@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
@@ -20,6 +21,21 @@ export function OperateOverlay() {
   const store = useHub();
   const { drafts, confirms } = useHubState(store);
   const [pointer, setPointer] = useState<(Pointer & { seq: number }) | null>(null);
+  const [origin, setOrigin] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const window = getCurrentWindow();
+    const measure = async () => {
+      const [position, scale] = await Promise.all([window.outerPosition(), window.scaleFactor()]);
+      const logical = position.toLogical(scale);
+      setOrigin({ x: logical.x, y: logical.y });
+    };
+    void measure();
+    const stops = [window.onMoved(() => void measure()), window.onResized(() => void measure())];
+    return () => {
+      for (const stop of stops) void stop.then((unlisten) => unlisten());
+    };
+  }, []);
 
   useEffect(() => {
     let seq = 0;
@@ -54,7 +70,7 @@ export function OperateOverlay() {
         <div
           className="overlay__pointer"
           style={{
-            transform: `translate(${pointer.x + pointer.width / 2}px, ${pointer.y + pointer.height / 2}px)`,
+            transform: `translate(${pointer.x + pointer.width / 2 - origin.x}px, ${pointer.y + pointer.height / 2 - origin.y}px)`,
           }}
         >
           <span key={`ripple-${pointer.seq}`} className="overlay__ripple" />
