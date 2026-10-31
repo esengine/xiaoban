@@ -116,6 +116,11 @@ pub enum Request {
     ForgetMemory {
         subject: String,
     },
+    ListGalaxies,
+    PinMemory {
+        memory_id: String,
+        pinned: bool,
+    },
     TidyMemories,
     FileData {
         file_id: String,
@@ -132,6 +137,9 @@ pub enum Response {
     Ack,
     FileData {
         url: String,
+    },
+    Galaxies {
+        galaxies: Vec<crate::MemoryGalaxy>,
     },
     MemoriesTidied {
         merged: u32,

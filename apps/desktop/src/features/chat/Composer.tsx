@@ -6,6 +6,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { openExternal } from "../../lib/external.ts";
 import { AttachRow, useVisionChoice, VisionNotice } from "../attach/Attachments.tsx";
 import type { AttachmentsState } from "../attach/useAttachments.ts";
+import { COMPOSE_EVENT } from "../memory/MemorySkyView.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { useVoice, type VoiceBlock, type VoiceState } from "../voice/useVoice.ts";
 import { QuoteBlock } from "./QuoteBlock.tsx";
@@ -144,6 +145,21 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
   useEffect(() => {
     if (quote) input.current?.focus();
   }, [quote]);
+
+  useEffect(() => {
+    const compose = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail !== "string") return;
+      setText(detail);
+      requestAnimationFrame(() => {
+        const field = input.current;
+        field?.focus();
+        field?.setSelectionRange(detail.length, detail.length);
+      });
+    };
+    window.addEventListener(COMPOSE_EVENT, compose);
+    return () => window.removeEventListener(COMPOSE_EVENT, compose);
+  }, []);
 
   const vision = useVisionChoice();
   const [visionAccepted, setVisionAccepted] = useState(false);

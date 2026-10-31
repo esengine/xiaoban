@@ -17,6 +17,7 @@ fn trimmed(value: &str) -> Option<String> {
     (!value.is_empty()).then(|| value.to_owned())
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handled {
     match request {
         Request::ListThreads => Ok(Response::Threads {
@@ -81,7 +82,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         request @ (Request::Remember { .. }
         | Request::ListMemories
         | Request::TidyMemories
-        | Request::ForgetMemory { .. }) => memories(state, local, request).await,
+        | Request::ForgetMemory { .. }
+        | Request::ListGalaxies
+        | Request::PinMemory { .. }) => memories(state, local, request).await,
         Request::InterpretAnswer {
             subject,
             question,
@@ -133,6 +136,18 @@ async fn memories(state: &SharedState, local: bool, request: Request) -> Handled
         }),
         Request::TidyMemories => tidy(state, local).await,
         Request::ForgetMemory { subject } => forget(state, subject).await,
+        Request::ListGalaxies => Ok(Response::Galaxies {
+            galaxies: state.store.list_galaxies().await?,
+        }),
+        Request::PinMemory { memory_id, pinned } => {
+            let memory = state
+                .store
+                .set_memory_pinned(memory_id, pinned)
+                .await?
+                .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such memory"))?;
+            state.publish(Event::MemorySaved { memory });
+            Ok(Response::Ack)
+        }
         _ => Err(bad_request("not a memory request")),
     }
 }

@@ -7,6 +7,7 @@ import type {
   Interpretation,
   Location,
   Memory,
+  MemoryGalaxy,
   Message,
   ModelInfo,
   OperatePermissions,
@@ -87,6 +88,20 @@ export class HubStore {
     const { memories } = await this.client.request({ type: "list_memories" }, "memories");
     this.#update((state) => ({ ...state, memories }));
     return memories;
+  }
+
+  async refreshGalaxies(): Promise<MemoryGalaxy[]> {
+    const { galaxies } = await this.client.request({ type: "list_galaxies" }, "galaxies");
+    this.#update((state) => ({ ...state, galaxies }));
+    return galaxies;
+  }
+
+  async pinMemory(memoryId: string, pinned: boolean): Promise<void> {
+    await this.client.request({ type: "pin_memory", memoryId, pinned }, "ack");
+  }
+
+  async forgetMemory(subject: string): Promise<void> {
+    await this.client.request({ type: "forget_memory", subject }, "ack");
   }
 
   async interpretAnswer(input: {

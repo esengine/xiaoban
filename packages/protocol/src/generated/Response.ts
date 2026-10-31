@@ -5,6 +5,7 @@ import type { Failure } from "./Failure.ts";
 import type { Interpretation } from "./Interpretation.ts";
 import type { Location } from "./Location.ts";
 import type { Memory } from "./Memory.ts";
+import type { MemoryGalaxy } from "./MemoryGalaxy.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
 import type { OperatePermissions } from "./OperatePermissions.ts";
@@ -19,6 +20,7 @@ import type { Usage } from "./Usage.ts";
 export type Response =
   | { type: "ack" }
   | { type: "file_data"; url: string }
+  | { type: "galaxies"; galaxies: Array<MemoryGalaxy> }
   | { type: "memories_tidied"; merged: number; replaced: number; moved: number; summaries: number }
   | { type: "threads"; threads: Array<Thread> }
   | { type: "thread"; thread: Thread }

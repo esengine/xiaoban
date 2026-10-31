@@ -5,6 +5,7 @@ import type {
   Failure,
   HubInfo,
   Memory,
+  MemoryGalaxy,
   Message,
   ModelInfo,
   Preferences,
@@ -48,6 +49,7 @@ export interface HubState {
   status: ConnectionStatus;
   hub: HubInfo | null;
   usedMemories: string[];
+  galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
   modelLoaded: boolean;
   preferences: Preferences | null;
@@ -67,6 +69,7 @@ export const initialHubState: HubState = {
   status: "idle",
   hub: null,
   usedMemories: [],
+  galaxies: [],
   model: null,
   modelLoaded: false,
   preferences: null,

@@ -22,6 +22,7 @@ export type { Interpretation } from "./Interpretation.ts";
 export type { Location } from "./Location.ts";
 export type { Memory } from "./Memory.ts";
 export type { MemoryCategory } from "./MemoryCategory.ts";
+export type { MemoryGalaxy } from "./MemoryGalaxy.ts";
 export type { MemoryKind } from "./MemoryKind.ts";
 export type { Message } from "./Message.ts";
 export type { ModelInfo } from "./ModelInfo.ts";

@@ -3954,3 +3954,265 @@ button.sent-files__image {
   font-size: 11px;
   color: color-mix(in srgb, var(--color-surface) 75%, transparent);
 }
+
+.memory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memory-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.memory-panel__count {
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.memory-panel__sky {
+  position: relative;
+  height: 200px;
+}
+
+.memory-panel__expand {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dark-text) 12%, transparent);
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.memory-sky {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  background: radial-gradient(120% 90% at 50% 40%, var(--dark-raised), var(--dark-island));
+}
+
+.memory-sky[data-full] {
+  border-radius: 0;
+}
+
+.memory-sky__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  cursor: grab;
+  touch-action: none;
+}
+
+.memory-sky__canvas:active {
+  cursor: grabbing;
+}
+
+.memory-sky__crumbs {
+  position: absolute;
+  left: 16px;
+  top: 64px;
+  display: flex;
+  gap: 4px;
+}
+
+.memory-sky__crumbs button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dark-text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.memory-sky__crumbs button:last-child {
+  color: var(--dark-text);
+}
+
+.memory-sky__few {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dark-text-muted);
+  pointer-events: none;
+}
+
+.memory-sky__tip {
+  position: absolute;
+  z-index: 2;
+  width: 200px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dark-island) 25%, transparent);
+  animation: fade-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.memory-sky__tip span {
+  color: var(--color-ink-mid);
+}
+
+.memory-sky-view {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: var(--dark-island);
+  animation: fade-in var(--motion-slow) var(--ease-standard) both;
+}
+
+.memory-sky-view__bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memory-sky-view__search input {
+  width: 280px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--dark-text) 12%, transparent);
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.memory-sky-view__chip {
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--dark-text) 12%, transparent);
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.memory-sky-view__chip[data-on] {
+  background: var(--chip);
+}
+
+.memory-sky-view__spacer {
+  flex: 1;
+}
+
+.memory-sky-view__close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--dark-text) 12%, transparent);
+  color: var(--dark-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.memory-sky-view__close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.memory-sky-view__hint {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  font-size: 11px;
+  color: var(--dark-text-muted);
+}
+
+.memory-card {
+  position: absolute;
+  z-index: 3;
+  width: 260px;
+  box-sizing: border-box;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--dark-island) 40%, transparent);
+  animation: dialog-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.memory-card__path {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-trip-green);
+}
+
+.memory-card__meta,
+.memory-card__aliases {
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.memory-card__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.memory-card__actions button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.memory-card__actions button[data-danger] {
+  border-color: var(--dark-attention-text);
+  color: var(--color-attention-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-sky-view,
+  .memory-card {
+    animation: none;
+  }
+}

@@ -2,11 +2,11 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { MemoryPanel } from "../memory/MemoryPanel.tsx";
 import { PairingDialog } from "../pairing/PairingDialog.tsx";
 import { range, stopCount } from "../trip/format.ts";
 import { MapIcon } from "../trip/icons.tsx";
 import { useTrip } from "../trip/TripCard.tsx";
-import { MemoryGraph } from "./MemoryGraph.tsx";
 
 function TripOutput({ tripId, onOpen }: { tripId: string; onOpen: () => void }) {
   const { t } = useI18n();
@@ -39,7 +39,7 @@ export function Workspace({
 }) {
   const { t } = useI18n();
   const store = useHub();
-  const { memories, devices, messages, usedMemories } = useHubState(store);
+  const { devices, messages } = useHubState(store);
   const tripIds = [
     ...new Set(
       (threadId ? (messages[threadId] ?? []) : []).flatMap((message) =>
@@ -63,7 +63,7 @@ export function Workspace({
         </section>
       )}
       <section className="workspace__section">
-        <MemoryGraph memories={memories} used={usedMemories} />
+        <MemoryPanel />
         <p className="workspace__hint">{t("workspace-memories-hint")}</p>
       </section>
       <section className="workspace__section">

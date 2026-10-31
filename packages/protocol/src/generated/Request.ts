@@ -62,5 +62,7 @@ export type Request =
   | { type: "add_note"; turnId: string; text: string }
   | { type: "locate" }
   | { type: "forget_memory"; subject: string }
+  | { type: "list_galaxies" }
+  | { type: "pin_memory"; memoryId: string; pinned: boolean }
   | { type: "tidy_memories" }
   | { type: "file_data"; fileId: string };
