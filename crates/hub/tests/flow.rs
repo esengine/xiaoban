@@ -14,7 +14,8 @@ use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, Prompts,
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
     AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
-    FailureKind, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role, ServerFrame,
+    FailureKind, Interpretation, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role,
+    ServerFrame,
 };
 
 struct TestClient {
@@ -781,7 +782,10 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
     let provider = RecordingProvider::new(ScriptedProvider::sequence([
         vec![ModelChunk::Text(r#"{"value":"阿哲","reply":null}"#.into())],
         vec![ModelChunk::Text(
-            r#"{"value":null,"reply":"没太懂，换个说法？"}"#.into(),
+            r#"{"value":null,"skip":false,"reply":"没太懂，换个说法？"}"#.into(),
+        )],
+        vec![ModelChunk::Text(
+            r#"{"value":null,"skip":true,"reply":null}"#.into(),
         )],
     ]));
     let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
@@ -794,14 +798,13 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
                 subject: "称呼".into(),
                 question: "怎么称呼你？".into(),
                 answer: answer.into(),
+                follow_up: None,
             })
             .await
     };
 
     let Response::Interpreted {
-        memory: Some(memory),
-        reply: None,
-        failure: None,
+        interpretation: Interpretation::Remembered { memory },
     } = interpret("叫我阿哲就行").await
     else {
         panic!("a clear answer should be remembered");
@@ -812,14 +815,20 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
     );
 
     let Response::Interpreted {
-        memory: None,
-        reply: Some(reply),
-        failure: None,
+        interpretation: Interpretation::Unclear { reply },
     } = interpret("asdfgh").await
     else {
         panic!("gibberish should be questioned, not remembered");
     };
-    assert_eq!(reply, "没太懂，换个说法？");
+    assert_eq!(reply.as_deref(), Some("没太懂，换个说法？"));
+
+    let declined = interpret("这个能先不说吗").await;
+    let Response::Interpreted {
+        interpretation: Interpretation::Declined,
+    } = declined
+    else {
+        panic!("declining should move on without remembering: {declined:?}");
+    };
 
     let Response::Memories { memories } = client.request(Request::ListMemories).await else {
         panic!("expected memories");

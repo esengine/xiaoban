@@ -50,6 +50,7 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
   const [index, setIndex] = useState(0);
   const [reading, setReading] = useState(false);
   const [draft, setDraft] = useState("");
+  const [followUp, setFollowUp] = useState<string | null>(null);
   const end = useRef<HTMLLIElement>(null);
   const question = QUESTIONS[index];
 
@@ -60,6 +61,7 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
   const say = (line: Line) => setLines((current) => [...current, line]);
 
   const advance = async () => {
+    setFollowUp(null);
     await pause();
     const following = QUESTIONS[index + 1];
     say({ kind: "ask", text: t(following ? following.ask : "meet-all-set") });
@@ -69,23 +71,38 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
   const interpret = async (current: Question, answer: string): Promise<boolean> => {
     const topic = t(current.label);
     try {
-      const { memory, reply, failure } = await store.interpretAnswer({
+      const result = await store.interpretAnswer({
         subject: topic,
         question: t(current.ask),
         answer,
+        followUp,
       });
-      if (memory) {
-        say({ kind: "remembered", text: t("meet-remembered", { topic, value: memory.value }) });
-        return true;
+      switch (result.outcome) {
+        case "remembered":
+          say({
+            kind: "remembered",
+            text: t("meet-remembered", { topic, value: result.memory.value }),
+          });
+          return true;
+        case "declined":
+          return true;
+        case "unclear": {
+          const reply = result.reply ?? t("meet-unclear");
+          setFollowUp(reply);
+          say({ kind: "ask", text: reply });
+          return false;
+        }
+        case "failed":
+          say({
+            kind: "ask",
+            text: t("meet-failed", { reason: t(failureKey(result.failure.kind)) }),
+          });
+          return false;
       }
-      const text = failure
-        ? t("meet-failed", { reason: t(failureKey(failure.kind)) })
-        : (reply ?? t("meet-unclear"));
-      say({ kind: "ask", text });
     } catch (error) {
       say({ kind: "ask", text: t("meet-failed", { reason: t(describeError(error)) }) });
+      return false;
     }
-    return false;
   };
 
   const answer = async (text: string, pass: boolean) => {
@@ -94,8 +111,8 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
     setDraft("");
     say({ kind: "answer", text: value });
     setReading(true);
-    const understood = pass || (await interpret(question, value));
-    if (understood) await advance();
+    const settled = pass || (await interpret(question, value));
+    if (settled) await advance();
     setReading(false);
   };
 

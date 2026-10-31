@@ -3,7 +3,7 @@ use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{NoTools, StablePrefix, Transcript};
-use xiaoban_protocol::{Event, Response};
+use xiaoban_protocol::{Event, Interpretation, Response};
 use xiaoban_store::StoreError;
 
 use crate::state::SharedState;
@@ -11,6 +11,8 @@ use crate::state::SharedState;
 #[derive(Debug, Default, Deserialize, PartialEq, Eq)]
 struct Verdict {
     value: Option<String>,
+    #[serde(default)]
+    skip: bool,
     reply: Option<String>,
 }
 
@@ -35,6 +37,7 @@ fn parse(text: &str) -> Verdict {
     });
     Verdict {
         value: non_empty(verdict.value),
+        skip: verdict.skip,
         reply: non_empty(verdict.reply),
     }
 }
@@ -43,10 +46,17 @@ pub async fn answer(
     state: &SharedState,
     subject: String,
     question: &str,
+    follow_up: Option<&str>,
     answer: String,
 ) -> Result<Response, StoreError> {
     let prefix = StablePrefix::new(state.prompts.interpret_answer.clone());
-    let wire = json!({ "question": question, "subject": subject, "answer": answer }).to_string();
+    let wire = json!({
+        "question": question,
+        "subject": subject,
+        "followUp": follow_up,
+        "answer": answer,
+    })
+    .to_string();
     let (events, _) = mpsc::channel(1);
     let outcome = state
         .active()
@@ -60,37 +70,25 @@ pub async fn answer(
             CancellationToken::new(),
         )
         .await;
-    let outcome = match outcome {
-        Ok(outcome) => outcome,
-        Err(error) => {
-            return Ok(Response::Interpreted {
-                memory: None,
-                reply: None,
-                failure: Some(error.to_failure()),
-            });
-        }
+    let interpretation = match outcome {
+        Err(error) => Interpretation::Failed {
+            failure: error.to_failure(),
+        },
+        Ok(outcome) => match parse(&outcome.text) {
+            Verdict {
+                value: Some(value), ..
+            } => {
+                let memory = state.store.remember(subject, value).await?;
+                state.publish(Event::MemorySaved {
+                    memory: memory.clone(),
+                });
+                Interpretation::Remembered { memory }
+            }
+            Verdict { skip: true, .. } => Interpretation::Declined,
+            Verdict { reply, .. } => Interpretation::Unclear { reply },
+        },
     };
-    let verdict = parse(&outcome.text);
-    let memory = match verdict.value {
-        Some(value) => {
-            let memory = state.store.remember(subject, value).await?;
-            state.publish(Event::MemorySaved {
-                memory: memory.clone(),
-            });
-            Some(memory)
-        }
-        None => None,
-    };
-    let reply = if memory.is_some() {
-        None
-    } else {
-        verdict.reply
-    };
-    Ok(Response::Interpreted {
-        memory,
-        reply,
-        failure: None,
-    })
+    Ok(Response::Interpreted { interpretation })
 }
 
 #[cfg(test)]
@@ -103,6 +101,7 @@ mod tests {
             parse("```json\n{\"value\": \" 阿哲 \", \"reply\": null}\n```"),
             Verdict {
                 value: Some("阿哲".into()),
+                skip: false,
                 reply: None
             }
         );
@@ -110,9 +109,11 @@ mod tests {
             parse(r#"{"value": "", "reply": "换个说法？"}"#),
             Verdict {
                 value: None,
+                skip: false,
                 reply: Some("换个说法？".into())
             }
         );
+        assert!(parse(r#"{"value": null, "skip": true, "reply": null}"#).skip);
         assert_eq!(parse("不是 JSON"), Verdict::default());
     }
 }

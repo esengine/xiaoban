@@ -2,6 +2,7 @@ import type {
   AutonomyLevel,
   ContextNote,
   Failure,
+  Interpretation,
   Memory,
   Message,
   ModelInfo,
@@ -78,12 +79,13 @@ export class HubStore {
     subject: string;
     question: string;
     answer: string;
-  }): Promise<{ memory: Memory | null; reply: string | null; failure: Failure | null }> {
-    const { memory, reply, failure } = await this.client.request(
+    followUp: string | null;
+  }): Promise<Interpretation> {
+    const { interpretation } = await this.client.request(
       { type: "interpret_answer", ...input },
       "interpreted",
     );
-    return { memory, reply, failure };
+    return interpretation;
   }
 
   async completeOnboarding(): Promise<void> {

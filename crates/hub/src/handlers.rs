@@ -72,7 +72,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             subject,
             question,
             answer,
-        } => interpret_answer(state, &subject, &question, &answer).await,
+            follow_up,
+        } => interpret_answer(state, &subject, &question, &answer, follow_up.as_deref()).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
@@ -158,8 +159,9 @@ async fn interpret_answer(
     subject: &str,
     question: &str,
     answer: &str,
+    follow_up: Option<&str>,
 ) -> Handled {
     let subject = trimmed(subject).ok_or_else(|| bad_request("memory subject is empty"))?;
     let answer = trimmed(answer).ok_or_else(|| bad_request("answer is empty"))?;
-    Ok(interpret::answer(state, subject, question.trim(), answer).await?)
+    Ok(interpret::answer(state, subject, question.trim(), follow_up, answer).await?)
 }

@@ -58,6 +58,7 @@ pub enum Request {
         subject: String,
         question: String,
         answer: String,
+        follow_up: Option<String>,
     },
 }
 
@@ -116,8 +117,19 @@ pub enum Response {
         memories: Vec<Memory>,
     },
     Interpreted {
-        memory: Option<Memory>,
-        reply: Option<String>,
-        failure: Option<Failure>,
+        interpretation: Interpretation,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "outcome",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+pub enum Interpretation {
+    Remembered { memory: Memory },
+    Declined,
+    Unclear { reply: Option<String> },
+    Failed { failure: Failure },
 }
