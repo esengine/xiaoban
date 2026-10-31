@@ -7,11 +7,11 @@ use xiaoban_hub::Operator;
 mod macos;
 
 #[cfg(target_os = "macos")]
-pub fn system() -> Arc<dyn Operator> {
-    Arc::new(macos::MacOperator::start())
+pub fn system(app: tauri::AppHandle) -> Arc<dyn Operator> {
+    Arc::new(macos::MacOperator::start(app))
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn system() -> Arc<dyn Operator> {
+pub fn system(_app: tauri::AppHandle) -> Arc<dyn Operator> {
     Arc::new(xiaoban_hub::NoOperator)
 }

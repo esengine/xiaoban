@@ -4,6 +4,7 @@ mod hub;
 mod island;
 mod location;
 mod operate;
+mod overlay;
 mod voice;
 
 use tauri::{Manager, RunEvent};
@@ -22,10 +23,12 @@ pub fn run() {
             let running = tauri::async_runtime::block_on(hub::start(
                 data_dir,
                 location::system(app.handle().clone()),
+                operate::system(app.handle().clone()),
             ))?;
             app.manage(running);
             island::keep_running_when_closed(app.handle());
             island::create(app.handle())?;
+            overlay::create(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

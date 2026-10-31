@@ -498,3 +498,6 @@ operate-consent-stop = 4 · 会不会打扰你
 operate-consent-stop-body = 不会抢你的鼠标和键盘，你可以同时用电脑。想让它停：灵动岛上点「暂停」或「停止」· 系统设置 › 隐私与安全性 里关掉
 operate-consent-later = 先不开
 operate-consent-open = 去系统设置开启
+overlay-click = 点「{ $label }」 · 第 { $n } 步
+overlay-type = 在「{ $label }」里输入 · 第 { $n } 步
+overlay-unnamed = 这里

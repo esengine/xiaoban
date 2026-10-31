@@ -5,10 +5,12 @@ use std::time::{Duration, Instant};
 
 use futures_util::future::BoxFuture;
 use objc2_app_kit::NSRunningApplication;
-use objc2_application_services::{AXError, AXIsProcessTrusted, AXUIElement};
-use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType};
+use objc2_application_services::{AXError, AXIsProcessTrusted, AXUIElement, AXValue, AXValueType};
+use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType, CGPoint, CGSize};
 use objc2_core_graphics::{CGEvent, CGEventFlags};
 use objc2_foundation::NSString;
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 use xiaoban_hub::{MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement};
 use xiaoban_protocol::OperatePermissions;
@@ -17,6 +19,7 @@ const MAX_DEPTH: usize = 40;
 const MAX_TEXT: usize = 80;
 const LAUNCH_WAIT: Duration = Duration::from_secs(8);
 const KEY_GAP: Duration = Duration::from_millis(30);
+const POINTER_TRAVEL: Duration = Duration::from_millis(700);
 
 type Job = Box<dyn FnOnce(&mut Worker) + Send>;
 
@@ -25,18 +28,31 @@ pub struct MacOperator {
     jobs: mpsc::Sender<Job>,
 }
 
-#[derive(Default)]
 struct Worker {
-    elements: HashMap<String, Vec<CFRetained<AXUIElement>>>,
+    app: AppHandle,
+    elements: HashMap<String, Vec<(CFRetained<AXUIElement>, String)>>,
+}
+
+#[derive(Clone, Serialize)]
+struct Pointer {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    label: String,
+    typing: bool,
 }
 
 impl MacOperator {
-    pub fn start() -> Self {
+    pub fn start(app: AppHandle) -> Self {
         let (jobs, inbox) = mpsc::channel::<Job>();
         std::thread::Builder::new()
             .name("operate".into())
             .spawn(move || {
-                let mut worker = Worker::default();
+                let mut worker = Worker {
+                    app,
+                    elements: HashMap::new(),
+                };
                 while let Ok(job) = inbox.recv() {
                     job(&mut worker);
                 }
@@ -233,7 +249,10 @@ fn snapshot(worker: &mut Worker, bundle: &str) -> Result<Snapshot, String> {
         .collect();
     worker.elements.insert(
         bundle.to_owned(),
-        walk.found.into_iter().map(|(_, handle)| handle).collect(),
+        walk.found
+            .into_iter()
+            .map(|(element, handle)| (handle, element.label))
+            .collect(),
     );
     Ok(Snapshot {
         app: app
@@ -245,12 +264,40 @@ fn snapshot(worker: &mut Worker, bundle: &str) -> Result<Snapshot, String> {
     })
 }
 
+fn frame(element: &AXUIElement) -> Option<(CGPoint, CGSize)> {
+    let mut point = CGPoint::default();
+    let mut size = CGSize::default();
+    let position = attribute(element, "AXPosition")?
+        .downcast::<AXValue>()
+        .ok()?;
+    let extent = attribute(element, "AXSize")?.downcast::<AXValue>().ok()?;
+    let read = unsafe {
+        position.value(AXValueType::CGPoint, NonNull::from(&mut point).cast())
+            && extent.value(AXValueType::CGSize, NonNull::from(&mut size).cast())
+    };
+    read.then_some((point, size))
+}
+
 fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(), String> {
-    let element = worker
+    let (element, label) = worker
         .elements
         .get(bundle)
         .and_then(|elements| elements.get(index as usize))
         .ok_or("no element with that number; call look_at_app again")?;
+    if let Some((origin, size)) = frame(element) {
+        let _ = worker.app.emit(
+            crate::overlay::POINTER_EVENT,
+            Pointer {
+                x: origin.x,
+                y: origin.y,
+                width: size.width,
+                height: size.height,
+                label: label.clone(),
+                typing: matches!(action, UiAction::SetText(_)),
+            },
+        );
+        std::thread::sleep(POINTER_TRAVEL);
+    }
     let error = match action {
         UiAction::Press => unsafe { element.perform_action(&CFString::from_static_str("AXPress")) },
         UiAction::SetText(value) => unsafe {

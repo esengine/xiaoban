@@ -501,3 +501,6 @@ operate-consent-stop = 4 · Will it get in your way?
 operate-consent-stop-body = It never takes over your mouse or keyboard, so you can keep using the computer. To stop it: Pause or Stop on the island · turn it off in System Settings › Privacy & Security
 operate-consent-later = Not now
 operate-consent-open = Open System Settings
+overlay-click = Click “{ $label }” · step { $n }
+overlay-type = Type into “{ $label }” · step { $n }
+overlay-unnamed = here

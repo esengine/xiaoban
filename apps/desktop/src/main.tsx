@@ -8,6 +8,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app/App.tsx";
 import { HubProvider } from "./app/hub.tsx";
 import { Island, IslandSlot } from "./features/island/Island.tsx";
+import { OperateOverlay } from "./features/overlay/OperateOverlay.tsx";
+import "./features/overlay/overlay.css";
 import "./features/island/island.css";
 import "./styles.css";
 
@@ -15,10 +17,11 @@ const translator = createTranslator(negotiateLocale(navigator.languages));
 const title = translator.t("app-name");
 const label = isTauri() ? getCurrentWindow().label : "main";
 const island = label === "island" || label === "island-slot";
+const overlay = label === "operate-overlay";
 document.documentElement.lang = translator.locale;
-document.documentElement.dataset.window = island ? "island" : "main";
+document.documentElement.dataset.window = overlay ? "overlay" : island ? "island" : "main";
 document.title = title;
-if (isTauri() && !island) void getCurrentWindow().setTitle(title);
+if (isTauri() && !island && !overlay) void getCurrentWindow().setTitle(title);
 
 const tokens = document.createElement("style");
 tokens.textContent = cssVariables();
@@ -33,8 +36,8 @@ createRoot(root).render(
       <IslandSlot />
     ) : (
       <I18nProvider translator={translator}>
-        <HubProvider window={island ? "island" : "main"}>
-          {island ? <Island /> : <App />}
+        <HubProvider window={overlay ? "overlay" : island ? "island" : "main"}>
+          {overlay ? <OperateOverlay /> : island ? <Island /> : <App />}
         </HubProvider>
       </I18nProvider>
     )}

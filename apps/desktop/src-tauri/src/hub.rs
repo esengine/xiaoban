@@ -31,6 +31,7 @@ impl RunningHub {
 pub async fn start(
     data_dir: PathBuf,
     locator: Arc<dyn xiaoban_hub::Locator>,
+    operator: Arc<dyn xiaoban_hub::Operator>,
 ) -> anyhow::Result<RunningHub> {
     let locale = system_locale();
     let runtime = HubRuntime {
@@ -42,7 +43,7 @@ pub async fn start(
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),
         apps: Arc::new(crate::apps::system()),
-        operator: crate::operate::system(),
+        operator,
         web: Arc::new(DeepseekWeb::new()),
         fallback: first_configured_from_env(),
     };

@@ -1,0 +1,146 @@
+html[data-window="overlay"],
+html[data-window="overlay"] body,
+html[data-window="overlay"] #root {
+  background: transparent;
+  overflow: hidden;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  transition: box-shadow var(--motion-slow) var(--ease-standard);
+}
+
+.overlay[data-edge="working"] {
+  animation: overlay-edge 2.4s ease-in-out infinite;
+}
+
+.overlay[data-edge="confirm"] {
+  box-shadow: inset 0 0 0 4px var(--color-attention);
+}
+
+.overlay[data-edge="paused"] {
+  box-shadow: inset 0 0 0 4px var(--color-faint);
+}
+
+@keyframes overlay-edge {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 4px var(--color-accent),
+      inset 0 0 40px color-mix(in srgb, var(--color-accent) 33%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 4px color-mix(in srgb, var(--color-accent) 70%, var(--color-surface)),
+      inset 0 0 24px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+}
+
+.overlay__pointer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: transform 600ms var(--ease-standard);
+}
+
+.overlay__cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  transform-origin: 0 0;
+  fill: var(--color-accent);
+  stroke: var(--color-surface);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  animation: overlay-click 400ms var(--ease-standard) 600ms both;
+}
+
+.overlay__ripple {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: var(--color-accent);
+  opacity: 0;
+  animation: overlay-ripple 700ms var(--ease-standard) 640ms both;
+}
+
+.overlay__caption {
+  position: absolute;
+  left: 22px;
+  top: 28px;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 12px;
+  animation: overlay-caption 2.6s var(--ease-standard) 500ms both;
+}
+
+@keyframes overlay-click {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.8);
+  }
+}
+
+@keyframes overlay-ripple {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  15% {
+    opacity: 0.6;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+@keyframes overlay-caption {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  12%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .overlay__pointer {
+    transition: none;
+  }
+
+  .overlay[data-edge="working"] {
+    animation: none;
+    box-shadow: inset 0 0 0 4px var(--color-accent);
+  }
+
+  .overlay__cursor,
+  .overlay__ripple {
+    animation: none;
+  }
+
+  .overlay__caption {
+    animation: fade-in var(--motion-fast) linear both;
+  }
+}
