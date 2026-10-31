@@ -128,6 +128,36 @@ button {
 
 .threads__search {
   padding: 20px var(--space-lg) var(--space-md);
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.threads__search .search {
+  flex: 1;
+  min-width: 0;
+}
+
+.threads__new {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.threads__new svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .search {

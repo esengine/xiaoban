@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{
-    AgentError, ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire,
+    AgentError, ChatMessage, ChatRole, NoTools, StablePrefix, Transcript, TurnEvent, TurnOutcome,
+    user_wire,
 };
 use xiaoban_i18n::keys;
 use xiaoban_protocol::{
@@ -113,6 +114,99 @@ fn launch(
         turn_id: turn_id.clone(),
     });
     tokio::spawn(run(Arc::clone(state), thread_id, turn_id, job, cancel));
+}
+
+const TITLE_CHARS: usize = 16;
+const MODEL_TITLE_CHARS: usize = 12;
+const TITLE_CONTEXT_CHARS: usize = 600;
+
+fn name_thread(state: &SharedState, thread_id: &str, answer: &str) {
+    if !state.auto_titles {
+        return;
+    }
+    let state = Arc::clone(state);
+    let thread_id = thread_id.to_owned();
+    let answer: String = answer.chars().take(TITLE_CONTEXT_CHARS).collect();
+    tokio::spawn(async move {
+        let Ok(thread) = state.store.thread(thread_id.clone()).await else {
+            return;
+        };
+        let primary = state
+            .store
+            .setting(crate::preferences::PRIMARY_THREAD_KEY)
+            .await
+            .ok()
+            .flatten();
+        if thread.title.is_some() || primary.as_deref() == Some(thread_id.as_str()) {
+            return;
+        }
+        let Some(first) = state
+            .store
+            .list_messages(thread_id.clone())
+            .await
+            .ok()
+            .and_then(|messages| {
+                messages
+                    .into_iter()
+                    .find(|message| message.role == Role::User)
+            })
+        else {
+            return;
+        };
+        let title = match model_title(&state, &first.text, &answer).await {
+            Some(title) => Some(title),
+            None => auto_title(&first.text),
+        };
+        let Some(title) = title else {
+            return;
+        };
+        if let Ok(thread) = state.store.rename_thread(thread_id, title).await {
+            state.publish(Event::ThreadUpdated { thread });
+        }
+    });
+}
+
+async fn model_title(state: &SharedState, question: &str, answer: &str) -> Option<String> {
+    let prefix = StablePrefix::new(state.localizer.text(keys::PROMPT_THREAD_TITLE));
+    let input = format!("[user] {question}\n[assistant] {answer}");
+    let (events, _) = mpsc::channel(1);
+    let outcome = state
+        .active()
+        .agent
+        .without_thinking()
+        .run_turn(
+            &prefix,
+            &Transcript::default(),
+            &input,
+            &NoTools,
+            events,
+            CancellationToken::new(),
+        )
+        .await
+        .ok()?;
+    let _ = state.store.record_memory_usage(outcome.usage).await;
+    let title: String = outcome
+        .text
+        .trim()
+        .trim_matches(|c: char| {
+            matches!(c, '"' | '\u{201c}' | '\u{201d}' | '\u{300c}' | '\u{300d}')
+        })
+        .chars()
+        .take(MODEL_TITLE_CHARS)
+        .collect();
+    (!title.trim().is_empty()).then_some(title)
+}
+
+fn auto_title(text: &str) -> Option<String> {
+    let first = text
+        .split(['\n', '\u{3002}', '\u{ff01}', '\u{ff1f}', '!', '?'])
+        .map(str::trim)
+        .find(|part| !part.is_empty())?;
+    let mut title: String = first.chars().take(TITLE_CHARS).collect();
+    if first.chars().count() > TITLE_CHARS {
+        title.push('\u{2026}');
+    }
+    Some(title)
 }
 
 struct Job {
@@ -445,6 +539,12 @@ async fn current_epoch(
     Ok((epoch, prefix, carried.into_iter().collect()))
 }
 
+async fn after_answer(state: &SharedState, thread_id: &str, turn_id: &str, outcome: &TurnOutcome) {
+    mark_used(state, turn_id, &outcome.text).await;
+    name_thread(state, thread_id, &outcome.text);
+    crate::archive::remember_peak(state, thread_id, outcome.peak_input).await;
+}
+
 async fn mark_used(state: &SharedState, turn_id: &str, answer: &str) {
     let Ok(memories) = state.store.list_memories().await else {
         return;
@@ -546,8 +646,7 @@ async fn drive(
         )
         .await
         .map_err(Failure::from)?;
-    mark_used(state, turn_id, &outcome.text).await;
-    crate::archive::remember_peak(state, thread_id, outcome.peak_input).await;
+    after_answer(state, thread_id, turn_id, &outcome).await;
     let message = state
         .store
         .append_message(

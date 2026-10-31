@@ -119,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
         operator: Arc::new(NoOperator),
         web: Arc::new(DeepseekWeb::new()),
         fallback: configured(&args)?,
+        auto_titles: true,
     };
 
     let hub = Hub::start(

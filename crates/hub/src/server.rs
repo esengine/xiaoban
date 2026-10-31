@@ -91,6 +91,7 @@ impl Hub {
                 |dir| dir.join("files"),
             )),
             web: runtime.web,
+            auto_titles: runtime.auto_titles,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),

@@ -13,6 +13,7 @@ interface Props {
   primaryId: string | null;
   activeId: string | null;
   onSelect: (id: string) => void;
+  onNew: () => void;
 }
 
 const UNREAD_KEY = "xiaoban.unread";
@@ -62,7 +63,7 @@ function useUnread(threads: Thread[], activeId: string | null) {
   return { unread, mark };
 }
 
-export function ThreadList({ threads, primaryId, activeId, onSelect }: Props) {
+export function ThreadList({ threads, primaryId, activeId, onSelect, onNew }: Props) {
   const { t, locale } = useI18n();
   const store = useHub();
   const openMenu = useContextMenu();
@@ -122,6 +123,17 @@ export function ThreadList({ threads, primaryId, activeId, onSelect }: Props) {
             autoComplete="off"
           />
         </label>
+        <button
+          type="button"
+          className="threads__new"
+          aria-label={t("thread-new")}
+          title={t("thread-new-shortcut")}
+          onClick={onNew}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
       </div>
       <ul className="threads__list">
         {visible.map((thread) => {

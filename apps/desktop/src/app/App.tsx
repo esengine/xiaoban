@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote } from "@xiaoban/protocol";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
@@ -51,6 +51,23 @@ function Home() {
   const setQuote = (threadId: string, quote: Quote | null) =>
     setQuotes(({ [threadId]: _old, ...rest }) => (quote ? { ...rest, [threadId]: quote } : rest));
 
+  const newThread = useCallback(async () => {
+    setTrip(null);
+    const thread = await store.createThread();
+    setSelected(thread.id);
+  }, [store]);
+
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n" && !event.shiftKey) {
+        event.preventDefault();
+        void newThread();
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [newThread]);
+
   const newThreadWith = async (quote: Quote) => {
     const thread = await store.createThread();
     setQuote(thread.id, quote);
@@ -90,6 +107,7 @@ function Home() {
           primaryId={primaryId}
           activeId={activeId}
           onSelect={setSelected}
+          onNew={() => void newThread()}
         />
       </div>
       {activeId ? (

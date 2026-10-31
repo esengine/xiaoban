@@ -8,7 +8,7 @@ use crate::turns;
 
 const AUTONOMY_KEY: &str = "autonomy";
 const ONBOARDED_KEY: &str = "onboarded";
-const PRIMARY_THREAD_KEY: &str = "primary_thread";
+pub const PRIMARY_THREAD_KEY: &str = "primary_thread";
 
 pub async fn load(state: &SharedState) -> Result<Preferences, ProtocolError> {
     let autonomy = state

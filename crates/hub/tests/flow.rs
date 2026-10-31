@@ -172,6 +172,7 @@ fn runtime_with(
         operator: Arc::new(FakeOperator::default()),
         web: Arc::new(FakeWeb),
         fallback,
+        auto_titles: false,
     }
 }
 
@@ -2022,4 +2023,34 @@ async fn messages_come_in_pages_from_the_newest() {
         Some("a")
     );
     hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn new_threads_are_titled_by_the_model_after_the_first_answer() {
+    let provider = ScriptedProvider::sequence([
+        vec![ModelChunk::Text("可以去西湖".into())],
+        vec![ModelChunk::Text("「杭州周末去哪」".into())],
+    ]);
+    let mut runtime = runtime(provider);
+    runtime.auto_titles = true;
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "这周末杭州去哪玩", Vec::new()).await;
+    for _ in 0..200 {
+        let Response::Threads { threads } = client.request(Request::ListThreads).await else {
+            panic!("expected threads");
+        };
+        if let Some(title) = threads
+            .iter()
+            .find(|candidate| candidate.id == thread)
+            .and_then(|candidate| candidate.title.clone())
+        {
+            assert_eq!(title, "杭州周末去哪");
+            hub.shutdown().await;
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("the thread was never titled");
 }
