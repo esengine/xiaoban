@@ -51,6 +51,10 @@ impl Turns {
         }
     }
 
+    pub fn busy(&self) -> bool {
+        !self.running.lock().unwrap().by_turn.is_empty()
+    }
+
     pub fn cancel(&self, turn_id: &str) -> bool {
         self.running
             .lock()

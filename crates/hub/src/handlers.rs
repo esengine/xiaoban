@@ -99,6 +99,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         }
         Request::Locate => locate(state, local).await,
         Request::FileData { file_id } => file_data(state, &file_id),
+        Request::TidyMemories => tidy(state, local).await,
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
         | Request::OperateStatus
@@ -123,6 +124,20 @@ async fn create_thread(state: &SharedState, title: Option<&str>) -> Handled {
         thread: thread.clone(),
     });
     Ok(Response::Thread { thread })
+}
+
+async fn tidy(state: &SharedState, local: bool) -> Handled {
+    if !local {
+        return Err(bad_request("only this computer can tidy memories"));
+    }
+    let tally = crate::tidy::run(state).await;
+    let count = |value: usize| u32::try_from(value).unwrap_or(u32::MAX);
+    Ok(Response::MemoriesTidied {
+        merged: count(tally.merged),
+        replaced: count(tally.replaced),
+        moved: count(tally.moved),
+        summaries: count(tally.summaries),
+    })
 }
 
 fn file_data(state: &SharedState, file_id: &str) -> Handled {
@@ -205,6 +220,7 @@ async fn usage(state: &SharedState) -> Handled {
     Ok(Response::Usage {
         usage: totals.usage,
         turns: totals.turns,
+        memory: state.store.memory_usage_total().await?,
     })
 }
 

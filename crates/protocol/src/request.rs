@@ -113,6 +113,7 @@ pub enum Request {
         text: String,
     },
     Locate,
+    TidyMemories,
     FileData {
         file_id: String,
     },
@@ -128,6 +129,12 @@ pub enum Response {
     Ack,
     FileData {
         url: String,
+    },
+    MemoriesTidied {
+        merged: u32,
+        replaced: u32,
+        moved: u32,
+        summaries: u32,
     },
     Threads {
         threads: Vec<Thread>,
@@ -155,6 +162,8 @@ pub enum Response {
     Usage {
         usage: Usage,
         turns: u32,
+        #[serde(default)]
+        memory: Usage,
     },
     ModelStatus {
         model: Option<ModelInfo>,

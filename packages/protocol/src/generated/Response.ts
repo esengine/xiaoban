@@ -19,6 +19,7 @@ import type { Usage } from "./Usage.ts";
 export type Response =
   | { type: "ack" }
   | { type: "file_data"; url: string }
+  | { type: "memories_tidied"; merged: number; replaced: number; moved: number; summaries: number }
   | { type: "threads"; threads: Array<Thread> }
   | { type: "thread"; thread: Thread }
   | { type: "messages"; messages: Array<Message> }
@@ -31,7 +32,7 @@ export type Response =
       port: number;
     }
   | { type: "devices"; devices: Array<Device> }
-  | { type: "usage"; usage: Usage; turns: number }
+  | { type: "usage"; usage: Usage; turns: number; memory: Usage }
   | { type: "model_status"; model: ModelInfo | null }
   | { type: "providers"; providers: Array<ProviderOption> }
   | { type: "provider_configured"; model: ModelInfo | null; failure: Failure | null }
