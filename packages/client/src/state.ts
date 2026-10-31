@@ -30,6 +30,9 @@ export interface TurnTrace {
 
 export interface Draft extends TurnTrace {
   paused?: boolean;
+  reasoning?: string;
+  reasoningSince?: number | undefined;
+  reasoningUntil?: number | undefined;
   turnId: string;
   threadId: string;
   text: string;
@@ -224,9 +227,30 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "text_delta": {
       const draft = state.drafts[event.turnId];
       if (!draft) return state;
+      const reasoningUntil =
+        draft.reasoningSince && !draft.reasoningUntil ? now : draft.reasoningUntil;
       return {
         ...state,
-        drafts: { ...state.drafts, [event.turnId]: { ...draft, text: draft.text + event.delta } },
+        drafts: {
+          ...state.drafts,
+          [event.turnId]: { ...draft, text: draft.text + event.delta, reasoningUntil },
+        },
+      };
+    }
+    case "reasoning_delta": {
+      const draft = state.drafts[event.turnId];
+      if (!draft) return state;
+      return {
+        ...state,
+        drafts: {
+          ...state.drafts,
+          [event.turnId]: {
+            ...draft,
+            reasoning: (draft.reasoning ?? "") + event.delta,
+            reasoningSince: draft.reasoningSince ?? now,
+            reasoningUntil: undefined,
+          },
+        },
       };
     }
     case "turn_completed": {

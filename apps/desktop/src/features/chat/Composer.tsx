@@ -309,8 +309,14 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
             />
           </label>
           {busy ? (
-            <button type="button" className="button button--stop" onClick={() => void onStop()}>
-              {t("composer-stop")}
+            <button
+              type="button"
+              className="composer__stop"
+              aria-label={t("composer-stop")}
+              title={t("composer-stop")}
+              onClick={() => void onStop()}
+            >
+              <span aria-hidden="true" />
             </button>
           ) : (
             <button

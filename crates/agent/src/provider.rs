@@ -137,6 +137,7 @@ pub struct ChatRequest {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModelChunk {
     Text(String),
+    Reasoning(String),
     ToolCallDelta {
         index: usize,
         id: Option<String>,

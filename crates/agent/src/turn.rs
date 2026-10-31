@@ -22,6 +22,7 @@ fn canonical(arguments: &str) -> String {
 pub enum TurnEvent {
     Thinking,
     TextDelta(String),
+    ReasoningDelta(String),
     ToolUsed(ToolCall),
     ToolFinished { call: ToolCall, result: String },
 }
@@ -242,6 +243,9 @@ impl Agent {
                 Some(ModelChunk::Text(delta)) => {
                     step.text.push_str(&delta);
                     let _ = events.send(TurnEvent::TextDelta(delta)).await;
+                }
+                Some(ModelChunk::Reasoning(delta)) => {
+                    let _ = events.send(TurnEvent::ReasoningDelta(delta)).await;
                 }
                 Some(ModelChunk::ToolCallDelta {
                     index,

@@ -17,6 +17,7 @@ export type Event =
   | { type: "turn_started"; threadId: string; turnId: string }
   | { type: "thinking"; turnId: string }
   | { type: "text_delta"; turnId: string; delta: string }
+  | { type: "reasoning_delta"; turnId: string; delta: string }
   | { type: "turn_completed"; turnId: string; message: Message; usage: Usage }
   | { type: "turn_failed"; turnId: string; failure: Failure }
   | { type: "model_changed"; model: ModelInfo | null }

@@ -32,6 +32,10 @@ pub enum Event {
         turn_id: String,
         delta: String,
     },
+    ReasoningDelta {
+        turn_id: String,
+        delta: String,
+    },
     TurnCompleted {
         turn_id: String,
         message: Message,
@@ -91,6 +95,7 @@ impl Event {
             }
             Self::Thinking { .. }
             | Self::TextDelta { .. }
+            | Self::ReasoningDelta { .. }
             | Self::TurnFailed { .. }
             | Self::ModelChanged { .. }
             | Self::DevicePaired { .. }

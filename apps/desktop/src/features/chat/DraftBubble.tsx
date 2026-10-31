@@ -2,7 +2,7 @@ import type { Draft } from "@xiaoban/client";
 import { failureKey } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import { waiting } from "@xiaoban/tokens";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MascotFace } from "../onboarding/Mascot.tsx";
 import { RichText } from "./RichText.tsx";
 import { WorkingLine } from "./Trace.tsx";
@@ -18,6 +18,44 @@ export function useElapsed(since: number, active: boolean): number {
 }
 
 const UNREACHABLE = new Set(["network", "model"]);
+
+function Reasoning({ draft }: { draft: Draft }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const since = draft.reasoningSince ?? draft.startedAt;
+  const thinking = draft.reasoningUntil === undefined;
+  const elapsed = useElapsed(since, thinking);
+  const seconds = Math.max(
+    1,
+    Math.round(((draft.reasoningUntil ?? since + elapsed) - since) / 1000),
+  );
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (open && box.current) box.current.scrollTop = box.current.scrollHeight;
+  }, [open, draft.reasoning]);
+  return (
+    <li className="reasoning">
+      <span className="reasoning__line">
+        <span key={seconds} className="reasoning__time">
+          {thinking ? t("reasoning-thinking", { seconds }) : t("reasoning-thought", { seconds })}
+        </span>
+        <button
+          type="button"
+          className="reasoning__toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? t("reasoning-hide") : t("reasoning-show")}
+        </button>
+      </span>
+      {open && (
+        <div ref={box} className="reasoning__box">
+          {draft.reasoning}
+        </div>
+      )}
+    </li>
+  );
+}
 
 export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => void }) {
   const { t } = useI18n();
@@ -48,8 +86,10 @@ export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => v
     );
   }
 
+  const reasoned = draft.reasoningSince !== undefined;
   if (waitingForText) {
     if (draft.steps.length > 0) return <WorkingLine steps={draft.steps} />;
+    if (reasoned) return <Reasoning draft={draft} />;
     if (elapsed < waiting.silentMs) return null;
     return (
       <li className="thinking" aria-live="polite">
@@ -68,9 +108,12 @@ export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => v
     );
   }
   return (
-    <li className="bubble bubble--assistant bubble--streaming" aria-live="polite">
-      <RichText text={draft.text} />
-      <span className="caret" aria-hidden="true" />
-    </li>
+    <>
+      {reasoned && <Reasoning draft={draft} />}
+      <li className="bubble bubble--assistant bubble--streaming" aria-live="polite">
+        <RichText text={draft.text} />
+        <span className="caret" aria-hidden="true" />
+      </li>
+    </>
   );
 }

@@ -139,6 +139,8 @@ struct Choice {
 struct Delta {
     content: Option<String>,
     #[serde(default)]
+    reasoning_content: Option<String>,
+    #[serde(default)]
     tool_calls: Vec<DeltaToolCall>,
 }
 
@@ -192,6 +194,13 @@ fn decode(data: &str) -> Result<Vec<ModelChunk>, AgentError> {
     for choice in chunk.choices {
         if let Some(content) = choice.delta.content.filter(|content| !content.is_empty()) {
             chunks.push(ModelChunk::Text(content));
+        }
+        if let Some(reasoning) = choice
+            .delta
+            .reasoning_content
+            .filter(|text| !text.is_empty())
+        {
+            chunks.push(ModelChunk::Reasoning(reasoning));
         }
         for call in choice.delta.tool_calls {
             let (name, arguments) = call

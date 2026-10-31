@@ -1046,10 +1046,35 @@ button.quote-block__main {
   color: #fff;
 }
 
-.button--stop {
+.composer__stop {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin: 0 6px;
+  border: 0;
+  border-radius: 18px;
   background: var(--color-ink);
-  color: #fff;
-  animation: breathe 1.6s ease-in-out infinite;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  animation: stop-pulse 1.6s ease-in-out infinite;
+}
+
+.composer__stop span {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-surface);
+}
+
+@keyframes stop-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9);
+  }
 }
 
 .bubble--settled {
@@ -3085,7 +3110,7 @@ button.quote-block__main {
   .bubble--settled,
   .shimmer,
   .caret,
-  .button--stop,
+  .composer__stop,
   .spinner,
   .trace-step__now::before,
   .voice-panel__mic,
@@ -3874,4 +3899,48 @@ button.sent-files__image {
   .viewer__scale {
     transition-duration: 120ms;
   }
+}
+
+.reasoning {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 86%;
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.reasoning__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reasoning__time {
+  font-size: 13px;
+  color: var(--color-accent-strong);
+  animation: fade-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.reasoning__toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reasoning__box {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink-mid);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  animation: fade-in var(--motion-standard) var(--ease-standard) both;
 }

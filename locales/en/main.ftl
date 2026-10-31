@@ -123,6 +123,10 @@ composer-placeholder = Tell Xiaoban what you need
 composer-send = Send
 composer-stop = Stop
 
+reasoning-thinking = Thinking for { $seconds }s
+reasoning-thought = Thought for { $seconds }s
+reasoning-show = Show thinking ›
+reasoning-hide = Hide thinking
 draft-thinking = Thinking…
 draft-elapsed = Thought for { $seconds } s
 draft-failed = Didn’t work: { $reason }

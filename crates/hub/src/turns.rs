@@ -458,6 +458,7 @@ async fn drive(
                 state.publish(match event {
                     TurnEvent::Thinking => Event::Thinking { turn_id },
                     TurnEvent::TextDelta(delta) => Event::TextDelta { turn_id, delta },
+                    TurnEvent::ReasoningDelta(delta) => Event::ReasoningDelta { turn_id, delta },
                     TurnEvent::ToolUsed(call) => Event::ToolUsed {
                         turn_id,
                         detail: crate::steps::detail(&call),

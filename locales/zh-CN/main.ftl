@@ -123,6 +123,10 @@ composer-placeholder = 想让小伴做什么，直接说
 composer-send = 发送
 composer-stop = 停
 
+reasoning-thinking = 想了 { $seconds } 秒
+reasoning-thought = 想了 { $seconds } 秒
+reasoning-show = 看思路 ›
+reasoning-hide = 收起思路
 draft-thinking = 在想…
 draft-elapsed = 已想 { $seconds } 秒
 draft-failed = 没成功：{ $reason }
