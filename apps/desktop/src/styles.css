@@ -2017,6 +2017,7 @@ button {
 }
 
 .trip-stop__row {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -2082,10 +2083,16 @@ button {
 }
 
 .trip-stop__actions {
-  flex: none;
+  position: absolute;
+  top: 6px;
+  right: 8px;
   display: flex;
   gap: var(--space-md);
+  padding: 2px 0 2px 12px;
+  background: var(--color-ground);
+  border-radius: var(--radius-sm);
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--motion-fast) var(--ease-standard);
 }
 
@@ -2093,6 +2100,7 @@ button {
 .trip-stop__row:focus-within .trip-stop__actions,
 .trip-stop[data-selected] .trip-stop__actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .trip-stop__leg {
