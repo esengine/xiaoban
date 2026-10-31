@@ -192,6 +192,9 @@ impl HubTools<'_> {
         self.before_acting().await;
         let result = self.state.operator.snapshot(app.id).await;
         match result {
+            Ok(snapshot) if snapshot.elements.is_empty() => error(
+                "this app exposes no buttons or fields to Xiaoban (it may be drawn in a way the system cannot read); do not guess, tell the user which steps they need to do themselves",
+            ),
             Ok(snapshot) => serde_json::to_string(&snapshot).unwrap_or_default(),
             Err(failure) => error(&failure),
         }

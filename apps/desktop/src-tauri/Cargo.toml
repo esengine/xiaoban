@@ -33,10 +33,10 @@ block2 = "0.6"
 objc2 = "0.6"
 objc2-av-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "AVCaptureDevice", "AVMediaFormat"] }
 objc2-avf-audio = "0.3"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "libc", "NSRunningApplication"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "libc", "NSRunningApplication", "NSWorkspace"] }
 objc2-application-services = { version = "0.3", default-features = false, features = ["std", "libc", "HIServices", "AXUIElement", "AXError", "AXValue"] }
 objc2-core-foundation = { version = "0.3", features = ["CFArray", "CFCGTypes", "CFNumber", "CFString"] }
-objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "libc", "CGEvent", "CGEventTypes", "CGRemoteOperation", "CGWindow"] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "libc", "CGEvent", "CGEventTypes", "CGError", "CGRemoteOperation", "CGWindow"] }
 objc2-core-location = "0.3"
 objc2-event-kit = { version = "0.3", default-features = false, features = ["std", "block2", "EKCalendar", "EKCalendarItem", "EKEvent", "EKEventStore", "EKObject", "EKSource", "EKTypes"] }
 objc2-foundation = { version = "0.3", features = ["NSArray", "NSBundle", "NSDate", "NSError", "NSFileManager", "NSPredicate", "NSString", "NSURL"] }

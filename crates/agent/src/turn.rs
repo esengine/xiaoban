@@ -35,6 +35,10 @@ pub struct TurnOutcome {
 
 pub trait ToolRunner: Send + Sync {
     fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String>;
+
+    fn reusable(&self, _name: &str) -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -147,7 +151,10 @@ impl Agent {
                     call.function.name.clone(),
                     canonical(&call.function.arguments),
                 );
-                let result = match seen.get_mut(&key) {
+                let result = match seen
+                    .get_mut(&key)
+                    .filter(|_| tools.reusable(&call.function.name))
+                {
                     Some((_, count)) if *count >= REPEAT_LIMIT => REPEATED.to_owned(),
                     Some((cached, count)) => {
                         *count += 1;

@@ -249,3 +249,53 @@ async fn repeated_calls_reuse_results_and_are_cut_off() {
     assert_eq!(results[..2], ["found", "found"]);
     assert!(results[2].contains("already ran this exact call"));
 }
+
+#[derive(Default)]
+struct ClickingTools {
+    runs: Mutex<u32>,
+}
+
+impl ToolRunner for ClickingTools {
+    fn run<'a>(&'a self, _: &'a ToolCall) -> BoxFuture<'a, String> {
+        Box::pin(async move {
+            *self.runs.lock().unwrap() += 1;
+            "done".to_owned()
+        })
+    }
+
+    fn reusable(&self, name: &str) -> bool {
+        name != "click"
+    }
+}
+
+#[tokio::test]
+async fn actions_run_every_time() {
+    let press = |id: &str| ModelChunk::ToolCallDelta {
+        index: 0,
+        id: Some(id.into()),
+        name: Some("click".into()),
+        arguments: r#"{ "element": 4 }"#.into(),
+    };
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![press("a")],
+        vec![press("b")],
+        vec![press("c")],
+        vec![ModelChunk::Text("好".into())],
+    ]));
+    let agent = Agent::new(provider);
+    let tools = ClickingTools::default();
+    let (tx, _rx) = mpsc::channel(64);
+    let outcome = agent
+        .run_turn(
+            &StablePrefix::new("system"),
+            &Transcript::default(),
+            "按三次 4",
+            &tools,
+            tx,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(outcome.text, "好");
+    assert_eq!(*tools.runs.lock().unwrap(), 3);
+}

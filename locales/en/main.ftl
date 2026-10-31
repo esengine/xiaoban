@@ -503,4 +503,6 @@ operate-consent-later = Not now
 operate-consent-open = Open System Settings
 overlay-click = Click “{ $label }” · step { $n }
 overlay-type = Type into “{ $label }” · step { $n }
+overlay-click-real = Clicking “{ $label }” with the real mouse · step { $n } · back in a moment
+overlay-type-real = Typing into “{ $label }” with the real keyboard · step { $n } · back in a moment
 overlay-unnamed = here

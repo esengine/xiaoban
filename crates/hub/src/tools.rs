@@ -501,6 +501,22 @@ impl HubTools<'_> {
 }
 
 impl ToolRunner for HubTools<'_> {
+    fn reusable(&self, name: &str) -> bool {
+        !matches!(
+            name,
+            REMEMBER
+                | LOCATE
+                | OPEN_APP
+                | SAVE_TRIP
+                | SAVE_PLACE_DETAIL
+                | crate::operate_tools::LOOK_AT_APP
+                | crate::operate_tools::CLICK
+                | crate::operate_tools::TYPE_TEXT
+                | crate::operate_tools::PRESS_KEYS
+                | crate::operate_tools::CONFIRM
+        )
+    }
+
     fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String> {
         Box::pin(async move {
             let arguments = call.function.arguments.as_str();

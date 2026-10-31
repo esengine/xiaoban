@@ -4,10 +4,14 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use futures_util::future::BoxFuture;
-use objc2_app_kit::NSRunningApplication;
+use objc2::rc::Retained;
+use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication, NSWorkspace};
 use objc2_application_services::{AXError, AXIsProcessTrusted, AXUIElement, AXValue, AXValueType};
 use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType, CGPoint, CGSize};
-use objc2_core_graphics::{CGEvent, CGEventFlags};
+use objc2_core_graphics::{
+    CGAssociateMouseAndMouseCursorPosition, CGEvent, CGEventFlags, CGEventTapLocation, CGEventType,
+    CGMouseButton, CGWarpMouseCursorPosition,
+};
 use objc2_foundation::NSString;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
@@ -20,6 +24,8 @@ const MAX_TEXT: usize = 80;
 const LAUNCH_WAIT: Duration = Duration::from_secs(8);
 const KEY_GAP: Duration = Duration::from_millis(30);
 const POINTER_TRAVEL: Duration = Duration::from_millis(700);
+const FOCUS_SETTLE: Duration = Duration::from_millis(250);
+const TYPE_CHUNK: usize = 16;
 
 type Job = Box<dyn FnOnce(&mut Worker) + Send>;
 
@@ -41,6 +47,7 @@ struct Pointer {
     height: f64,
     label: String,
     typing: bool,
+    real: bool,
 }
 
 impl MacOperator {
@@ -201,13 +208,13 @@ impl Walk {
     }
 }
 
-fn running(bundle: &str) -> Option<objc2::rc::Retained<NSRunningApplication>> {
+fn running(bundle: &str) -> Option<Retained<NSRunningApplication>> {
     NSRunningApplication::runningApplicationsWithBundleIdentifier(&NSString::from_str(bundle))
         .iter()
         .find(|app| app.isFinishedLaunching())
 }
 
-fn launch(bundle: &str) -> Result<objc2::rc::Retained<NSRunningApplication>, String> {
+fn launch(bundle: &str) -> Result<Retained<NSRunningApplication>, String> {
     if let Some(app) = running(bundle) {
         return Ok(app);
     }
@@ -278,47 +285,155 @@ fn frame(element: &AXUIElement) -> Option<(CGPoint, CGSize)> {
     read.then_some((point, size))
 }
 
+struct Borrowed {
+    previous: Option<Retained<NSRunningApplication>>,
+    cursor: CGPoint,
+}
+
+#[allow(deprecated)]
+fn borrow_focus(bundle: &str) -> Result<Borrowed, String> {
+    let previous = NSWorkspace::sharedWorkspace().frontmostApplication();
+    let cursor = CGEvent::location(CGEvent::new(None).as_deref());
+    let target = running(bundle).ok_or("the app is not running")?;
+    target.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+    std::thread::sleep(FOCUS_SETTLE);
+    Ok(Borrowed { previous, cursor })
+}
+
+#[allow(deprecated)]
+fn give_back(borrowed: Borrowed) {
+    let _ = CGWarpMouseCursorPosition(borrowed.cursor);
+    let _ = CGAssociateMouseAndMouseCursorPosition(true);
+    if let Some(previous) = borrowed.previous {
+        previous.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+    }
+}
+
+fn real_click(at: CGPoint) -> Result<(), String> {
+    for kind in [CGEventType::LeftMouseDown, CGEventType::LeftMouseUp] {
+        let event = CGEvent::new_mouse_event(None, kind, at, CGMouseButton::Left)
+            .ok_or("could not create a mouse event")?;
+        CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&event));
+        std::thread::sleep(KEY_GAP);
+    }
+    Ok(())
+}
+
+const COMMAND_KEY: u16 = 0x37;
+const A_KEY: u16 = 0x00;
+
+fn post_key(key: u16, down: bool, flags: CGEventFlags, text: Option<&[u16]>) -> Result<(), String> {
+    let event =
+        CGEvent::new_keyboard_event(None, key, down).ok_or("could not create a key event")?;
+    CGEvent::set_flags(Some(&event), flags);
+    if let Some(text) = text {
+        unsafe {
+            CGEvent::keyboard_set_unicode_string(Some(&event), text.len() as _, text.as_ptr());
+        };
+    }
+    CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&event));
+    std::thread::sleep(KEY_GAP);
+    Ok(())
+}
+
+fn real_select_all() -> Result<(), String> {
+    let command = CGEventFlags::MaskCommand;
+    post_key(COMMAND_KEY, true, command, None)?;
+    let pressed =
+        post_key(A_KEY, true, command, None).and_then(|()| post_key(A_KEY, false, command, None));
+    post_key(COMMAND_KEY, false, CGEventFlags::empty(), None)?;
+    pressed
+}
+
+fn real_type(text: &str) -> Result<(), String> {
+    let units: Vec<u16> = text.encode_utf16().collect();
+    for chunk in units.chunks(TYPE_CHUNK) {
+        post_key(A_KEY, true, CGEventFlags::empty(), Some(chunk))?;
+        post_key(A_KEY, false, CGEventFlags::empty(), Some(chunk))?;
+    }
+    Ok(())
+}
+
+fn by_hand(bundle: &str, center: CGPoint, text: Option<&str>) -> Result<(), String> {
+    let borrowed = borrow_focus(bundle)?;
+    let result = real_click(center).and_then(|()| match text {
+        Some(text) => {
+            real_select_all()?;
+            real_type(text)
+        }
+        None => Ok(()),
+    });
+    give_back(borrowed);
+    result
+}
+
+fn took(element: &AXUIElement, value: &str) -> bool {
+    let wanted: String = value.trim().chars().take(MAX_TEXT).collect();
+    wanted.is_empty() || text(element, "AXValue").is_some_and(|now| now == wanted)
+}
+
 fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(), String> {
     let (element, label) = worker
         .elements
         .get(bundle)
         .and_then(|elements| elements.get(index as usize))
         .ok_or("no element with that number; call look_at_app again")?;
-    if let Some((origin, size)) = frame(element) {
-        let _ = worker.app.emit(
-            crate::overlay::POINTER_EVENT,
-            Pointer {
-                x: origin.x,
-                y: origin.y,
-                width: size.width,
-                height: size.height,
-                label: label.clone(),
-                typing: matches!(action, UiAction::SetText(_)),
-            },
-        );
+    let bounds = frame(element);
+    let typing = matches!(action, UiAction::SetText(_));
+    let show = |real: bool| {
+        if let Some((origin, size)) = bounds {
+            let _ = worker.app.emit(
+                crate::overlay::POINTER_EVENT,
+                Pointer {
+                    x: origin.x,
+                    y: origin.y,
+                    width: size.width,
+                    height: size.height,
+                    label: label.clone(),
+                    typing,
+                    real,
+                },
+            );
+        }
+    };
+    show(false);
+    if bounds.is_some() {
         std::thread::sleep(POINTER_TRAVEL);
     }
-    let error = match action {
-        UiAction::Press => unsafe { element.perform_action(&CFString::from_static_str("AXPress")) },
-        UiAction::SetText(value) => unsafe {
-            let _ = element.set_attribute_value(
-                &CFString::from_static_str("AXFocused"),
-                CFBoolean::new(true),
-            );
-            element.set_attribute_value(
-                &CFString::from_static_str("AXValue"),
-                &CFString::from_str(value),
-            )
-        },
+    let direct = match action {
+        UiAction::Press => {
+            let status = unsafe { element.perform_action(&CFString::from_static_str("AXPress")) };
+            status == AXError::Success
+        }
+        UiAction::SetText(value) => {
+            let status = unsafe {
+                let _ = element.set_attribute_value(
+                    &CFString::from_static_str("AXFocused"),
+                    CFBoolean::new(true),
+                );
+                element.set_attribute_value(
+                    &CFString::from_static_str("AXValue"),
+                    &CFString::from_str(value),
+                )
+            };
+            status == AXError::Success && took(element, value)
+        }
     };
-    if error == AXError::Success {
-        Ok(())
-    } else {
-        Err(format!(
-            "the app refused the action (accessibility error {})",
-            error.0
-        ))
+    if direct {
+        return Ok(());
     }
+    let (origin, size) =
+        bounds.ok_or("the app refused the action and the element has no position to click")?;
+    let center = CGPoint {
+        x: origin.x + size.width / 2.0,
+        y: origin.y + size.height / 2.0,
+    };
+    show(true);
+    let text = match action {
+        UiAction::SetText(value) => Some(value.as_str()),
+        UiAction::Press => None,
+    };
+    by_hand(bundle, center, text)
 }
 
 fn key_code(name: &str) -> Option<u16> {

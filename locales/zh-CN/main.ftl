@@ -500,4 +500,6 @@ operate-consent-later = 先不开
 operate-consent-open = 去系统设置开启
 overlay-click = 点「{ $label }」 · 第 { $n } 步
 overlay-type = 在「{ $label }」里输入 · 第 { $n } 步
+overlay-click-real = 用真实鼠标点「{ $label }」 · 第 { $n } 步 · 马上还你
+overlay-type-real = 用真实键盘在「{ $label }」里输入 · 第 { $n } 步 · 马上还你
 overlay-unnamed = 这里

@@ -14,6 +14,7 @@ interface Pointer {
   height: number;
   label: string;
   typing: boolean;
+  real: boolean;
 }
 
 export function OperateOverlay() {
@@ -58,10 +59,19 @@ export function OperateOverlay() {
 
   const step = active?.steps.length ?? 0;
   const caption = pointer
-    ? t(pointer.typing ? "overlay-type" : "overlay-click", {
-        label: pointer.label || t("overlay-unnamed"),
-        n: step,
-      })
+    ? t(
+        pointer.real
+          ? pointer.typing
+            ? "overlay-type-real"
+            : "overlay-click-real"
+          : pointer.typing
+            ? "overlay-type"
+            : "overlay-click",
+        {
+          label: pointer.label || t("overlay-unnamed"),
+          n: step,
+        },
+      )
     : null;
 
   return (
