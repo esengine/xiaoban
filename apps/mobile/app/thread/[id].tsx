@@ -1,4 +1,6 @@
+import { failureKey } from "@xiaoban/client";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
+import { useI18n } from "@xiaoban/i18n/react";
 import { color, radius, space } from "@xiaoban/tokens";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,6 +25,7 @@ interface Row {
 
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useI18n();
   const store = useHubStore();
   const state = useHubState(store);
   const [text, setText] = useState("");
@@ -41,11 +44,13 @@ export default function ThreadScreen() {
     ...draftsForThread(state, id).map((draft) => ({
       key: draft.turnId,
       role: "assistant" as const,
-      text: draft.failure ? `没成功：${draft.failure.message}` : draft.text || "在想…",
+      text: draft.failure
+        ? t("draft-failed", { reason: t(failureKey(draft.failure.kind)) })
+        : draft.text || t("draft-thinking"),
       pending: !draft.failure,
     })),
   ];
-  const title = state.threads.find((thread) => thread.id === id)?.title ?? "";
+  const title = state.threads.find((thread) => thread.id === id)?.title ?? t("thread-untitled");
 
   const send = async () => {
     const value = text.trim();
@@ -78,14 +83,14 @@ export default function ThreadScreen() {
       <View style={styles.composer}>
         <TextInput
           style={[shared.input, styles.field]}
-          placeholder="说点什么"
+          placeholder={t("composer-placeholder")}
           value={text}
           onChangeText={setText}
           onSubmitEditing={send}
           returnKeyType="send"
         />
         <Pressable style={shared.primaryButton} onPress={send} accessibilityRole="button">
-          <Text style={shared.primaryButtonText}>发送</Text>
+          <Text style={shared.primaryButtonText}>{t("composer-send")}</Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>

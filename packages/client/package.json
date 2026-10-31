@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@xiaoban/protocol": "workspace:*"
+    "@xiaoban/protocol": "workspace:*",
+    "@xiaoban/i18n": "workspace:*"
   },
   "peerDependencies": {
     "react": "catalog:"

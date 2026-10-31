@@ -8,7 +8,7 @@ use xiaoban_relay::Relay;
 #[command(
     name = "xiaoban-relay",
     version,
-    about = "小伴自建中转：只转发加密数据，不保存、不认账号"
+    about = "Self-hosted Xiaoban relay: forwards encrypted frames, stores nothing, has no accounts"
 )]
 struct Args {
     #[arg(long, env = "XIAOBAN_RELAY_BIND", default_value = "0.0.0.0:8443")]

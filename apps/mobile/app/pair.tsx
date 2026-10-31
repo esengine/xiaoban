@@ -1,3 +1,5 @@
+import { describeError } from "@xiaoban/client";
+import { useI18n } from "@xiaoban/i18n/react";
 import { color, space } from "@xiaoban/tokens";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -6,6 +8,7 @@ import { useHubContext } from "../src/hub/HubProvider.tsx";
 import { shared } from "../src/theme.ts";
 
 export default function PairScreen() {
+  const { t } = useI18n();
   const { pair } = useHubContext();
   const [address, setAddress] = useState("");
   const [code, setCode] = useState("");
@@ -19,7 +22,7 @@ export default function PairScreen() {
       await pair(address, code);
       router.replace("/");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "连接失败");
+      setError(t(describeError(cause)));
     } finally {
       setBusy(false);
     }
@@ -27,12 +30,10 @@ export default function PairScreen() {
 
   return (
     <View style={[shared.screen, styles.body]}>
-      <Text style={styles.lead}>
-        在电脑上打开小伴 › 设置 › 设备，把显示的地址和配对码填在这里。
-      </Text>
+      <Text style={styles.lead}>{t("pair-lead")}</Text>
       <TextInput
         style={shared.input}
-        placeholder="电脑地址，比如 192.168.1.8"
+        placeholder={t("pair-address-placeholder")}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="url"
@@ -41,7 +42,7 @@ export default function PairScreen() {
       />
       <TextInput
         style={shared.input}
-        placeholder="6 位配对码"
+        placeholder={t("pair-code-placeholder")}
         keyboardType="number-pad"
         maxLength={6}
         value={code}
@@ -54,7 +55,7 @@ export default function PairScreen() {
         onPress={submit}
         accessibilityRole="button"
       >
-        <Text style={shared.primaryButtonText}>{busy ? "连接中…" : "连接"}</Text>
+        <Text style={shared.primaryButtonText}>{t(busy ? "pair-submitting" : "pair-submit")}</Text>
       </Pressable>
     </View>
   );

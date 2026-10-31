@@ -1,5 +1,6 @@
 import type { HubStore } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
+import { useI18n } from "@xiaoban/i18n/react";
 import type { Thread } from "@xiaoban/protocol";
 import { color, space } from "@xiaoban/tokens";
 import { Redirect, router } from "expo-router";
@@ -15,6 +16,7 @@ export default function HomeScreen() {
 }
 
 function ThreadList({ store }: { store: HubStore }) {
+  const { t } = useI18n();
   const { threads, status } = useHubState(store);
 
   const create = async () => {
@@ -24,7 +26,7 @@ function ThreadList({ store }: { store: HubStore }) {
 
   return (
     <View style={shared.screen}>
-      {status !== "open" && <Text style={styles.status}>正在连接家里的电脑…</Text>}
+      {status !== "open" && <Text style={styles.status}>{t("connection-waiting-for-hub")}</Text>}
       <FlatList<Thread>
         data={threads}
         keyExtractor={(thread) => thread.id}
@@ -35,17 +37,17 @@ function ThreadList({ store }: { store: HubStore }) {
             accessibilityRole="button"
             onPress={() => router.push({ pathname: "/thread/[id]", params: { id: item.id } })}
           >
-            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.title}>{item.title ?? t("thread-untitled")}</Text>
           </Pressable>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>还没有对话</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t("thread-empty")}</Text>}
       />
       <Pressable
         style={[shared.primaryButton, styles.fab]}
         onPress={create}
         accessibilityRole="button"
       >
-        <Text style={shared.primaryButtonText}>新对话</Text>
+        <Text style={shared.primaryButtonText}>{t("thread-new")}</Text>
       </Pressable>
     </View>
   );

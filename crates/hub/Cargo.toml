@@ -18,6 +18,7 @@ hex.workspace = true
 mdns-sd.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+sys-locale.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
@@ -25,6 +26,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
 xiaoban-agent.workspace = true
+xiaoban-i18n.workspace = true
 xiaoban-protocol.workspace = true
 xiaoban-store.workspace = true
 

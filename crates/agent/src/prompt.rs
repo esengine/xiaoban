@@ -6,9 +6,6 @@ use xiaoban_protocol::ContextNote;
 
 use crate::{ChatMessage, ChatRequest, ChatRole};
 
-pub const DEFAULT_SYSTEM_PROMPT: &str =
-    "你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。";
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StablePrefix {
     messages: Arc<[ChatMessage]>,
@@ -32,12 +29,6 @@ impl StablePrefix {
 
     pub fn fingerprint(&self) -> &str {
         &self.fingerprint
-    }
-}
-
-impl Default for StablePrefix {
-    fn default() -> Self {
-        Self::new(DEFAULT_SYSTEM_PROMPT)
     }
 }
 
@@ -136,7 +127,7 @@ mod tests {
             StablePrefix::new("a").fingerprint(),
             StablePrefix::new("b").fingerprint()
         );
-        assert_eq!(StablePrefix::default().fingerprint().len(), 16);
+        assert_eq!(StablePrefix::new("a").fingerprint().len(), 16);
     }
 
     #[test]
@@ -160,7 +151,7 @@ mod tests {
 
     #[test]
     fn appending_keeps_the_previous_request_as_an_exact_prefix() {
-        let prefix = StablePrefix::default();
+        let prefix = StablePrefix::new("system");
         let mut transcript = Transcript::default();
         let first = assemble(&prefix, &transcript, "明天几点出门");
         transcript.push(ChatMessage::new(ChatRole::User, "明天几点出门"));

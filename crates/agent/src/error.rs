@@ -21,12 +21,12 @@ impl AgentError {
             Self::Status { status, .. } => (FailureKind::Model, *status == 429 || *status >= 500),
             Self::Stream(_) => (FailureKind::Model, true),
             Self::Cancelled => (FailureKind::Cancelled, false),
-            Self::NotConfigured => (FailureKind::Model, false),
+            Self::NotConfigured => (FailureKind::NotConfigured, false),
         };
         Failure {
             kind,
-            message: self.to_string(),
             retryable,
+            detail: self.to_string(),
         }
     }
 }

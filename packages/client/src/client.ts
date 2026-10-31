@@ -38,7 +38,7 @@ export class HubRequestError extends Error {
   readonly code: ErrorCode;
 
   constructor(error: ProtocolError) {
-    super(error.message);
+    super(error.detail);
     this.name = "HubRequestError";
     this.code = error.code;
   }

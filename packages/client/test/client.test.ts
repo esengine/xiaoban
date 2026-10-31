@@ -67,7 +67,7 @@ describe("HubClient", () => {
         {
           type: "error",
           id: frame.id,
-          error: { code: "not_found", message: "thread not found" },
+          error: { code: "not_found", detail: "thread not found" },
         },
       ];
     });

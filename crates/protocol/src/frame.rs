@@ -53,6 +53,7 @@ pub enum ErrorCode {
     Unauthorized,
     BadRequest,
     NotFound,
+    Busy,
     Internal,
 }
 
@@ -61,14 +62,14 @@ pub enum ErrorCode {
 #[ts(export)]
 pub struct ProtocolError {
     pub code: ErrorCode,
-    pub message: String,
+    pub detail: String,
 }
 
 impl ProtocolError {
-    pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
+    pub fn new(code: ErrorCode, detail: impl Into<String>) -> Self {
         Self {
             code,
-            message: message.into(),
+            detail: detail.into(),
         }
     }
 }

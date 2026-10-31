@@ -1,14 +1,17 @@
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
+import { useI18n } from "@xiaoban/i18n/react";
 import { useHub } from "../../app/hub.tsx";
 import { Composer } from "./Composer.tsx";
 import { DraftBubble } from "./DraftBubble.tsx";
 
 export function ChatPane({ threadId }: { threadId: string }) {
+  const { t } = useI18n();
   const store = useHub();
   const state = useHubState(store);
   const messages = state.messages[threadId] ?? [];
   const drafts = draftsForThread(state, threadId);
-  const title = state.threads.find((thread) => thread.id === threadId)?.title ?? "";
+  const title =
+    state.threads.find((thread) => thread.id === threadId)?.title ?? t("thread-untitled");
   const running = drafts.find((draft) => !draft.failure);
 
   return (

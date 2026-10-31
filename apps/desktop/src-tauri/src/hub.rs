@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use tauri::State;
 use tauri::async_runtime::Mutex;
-use xiaoban_agent::{Agent, OpenAiCompatible, OpenAiConfig, UnconfiguredProvider};
-use xiaoban_hub::{Hub, HubConfig, HubHandle};
+use xiaoban_agent::{Agent, OpenAiCompatible, UnconfiguredProvider, first_configured_from_env};
+use xiaoban_hub::{Hub, HubConfig, HubHandle, default_hub_name, system_locale, system_prefix};
 
 const LAN_BIND: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), 47100);
@@ -23,26 +23,22 @@ impl RunningHub {
     }
 }
 
-fn agent_from_env() -> Agent {
-    match std::env::var("XIAOBAN_API_KEY") {
-        Ok(api_key) if !api_key.is_empty() => Agent::new(OpenAiCompatible::new(OpenAiConfig {
-            base_url: std::env::var("XIAOBAN_MODEL_BASE_URL")
-                .unwrap_or_else(|_| "https://api.deepseek.com".into()),
-            api_key,
-            model: std::env::var("XIAOBAN_MODEL").unwrap_or_else(|_| "deepseek-v4-flash".into()),
-        })),
-        _ => Agent::new(UnconfiguredProvider),
+fn agent(prefix: xiaoban_agent::StablePrefix) -> Agent {
+    match first_configured_from_env() {
+        Some((_, config)) => Agent::new(OpenAiCompatible::new(config), prefix),
+        None => Agent::new(UnconfiguredProvider, prefix),
     }
 }
 
 pub async fn start(data_dir: PathBuf) -> anyhow::Result<RunningHub> {
+    let locale = system_locale();
     let config = HubConfig {
         data_dir: Some(data_dir),
         bind: LAN_BIND,
-        name: "小伴".into(),
+        name: default_hub_name(locale),
         advertise: true,
     };
-    let handle = Hub::start(config, agent_from_env()).await?;
+    let handle = Hub::start(config, agent(system_prefix(locale))).await?;
     Ok(RunningHub {
         endpoint: handle.ws_url(),
         handle: Mutex::new(Some(handle)),

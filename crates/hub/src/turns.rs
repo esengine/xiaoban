@@ -64,7 +64,7 @@ pub async fn start(
     let turn_id = uuid::Uuid::now_v7().to_string();
     let cancel = state.turns.claim(&thread_id, &turn_id).ok_or_else(|| {
         ProtocolError::new(
-            ErrorCode::BadRequest,
+            ErrorCode::Busy,
             "a reply is still in progress in this thread",
         )
     })?;

@@ -35,11 +35,7 @@ impl std::fmt::Debug for Agent {
 }
 
 impl Agent {
-    pub fn new(provider: impl ModelProvider) -> Self {
-        Self::with_prefix(provider, StablePrefix::default())
-    }
-
-    pub fn with_prefix(provider: impl ModelProvider, prefix: StablePrefix) -> Self {
+    pub fn new(provider: impl ModelProvider, prefix: StablePrefix) -> Self {
         Self {
             provider: Arc::new(provider),
             prefix,

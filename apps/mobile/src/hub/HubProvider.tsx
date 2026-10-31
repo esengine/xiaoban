@@ -1,4 +1,5 @@
 import { HubClient, HubStore } from "@xiaoban/client";
+import { useI18n } from "@xiaoban/i18n/react";
 import type { Credential } from "@xiaoban/protocol";
 import { createContext, type ReactNode, use, useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
@@ -12,24 +13,26 @@ interface HubContextValue {
   pair: (address: string, code: string) => Promise<void>;
 }
 
-const HubContext = createContext<HubContextValue | null>(null);
-
-function createStore(url: string, deviceId: string, credential: Credential): HubStore {
-  const client = new HubClient({
-    url,
-    device: {
-      deviceId,
-      name: Platform.OS === "ios" ? "iPhone" : "安卓手机",
-      platform: Platform.OS === "ios" ? "ios" : "android",
-    },
-    credential,
-  });
-  return new HubStore(client);
+export class MissingDeviceToken extends Error {
+  override readonly name = "MissingDeviceToken";
 }
 
+const HubContext = createContext<HubContextValue | null>(null);
+const platform = Platform.OS === "ios" ? "ios" : "android";
+
 export function HubProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("loading");
   const [store, setStore] = useState<HubStore | null>(null);
+  const deviceName = t(platform === "ios" ? "device-ios" : "device-android");
+
+  const createStore = useCallback(
+    (url: string, deviceId: string, credential: Credential) =>
+      new HubStore(
+        new HubClient({ url, device: { deviceId, name: deviceName, platform }, credential }),
+      ),
+    [deviceName],
+  );
 
   useEffect(() => {
     void loadSession().then((session) => {
@@ -45,21 +48,24 @@ export function HubProvider({ children }: { children: ReactNode }) {
       setPhase("ready");
       void restored.client.connect();
     });
-  }, []);
+  }, [createStore]);
 
   useEffect(() => () => store?.client.close(), [store]);
 
-  const pair = useCallback(async (address: string, code: string) => {
-    const url = hubUrl(address);
-    const deviceId = newDeviceId();
-    const paired = createStore(url, deviceId, { kind: "pairing_code", code: code.trim() });
-    const welcome = await paired.client.connect();
-    if (!welcome.deviceToken) throw new Error("电脑没有返回配对凭证");
-    const session: Session = { url, deviceId, token: welcome.deviceToken };
-    await saveSession(session);
-    setStore(paired);
-    setPhase("ready");
-  }, []);
+  const pair = useCallback(
+    async (address: string, code: string) => {
+      const url = hubUrl(address);
+      const deviceId = newDeviceId();
+      const paired = createStore(url, deviceId, { kind: "pairing_code", code: code.trim() });
+      const welcome = await paired.client.connect();
+      if (!welcome.deviceToken) throw new MissingDeviceToken();
+      const session: Session = { url, deviceId, token: welcome.deviceToken };
+      await saveSession(session);
+      setStore(paired);
+      setPhase("ready");
+    },
+    [createStore],
+  );
 
   return <HubContext value={{ phase, store, pair }}>{children}</HubContext>;
 }

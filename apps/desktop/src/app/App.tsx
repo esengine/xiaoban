@@ -1,10 +1,12 @@
 import { useHubState } from "@xiaoban/client/react";
+import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { useHub } from "./hub.tsx";
 
 export function App() {
+  const { t } = useI18n();
   const store = useHub();
   const { threads, status } = useHubState(store);
   const [selected, setSelected] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function App() {
 
   return (
     <div className="shell">
-      <nav className="rail" aria-label="主导航">
+      <nav className="rail" aria-label={t("nav-main")}>
         <div className="rail__logo" />
       </nav>
       <ThreadList
@@ -35,9 +37,9 @@ export function App() {
         <ChatPane threadId={activeId} />
       ) : (
         <main className="empty">
-          <p>还没有对话</p>
+          <p>{t("thread-empty")}</p>
           <button type="button" className="button button--primary" onClick={startThread}>
-            和小伴聊聊
+            {t("thread-start")}
           </button>
         </main>
       )}

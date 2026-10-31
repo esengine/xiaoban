@@ -4,7 +4,9 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
-use xiaoban_agent::{Agent, RecordingProvider, ScriptedProvider, StablePrefix, prefix_reuse};
+use xiaoban_agent::{
+    Agent, ModelProvider, RecordingProvider, ScriptedProvider, StablePrefix, prefix_reuse,
+};
 use xiaoban_hub::{Hub, HubConfig, HubHandle};
 use xiaoban_protocol::{
     ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event, PROTOCOL_VERSION,
@@ -80,8 +82,12 @@ impl TestClient {
     }
 }
 
+fn agent(provider: impl ModelProvider) -> Agent {
+    Agent::new(provider, StablePrefix::new("system"))
+}
+
 async fn start_hub(chunks: &[&str]) -> HubHandle {
-    let agent = Agent::new(ScriptedProvider::new(chunks.iter().copied()));
+    let agent = agent(ScriptedProvider::new(chunks.iter().copied()));
     Hub::start(HubConfig::ephemeral(), agent).await.unwrap()
 }
 
@@ -234,7 +240,7 @@ async fn new_thread(client: &mut TestClient) -> String {
 #[tokio::test]
 async fn consecutive_turns_reuse_the_exact_request_prefix() {
     let provider = RecordingProvider::new(ScriptedProvider::new(["好"]));
-    let hub = Hub::start(HubConfig::ephemeral(), Agent::new(provider.clone()))
+    let hub = Hub::start(HubConfig::ephemeral(), agent(provider.clone()))
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
@@ -272,7 +278,7 @@ async fn consecutive_turns_reuse_the_exact_request_prefix() {
 #[tokio::test]
 async fn second_message_is_rejected_while_a_reply_is_running() {
     let provider = ScriptedProvider::new(["慢", "慢"]).with_delay(Duration::from_millis(150));
-    let hub = Hub::start(HubConfig::ephemeral(), Agent::new(provider))
+    let hub = Hub::start(HubConfig::ephemeral(), agent(provider))
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
@@ -303,7 +309,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
                 id: Some(got),
                 error,
             } if got == id => {
-                assert_eq!(error.code, ErrorCode::BadRequest);
+                assert_eq!(error.code, ErrorCode::Busy);
                 break;
             }
             ServerFrame::Response { id: got, .. } if got == id => panic!("should be rejected"),
@@ -321,7 +327,7 @@ async fn changing_the_stable_prefix_starts_a_new_epoch_that_keeps_history() {
         ..HubConfig::ephemeral()
     };
 
-    let hub = Hub::start(config.clone(), Agent::new(ScriptedProvider::new(["7:40"])))
+    let hub = Hub::start(config.clone(), agent(ScriptedProvider::new(["7:40"])))
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
@@ -331,7 +337,7 @@ async fn changing_the_stable_prefix_starts_a_new_epoch_that_keeps_history() {
     hub.shutdown().await;
 
     let provider = RecordingProvider::new(ScriptedProvider::new(["带"]));
-    let upgraded = Agent::with_prefix(provider.clone(), StablePrefix::new("新版提示词"));
+    let upgraded = Agent::new(provider.clone(), StablePrefix::new("新版提示词"));
     let hub = Hub::start(config, upgraded).await.unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
     converse(&mut client, &thread, "要带伞吗", Vec::new()).await;

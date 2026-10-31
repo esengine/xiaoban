@@ -12,6 +12,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
     "@xiaoban/client": "workspace:*",
+    "@xiaoban/i18n": "workspace:*",
     "@xiaoban/protocol": "workspace:*",
     "@xiaoban/tokens": "workspace:*",
     "react": "catalog:",

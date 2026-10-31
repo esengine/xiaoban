@@ -4,7 +4,7 @@ use xiaoban_store::{EntryRole, EpochReason, Store, TranscriptEntry};
 #[tokio::test]
 async fn threads_and_messages_round_trip() {
     let store = Store::open_in_memory().unwrap();
-    let thread = store.create_thread("新家装修".into()).await.unwrap();
+    let thread = store.create_thread(Some("新家装修".into())).await.unwrap();
     store
         .append_message(thread.id.clone(), Role::User, "木工几号进场".into())
         .await
@@ -59,7 +59,7 @@ async fn settings_upsert() {
 #[tokio::test]
 async fn transcript_is_append_only_and_carried_across_epochs() {
     let store = Store::open_in_memory().unwrap();
-    let thread = store.create_thread("出门".into()).await.unwrap();
+    let thread = store.create_thread(Some("出门".into())).await.unwrap();
     assert!(
         store
             .latest_epoch(thread.id.clone())
@@ -127,7 +127,7 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
 #[tokio::test]
 async fn usage_totals_sum_every_turn() {
     let store = Store::open_in_memory().unwrap();
-    let thread = store.create_thread("t".into()).await.unwrap();
+    let thread = store.create_thread(None).await.unwrap();
     let epoch = store
         .start_epoch(
             thread.id.clone(),

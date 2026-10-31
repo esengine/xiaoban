@@ -6,7 +6,7 @@ use ts_rs::TS;
 #[ts(export)]
 pub struct Thread {
     pub id: String,
-    pub title: String,
+    pub title: Option<String>,
     #[ts(type = "number")]
     pub created_at: i64,
     #[ts(type = "number")]
@@ -87,6 +87,7 @@ pub struct HubInfo {
 #[ts(export)]
 pub enum FailureKind {
     Model,
+    NotConfigured,
     Network,
     Cancelled,
     Budget,
@@ -98,6 +99,6 @@ pub enum FailureKind {
 #[ts(export)]
 pub struct Failure {
     pub kind: FailureKind,
-    pub message: String,
     pub retryable: bool,
+    pub detail: String,
 }

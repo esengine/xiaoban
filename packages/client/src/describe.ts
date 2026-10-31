@@ -1,0 +1,41 @@
+import type { PlainMessageKey } from "@xiaoban/i18n";
+import type { ErrorCode, FailureKind } from "@xiaoban/protocol";
+import { type ConnectionStatus, HubRequestError } from "./client.ts";
+
+const FAILURE_KEYS = {
+  model: "failure-model",
+  not_configured: "failure-not-configured",
+  network: "failure-network",
+  cancelled: "failure-cancelled",
+  budget: "failure-budget",
+  internal: "failure-internal",
+} as const satisfies Record<FailureKind, PlainMessageKey>;
+
+const ERROR_KEYS = {
+  unsupported_protocol: "error-unsupported-protocol",
+  unauthorized: "error-unauthorized",
+  bad_request: "error-bad-request",
+  not_found: "error-not-found",
+  busy: "error-busy",
+  internal: "error-internal",
+} as const satisfies Record<ErrorCode, PlainMessageKey>;
+
+const CONNECTION_KEYS = {
+  idle: "connection-idle",
+  connecting: "connection-connecting",
+  open: "connection-open",
+  reconnecting: "connection-reconnecting",
+  closed: "connection-closed",
+} as const satisfies Record<ConnectionStatus, PlainMessageKey>;
+
+export function failureKey(kind: FailureKind): PlainMessageKey {
+  return FAILURE_KEYS[kind];
+}
+
+export function connectionKey(status: ConnectionStatus): PlainMessageKey {
+  return CONNECTION_KEYS[status];
+}
+
+export function describeError(error: unknown): PlainMessageKey {
+  return error instanceof HubRequestError ? ERROR_KEYS[error.code] : "error-unreachable";
+}

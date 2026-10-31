@@ -1,4 +1,5 @@
-import type { Draft } from "@xiaoban/client";
+import { type Draft, failureKey } from "@xiaoban/client";
+import { useI18n } from "@xiaoban/i18n/react";
 import { waiting } from "@xiaoban/tokens";
 import { useEffect, useState } from "react";
 
@@ -13,6 +14,7 @@ function useElapsed(since: number, active: boolean): number {
 }
 
 export function DraftBubble({ draft }: { draft: Draft }) {
+  const { t } = useI18n();
   const waitingForText = draft.text === "" && !draft.failure;
   const elapsed = useElapsed(draft.startedAt, waitingForText);
 
@@ -20,18 +22,21 @@ export function DraftBubble({ draft }: { draft: Draft }) {
     return (
       <li className="bubble bubble--assistant bubble--failed">
         {draft.text && <span>{draft.text}</span>}
-        <span className="bubble__note">没成功：{draft.failure.message}</span>
+        <span className="bubble__note">
+          {t("draft-failed", { reason: t(failureKey(draft.failure.kind)) })}
+        </span>
       </li>
     );
   }
   if (waitingForText) {
     if (elapsed < waiting.silentMs) return null;
-    const seconds = Math.floor(elapsed / 1000);
     return (
       <li className="bubble bubble--assistant bubble--thinking" aria-live="polite">
-        <span className="shimmer">在想…</span>
+        <span className="shimmer">{t("draft-thinking")}</span>
         {elapsed >= waiting.showElapsedMs && (
-          <span className="bubble__note">已想 {seconds} 秒</span>
+          <span className="bubble__note">
+            {t("draft-elapsed", { seconds: Math.floor(elapsed / 1000) })}
+          </span>
         )}
       </li>
     );

@@ -13,7 +13,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
 }
 
 impl Store {
-    pub async fn create_thread(&self, title: String) -> Result<Thread> {
+    pub async fn create_thread(&self, title: Option<String>) -> Result<Thread> {
         self.with(move |conn| {
             let now = now_ms();
             let thread = Thread {

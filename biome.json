@@ -34,8 +34,24 @@
   "overrides": [
     {
       "includes": ["packages/protocol/src/generated/**"],
-      "linter": { "enabled": false },
-      "assist": { "enabled": false }
+      "linter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["apps/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noJsxLiterals": {
+              "level": "error"
+            }
+          }
+        }
+      }
     }
   ]
 }

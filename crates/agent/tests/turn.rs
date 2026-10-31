@@ -3,8 +3,8 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{
-    Agent, AgentError, ChatMessage, ChatRole, RecordingProvider, ScriptedProvider, Transcript,
-    TurnEvent, prefix_reuse, user_wire,
+    Agent, AgentError, ChatMessage, ChatRole, RecordingProvider, ScriptedProvider, StablePrefix,
+    Transcript, TurnEvent, prefix_reuse, user_wire,
 };
 use xiaoban_protocol::ContextNote;
 
@@ -21,7 +21,10 @@ async fn turn(agent: &Agent, transcript: &mut Transcript, wire: &str) -> String 
 
 #[tokio::test]
 async fn streams_deltas_and_collects_text() {
-    let agent = Agent::new(ScriptedProvider::new(["7:40", " 出门"]));
+    let agent = Agent::new(
+        ScriptedProvider::new(["7:40", " 出门"]),
+        StablePrefix::new("system"),
+    );
     let (tx, mut rx) = mpsc::channel(16);
     let outcome = agent
         .run_turn(
@@ -51,7 +54,7 @@ async fn streams_deltas_and_collects_text() {
 #[tokio::test]
 async fn every_request_extends_the_previous_one_byte_for_byte() {
     let provider = RecordingProvider::new(ScriptedProvider::new(["好的"]));
-    let agent = Agent::new(provider.clone());
+    let agent = Agent::new(provider.clone(), StablePrefix::new("system"));
     let mut transcript = Transcript::default();
     let context = [ContextNote {
         label: "页面".into(),
@@ -80,7 +83,7 @@ async fn every_request_extends_the_previous_one_byte_for_byte() {
 #[tokio::test]
 async fn cancellation_stops_the_turn() {
     let provider = ScriptedProvider::new(["a", "b", "c"]).with_delay(Duration::from_millis(200));
-    let agent = Agent::new(provider);
+    let agent = Agent::new(provider, StablePrefix::new("system"));
     let (tx, _rx) = mpsc::channel(16);
     let cancel = CancellationToken::new();
     let trigger = cancel.clone();

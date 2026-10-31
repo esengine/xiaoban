@@ -3,8 +3,6 @@ use xiaoban_protocol::{ErrorCode, ProtocolError, Request, Response};
 use crate::state::SharedState;
 use crate::turns;
 
-const DEFAULT_TITLE: &str = "新的对话";
-
 pub async fn handle(state: &SharedState, request: Request) -> Result<Response, ProtocolError> {
     Ok(match request {
         Request::ListThreads => Response::Threads {
@@ -13,8 +11,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
         Request::CreateThread { title } => {
             let title = title
                 .map(|title| title.trim().to_owned())
-                .filter(|title| !title.is_empty())
-                .unwrap_or_else(|| DEFAULT_TITLE.to_owned());
+                .filter(|title| !title.is_empty());
             let thread = state.store.create_thread(title).await?;
             state.publish(xiaoban_protocol::Event::ThreadUpdated {
                 thread: thread.clone(),

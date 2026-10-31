@@ -1,3 +1,4 @@
+import { useI18n } from "@xiaoban/i18n/react";
 import { type FormEvent, useState } from "react";
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export function Composer({ busy, onSend, onStop }: Props) {
+  const { t } = useI18n();
   const [text, setText] = useState("");
 
   const submit = async (event: FormEvent) => {
@@ -20,21 +22,21 @@ export function Composer({ busy, onSend, onStop }: Props) {
   return (
     <form className="composer" onSubmit={submit}>
       <label className="composer__field">
-        <span className="visually-hidden">对小伴说</span>
+        <span className="visually-hidden">{t("composer-label")}</span>
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="说点什么"
+          placeholder={t("composer-placeholder")}
           autoComplete="off"
         />
       </label>
       {busy ? (
         <button type="button" className="button button--stop" onClick={() => void onStop()}>
-          停
+          {t("composer-stop")}
         </button>
       ) : (
         <button type="submit" className="button button--primary" disabled={!text.trim()}>
-          发送
+          {t("composer-send")}
         </button>
       )}
     </form>

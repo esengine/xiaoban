@@ -6,7 +6,7 @@ const MIGRATIONS: &[&str] = &[
     r"
 CREATE TABLE threads (
     id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
+    title TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
