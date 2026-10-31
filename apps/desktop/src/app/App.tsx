@@ -3,13 +3,13 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
-import { ConnectModel } from "../features/onboarding/ConnectModel.tsx";
+import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { useHub } from "./hub.tsx";
 
 export function App() {
   const { t } = useI18n();
   const store = useHub();
-  const { threads, status, model, modelLoaded } = useHubState(store);
+  const { threads, status, model, modelLoaded, preferences } = useHubState(store);
   const [selected, setSelected] = useState<string | null>(null);
   const activeId = selected ?? threads[0]?.id ?? null;
 
@@ -17,8 +17,10 @@ export function App() {
     if (activeId && status === "open") void store.loadMessages(activeId);
   }, [activeId, status, store]);
 
-  if (!modelLoaded) return <main className="splash" aria-busy="true" />;
-  if (!model) return <ConnectModel />;
+  if (!modelLoaded || !preferences) return <main className="splash" aria-busy="true" />;
+  if (!preferences.onboarded) {
+    return <Onboarding startAt={model ? 1 : 0} onFinish={() => setSelected(null)} />;
+  }
 
   const startThread = async () => {
     const thread = await store.createThread();

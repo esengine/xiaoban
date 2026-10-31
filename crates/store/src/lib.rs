@@ -1,6 +1,7 @@
 mod clock;
 mod devices;
 mod error;
+mod memories;
 mod messages;
 mod migrations;
 mod settings;

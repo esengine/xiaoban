@@ -12,8 +12,9 @@ use xiaoban_agent::{
 };
 use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, SecretStore};
 use xiaoban_protocol::{
-    ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event, FailureKind,
-    PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role, ServerFrame,
+    AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
+    FailureKind, MemoryTopic, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role,
+    ServerFrame,
 };
 
 struct TestClient {
@@ -108,7 +109,10 @@ impl Connector for FixedConnector {
         let result = if config.api_key != VALID_KEY {
             Err(AgentError::InvalidKey)
         } else if verify_model && config.model != "relay-model" {
-            Err(AgentError::UnknownModel(config.model))
+            Err(AgentError::UnknownModel {
+                model: config.model,
+                available: vec!["relay-model".into()],
+            })
         } else {
             Ok(())
         };
@@ -658,4 +662,71 @@ async fn custom_relays_are_validated_saved_and_restored() {
     assert_eq!(restored, model);
     hub.shutdown().await;
     let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+async fn onboarding_steps_persist_preferences_and_memories() {
+    let hub = start_hub(&["好"]).await;
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+
+    let Response::Preferences { preferences } = client.request(Request::Preferences).await else {
+        panic!("expected preferences");
+    };
+    assert_eq!(preferences.autonomy, AutonomyLevel::Balanced);
+    assert!(!preferences.onboarded);
+
+    for (topic, value) in [
+        (MemoryTopic::PreferredName, "阿哲"),
+        (MemoryTopic::HomeAndWork, "北京，公司在望京"),
+        (MemoryTopic::PreferredName, "哲哥"),
+    ] {
+        let Response::Memory { memory } = client
+            .request(Request::Remember {
+                topic,
+                value: value.into(),
+            })
+            .await
+        else {
+            panic!("expected memory");
+        };
+        assert_eq!(memory.value, value);
+    }
+    let Response::Memories { memories } = client.request(Request::ListMemories).await else {
+        panic!("expected memories");
+    };
+    assert_eq!(memories.len(), 2);
+
+    client
+        .request(Request::SetAutonomy {
+            level: AutonomyLevel::Cautious,
+        })
+        .await;
+    client.request(Request::CompleteOnboarding).await;
+    let Response::Preferences { preferences } = client.request(Request::Preferences).await else {
+        panic!("expected preferences");
+    };
+    assert_eq!(preferences.autonomy, AutonomyLevel::Cautious);
+    assert!(preferences.onboarded);
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn the_desktop_hears_when_a_phone_pairs() {
+    let hub = start_hub(&["好"]).await;
+    let (mut desktop, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let Response::PairingCode { code, port, .. } =
+        desktop.request(Request::CreatePairingCode).await
+    else {
+        panic!("expected code");
+    };
+    assert_eq!(port, hub.addr.port());
+
+    let _phone = TestClient::connect(&hub, "phone-1", Credential::PairingCode { code }).await;
+    loop {
+        if let Event::DevicePaired { device } = desktop.next_event().await {
+            assert_eq!(device.id, "phone-1");
+            break;
+        }
+    }
+    hub.shutdown().await;
 }

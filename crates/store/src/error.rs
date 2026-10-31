@@ -30,6 +30,7 @@ impl From<StoreError> for xiaoban_protocol::Failure {
             kind: xiaoban_protocol::FailureKind::Internal,
             retryable: false,
             detail: error.to_string(),
+            alternatives: Vec::new(),
         }
     }
 }

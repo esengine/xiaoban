@@ -31,6 +31,9 @@ pub async fn run(socket: WebSocket, peer: SocketAddr, state: SharedState) {
         return;
     };
     tracing::info!(device = %session.device_id, %peer, "device connected");
+    if let Some(device) = session.paired.clone() {
+        state.publish(xiaoban_protocol::Event::DevicePaired { device });
+    }
 
     let forward = tokio::spawn(forward_events(state.events.subscribe(), out.clone()));
 

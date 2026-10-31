@@ -63,12 +63,15 @@ impl Hub {
             name: config.name.clone(),
             version: env!("CARGO_PKG_VERSION").to_owned(),
         };
+        let listener = TcpListener::bind(config.bind).await?;
+        let addr = listener.local_addr()?;
         let restored = model::restore(&store, &runtime.secrets, runtime.fallback.clone())
             .await
             .map_err(|error| HubError::Startup(error.detail))?;
         let active = model::activate(&*runtime.connector, &runtime.prefix, restored);
         let state: SharedState = Arc::new(HubState {
             info: info.clone(),
+            port: addr.port(),
             store,
             prefix: runtime.prefix,
             connector: runtime.connector,
@@ -79,8 +82,6 @@ impl Hub {
             turns: crate::turns::Turns::default(),
         });
 
-        let listener = TcpListener::bind(config.bind).await?;
-        let addr = listener.local_addr()?;
         let mdns = config
             .advertise
             .then(|| discovery::advertise(&info, addr.port()))

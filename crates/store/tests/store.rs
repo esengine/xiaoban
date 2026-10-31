@@ -1,4 +1,4 @@
-use xiaoban_protocol::{Platform, Role, Usage};
+use xiaoban_protocol::{MemoryTopic, Platform, Role, Usage};
 use xiaoban_store::{EntryRole, EpochReason, Store, TranscriptEntry};
 
 #[tokio::test]
@@ -162,4 +162,25 @@ async fn usage_totals_sum_every_turn() {
             cached_tokens: 90
         }
     );
+}
+
+#[tokio::test]
+async fn remembering_a_topic_again_replaces_the_value() {
+    let store = Store::open_in_memory().unwrap();
+    let first = store
+        .remember(MemoryTopic::PreferredName, "阿哲".into())
+        .await
+        .unwrap();
+    store
+        .remember(MemoryTopic::Household, "老婆和儿子".into())
+        .await
+        .unwrap();
+    let updated = store
+        .remember(MemoryTopic::PreferredName, "哲哥".into())
+        .await
+        .unwrap();
+    assert_eq!(updated.id, first.id);
+    let memories = store.list_memories().await.unwrap();
+    assert_eq!(memories.len(), 2);
+    assert!(memories.iter().any(|m| m.value == "哲哥"));
 }

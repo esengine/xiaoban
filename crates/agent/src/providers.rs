@@ -98,7 +98,10 @@ impl ConfiguredProvider {
         let base_url = normalize_base_url(base_url)?;
         let model = model.trim().to_owned();
         if model.is_empty() {
-            return Err(AgentError::UnknownModel(model));
+            return Err(AgentError::UnknownModel {
+                model,
+                available: Vec::new(),
+            });
         }
         Ok(Self {
             info: ModelInfo {
@@ -205,7 +208,7 @@ mod tests {
         assert_eq!(custom.config.base_url, "https://relay.example.com/v1");
         assert!(matches!(
             ConfiguredProvider::custom("https://r.example.com", "k".into(), " ", None),
-            Err(AgentError::UnknownModel(_))
+            Err(AgentError::UnknownModel { .. })
         ));
     }
 }

@@ -6024,6 +6024,7 @@ dependencies = [
  "clap",
  "futures-util",
  "hex",
+ "if-addrs",
  "keyring",
  "mdns-sd",
  "serde_json",

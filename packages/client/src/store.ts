@@ -1,10 +1,15 @@
 import type {
+  AutonomyLevel,
   ContextNote,
   Failure,
+  Memory,
+  MemoryTopic,
   Message,
   ModelInfo,
+  Preferences,
   ProviderId,
   ProviderOption,
+  Response,
   Thread,
   Usage,
 } from "@xiaoban/protocol";
@@ -42,6 +47,39 @@ export class HubStore {
   async refreshModel(): Promise<void> {
     const { model } = await this.client.request({ type: "model_status" }, "model_status");
     this.#update((state) => ({ ...state, model, modelLoaded: true }));
+  }
+
+  async refreshPreferences(): Promise<Preferences> {
+    const { preferences } = await this.client.request({ type: "preferences" }, "preferences");
+    this.#update((state) => ({ ...state, preferences }));
+    return preferences;
+  }
+
+  async setAutonomy(level: AutonomyLevel): Promise<void> {
+    await this.client.request({ type: "set_autonomy", level }, "ack");
+    this.#update((state) =>
+      state.preferences
+        ? { ...state, preferences: { ...state.preferences, autonomy: level } }
+        : state,
+    );
+  }
+
+  async remember(topic: MemoryTopic, value: string): Promise<Memory> {
+    const { memory } = await this.client.request({ type: "remember", topic, value }, "memory");
+    return memory;
+  }
+
+  async completeOnboarding(): Promise<void> {
+    await this.client.request({ type: "complete_onboarding" }, "ack");
+    this.#update((state) =>
+      state.preferences
+        ? { ...state, preferences: { ...state.preferences, onboarded: true } }
+        : state,
+    );
+  }
+
+  async createPairingCode(): Promise<Extract<Response, { type: "pairing_code" }>> {
+    return this.client.request({ type: "create_pairing_code" }, "pairing_code");
   }
 
   async listProviders(): Promise<ProviderOption[]> {
@@ -103,7 +141,9 @@ export class HubStore {
   }
 
   #refreshInBackground(): void {
-    Promise.all([this.refreshThreads(), this.refreshModel()]).catch(() => undefined);
+    Promise.all([this.refreshThreads(), this.refreshModel(), this.refreshPreferences()]).catch(
+      () => undefined,
+    );
   }
 
   #update(next: (state: HubState) => HubState): void {

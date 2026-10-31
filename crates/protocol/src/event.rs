@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Failure, Message, ModelInfo, Thread, Usage};
+use crate::{Device, Failure, Message, ModelInfo, Thread, Usage};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -39,6 +39,9 @@ pub enum Event {
     ModelChanged {
         model: Option<ModelInfo>,
     },
+    DevicePaired {
+        device: Device,
+    },
 }
 
 impl Event {
@@ -52,7 +55,8 @@ impl Event {
             Self::Thinking { .. }
             | Self::TextDelta { .. }
             | Self::TurnFailed { .. }
-            | Self::ModelChanged { .. } => None,
+            | Self::ModelChanged { .. }
+            | Self::DevicePaired { .. } => None,
         }
     }
 }

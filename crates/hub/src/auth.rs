@@ -19,6 +19,7 @@ pub struct Authenticated {
     pub device_id: String,
     pub local: bool,
     pub issued_token: Option<String>,
+    pub paired: Option<xiaoban_protocol::Device>,
 }
 
 impl Pairing {
@@ -68,6 +69,7 @@ pub async fn authenticate(
             device_id: hello.device_id.clone(),
             local: true,
             issued_token: None,
+            paired: None,
         }),
         Credential::Local => Err(unauthorized(
             "local access is only allowed from this machine",
@@ -82,6 +84,7 @@ pub async fn authenticate(
                 device_id: device.device.id,
                 local: false,
                 issued_token: None,
+                paired: None,
             })
         }
         Credential::PairingCode { code } => {
@@ -89,7 +92,7 @@ pub async fn authenticate(
                 return Err(unauthorized("pairing code is invalid or expired"));
             }
             let token = new_token();
-            store
+            let device = store
                 .pair_device(
                     hello.device_id.clone(),
                     hello.name.clone(),
@@ -101,6 +104,7 @@ pub async fn authenticate(
                 device_id: hello.device_id.clone(),
                 local: false,
                 issued_token: Some(token),
+                paired: Some(device),
             })
         }
     }

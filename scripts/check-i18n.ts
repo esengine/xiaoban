@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const SOURCE = /\.(rs|ts|tsx|json|html)$/;
 const SKIP = [
@@ -30,7 +30,8 @@ const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclud
   encoding: "utf8",
 })
   .split("\n")
-  .filter((file) => SOURCE.test(file) && !SKIP.some((pattern) => pattern.test(file)));
+  .filter((file) => SOURCE.test(file) && !SKIP.some((pattern) => pattern.test(file)))
+  .filter((file) => existsSync(file));
 
 const problems: string[] = [];
 for (const file of files) {

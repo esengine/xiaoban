@@ -34,7 +34,7 @@ describe("applyEvent", () => {
     state = applyEvent(state, {
       type: "turn_failed",
       turnId: "u1",
-      failure: { kind: "network", retryable: true, detail: "offline" },
+      failure: { kind: "network", retryable: true, detail: "offline", alternatives: [] },
     });
     expect(state.drafts.u1?.failure?.retryable).toBe(true);
   });

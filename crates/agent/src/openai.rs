@@ -65,7 +65,10 @@ impl OpenAiCompatible {
         if listed.is_empty() || listed.contains(&self.config.model) {
             Ok(())
         } else {
-            Err(AgentError::UnknownModel(self.config.model.clone()))
+            Err(AgentError::UnknownModel {
+                model: self.config.model.clone(),
+                available: listed,
+            })
         }
     }
 
@@ -83,7 +86,10 @@ impl OpenAiCompatible {
             .send()
             .await?;
         if response.status() == reqwest::StatusCode::NOT_FOUND {
-            return Err(AgentError::UnknownModel(self.config.model.clone()));
+            return Err(AgentError::UnknownModel {
+                model: self.config.model.clone(),
+                available: Vec::new(),
+            });
         }
         ensure_success(response).await.map(drop)
     }

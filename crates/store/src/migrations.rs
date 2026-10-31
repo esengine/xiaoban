@@ -63,6 +63,14 @@ CREATE TABLE turn_usage (
     created_at INTEGER NOT NULL
 );
 ",
+    r"
+CREATE TABLE memories (
+    id TEXT PRIMARY KEY,
+    topic TEXT NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

@@ -137,4 +137,76 @@ pub struct Failure {
     pub kind: FailureKind,
     pub retryable: bool,
     pub detail: String,
+    #[serde(default)]
+    pub alternatives: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum AutonomyLevel {
+    Cautious,
+    #[default]
+    Balanced,
+    HandsOff,
+}
+
+impl AutonomyLevel {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Cautious => "cautious",
+            Self::Balanced => "balanced",
+            Self::HandsOff => "hands_off",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        [Self::Cautious, Self::Balanced, Self::HandsOff]
+            .into_iter()
+            .find(|level| level.as_str() == value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum MemoryTopic {
+    PreferredName,
+    HomeAndWork,
+    Household,
+}
+
+impl MemoryTopic {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::PreferredName => "preferred_name",
+            Self::HomeAndWork => "home_and_work",
+            Self::Household => "household",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        [Self::PreferredName, Self::HomeAndWork, Self::Household]
+            .into_iter()
+            .find(|topic| topic.as_str() == value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Memory {
+    pub id: String,
+    pub topic: MemoryTopic,
+    pub value: String,
+    #[ts(type = "number")]
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Preferences {
+    pub autonomy: AutonomyLevel,
+    pub onboarded: bool,
 }

@@ -20,6 +20,7 @@ pub struct Active {
 #[derive(Debug)]
 pub struct HubState {
     pub info: HubInfo,
+    pub port: u16,
     pub store: Store,
     pub prefix: StablePrefix,
     pub connector: Arc<dyn Connector>,

@@ -1,3 +1,4 @@
+export type { AutonomyLevel } from "./AutonomyLevel.ts";
 export type { ClientFrame } from "./ClientFrame.ts";
 export type { ContextNote } from "./ContextNote.ts";
 export type { Credential } from "./Credential.ts";
@@ -8,9 +9,12 @@ export type { Event } from "./Event.ts";
 export type { Failure } from "./Failure.ts";
 export type { FailureKind } from "./FailureKind.ts";
 export type { HubInfo } from "./HubInfo.ts";
+export type { Memory } from "./Memory.ts";
+export type { MemoryTopic } from "./MemoryTopic.ts";
 export type { Message } from "./Message.ts";
 export type { ModelInfo } from "./ModelInfo.ts";
 export type { Platform } from "./Platform.ts";
+export type { Preferences } from "./Preferences.ts";
 export type { ProtocolError } from "./ProtocolError.ts";
 export type { ProviderId } from "./ProviderId.ts";
 export type { ProviderOption } from "./ProviderOption.ts";

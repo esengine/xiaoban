@@ -69,7 +69,7 @@ async fn check_verifies_the_model_against_the_listing_when_asked() {
     assert!(provider(&base, "good", "n").check(true).await.is_ok());
     assert!(matches!(
         provider(&base, "good", "typo").check(true).await,
-        Err(AgentError::UnknownModel(model)) if model == "typo"
+        Err(AgentError::UnknownModel { model, available }) if model == "typo" && available == ["m", "n"]
     ));
     assert!(provider(&base, "good", "typo").check(false).await.is_ok());
 }
@@ -80,7 +80,7 @@ async fn relays_without_a_model_listing_fall_back_to_a_tiny_completion() {
     assert!(provider(&base, "good", "m").check(true).await.is_ok());
     assert!(matches!(
         provider(&base, "good", "missing").check(true).await,
-        Err(AgentError::UnknownModel(_))
+        Err(AgentError::UnknownModel { .. })
     ));
     assert!(matches!(
         provider(&base, "bad", "m").check(true).await,

@@ -4,6 +4,8 @@ mod discovery;
 mod error;
 mod handlers;
 mod model;
+mod network;
+mod preferences;
 mod runtime;
 mod secrets;
 mod server;

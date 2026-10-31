@@ -1,4 +1,12 @@
-import type { Event, Failure, HubInfo, Message, ModelInfo, Thread } from "@xiaoban/protocol";
+import type {
+  Event,
+  Failure,
+  HubInfo,
+  Message,
+  ModelInfo,
+  Preferences,
+  Thread,
+} from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
 
 export interface Draft {
@@ -14,6 +22,7 @@ export interface HubState {
   hub: HubInfo | null;
   model: ModelInfo | null;
   modelLoaded: boolean;
+  preferences: Preferences | null;
   threads: Thread[];
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
@@ -24,6 +33,7 @@ export const initialHubState: HubState = {
   hub: null,
   model: null,
   modelLoaded: false,
+  preferences: null,
   threads: [],
   messages: {},
   drafts: {},
@@ -82,6 +92,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         messages: appendMessage(state, event.message),
         drafts: withoutDraft(state.drafts, event.turnId),
       };
+    case "device_paired":
+      return state;
     case "model_changed":
       return { ...state, model: event.model, modelLoaded: true };
     case "turn_failed": {

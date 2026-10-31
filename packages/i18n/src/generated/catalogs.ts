@@ -1,7 +1,7 @@
 export const catalogs = {
   "zh-CN":
-    "app-name = 小伴\nhub-default-name = 小伴\n\nprompt-system = 你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。\n\nnav-main = 主导航\ndevice-desktop = 这台电脑\ndevice-ios = iPhone\ndevice-android = 安卓手机\n\nconnection-idle = 未连接\nconnection-connecting = 连接中\nconnection-open = 已连接\nconnection-reconnecting = 重新连接中\nconnection-closed = 已断开\nconnection-waiting-for-hub = 正在连接家里的电脑…\n\nthread-new = 新对话\nthread-untitled = 新的对话\nthread-empty = 还没有对话\nthread-start = 和小伴聊聊\n\ncomposer-label = 对小伴说\ncomposer-placeholder = 说点什么\ncomposer-send = 发送\ncomposer-stop = 停\n\ndraft-thinking = 在想…\ndraft-elapsed = 已想 { $seconds } 秒\ndraft-failed = 没成功：{ $reason }\n\nfailure-model = 模型出了点问题\nfailure-not-configured = 还没有连接模型\nfailure-network = 网络断了\nfailure-cancelled = 已停止\nfailure-budget = 到了花费上限\nfailure-internal = 小伴内部出错了\n\nerror-unsupported-protocol = 电脑上的小伴版本不匹配，请都更新到最新版\nerror-unauthorized = 配对码不对或已过期\nerror-bad-request = 请求有误\nerror-not-found = 找不到这条内容\nerror-busy = 上一条还在回复，稍等一下\nerror-internal = 小伴内部出错了\nerror-unreachable = 连不上电脑，确认手机和电脑在同一个 Wi-Fi 下\n\npair-title = 连接家里的电脑\npair-lead = 在电脑上打开小伴 › 设置 › 设备，把显示的地址和配对码填在这里。\npair-address-placeholder = 电脑地址，比如 192.168.1.8\npair-code-placeholder = 6 位配对码\npair-submit = 连接\npair-submitting = 连接中…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = 小米 MiMo\nprovider-custom = 自定义 / 中转站\nmodel-not-connected = 还没有连接模型\nmodel-current = 当前模型\n\nonboarding-hello = 嗨，我是小伴\nonboarding-local-first = 我跑在你自己的设备上，不用注册账号，聊天和记忆都不出你家。\nonboarding-pick-provider = 先给我接一个大模型：\nonboarding-recommended = 推荐\nonboarding-key-label = 密钥\nonboarding-key-placeholder = 粘贴 { $provider } 的密钥\nonboarding-show-key = 显示密钥\nonboarding-hide-key = 隐藏密钥\nonboarding-get-key = 没有密钥？去 { $provider } 申请\nonboarding-cost-note = 日常聊天大约每月几块钱，按你自己的密钥计费。\nonboarding-submit = 测试并继续\nonboarding-checking = 正在测试…\nonboarding-key-local = 密钥只存在这台电脑的钥匙串里\nfailure-invalid-key = 密钥不对，检查一下有没有复制完整\nfailure-unknown-model = 这个地址上没有这个模型，检查一下模型名\nfailure-invalid-endpoint = 接口地址不对，要以 http:// 或 https:// 开头\ncustom-description = 兼容 OpenAI 格式的接口都行，比如中转站、本机 Ollama\ncustom-base-url-label = 接口地址\ncustom-base-url-placeholder = https://你的中转站/v1\ncustom-model-label = 模型名\ncustom-model-placeholder = 比如 deepseek-v4-flash\ncustom-label-label = 叫它什么（可选）\ncustom-label-placeholder = 比如：我的中转站\ncustom-trust-warning = 密钥会发给这个地址，请确认你信任它。\npair-hello = 连接家里的电脑\npair-home-lead = 我住在你家里的电脑上。先在电脑上打开小伴，把显示的地址和配对码填在这里。\n",
-  en: "app-name = Xiaoban\nhub-default-name = Xiaoban\n\nprompt-system = You are Xiaoban, a friendly companion who helps the user with everyday life. Keep answers short and concrete, and reply in English.\n\nnav-main = Main navigation\ndevice-desktop = This computer\ndevice-ios = iPhone\ndevice-android = Android phone\n\nconnection-idle = Not connected\nconnection-connecting = Connecting\nconnection-open = Connected\nconnection-reconnecting = Reconnecting\nconnection-closed = Disconnected\nconnection-waiting-for-hub = Connecting to your home computer…\n\nthread-new = New conversation\nthread-untitled = New conversation\nthread-empty = No conversations yet\nthread-start = Start chatting\n\ncomposer-label = Message Xiaoban\ncomposer-placeholder = Say something\ncomposer-send = Send\ncomposer-stop = Stop\n\ndraft-thinking = Thinking…\ndraft-elapsed = Thought for { $seconds } s\ndraft-failed = Didn’t work: { $reason }\n\nfailure-model = The model ran into a problem\nfailure-not-configured = No model is connected yet\nfailure-network = The network dropped\nfailure-cancelled = Stopped\nfailure-budget = Spending limit reached\nfailure-internal = Something went wrong inside Xiaoban\n\nerror-unsupported-protocol = Xiaoban versions don’t match. Update both devices.\nerror-unauthorized = The pairing code is wrong or has expired\nerror-bad-request = Invalid request\nerror-not-found = Not found\nerror-busy = Still replying to the previous message\nerror-internal = Something went wrong inside Xiaoban\nerror-unreachable = Can’t reach your computer. Check that both are on the same Wi-Fi.\n\npair-title = Connect your home computer\npair-lead = On your computer, open Xiaoban › Settings › Devices and enter the address and pairing code shown there.\npair-address-placeholder = Computer address, e.g. 192.168.1.8\npair-code-placeholder = 6-digit pairing code\npair-submit = Connect\npair-submitting = Connecting…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = Xiaomi MiMo\nprovider-custom = Custom / relay\nmodel-not-connected = No model connected\nmodel-current = Current model\n\nonboarding-hello = Hi, I’m Xiaoban\nonboarding-local-first = I run on your own devices. No account needed, and your chats and memories stay at home.\nonboarding-pick-provider = First, connect me to a model:\nonboarding-recommended = Recommended\nonboarding-key-label = API key\nonboarding-key-placeholder = Paste your { $provider } key\nonboarding-show-key = Show key\nonboarding-hide-key = Hide key\nonboarding-get-key = No key yet? Get one from { $provider }\nonboarding-cost-note = Everyday chatting costs a few yuan a month, billed to your own key.\nonboarding-submit = Test and continue\nonboarding-checking = Testing…\nonboarding-key-local = Your key stays in this computer’s keychain\nfailure-invalid-key = That key didn’t work. Check that you copied all of it.\nfailure-unknown-model = That endpoint doesn’t serve this model. Check the model name.\nfailure-invalid-endpoint = The endpoint must start with http:// or https://\ncustom-description = Any OpenAI-compatible endpoint works, such as a relay or a local Ollama\ncustom-base-url-label = Endpoint\ncustom-base-url-placeholder = https://your-relay/v1\ncustom-model-label = Model\ncustom-model-placeholder = e.g. deepseek-v4-flash\ncustom-label-label = Name (optional)\ncustom-label-placeholder = e.g. My relay\ncustom-trust-warning = Your key will be sent to this address. Make sure you trust it.\npair-hello = Connect your home computer\npair-home-lead = I live on your home computer. Open Xiaoban there, then enter the address and pairing code it shows.\n",
+    "app-name = 小伴\nhub-default-name = 小伴\n\nprompt-system = 你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。\n\nnav-main = 主导航\ndevice-desktop = 这台电脑\ndevice-ios = iPhone\ndevice-android = 安卓手机\n\nconnection-idle = 未连接\nconnection-connecting = 连接中\nconnection-open = 已连接\nconnection-reconnecting = 重新连接中\nconnection-closed = 已断开\nconnection-waiting-for-hub = 正在连接家里的电脑…\n\nthread-new = 新对话\nthread-untitled = 新的对话\nthread-empty = 还没有对话\nthread-start = 和小伴聊聊\n\ncomposer-label = 对小伴说\ncomposer-placeholder = 说点什么\ncomposer-send = 发送\ncomposer-stop = 停\n\ndraft-thinking = 在想…\ndraft-elapsed = 已想 { $seconds } 秒\ndraft-failed = 没成功：{ $reason }\n\nfailure-model = 模型出了点问题\nfailure-not-configured = 还没有连接模型\nfailure-network = 网络断了\nfailure-cancelled = 已停止\nfailure-budget = 到了花费上限\nfailure-internal = 小伴内部出错了\n\nerror-unsupported-protocol = 电脑上的小伴版本不匹配，请都更新到最新版\nerror-unauthorized = 配对码不对或已过期\nerror-bad-request = 请求有误\nerror-not-found = 找不到这条内容\nerror-busy = 上一条还在回复，稍等一下\nerror-internal = 小伴内部出错了\nerror-unreachable = 连不上电脑，确认手机和电脑在同一个 Wi-Fi 下\n\npair-title = 连接家里的电脑\npair-lead = 在电脑上打开小伴 › 设置 › 设备，把显示的地址和配对码填在这里。\npair-address-placeholder = 电脑地址，比如 192.168.1.8\npair-code-placeholder = 6 位配对码\npair-submit = 连接\npair-submitting = 连接中…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = 小米 MiMo\nprovider-custom = 自定义 / 中转站\nmodel-not-connected = 还没有连接模型\nmodel-current = 当前模型\n\nonboarding-hello = 嗨，我是小伴\nonboarding-local-first = 我跑在你自己的设备上，不用注册账号，聊天和记忆都不出你家。\nonboarding-pick-provider = 先给我接一个大模型：\nonboarding-recommended = 推荐\nonboarding-key-label = 密钥\nonboarding-key-placeholder = 粘贴 { $provider } 的密钥\nonboarding-show-key = 显示密钥\nonboarding-hide-key = 隐藏密钥\nonboarding-get-key = 没有密钥？去 { $provider } 申请\nonboarding-cost-note = 日常聊天大约每月几块钱，按你自己的密钥计费。\nonboarding-submit = 测试并继续\nonboarding-checking = 正在测试…\nonboarding-key-local = 密钥只存在这台电脑的钥匙串里\nfailure-invalid-key = 密钥不对，检查一下有没有复制完整\nfailure-unknown-model = 这个地址上没有这个模型，检查一下模型名\nfailure-invalid-endpoint = 接口地址不对，要以 http:// 或 https:// 开头\ncustom-description = 兼容 OpenAI 格式的接口都行，比如中转站、本机 Ollama\ncustom-base-url-label = 接口地址\ncustom-base-url-placeholder = https://你的中转站/v1\ncustom-model-label = 模型名\ncustom-model-placeholder = 比如 deepseek-v4-flash\ncustom-label-label = 叫它什么（可选）\ncustom-label-placeholder = 比如：我的中转站\ncustom-trust-warning = 密钥会发给这个地址，请确认你信任它。\n\nonboarding-intro = 花两分钟把我设置好，之后像聊天一样用就行。\nonboarding-privacy = 不用注册账号，数据只在你的设备上\nonboarding-progress = 第 { $step } 步，共 { $total } 步\nonboarding-back = 上一步\nonboarding-skip = 跳过\nonboarding-later = 以后再说\nonboarding-next = 下一步\nonboarding-finish = 完成，开始用\nstep-model-title = 连接模型\nstep-model-hint = 用你自己的密钥\nstep-meet-title = 认识你\nstep-meet-hint = 随便聊几句\nstep-trust-title = 放手程度\nstep-trust-hint = 替你做到哪一步\nstep-phone-title = 连接手机\nstep-phone-hint = 可以以后再说\nmodel-heading = 先给我接一个大模型\nmodel-lead = 小伴不提供模型。选一个服务商，或者填你自己的中转站。\ncustom-card-hint = 兼容 OpenAI 格式\ncustom-base-url-hint = 粘贴带 /chat/completions 的完整地址也行，会自动截掉\nfailure-unknown-model-listed = 这个地址上没有 { $model } 这个模型，检查一下模型名。中转站列出的有：{ $models }\nmeet-heading = 让小伴认识你\nmeet-lead = 随便聊几句，我会把有用的记下来。记住了什么随时能在「我 › 记忆」里改或删。\nmeet-question-preferred-name = 怎么称呼你？\nmeet-question-home-and-work = 平时在哪个城市？上班在哪？\nmeet-question-household = 家里有谁需要我一起照顾吗？\nmeet-reply-alone = 就我自己\nmeet-reply-pass = 这个先不说\nmeet-input-placeholder = 直接打字回答\nmeet-remembered = 已记住 · { $topic }：{ $value }\nmeet-all-set = 好，我都记下了，接着往下吧。\nmemory-topic-preferred-name = 称呼\nmemory-topic-home-and-work = 城市和上班\nmemory-topic-household = 家里\ntrust-heading = 我可以替你做到哪一步？\ntrust-lead = 选一档就行，以后每件事、每个计划都能单独调。\ntrust-cautious-name = 谨慎\ntrust-cautious-desc = 什么都先问我，我点头才动手。\ntrust-cautious-example = 设提醒前也会先问一句。\ntrust-balanced-name = 平衡（推荐）\ntrust-balanced-desc = 查信息、设提醒、记账直接做；花钱、替你对外说话先问。\ntrust-balanced-example = 提醒直接设好；点外卖会弹确认。\ntrust-hands-off-name = 放手\ntrust-hands-off-desc = 小额固定开销也直接办，事后告诉你，随时能撤销。\ntrust-hands-off-example = 电费到期自动交，在「日常」里留记录。\ntrust-red-lines = 付款、签合同、替你联系新的人这几件事，无论选哪档都会先停下问你。\nphone-heading = 把手机也连上\nphone-lead = 手机连上以后，出门也能看提醒、确认事情。所有数据经局域网直接同步，不经过任何服务器。\nphone-step-install = 1. 在手机上安装小伴（iPhone、安卓都可以）\nphone-step-scan = 2. 打开后扫这个码；扫不了就手动输入下面两项\nphone-step-wifi = 3. 手机和电脑要连同一个 Wi-Fi\nphone-qr-label = 配对二维码\nphone-address-label = 电脑地址\nphone-code-label = 配对码 · { $time } 后失效\nphone-code-expired = 配对码已失效\nphone-refresh = 换一个配对码\nphone-waiting = 等手机来连……\nphone-connected = { $name } 已连上\nphone-no-network = 没找到局域网地址，确认电脑连着 Wi-Fi\nphone-relay-hint = 出门也想用？可以在设置里加一个自建中转。\npair-hello = 连接家里的电脑\npair-home-lead = 我住在你家里的电脑上。先在电脑上打开小伴，把显示的地址和配对码填在这里。\n",
+  en: "app-name = Xiaoban\nhub-default-name = Xiaoban\n\nprompt-system = You are Xiaoban, a friendly companion who helps the user with everyday life. Keep answers short and concrete, and reply in English.\n\nnav-main = Main navigation\ndevice-desktop = This computer\ndevice-ios = iPhone\ndevice-android = Android phone\n\nconnection-idle = Not connected\nconnection-connecting = Connecting\nconnection-open = Connected\nconnection-reconnecting = Reconnecting\nconnection-closed = Disconnected\nconnection-waiting-for-hub = Connecting to your home computer…\n\nthread-new = New conversation\nthread-untitled = New conversation\nthread-empty = No conversations yet\nthread-start = Start chatting\n\ncomposer-label = Message Xiaoban\ncomposer-placeholder = Say something\ncomposer-send = Send\ncomposer-stop = Stop\n\ndraft-thinking = Thinking…\ndraft-elapsed = Thought for { $seconds } s\ndraft-failed = Didn’t work: { $reason }\n\nfailure-model = The model ran into a problem\nfailure-not-configured = No model is connected yet\nfailure-network = The network dropped\nfailure-cancelled = Stopped\nfailure-budget = Spending limit reached\nfailure-internal = Something went wrong inside Xiaoban\n\nerror-unsupported-protocol = Xiaoban versions don’t match. Update both devices.\nerror-unauthorized = The pairing code is wrong or has expired\nerror-bad-request = Invalid request\nerror-not-found = Not found\nerror-busy = Still replying to the previous message\nerror-internal = Something went wrong inside Xiaoban\nerror-unreachable = Can’t reach your computer. Check that both are on the same Wi-Fi.\n\npair-title = Connect your home computer\npair-lead = On your computer, open Xiaoban › Settings › Devices and enter the address and pairing code shown there.\npair-address-placeholder = Computer address, e.g. 192.168.1.8\npair-code-placeholder = 6-digit pairing code\npair-submit = Connect\npair-submitting = Connecting…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = Xiaomi MiMo\nprovider-custom = Custom / relay\nmodel-not-connected = No model connected\nmodel-current = Current model\n\nonboarding-hello = Hi, I’m Xiaoban\nonboarding-local-first = I run on your own devices. No account needed, and your chats and memories stay at home.\nonboarding-pick-provider = First, connect me to a model:\nonboarding-recommended = Recommended\nonboarding-key-label = API key\nonboarding-key-placeholder = Paste your { $provider } key\nonboarding-show-key = Show key\nonboarding-hide-key = Hide key\nonboarding-get-key = No key yet? Get one from { $provider }\nonboarding-cost-note = Everyday chatting costs a few yuan a month, billed to your own key.\nonboarding-submit = Test and continue\nonboarding-checking = Testing…\nonboarding-key-local = Your key stays in this computer’s keychain\nfailure-invalid-key = That key didn’t work. Check that you copied all of it.\nfailure-unknown-model = That endpoint doesn’t serve this model. Check the model name.\nfailure-invalid-endpoint = The endpoint must start with http:// or https://\ncustom-description = Any OpenAI-compatible endpoint works, such as a relay or a local Ollama\ncustom-base-url-label = Endpoint\ncustom-base-url-placeholder = https://your-relay/v1\ncustom-model-label = Model\ncustom-model-placeholder = e.g. deepseek-v4-flash\ncustom-label-label = Name (optional)\ncustom-label-placeholder = e.g. My relay\ncustom-trust-warning = Your key will be sent to this address. Make sure you trust it.\n\nonboarding-intro = Two minutes of setup, then just chat with me.\nonboarding-privacy = No account needed. Your data stays on your devices.\nonboarding-progress = Step { $step } of { $total }\nonboarding-back = Back\nonboarding-skip = Skip\nonboarding-later = Later\nonboarding-next = Next\nonboarding-finish = Finish and start\nstep-model-title = Connect a model\nstep-model-hint = With your own key\nstep-meet-title = Get to know you\nstep-meet-hint = A few quick questions\nstep-trust-title = How much to hand off\nstep-trust-hint = What I may do on my own\nstep-phone-title = Connect your phone\nstep-phone-hint = You can do this later\nmodel-heading = First, connect me to a model\nmodel-lead = Xiaoban doesn’t ship a model. Pick a provider, or enter your own relay.\ncustom-card-hint = OpenAI-compatible\ncustom-base-url-hint = Pasting the full /chat/completions URL works too; it gets trimmed\nfailure-unknown-model-listed = This endpoint doesn’t serve { $model }. Check the model name. It lists: { $models }\nmeet-heading = Let Xiaoban get to know you\nmeet-lead = Answer a few questions and I’ll remember what’s useful. You can edit or delete anything later under Me › Memories.\nmeet-question-preferred-name = What should I call you?\nmeet-question-home-and-work = Which city do you live in, and where do you work?\nmeet-question-household = Is there anyone at home I should help look after?\nmeet-reply-alone = Just me\nmeet-reply-pass = Skip this one\nmeet-input-placeholder = Type your answer\nmeet-remembered = Remembered · { $topic }: { $value }\nmeet-all-set = Got it all. Let’s keep going.\nmemory-topic-preferred-name = Name\nmemory-topic-home-and-work = City and work\nmemory-topic-household = Household\ntrust-heading = How much should I do on my own?\ntrust-lead = Pick one for now. You can adjust it per task or plan later.\ntrust-cautious-name = Cautious\ntrust-cautious-desc = Ask before doing anything.\ntrust-cautious-example = Even reminders get a quick check first.\ntrust-balanced-name = Balanced (recommended)\ntrust-balanced-desc = Look things up, set reminders and log expenses on my own; ask before spending or speaking for you.\ntrust-balanced-example = Reminders are set directly; food orders show a confirmation.\ntrust-hands-off-name = Hands-off\ntrust-hands-off-desc = Handle small recurring payments too and tell you afterwards. Everything can be undone.\ntrust-hands-off-example = Pay the electricity bill when due and log it in Daily.\ntrust-red-lines = Paying, signing contracts and contacting new people always pause for your approval, whatever you pick.\nphone-heading = Connect your phone too\nphone-lead = With your phone connected you can check reminders and approve things on the go. Everything syncs over your local network, never through a server.\nphone-step-install = 1. Install Xiaoban on your phone (iPhone or Android)\nphone-step-scan = 2. Scan this code, or enter the two values below\nphone-step-wifi = 3. Keep the phone and this computer on the same Wi-Fi\nphone-qr-label = Pairing QR code\nphone-address-label = Computer address\nphone-code-label = Pairing code · expires in { $time }\nphone-code-expired = Pairing code expired\nphone-refresh = New pairing code\nphone-waiting = Waiting for your phone…\nphone-connected = { $name } is connected\nphone-no-network = No local network address found. Check this computer’s Wi-Fi.\nphone-relay-hint = Want to use it away from home? Add a self-hosted relay in Settings.\npair-hello = Connect your home computer\npair-home-lead = I live on your home computer. Open Xiaoban there, then enter the address and pairing code it shows.\n",
 } as const;
 
 export type MessageKey =
@@ -16,8 +16,10 @@ export type MessageKey =
   | "connection-open"
   | "connection-reconnecting"
   | "connection-waiting-for-hub"
+  | "custom-base-url-hint"
   | "custom-base-url-label"
   | "custom-base-url-placeholder"
+  | "custom-card-hint"
   | "custom-description"
   | "custom-label-label"
   | "custom-label-placeholder"
@@ -46,22 +48,46 @@ export type MessageKey =
   | "failure-network"
   | "failure-not-configured"
   | "failure-unknown-model"
+  | "failure-unknown-model-listed"
   | "hub-default-name"
+  | "meet-all-set"
+  | "meet-heading"
+  | "meet-input-placeholder"
+  | "meet-lead"
+  | "meet-question-home-and-work"
+  | "meet-question-household"
+  | "meet-question-preferred-name"
+  | "meet-remembered"
+  | "meet-reply-alone"
+  | "meet-reply-pass"
+  | "memory-topic-home-and-work"
+  | "memory-topic-household"
+  | "memory-topic-preferred-name"
   | "model-current"
+  | "model-heading"
+  | "model-lead"
   | "model-not-connected"
   | "nav-main"
+  | "onboarding-back"
   | "onboarding-checking"
   | "onboarding-cost-note"
+  | "onboarding-finish"
   | "onboarding-get-key"
   | "onboarding-hello"
   | "onboarding-hide-key"
+  | "onboarding-intro"
   | "onboarding-key-label"
   | "onboarding-key-local"
   | "onboarding-key-placeholder"
+  | "onboarding-later"
   | "onboarding-local-first"
+  | "onboarding-next"
   | "onboarding-pick-provider"
+  | "onboarding-privacy"
+  | "onboarding-progress"
   | "onboarding-recommended"
   | "onboarding-show-key"
+  | "onboarding-skip"
   | "onboarding-submit"
   | "pair-address-placeholder"
   | "pair-code-placeholder"
@@ -71,14 +97,48 @@ export type MessageKey =
   | "pair-submit"
   | "pair-submitting"
   | "pair-title"
+  | "phone-address-label"
+  | "phone-code-expired"
+  | "phone-code-label"
+  | "phone-connected"
+  | "phone-heading"
+  | "phone-lead"
+  | "phone-no-network"
+  | "phone-qr-label"
+  | "phone-refresh"
+  | "phone-relay-hint"
+  | "phone-step-install"
+  | "phone-step-scan"
+  | "phone-step-wifi"
+  | "phone-waiting"
   | "prompt-system"
   | "provider-custom"
   | "provider-deepseek"
   | "provider-mimo"
+  | "step-meet-hint"
+  | "step-meet-title"
+  | "step-model-hint"
+  | "step-model-title"
+  | "step-phone-hint"
+  | "step-phone-title"
+  | "step-trust-hint"
+  | "step-trust-title"
   | "thread-empty"
   | "thread-new"
   | "thread-start"
-  | "thread-untitled";
+  | "thread-untitled"
+  | "trust-balanced-desc"
+  | "trust-balanced-example"
+  | "trust-balanced-name"
+  | "trust-cautious-desc"
+  | "trust-cautious-example"
+  | "trust-cautious-name"
+  | "trust-hands-off-desc"
+  | "trust-hands-off-example"
+  | "trust-hands-off-name"
+  | "trust-heading"
+  | "trust-lead"
+  | "trust-red-lines";
 
 export interface MessageArgs {
   "app-name": undefined;
@@ -92,8 +152,10 @@ export interface MessageArgs {
   "connection-open": undefined;
   "connection-reconnecting": undefined;
   "connection-waiting-for-hub": undefined;
+  "custom-base-url-hint": undefined;
   "custom-base-url-label": undefined;
   "custom-base-url-placeholder": undefined;
+  "custom-card-hint": undefined;
   "custom-description": undefined;
   "custom-label-label": undefined;
   "custom-label-placeholder": undefined;
@@ -122,22 +184,46 @@ export interface MessageArgs {
   "failure-network": undefined;
   "failure-not-configured": undefined;
   "failure-unknown-model": undefined;
+  "failure-unknown-model-listed": { model: string | number; models: string | number };
   "hub-default-name": undefined;
+  "meet-all-set": undefined;
+  "meet-heading": undefined;
+  "meet-input-placeholder": undefined;
+  "meet-lead": undefined;
+  "meet-question-home-and-work": undefined;
+  "meet-question-household": undefined;
+  "meet-question-preferred-name": undefined;
+  "meet-remembered": { topic: string | number; value: string | number };
+  "meet-reply-alone": undefined;
+  "meet-reply-pass": undefined;
+  "memory-topic-home-and-work": undefined;
+  "memory-topic-household": undefined;
+  "memory-topic-preferred-name": undefined;
   "model-current": undefined;
+  "model-heading": undefined;
+  "model-lead": undefined;
   "model-not-connected": undefined;
   "nav-main": undefined;
+  "onboarding-back": undefined;
   "onboarding-checking": undefined;
   "onboarding-cost-note": undefined;
+  "onboarding-finish": undefined;
   "onboarding-get-key": { provider: string | number };
   "onboarding-hello": undefined;
   "onboarding-hide-key": undefined;
+  "onboarding-intro": undefined;
   "onboarding-key-label": undefined;
   "onboarding-key-local": undefined;
   "onboarding-key-placeholder": { provider: string | number };
+  "onboarding-later": undefined;
   "onboarding-local-first": undefined;
+  "onboarding-next": undefined;
   "onboarding-pick-provider": undefined;
+  "onboarding-privacy": undefined;
+  "onboarding-progress": { step: string | number; total: string | number };
   "onboarding-recommended": undefined;
   "onboarding-show-key": undefined;
+  "onboarding-skip": undefined;
   "onboarding-submit": undefined;
   "pair-address-placeholder": undefined;
   "pair-code-placeholder": undefined;
@@ -147,12 +233,46 @@ export interface MessageArgs {
   "pair-submit": undefined;
   "pair-submitting": undefined;
   "pair-title": undefined;
+  "phone-address-label": undefined;
+  "phone-code-expired": undefined;
+  "phone-code-label": { time: string | number };
+  "phone-connected": { name: string | number };
+  "phone-heading": undefined;
+  "phone-lead": undefined;
+  "phone-no-network": undefined;
+  "phone-qr-label": undefined;
+  "phone-refresh": undefined;
+  "phone-relay-hint": undefined;
+  "phone-step-install": undefined;
+  "phone-step-scan": undefined;
+  "phone-step-wifi": undefined;
+  "phone-waiting": undefined;
   "prompt-system": undefined;
   "provider-custom": undefined;
   "provider-deepseek": undefined;
   "provider-mimo": undefined;
+  "step-meet-hint": undefined;
+  "step-meet-title": undefined;
+  "step-model-hint": undefined;
+  "step-model-title": undefined;
+  "step-phone-hint": undefined;
+  "step-phone-title": undefined;
+  "step-trust-hint": undefined;
+  "step-trust-title": undefined;
   "thread-empty": undefined;
   "thread-new": undefined;
   "thread-start": undefined;
   "thread-untitled": undefined;
+  "trust-balanced-desc": undefined;
+  "trust-balanced-example": undefined;
+  "trust-balanced-name": undefined;
+  "trust-cautious-desc": undefined;
+  "trust-cautious-example": undefined;
+  "trust-cautious-name": undefined;
+  "trust-hands-off-desc": undefined;
+  "trust-hands-off-example": undefined;
+  "trust-hands-off-name": undefined;
+  "trust-heading": undefined;
+  "trust-lead": undefined;
+  "trust-red-lines": undefined;
 }

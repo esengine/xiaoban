@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    ContextNote, Device, Failure, Message, ModelInfo, ProviderId, ProviderOption, Thread, Usage,
+    AutonomyLevel, ContextNote, Device, Failure, Memory, MemoryTopic, Message, ModelInfo,
+    Preferences, ProviderId, ProviderOption, Thread, Usage,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -43,6 +44,16 @@ pub enum Request {
         base_url: Option<String>,
         label: Option<String>,
     },
+    Preferences,
+    SetAutonomy {
+        level: AutonomyLevel,
+    },
+    Remember {
+        topic: MemoryTopic,
+        value: String,
+    },
+    ListMemories,
+    CompleteOnboarding,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -70,6 +81,8 @@ pub enum Response {
         code: String,
         #[ts(type = "number")]
         expires_at: i64,
+        addresses: Vec<String>,
+        port: u16,
     },
     Devices {
         devices: Vec<Device>,
@@ -87,5 +100,14 @@ pub enum Response {
     ProviderConfigured {
         model: Option<ModelInfo>,
         failure: Option<Failure>,
+    },
+    Preferences {
+        preferences: Preferences,
+    },
+    Memory {
+        memory: Memory,
+    },
+    Memories {
+        memories: Vec<Memory>,
     },
 }
