@@ -1,7 +1,6 @@
 mod apps;
 mod auth;
 mod calendar;
-mod compact;
 mod config;
 mod confirms;
 mod discovery;

@@ -414,18 +414,8 @@ async fn current_epoch(
                     epoch.memory_snapshot = snapshot;
                 }
             }
-            let transcript = parse_transcript(&entries);
-            if crate::compact::needed(&transcript)
-                && let Some(carried) = crate::compact::compact(state, &transcript).await
-            {
-                tracing::info!(thread = thread_id, "compacted the conversation");
-                let epoch =
-                    begin_epoch(state, thread_id, EpochReason::Compacted, carried.clone()).await?;
-                let prefix = state.prefix(epoch.memory_snapshot.as_deref());
-                return Ok((epoch, prefix, carried.into_iter().collect()));
-            }
             let prefix = state.prefix(epoch.memory_snapshot.as_deref());
-            return Ok((epoch, prefix, transcript));
+            return Ok((epoch, prefix, parse_transcript(&entries)));
         }
         Some((previous, entries)) => {
             tracing::info!(
