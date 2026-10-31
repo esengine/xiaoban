@@ -113,6 +113,9 @@ pub enum Request {
         text: String,
     },
     Locate,
+    ForgetMemory {
+        subject: String,
+    },
     TidyMemories,
     FileData {
         file_id: String,

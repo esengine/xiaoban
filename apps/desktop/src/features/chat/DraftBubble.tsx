@@ -108,12 +108,9 @@ export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => v
     );
   }
   return (
-    <>
-      {reasoned && <Reasoning draft={draft} />}
-      <li className="bubble bubble--assistant bubble--streaming" aria-live="polite">
-        <RichText text={draft.text} />
-        <span className="caret" aria-hidden="true" />
-      </li>
-    </>
+    <li className="bubble bubble--assistant bubble--streaming" aria-live="polite">
+      <RichText text={draft.text} />
+      <span className="caret" aria-hidden="true" />
+    </li>
   );
 }

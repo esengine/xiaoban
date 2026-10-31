@@ -78,10 +78,10 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             preferences: preferences::load(state).await?,
         }),
         Request::SetAutonomy { level } => set_autonomy(state, level).await,
-        Request::Remember { subject, value } => remember(state, &subject, &value).await,
-        Request::ListMemories => Ok(Response::Memories {
-            memories: state.store.list_memories().await?,
-        }),
+        request @ (Request::Remember { .. }
+        | Request::ListMemories
+        | Request::TidyMemories
+        | Request::ForgetMemory { .. }) => memories(state, local, request).await,
         Request::InterpretAnswer {
             subject,
             question,
@@ -99,7 +99,6 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         }
         Request::Locate => locate(state, local).await,
         Request::FileData { file_id } => file_data(state, &file_id),
-        Request::TidyMemories => tidy(state, local).await,
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
         | Request::OperateStatus
@@ -124,6 +123,27 @@ async fn create_thread(state: &SharedState, title: Option<&str>) -> Handled {
         thread: thread.clone(),
     });
     Ok(Response::Thread { thread })
+}
+
+async fn memories(state: &SharedState, local: bool, request: Request) -> Handled {
+    match request {
+        Request::Remember { subject, value } => remember(state, &subject, &value).await,
+        Request::ListMemories => Ok(Response::Memories {
+            memories: state.store.list_memories().await?,
+        }),
+        Request::TidyMemories => tidy(state, local).await,
+        Request::ForgetMemory { subject } => forget(state, subject).await,
+        _ => Err(bad_request("not a memory request")),
+    }
+}
+
+async fn forget(state: &SharedState, subject: String) -> Handled {
+    let memory_id =
+        state.store.forget_memory(subject).await?.ok_or_else(|| {
+            ProtocolError::new(ErrorCode::NotFound, "no memory with that subject")
+        })?;
+    state.publish(Event::MemoryForgotten { memory_id });
+    Ok(Response::Ack)
 }
 
 async fn tidy(state: &SharedState, local: bool) -> Handled {

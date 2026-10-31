@@ -61,5 +61,6 @@ export type Request =
   | { type: "resume_turn"; turnId: string }
   | { type: "add_note"; turnId: string; text: string }
   | { type: "locate" }
+  | { type: "forget_memory"; subject: string }
   | { type: "tidy_memories" }
   | { type: "file_data"; fileId: string };
