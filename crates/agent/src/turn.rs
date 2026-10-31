@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use futures_util::StreamExt;
@@ -9,13 +10,20 @@ use xiaoban_protocol::Usage;
 use crate::prompt::{StablePrefix, Transcript, assemble_with};
 use crate::{AgentError, ChatMessage, ChatRole, ModelChunk, ModelProvider, ToolCall};
 
-const MAX_STEPS: usize = 6;
+const REPEAT_LIMIT: u32 = 2;
+const REPEATED: &str = r#"{"error":"you already ran this exact call twice in this turn; stop repeating it and answer with what you have"}"#;
+
+fn canonical(arguments: &str) -> String {
+    serde_json::from_str::<serde_json::Value>(arguments)
+        .map_or_else(|_| arguments.trim().to_owned(), |value| value.to_string())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TurnEvent {
     Thinking,
     TextDelta(String),
-    ToolUsed(String),
+    ToolUsed(ToolCall),
+    ToolFinished { call: ToolCall, result: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,7 +123,8 @@ impl Agent {
         let mut tail = vec![ChatMessage::new(ChatRole::User, user_wire)];
         let mut usage = Usage::default();
 
-        for _ in 0..MAX_STEPS {
+        let mut seen: HashMap<(String, String), (String, u32)> = HashMap::new();
+        loop {
             let step = self
                 .stream_step(prefix, transcript, &tail, &events, &cancel, &mut usage)
                 .await?;
@@ -130,14 +139,35 @@ impl Agent {
                 });
             }
             for call in &calls {
+                if cancel.is_cancelled() {
+                    return Err(AgentError::Cancelled);
+                }
+                let _ = events.send(TurnEvent::ToolUsed(call.clone())).await;
+                let key = (
+                    call.function.name.clone(),
+                    canonical(&call.function.arguments),
+                );
+                let result = match seen.get_mut(&key) {
+                    Some((_, count)) if *count >= REPEAT_LIMIT => REPEATED.to_owned(),
+                    Some((cached, count)) => {
+                        *count += 1;
+                        cached.clone()
+                    }
+                    None => {
+                        let result = tools.run(call).await;
+                        seen.insert(key, (result.clone(), 1));
+                        result
+                    }
+                };
                 let _ = events
-                    .send(TurnEvent::ToolUsed(call.function.name.clone()))
+                    .send(TurnEvent::ToolFinished {
+                        call: call.clone(),
+                        result: result.clone(),
+                    })
                     .await;
-                let result = tools.run(call).await;
                 tail.push(ChatMessage::tool_result(call.id.clone(), result));
             }
         }
-        Err(AgentError::Stream("the model kept calling tools".into()))
     }
 
     async fn stream_step(

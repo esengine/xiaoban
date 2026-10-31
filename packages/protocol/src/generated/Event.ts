@@ -4,6 +4,7 @@ import type { Failure } from "./Failure.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
+import type { StepResult } from "./StepResult.ts";
 import type { Thread } from "./Thread.ts";
 import type { Usage } from "./Usage.ts";
 
@@ -18,5 +19,6 @@ export type Event =
   | { type: "turn_failed"; turnId: string; failure: Failure }
   | { type: "model_changed"; model: ModelInfo | null }
   | { type: "device_paired"; device: Device }
-  | { type: "tool_used"; turnId: string; tool: string }
+  | { type: "tool_used"; turnId: string; tool: string; callId: string; detail: string | null }
+  | { type: "tool_finished"; turnId: string; callId: string; result: StepResult }
   | { type: "memory_saved"; memory: Memory };

@@ -48,6 +48,13 @@ pub enum Event {
     ToolUsed {
         turn_id: String,
         tool: String,
+        call_id: String,
+        detail: Option<String>,
+    },
+    ToolFinished {
+        turn_id: String,
+        call_id: String,
+        result: StepResult,
     },
     MemorySaved {
         memory: Memory,
@@ -70,7 +77,22 @@ impl Event {
             | Self::ModelChanged { .. }
             | Self::DevicePaired { .. }
             | Self::ToolUsed { .. }
+            | Self::ToolFinished { .. }
             | Self::MemorySaved { .. } => None,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+pub enum StepResult {
+    Found { count: u32, sources: Vec<String> },
+    Page { title: String },
+    Saved { version: u32 },
+    Failed,
+    Done,
 }

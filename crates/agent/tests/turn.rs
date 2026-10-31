@@ -182,10 +182,70 @@ async fn tool_calls_run_and_the_conversation_continues_append_only() {
     while let Some(event) = rx.recv().await {
         events.push(event);
     }
-    assert!(events.contains(&TurnEvent::ToolUsed("remember".into())));
+    assert!(events.iter().any(
+        |event| matches!(event, TurnEvent::ToolUsed(call) if call.function.name == "remember")
+    ));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        TurnEvent::ToolFinished { result, .. } if result == "saved"
+    )));
 
     let requests = provider.requests();
     assert_eq!(requests.len(), 2);
     assert!(prefix_reuse(&requests[0], &requests[1]).is_intact());
     assert_eq!(requests[1].messages.len(), requests[0].messages.len() + 2);
+}
+
+#[derive(Default)]
+struct CountingTools {
+    runs: std::sync::Mutex<u32>,
+}
+
+impl ToolRunner for CountingTools {
+    fn run<'a>(&'a self, _: &'a ToolCall) -> BoxFuture<'a, String> {
+        Box::pin(async move {
+            *self.runs.lock().unwrap() += 1;
+            "found".to_owned()
+        })
+    }
+}
+
+#[tokio::test]
+async fn repeated_calls_reuse_results_and_are_cut_off() {
+    let same = |id: &str| ModelChunk::ToolCallDelta {
+        index: 0,
+        id: Some(id.into()),
+        name: Some("web_search".into()),
+        arguments: r#"{ "query": "灵隐寺" }"#.into(),
+    };
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![same("a")],
+        vec![same("b")],
+        vec![same("c")],
+        vec![ModelChunk::Text("好".into())],
+    ]));
+    let agent = Agent::new(provider.clone());
+    let tools = CountingTools::default();
+    let (tx, _rx) = mpsc::channel(64);
+    let outcome = agent
+        .run_turn(
+            &StablePrefix::new("system"),
+            &Transcript::default(),
+            "查一下",
+            &tools,
+            tx,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(outcome.text, "好");
+    assert_eq!(*tools.runs.lock().unwrap(), 1);
+    let results: Vec<_> = outcome
+        .messages
+        .iter()
+        .filter(|message| message.role == ChatRole::Tool)
+        .map(|message| message.content.as_str())
+        .collect();
+    assert_eq!(results[..2], ["found", "found"]);
+    assert!(results[2].contains("already ran this exact call"));
 }

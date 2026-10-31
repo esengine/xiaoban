@@ -299,7 +299,17 @@ async fn drive(
                 state.publish(match event {
                     TurnEvent::Thinking => Event::Thinking { turn_id },
                     TurnEvent::TextDelta(delta) => Event::TextDelta { turn_id, delta },
-                    TurnEvent::ToolUsed(tool) => Event::ToolUsed { turn_id, tool },
+                    TurnEvent::ToolUsed(call) => Event::ToolUsed {
+                        turn_id,
+                        detail: crate::steps::detail(&call),
+                        tool: call.function.name,
+                        call_id: call.id,
+                    },
+                    TurnEvent::ToolFinished { call, result } => Event::ToolFinished {
+                        turn_id,
+                        result: crate::steps::result(&call, &result),
+                        call_id: call.id,
+                    },
                 });
             }
         })

@@ -69,7 +69,19 @@ describe("applyEvent", () => {
       { type: "turn_started", threadId: "t1", turnId: "u1" },
       10,
     );
-    state = applyEvent(state, { type: "tool_used", turnId: "u1", tool: "remember" });
+    state = applyEvent(state, {
+      type: "tool_used",
+      turnId: "u1",
+      tool: "remember",
+      callId: "c1",
+      detail: "称呼",
+    });
+    state = applyEvent(state, {
+      type: "tool_finished",
+      turnId: "u1",
+      callId: "c1",
+      result: { kind: "done" },
+    });
     state = applyEvent(state, { type: "memory_saved", memory });
     state = applyEvent(
       state,
@@ -81,7 +93,12 @@ describe("applyEvent", () => {
       },
       1810,
     );
-    expect(state.settled.m2).toEqual({ durationMs: 1800, tools: ["remember"], memories: [memory] });
+    expect(state.settled.m2).toEqual({
+      durationMs: 1800,
+      tools: ["remember"],
+      steps: [{ callId: "c1", tool: "remember", detail: "称呼", result: { kind: "done" } }],
+      memories: [memory],
+    });
     expect(state.memories).toEqual([memory]);
   });
 

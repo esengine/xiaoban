@@ -18,6 +18,7 @@ mod server;
 mod services;
 mod session;
 mod state;
+mod steps;
 mod tools;
 mod trip;
 mod trip_requests;

@@ -8,13 +8,22 @@ import type {
   ModelInfo,
   Preferences,
   ServiceStatus,
+  StepResult,
   Thread,
   Trip,
 } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
 
+export interface TraceStep {
+  callId: string;
+  tool: string;
+  detail: string | null;
+  result: StepResult | null;
+}
+
 export interface TurnTrace {
   tools: string[];
+  steps: TraceStep[];
   memories: Memory[];
 }
 
@@ -137,6 +146,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
             startedAt: now,
             failure: null,
             tools: [],
+            steps: [],
             memories: [],
           },
         },
@@ -148,7 +158,30 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         ...state,
         drafts: {
           ...state.drafts,
-          [event.turnId]: { ...draft, tools: [...draft.tools, event.tool] },
+          [event.turnId]: {
+            ...draft,
+            tools: [...draft.tools, event.tool],
+            steps: [
+              ...draft.steps,
+              { callId: event.callId, tool: event.tool, detail: event.detail, result: null },
+            ],
+          },
+        },
+      };
+    }
+    case "tool_finished": {
+      const draft = state.drafts[event.turnId];
+      if (!draft) return state;
+      return {
+        ...state,
+        drafts: {
+          ...state.drafts,
+          [event.turnId]: {
+            ...draft,
+            steps: draft.steps.map((step) =>
+              step.callId === event.callId ? { ...step, result: event.result } : step,
+            ),
+          },
         },
       };
     }
@@ -175,6 +208,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
               [event.message.id]: {
                 durationMs: Math.max(0, now - draft.startedAt),
                 tools: draft.tools,
+                steps: draft.steps,
                 memories: draft.memories,
               },
             }
