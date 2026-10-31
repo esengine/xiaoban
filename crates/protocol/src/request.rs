@@ -25,6 +25,8 @@ pub enum Request {
         text: String,
         #[serde(default)]
         context: Vec<ContextNote>,
+        #[serde(default)]
+        quote: Option<String>,
     },
     CancelTurn {
         turn_id: String,

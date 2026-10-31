@@ -152,9 +152,19 @@ export class HubStore {
     return messages;
   }
 
-  async send(threadId: string, text: string, context: ContextNote[] = []): Promise<string> {
+  async send(
+    threadId: string,
+    text: string,
+    options: { context?: ContextNote[]; quote?: string | null } = {},
+  ): Promise<string> {
     const { turnId } = await this.client.request(
-      { type: "send_message", threadId, text, context },
+      {
+        type: "send_message",
+        threadId,
+        text,
+        context: options.context ?? [],
+        quote: options.quote ?? null,
+      },
       "turn_accepted",
     );
     return turnId;

@@ -87,6 +87,10 @@ INSERT INTO transcript_messages (epoch_id, seq, message)
     SELECT epoch_id, seq, json_object('role', role, 'content', content) FROM transcript_entries;
 DROP TABLE transcript_entries;
 ",
+    r"
+ALTER TABLE messages ADD COLUMN quote TEXT;
+ALTER TABLE messages ADD COLUMN replaces TEXT REFERENCES messages(id) ON DELETE SET NULL;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

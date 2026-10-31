@@ -8,6 +8,8 @@ const reply: Message = {
   threadId: "t1",
   role: "assistant",
   text: "7:40 出门",
+  quote: null,
+  replaces: null,
   createdAt: 3,
 };
 

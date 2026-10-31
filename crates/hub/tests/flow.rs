@@ -193,6 +193,7 @@ async fn local_client_sends_a_message_and_receives_streamed_reply() {
             thread_id: thread.id.clone(),
             text: "明天几点出门".into(),
             context: Vec::new(),
+            quote: None,
         })
         .await
     else {
@@ -292,6 +293,7 @@ async fn converse(client: &mut TestClient, thread_id: &str, text: &str, context:
             thread_id: thread_id.into(),
             text: text.into(),
             context,
+            quote: None,
         })
         .await
     else {
@@ -366,6 +368,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
             thread_id: thread.clone(),
             text: "一".into(),
             context: Vec::new(),
+            quote: None,
         })
         .await;
     client.next_id += 1;
@@ -377,6 +380,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
                 thread_id: thread,
                 text: "二".into(),
                 context: Vec::new(),
+                quote: None,
             },
         })
         .await;
@@ -490,6 +494,7 @@ async fn onboarding_configures_a_provider_and_hot_swaps_the_model() {
             thread_id: thread.clone(),
             text: "在吗".into(),
             context: Vec::new(),
+            quote: None,
         })
         .await;
     let failure = loop {
@@ -949,6 +954,7 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
             thread_id: thread.clone(),
             text: "明天几点出门".into(),
             context: Vec::new(),
+            quote: None,
         })
         .await
     else {
@@ -995,6 +1001,34 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
         panic!("expected messages");
     };
     assert_eq!(messages.len(), 3);
+    assert_eq!(
+        messages[2].replaces.as_deref(),
+        Some(messages[1].id.as_str())
+    );
+
+    let Response::TurnAccepted { turn_id, message } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "那 8 点半呢".into(),
+            context: Vec::new(),
+            quote: Some("7:40".into()),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    assert_eq!(message.quote.as_deref(), Some("7:40"));
+    finish_turn(&mut client, &turn_id).await.unwrap();
+    let last = recorded
+        .requests()
+        .last()
+        .unwrap()
+        .messages
+        .last()
+        .unwrap()
+        .content
+        .clone();
+    assert!(last.starts_with("那 8 点半呢") && last.contains("7:40"));
     hub.shutdown().await;
 }
 

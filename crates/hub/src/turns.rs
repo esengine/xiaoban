@@ -8,7 +8,7 @@ use xiaoban_agent::{
 };
 use xiaoban_i18n::keys;
 use xiaoban_protocol::{ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role};
-use xiaoban_store::{Epoch, EpochReason, StoreError};
+use xiaoban_store::{Epoch, EpochReason, NewMessage, StoreError};
 
 use crate::memory;
 use crate::state::SharedState;
@@ -77,30 +77,45 @@ fn launch(
     state: &SharedState,
     thread_id: String,
     turn_id: String,
-    wire: String,
+    job: Job,
     cancel: CancellationToken,
 ) {
     state.publish(Event::TurnStarted {
         thread_id: thread_id.clone(),
         turn_id: turn_id.clone(),
     });
-    tokio::spawn(run(Arc::clone(state), thread_id, turn_id, wire, cancel));
+    tokio::spawn(run(Arc::clone(state), thread_id, turn_id, job, cancel));
+}
+
+struct Job {
+    wire: String,
+    replaces: Option<String>,
 }
 
 pub async fn start(
     state: &SharedState,
     thread_id: String,
     text: String,
-    context: Vec<ContextNote>,
+    mut context: Vec<ContextNote>,
+    quote: Option<String>,
 ) -> Result<(String, Message), ProtocolError> {
     state.store.thread(thread_id.clone()).await?;
     let (turn_id, cancel) = claim(state, &thread_id)?;
 
+    if let Some(quote) = &quote {
+        context.insert(
+            0,
+            ContextNote {
+                label: state.localizer.text(keys::QUOTE_CONTEXT_LABEL),
+                body: quote.clone(),
+            },
+        );
+    }
     let wire = user_wire(&text, &context);
     let accepted = async {
         let message = state
             .store
-            .append_message(thread_id.clone(), Role::User, text)
+            .append_message(thread_id.clone(), NewMessage::user(text).quoting(quote))
             .await?;
         let thread = state.store.touch_thread(thread_id.clone()).await?;
         Ok::<_, StoreError>((message, thread))
@@ -118,7 +133,11 @@ pub async fn start(
         message: message.clone(),
     });
     state.publish(Event::ThreadUpdated { thread });
-    launch(state, thread_id, turn_id.clone(), wire, cancel);
+    let job = Job {
+        wire,
+        replaces: None,
+    };
+    launch(state, thread_id, turn_id.clone(), job, cancel);
     Ok((turn_id, message))
 }
 
@@ -133,14 +152,18 @@ pub async fn retry(
         .find(|message| message.role == Role::User)
         .cloned()
         .ok_or_else(|| ProtocolError::new(ErrorCode::BadRequest, "nothing to answer yet"))?;
-    let unanswered = messages.last().is_some_and(|last| last.role == Role::User);
-    let wire = if unanswered {
-        asked.text.clone()
-    } else {
-        state.localizer.text(keys::TURN_REGENERATE)
+    let job = match messages.last() {
+        Some(last) if last.role == Role::Assistant => Job {
+            wire: state.localizer.text(keys::TURN_REGENERATE),
+            replaces: Some(last.replaces.clone().unwrap_or_else(|| last.id.clone())),
+        },
+        _ => Job {
+            wire: asked.text.clone(),
+            replaces: None,
+        },
     };
     let (turn_id, cancel) = claim(state, &thread_id)?;
-    launch(state, thread_id, turn_id.clone(), wire, cancel);
+    launch(state, thread_id, turn_id.clone(), job, cancel);
     Ok((turn_id, asked))
 }
 
@@ -148,10 +171,10 @@ async fn run(
     state: SharedState,
     thread_id: String,
     turn_id: String,
-    wire: String,
+    job: Job,
     cancel: CancellationToken,
 ) {
-    let result = drive(&state, &thread_id, &turn_id, wire, cancel).await;
+    let result = drive(&state, &thread_id, &turn_id, job, cancel).await;
     state.turns.release(&turn_id);
     if let Err(failure) = result {
         state.publish(Event::TurnFailed { turn_id, failure });
@@ -240,9 +263,10 @@ async fn drive(
     state: &SharedState,
     thread_id: &str,
     turn_id: &str,
-    wire: String,
+    job: Job,
     cancel: CancellationToken,
 ) -> Result<(), Failure> {
+    let Job { wire, replaces } = job;
     let (epoch, prefix, transcript) = current_epoch(state, thread_id)
         .await
         .map_err(Failure::from)?;
@@ -296,7 +320,10 @@ async fn drive(
         .map_err(Failure::from)?;
     let message = state
         .store
-        .append_message(thread_id.to_owned(), Role::Assistant, outcome.text)
+        .append_message(
+            thread_id.to_owned(),
+            NewMessage::assistant(outcome.text).replacing(replaces),
+        )
         .await
         .map_err(Failure::from)?;
     let thread = state

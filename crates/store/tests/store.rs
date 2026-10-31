@@ -1,16 +1,16 @@
 use xiaoban_protocol::{Platform, Role, Usage};
-use xiaoban_store::{EpochReason, Store};
+use xiaoban_store::{EpochReason, NewMessage, Store};
 
 #[tokio::test]
 async fn threads_and_messages_round_trip() {
     let store = Store::open_in_memory().unwrap();
     let thread = store.create_thread(Some("新家装修".into())).await.unwrap();
     store
-        .append_message(thread.id.clone(), Role::User, "木工几号进场".into())
+        .append_message(thread.id.clone(), NewMessage::user("木工几号进场"))
         .await
         .unwrap();
     store
-        .append_message(thread.id.clone(), Role::Assistant, "11 月 6 日".into())
+        .append_message(thread.id.clone(), NewMessage::assistant("11 月 6 日"))
         .await
         .unwrap();
 
@@ -180,4 +180,32 @@ async fn remembering_a_topic_again_replaces_the_value() {
     assert_eq!(memories.len(), 2);
     assert_eq!(memories[0].subject, "称呼");
     assert_eq!(memories[0].value, "哲哥");
+}
+
+#[tokio::test]
+async fn quotes_and_versions_round_trip() {
+    let store = Store::open_in_memory().unwrap();
+    let thread = store.create_thread(None).await.unwrap();
+    store
+        .append_message(
+            thread.id.clone(),
+            NewMessage::user("那 8 点半出门来得及吗").quoting(Some("9 点前到".into())),
+        )
+        .await
+        .unwrap();
+    let first = store
+        .append_message(thread.id.clone(), NewMessage::assistant("来得及"))
+        .await
+        .unwrap();
+    store
+        .append_message(
+            thread.id.clone(),
+            NewMessage::assistant("稍微赶").replacing(Some(first.id.clone())),
+        )
+        .await
+        .unwrap();
+    let messages = store.list_messages(thread.id).await.unwrap();
+    assert_eq!(messages[0].quote.as_deref(), Some("9 点前到"));
+    assert_eq!(messages[2].replaces.as_deref(), Some(first.id.as_str()));
+    assert_eq!(messages[0].role, Role::User);
 }

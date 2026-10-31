@@ -3,6 +3,45 @@ use xiaoban_protocol::{Message, Role};
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewMessage {
+    pub role: Role,
+    pub text: String,
+    pub quote: Option<String>,
+    pub replaces: Option<String>,
+}
+
+impl NewMessage {
+    pub fn user(text: impl Into<String>) -> Self {
+        Self::new(Role::User, text)
+    }
+
+    pub fn assistant(text: impl Into<String>) -> Self {
+        Self::new(Role::Assistant, text)
+    }
+
+    fn new(role: Role, text: impl Into<String>) -> Self {
+        Self {
+            role,
+            text: text.into(),
+            quote: None,
+            replaces: None,
+        }
+    }
+
+    #[must_use]
+    pub fn quoting(mut self, quote: Option<String>) -> Self {
+        self.quote = quote;
+        self
+    }
+
+    #[must_use]
+    pub fn replacing(mut self, replaces: Option<String>) -> Self {
+        self.replaces = replaces;
+        self
+    }
+}
+
 fn role_to_str(role: Role) -> &'static str {
     match role {
         Role::User => "user",
@@ -18,6 +57,8 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<(Message, String)> {
             role: Role::User,
             text: row.get(3)?,
             created_at: row.get(4)?,
+            quote: row.get(5)?,
+            replaces: row.get(6)?,
         },
         row.get(2)?,
     ))
@@ -33,28 +74,28 @@ fn with_role((mut message, role): (Message, String)) -> Result<Message> {
 }
 
 impl Store {
-    pub async fn append_message(
-        &self,
-        thread_id: String,
-        role: Role,
-        text: String,
-    ) -> Result<Message> {
+    pub async fn append_message(&self, thread_id: String, new: NewMessage) -> Result<Message> {
         self.with(move |conn| {
             let message = Message {
                 id: new_id(),
                 thread_id,
-                role,
-                text,
+                role: new.role,
+                text: new.text,
+                quote: new.quote,
+                replaces: new.replaces,
                 created_at: now_ms(),
             };
             conn.execute(
-                "INSERT INTO messages (id, thread_id, role, text, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO messages (id, thread_id, role, text, created_at, quote, replaces)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     message.id,
                     message.thread_id,
                     role_to_str(message.role),
                     message.text,
-                    message.created_at
+                    message.created_at,
+                    message.quote,
+                    message.replaces
                 ],
             )?;
             Ok(message)
@@ -65,7 +106,8 @@ impl Store {
     pub async fn list_messages(&self, thread_id: String) -> Result<Vec<Message>> {
         self.with(move |conn| {
             let mut stmt = conn.prepare(
-                "SELECT id, thread_id, role, text, created_at FROM messages WHERE thread_id = ?1 ORDER BY created_at, id",
+                "SELECT id, thread_id, role, text, created_at, quote, replaces
+                 FROM messages WHERE thread_id = ?1 ORDER BY created_at, rowid",
             )?;
             let rows = stmt.query_map([thread_id], from_row)?;
             rows.map(|row| with_role(row?)).collect()

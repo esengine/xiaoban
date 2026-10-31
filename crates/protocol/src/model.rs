@@ -27,6 +27,8 @@ pub struct Message {
     pub thread_id: String,
     pub role: Role,
     pub text: String,
+    pub quote: Option<String>,
+    pub replaces: Option<String>,
     #[ts(type = "number")]
     pub created_at: i64,
 }

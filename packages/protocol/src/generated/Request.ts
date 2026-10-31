@@ -7,7 +7,13 @@ export type Request =
   | { type: "list_threads" }
   | { type: "create_thread"; title: string | null }
   | { type: "list_messages"; threadId: string }
-  | { type: "send_message"; threadId: string; text: string; context: Array<ContextNote> }
+  | {
+      type: "send_message";
+      threadId: string;
+      text: string;
+      context: Array<ContextNote>;
+      quote: string | null;
+    }
   | { type: "cancel_turn"; turnId: string }
   | { type: "retry_turn"; threadId: string }
   | { type: "rename_thread"; threadId: string; title: string }

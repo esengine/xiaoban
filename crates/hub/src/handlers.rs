@@ -29,7 +29,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             thread_id,
             text,
             context,
-        } => send(state, thread_id, &text, context).await,
+            quote,
+        } => send(state, thread_id, &text, context, quote).await,
         Request::CancelTurn { turn_id } => cancel(state, &turn_id),
         Request::RetryTurn { thread_id } => {
             let (turn_id, message) = turns::retry(state, thread_id).await?;
@@ -110,9 +111,11 @@ async fn send(
     thread_id: String,
     text: &str,
     context: Vec<ContextNote>,
+    quote: Option<String>,
 ) -> Handled {
     let text = trimmed(text).ok_or_else(|| bad_request("message is empty"))?;
-    let (turn_id, message) = turns::start(state, thread_id, text, context).await?;
+    let quote = quote.as_deref().and_then(trimmed);
+    let (turn_id, message) = turns::start(state, thread_id, text, context, quote).await?;
     Ok(Response::TurnAccepted { turn_id, message })
 }
 

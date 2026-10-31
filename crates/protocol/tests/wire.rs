@@ -8,6 +8,7 @@ fn client_frames_use_tagged_camel_case_json() {
             thread_id: "t1".into(),
             text: "你好".into(),
             context: Vec::new(),
+            quote: None,
         },
     };
     let json = serde_json::to_value(&frame).unwrap();
@@ -16,7 +17,7 @@ fn client_frames_use_tagged_camel_case_json() {
         serde_json::json!({
             "type": "request",
             "id": 7,
-            "body": { "type": "send_message", "threadId": "t1", "text": "你好", "context": [] }
+            "body": { "type": "send_message", "threadId": "t1", "text": "你好", "context": [], "quote": null }
         })
     );
 }

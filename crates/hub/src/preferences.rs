@@ -1,7 +1,7 @@
 use xiaoban_agent::{ChatMessage, ChatRole};
 use xiaoban_i18n::keys;
-use xiaoban_protocol::{AutonomyLevel, Event, Preferences, ProtocolError, Role};
-use xiaoban_store::EpochReason;
+use xiaoban_protocol::{AutonomyLevel, Event, Preferences, ProtocolError};
+use xiaoban_store::{EpochReason, NewMessage};
 
 use crate::state::SharedState;
 use crate::turns;
@@ -67,7 +67,7 @@ async fn ensure_primary_thread(state: &SharedState) -> Result<(), ProtocolError>
     for line in &lines {
         state
             .store
-            .append_message(thread.id.clone(), Role::Assistant, line.clone())
+            .append_message(thread.id.clone(), NewMessage::assistant(line.clone()))
             .await?;
     }
     turns::begin_epoch(

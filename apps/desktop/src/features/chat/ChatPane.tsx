@@ -1,8 +1,8 @@
-import { connectionKey, providerKey, type Settled } from "@xiaoban/client";
+import { connectionKey, type Draft, providerKey, type Settled } from "@xiaoban/client";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { ContextNote, Message } from "@xiaoban/protocol";
+import type { Message } from "@xiaoban/protocol";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
@@ -13,6 +13,7 @@ import { PanelToggle } from "./PanelToggle.tsx";
 import { plain } from "./plain.ts";
 import { RichText } from "./RichText.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
+import { type Row, toRows } from "./versions.ts";
 
 const SUGGESTIONS: readonly PlainMessageKey[] = [
   "home-suggestion-umbrella",
@@ -32,6 +33,11 @@ interface Props {
   onNewThreadWith: (text: string) => void;
 }
 
+interface Regenerating {
+  root: string;
+  turnId: string | null;
+}
+
 function selectionWithin(element: Element): string {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return "";
@@ -39,7 +45,56 @@ function selectionWithin(element: Element): string {
   return element.contains(range.commonAncestorContainer) ? selection.toString().trim() : "";
 }
 
-function ReplyFooter({ message, settled }: { message: Message; settled: Settled | undefined }) {
+function Versions({
+  index,
+  count,
+  onPick,
+}: {
+  index: number;
+  count: number;
+  onPick: (index: number) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <span className="versions">
+      <button
+        type="button"
+        className="versions__step"
+        aria-label={t("versions-previous")}
+        disabled={index === 0}
+        onClick={() => onPick(index - 1)}
+      >
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24">
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+      </button>
+      <span className="versions__count">
+        {t("versions-count", { current: index + 1, total: count })}
+      </span>
+      <button
+        type="button"
+        className="versions__step"
+        aria-label={t("versions-next")}
+        disabled={index === count - 1}
+        onClick={() => onPick(index + 1)}
+      >
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24">
+          <path d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </span>
+  );
+}
+
+function ReplyFooter({
+  message,
+  settled,
+  versions,
+}: {
+  message: Message;
+  settled: Settled | undefined;
+  versions: { index: number; count: number; onPick: (index: number) => void } | null;
+}) {
   const { t, locale } = useI18n();
   const time = new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
@@ -48,9 +103,12 @@ function ReplyFooter({ message, settled }: { message: Message; settled: Settled 
   }).format(message.createdAt);
   return (
     <span className={settled ? "reply-meta reply-meta--fresh" : "reply-meta"}>
-      {settled
-        ? t("reply-meta", { time, seconds: (settled.durationMs / 1000).toFixed(1) })
-        : t("reply-time", { time })}
+      <span>
+        {settled
+          ? t("reply-meta", { time, seconds: (settled.durationMs / 1000).toFixed(1) })
+          : t("reply-time", { time })}
+      </span>
+      {versions && <Versions {...versions} />}
     </span>
   );
 }
@@ -62,6 +120,7 @@ export function ChatPane(props: Props) {
   const state = useHubState(store);
   const openMenu = useContextMenu();
   const messages = state.messages[threadId] ?? [];
+  const rows = toRows(messages);
   const drafts = draftsForThread(state, threadId);
   const thread = state.threads.find((candidate) => candidate.id === threadId);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
@@ -70,11 +129,27 @@ export function ChatPane(props: Props) {
   const list = useRef<HTMLOListElement>(null);
   const flown = useRef(new Set<string>());
   const [speaking, setSpeaking] = useState(false);
+  const [picked, setPicked] = useState<Record<string, number>>({});
+  const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
   const fresh = primary && drafts.length === 0 && messages.every((m) => m.role === "assistant");
-  const lastAssistant = messages.findLast((message) => message.role === "assistant");
+  const lastRow = rows.at(-1);
+  const lastAnswer = lastRow?.kind === "answer" ? lastRow : null;
   const lastUser = messages.findLast((message) => message.role === "user");
+
+  const inPlace = (draft: Draft) =>
+    regenerating !== null &&
+    (regenerating.turnId === draft.turnId || (regenerating.turnId === null && !draft.failure));
+  const placed = drafts.find(inPlace) ?? null;
+  const trailing = drafts.filter((draft) => draft !== placed);
   const delivered =
-    running && running.text === "" && running.tools.length === 0 && lastUser ? lastUser.id : null;
+    running && running !== placed && running.text === "" && running.tools.length === 0 && lastUser
+      ? lastUser.id
+      : null;
+
+  useEffect(() => {
+    if (!regenerating?.turnId) return;
+    if (!drafts.some((draft) => draft.turnId === regenerating.turnId)) setRegenerating(null);
+  }, [drafts, regenerating]);
 
   const model = state.model
     ? (state.model.label ?? `${t(providerKey(state.model.provider))} · ${state.model.model}`)
@@ -103,10 +178,21 @@ export function ChatPane(props: Props) {
 
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
 
-  const send = (text: string, context: ContextNote[] = []) => store.send(threadId, text, context);
+  const send = (text: string, sentQuote: string | null = null) =>
+    store.send(threadId, text, { quote: sentQuote });
   const retry = (turnId: string) => {
     store.dropDraft(turnId);
     void store.retry(threadId);
+  };
+  const regenerate = async (root: string) => {
+    setPicked(({ [root]: _shown, ...rest }) => rest);
+    setRegenerating({ root, turnId: null });
+    try {
+      const turnId = await store.retry(threadId);
+      setRegenerating({ root, turnId });
+    } catch {
+      setRegenerating(null);
+    }
   };
   const speak = (text: string) => {
     const synth = window.speechSynthesis;
@@ -123,7 +209,7 @@ export function ChatPane(props: Props) {
     synth.speak(utterance);
   };
 
-  const menuFor = (event: MouseEvent<HTMLLIElement>, message: Message) => {
+  const menuFor = (event: MouseEvent<HTMLLIElement>, message: Message, root: string | null) => {
     const selected = selectionWithin(event.currentTarget);
     const copy = (text: string) => void navigator.clipboard.writeText(text);
     let entries: MenuEntry[];
@@ -136,10 +222,11 @@ export function ChatPane(props: Props) {
         {
           label: t("menu-look-up"),
           disabled: Boolean(running),
-          onSelect: () => void send(t("look-up-prompt", { text: selected })),
+          onSelect: () => void send(t("look-up-message"), selected),
         },
       ];
-    } else if (message.role === "assistant") {
+    } else if (root) {
+      const latest = root === lastAnswer?.root;
       entries = [
         { label: t("menu-copy"), shortcut: "⌘C", onSelect: () => copy(message.text) },
         { label: t("menu-quote"), shortcut: "⌘R", onSelect: () => onQuote(message.text) },
@@ -150,9 +237,9 @@ export function ChatPane(props: Props) {
         },
         {
           label: t("menu-regenerate"),
-          shortcut: message.id === lastAssistant?.id ? undefined : t("menu-regenerate-last-only"),
-          disabled: message.id !== lastAssistant?.id || Boolean(running),
-          onSelect: () => void store.retry(threadId),
+          shortcut: latest ? undefined : t("menu-regenerate-last-only"),
+          disabled: !latest || Boolean(running),
+          onSelect: () => void regenerate(root),
         },
       ];
     } else {
@@ -162,6 +249,47 @@ export function ChatPane(props: Props) {
       ];
     }
     openMenu(event, entries);
+  };
+
+  const renderRow = (row: Row) => {
+    if (row.kind === "user") {
+      const message = row.message;
+      return (
+        <UserItem
+          key={message.id}
+          message={message}
+          delivered={message.id === delivered}
+          onContextMenu={(event) => menuFor(event, message, null)}
+        />
+      );
+    }
+    if (placed && regenerating?.root === row.root) {
+      return <DraftItem key={row.root} draft={placed} onRetry={() => retry(placed.turnId)} />;
+    }
+    const count = row.versions.length;
+    const index = Math.min(picked[row.root] ?? count - 1, count - 1);
+    const message = row.versions[index] ?? row.versions[0];
+    if (!message) return null;
+    const settled = state.settled[message.id];
+    const footer = settled !== undefined || row === lastAnswer || count > 1;
+    return (
+      <AnswerItem
+        key={row.root}
+        message={message}
+        settled={settled}
+        footer={footer}
+        versions={
+          count > 1
+            ? {
+                index,
+                count,
+                onPick: (next) => setPicked((current) => ({ ...current, [row.root]: next })),
+              }
+            : null
+        }
+        onContextMenu={(event) => menuFor(event, message, row.root)}
+      />
+    );
   };
 
   return (
@@ -179,23 +307,8 @@ export function ChatPane(props: Props) {
         />
       </header>
       <ol ref={list} className="chat__messages" aria-live="polite">
-        {messages.map((message) => {
-          const settled = state.settled[message.id];
-          const showFooter =
-            message.role === "assistant" &&
-            (settled !== undefined || message.id === lastAssistant?.id);
-          return (
-            <MessageItem
-              key={message.id}
-              message={message}
-              settled={settled}
-              footer={showFooter}
-              delivered={message.id === delivered}
-              onContextMenu={(event) => menuFor(event, message)}
-            />
-          );
-        })}
-        {drafts.map((draft) => (
+        {rows.map(renderRow)}
+        {trailing.map((draft) => (
           <DraftItem key={draft.turnId} draft={draft} onRetry={() => retry(draft.turnId)} />
         ))}
         {fresh && messages.length > 0 && (
@@ -218,41 +331,47 @@ export function ChatPane(props: Props) {
         busy={Boolean(running)}
         quote={quote}
         onClearQuote={() => onQuote(null)}
-        onSend={(text) =>
-          send(text, quote ? [{ label: t("quote-label"), body: quote }] : []).then(() =>
-            onQuote(null),
-          )
-        }
+        onSend={(text) => send(text, quote).then(() => onQuote(null))}
         onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
       />
     </main>
   );
 }
 
-function MessageItem({
+function UserItem({
+  message,
+  delivered,
+  onContextMenu,
+}: {
+  message: Message;
+  delivered: boolean;
+  onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <li className="bubble bubble--user" onContextMenu={onContextMenu}>
+        {message.quote && <span className="bubble__quote">{message.quote}</span>}
+        {message.text}
+      </li>
+      {delivered && <li className="delivered">{t("delivered")}</li>}
+    </>
+  );
+}
+
+function AnswerItem({
   message,
   settled,
   footer,
-  delivered,
+  versions,
   onContextMenu,
 }: {
   message: Message;
   settled: Settled | undefined;
   footer: boolean;
-  delivered: boolean;
+  versions: { index: number; count: number; onPick: (index: number) => void } | null;
   onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
 }) {
-  const { t } = useI18n();
-  if (message.role === "user") {
-    return (
-      <>
-        <li className="bubble bubble--user" onContextMenu={onContextMenu}>
-          {message.text}
-        </li>
-        {delivered && <li className="delivered">{t("delivered")}</li>}
-      </>
-    );
-  }
   return (
     <>
       {settled && <TraceSummary trace={settled} />}
@@ -264,20 +383,14 @@ function MessageItem({
       >
         <RichText text={message.text} />
         {settled && <span className="caret caret--done" aria-hidden="true" />}
-        {footer && <ReplyFooter message={message} settled={settled} />}
+        {footer && <ReplyFooter message={message} settled={settled} versions={versions} />}
       </li>
       {settled && <MemoryChips memories={settled.memories} />}
     </>
   );
 }
 
-function DraftItem({
-  draft,
-  onRetry,
-}: {
-  draft: import("@xiaoban/client").Draft;
-  onRetry: () => void;
-}) {
+function DraftItem({ draft, onRetry }: { draft: Draft; onRetry: () => void }) {
   return (
     <>
       {draft.tools.length > 0 && draft.text !== "" && <TraceSummary trace={draft} />}

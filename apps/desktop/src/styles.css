@@ -972,10 +972,72 @@ button {
 }
 
 .reply-meta {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   margin-top: 8px;
   font-size: 11px;
   color: var(--color-faint);
+}
+
+.versions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-ground);
+  color: var(--color-ink-mid);
+}
+
+.versions__step {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.versions__step:hover:not(:disabled) {
+  background: var(--color-line);
+}
+
+.versions__step:disabled {
+  color: var(--color-line-strong);
+  cursor: default;
+}
+
+.versions__step svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.versions__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.bubble__quote {
+  display: -webkit-box;
+  margin: 0 0 6px;
+  padding: 4px 8px;
+  border-left: 2px solid color-mix(in srgb, var(--color-surface) 60%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-surface) 15%, transparent);
+  color: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .reply-meta--fresh {
