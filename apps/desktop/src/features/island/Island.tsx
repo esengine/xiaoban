@@ -18,6 +18,8 @@ const SIZES: Record<Mode, readonly [number, number]> = {
   done: [320, 44],
   confirm: [440, 196],
 };
+const CONFIRM_RADIUS = 30;
+const CONFIRM_SHORT = 112;
 const DRAG_THRESHOLD = 4;
 const FLASH_MS = 3_000;
 const DONE_MS = 3_000;
@@ -106,6 +108,10 @@ export function Island() {
           : "compact"
         : "idle";
 
+  const targetSize: readonly [number, number] =
+    mode === "confirm" && confirm?.kind.kind !== "action"
+      ? [SIZES.confirm[0], CONFIRM_SHORT]
+      : SIZES[mode];
   const [dragging, setDragging] = useState(false);
   const press = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   useEffect(() => {
@@ -120,7 +126,7 @@ export function Island() {
 
   const shownSize = useRef<readonly [number, number]>(SIZES.idle);
   useEffect(() => {
-    const next = SIZES[mode];
+    const next = targetSize;
     const [width, height] = shownSize.current;
     void invoke("island_resize", {
       width: Math.max(width, next[0]),
@@ -132,7 +138,7 @@ export function Island() {
       motion.island,
     );
     return () => window.clearTimeout(timer);
-  }, [mode]);
+  }, [targetSize[0], targetSize[1]]);
 
   const [leaving, setLeaving] = useState<{ mode: Mode; node: ReactNode } | null>(null);
   const previousContent = useRef<{ mode: Mode; node: ReactNode } | null>(null);
@@ -224,7 +230,8 @@ export function Island() {
     previousContent.current = { mode, node: content };
   });
 
-  const size = SIZES[mode];
+  const size = targetSize;
+  const radius = mode === "confirm" ? CONFIRM_RADIUS : size[1] / 2;
   const target = confirm?.threadId ?? done?.threadId ?? running?.threadId ?? null;
 
   return (
@@ -234,7 +241,7 @@ export function Island() {
         data-idle={(mode === "idle" && !hover && !dragging) || undefined}
         data-dragging={dragging || undefined}
         data-confirm={mode === "confirm" || undefined}
-        style={{ width: size[0], height: size[1], borderRadius: size[1] / 2 }}
+        style={{ width: size[0], height: size[1], borderRadius: radius }}
       >
         <button
           type="button"
