@@ -2118,7 +2118,7 @@ async fn subthreads_open_after_confirmation_and_report_back() {
             panic!("expected messages");
         };
         if messages.iter().any(|message| {
-            matches!(&message.attachment, Some(xiaoban_protocol::Attachment::Report { title, .. }) if title == "苏州周末")
+            matches!(&message.attachment, Some(Attachment::Report { title, .. }) if title == "苏州周末")
         }) {
             let Response::Threads { threads } = client.request(Request::ListThreads).await else {
                 panic!("expected threads");
