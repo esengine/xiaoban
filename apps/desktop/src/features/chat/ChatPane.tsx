@@ -12,6 +12,7 @@ import { TripCard } from "../trip/TripCard.tsx";
 import { Composer } from "./Composer.tsx";
 import { DraftBubble } from "./DraftBubble.tsx";
 import { flyToMe } from "./flyToMe.ts";
+import { InlineText } from "./InlineText.tsx";
 import { PanelToggle } from "./PanelToggle.tsx";
 import { plain } from "./plain.ts";
 import { RichText } from "./RichText.tsx";
@@ -387,7 +388,7 @@ function UserItem({
     <>
       <li className="bubble bubble--user" onContextMenu={onContextMenu}>
         {message.quote && <span className="bubble__quote">{message.quote}</span>}
-        {message.text}
+        <InlineText text={message.text} />
       </li>
       {delivered && <li className="delivered">{t("delivered")}</li>}
     </>

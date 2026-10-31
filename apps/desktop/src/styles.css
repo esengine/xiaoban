@@ -1136,6 +1136,51 @@ button {
   border-radius: 5px;
 }
 
+:is(.rich, .bubble) :is(sup, sub) {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+:is(.rich, .bubble) mark {
+  background: var(--color-attention-soft);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+:is(.rich, .bubble) del {
+  color: var(--color-faint);
+}
+
+.rich__kbd {
+  display: inline-block;
+  min-width: 14px;
+  height: 20px;
+  padding: 0 6px;
+  margin: 0 1px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-line-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 17px;
+  text-align: center;
+  vertical-align: 1px;
+}
+
+.bubble--user .rich__kbd {
+  border-color: color-mix(in srgb, var(--color-surface) 40%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 15%, transparent);
+  color: var(--color-surface);
+}
+
+.bubble--user del {
+  color: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+
 .rich__code-block {
   position: relative;
   margin: 10px 0;

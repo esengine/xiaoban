@@ -3,6 +3,7 @@ import { type ComponentProps, memo, type ReactNode, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { openExternal } from "../../lib/external.ts";
+import { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 
 function textOf(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
@@ -60,12 +61,15 @@ const components: Components = {
     </div>
   ),
   img: ({ alt }) => <span>{alt}</span>,
+  kbd: ({ children }) => (
+    <kbd className="rich__kbd">{typeof children === "string" ? keyLabel(children) : children}</kbd>
+  ),
 };
 
 export const RichText = memo(function RichText({ text }: { text: string }) {
   return (
     <div className="rich">
-      <Markdown remarkPlugins={[remarkGfm]} components={components}>
+      <Markdown remarkPlugins={[remarkGfm, remarkInlineTags]} components={components}>
         {text}
       </Markdown>
     </div>
