@@ -4,6 +4,8 @@ export type FailureKind =
   | "model"
   | "not_configured"
   | "invalid_key"
+  | "unknown_model"
+  | "invalid_endpoint"
   | "network"
   | "cancelled"
   | "budget"

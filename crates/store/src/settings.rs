@@ -26,3 +26,13 @@ impl Store {
         .await
     }
 }
+
+impl Store {
+    pub async fn clear_setting(&self, key: &'static str) -> Result<()> {
+        self.with(move |conn| {
+            conn.execute("DELETE FROM settings WHERE key = ?1", [key])?;
+            Ok(())
+        })
+        .await
+    }
+}

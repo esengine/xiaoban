@@ -11,7 +11,7 @@ export function ModelBadge({ model }: { model: ModelInfo | null }) {
   return (
     <p className="model-badge" title={t("model-current")}>
       <img className="model-badge__icon" src={providerSvgDataUri(model.provider)} alt="" />
-      <span className="model-badge__name">{t(providerKey(model.provider))}</span>
+      <span className="model-badge__name">{model.label ?? t(providerKey(model.provider))}</span>
       <span className="model-badge__model">{model.model}</span>
     </p>
   );

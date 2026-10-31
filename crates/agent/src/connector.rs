@@ -6,7 +6,11 @@ use crate::{AgentError, ModelProvider, OpenAiCompatible, OpenAiConfig};
 
 pub trait Connector: std::fmt::Debug + Send + Sync + 'static {
     fn provider(&self, config: OpenAiConfig) -> Arc<dyn ModelProvider>;
-    fn check(&self, config: OpenAiConfig) -> BoxFuture<'static, Result<(), AgentError>>;
+    fn check(
+        &self,
+        config: OpenAiConfig,
+        verify_model: bool,
+    ) -> BoxFuture<'static, Result<(), AgentError>>;
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -17,7 +21,11 @@ impl Connector for HttpConnector {
         Arc::new(OpenAiCompatible::new(config))
     }
 
-    fn check(&self, config: OpenAiConfig) -> BoxFuture<'static, Result<(), AgentError>> {
-        Box::pin(async move { OpenAiCompatible::new(config).check().await })
+    fn check(
+        &self,
+        config: OpenAiConfig,
+        verify_model: bool,
+    ) -> BoxFuture<'static, Result<(), AgentError>> {
+        Box::pin(async move { OpenAiCompatible::new(config).check(verify_model).await })
     }
 }

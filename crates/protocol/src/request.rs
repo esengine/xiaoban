@@ -40,6 +40,8 @@ pub enum Request {
         provider: ProviderId,
         api_key: String,
         model: Option<String>,
+        base_url: Option<String>,
+        label: Option<String>,
     },
 }
 

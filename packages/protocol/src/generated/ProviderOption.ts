@@ -3,8 +3,8 @@ import type { ProviderId } from "./ProviderId.ts";
 
 export type ProviderOption = {
   id: ProviderId;
-  defaultModel: string;
+  defaultModel: string | null;
   models: Array<string>;
-  consoleUrl: string;
+  consoleUrl: string | null;
   configured: boolean;
 };

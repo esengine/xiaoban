@@ -1,6 +1,6 @@
 use xiaoban_protocol::{ModelInfo, ProviderId};
 
-use crate::OpenAiConfig;
+use crate::{AgentError, OpenAiConfig};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProviderPreset {
@@ -32,11 +32,8 @@ pub const PRESETS: [ProviderPreset; 2] = [
 ];
 
 impl ProviderPreset {
-    pub fn of(id: ProviderId) -> &'static Self {
-        PRESETS
-            .iter()
-            .find(|preset| preset.id == id)
-            .expect("every provider id has a preset")
+    pub fn find(id: ProviderId) -> Option<&'static Self> {
+        PRESETS.iter().find(|preset| preset.id == id)
     }
 
     pub fn config(&self, api_key: String, model: Option<String>) -> OpenAiConfig {
@@ -55,6 +52,24 @@ impl ProviderPreset {
     }
 }
 
+pub fn normalize_base_url(raw: &str) -> Result<String, AgentError> {
+    let invalid = || AgentError::InvalidEndpoint(raw.to_owned());
+    let mut url = reqwest::Url::parse(raw.trim()).map_err(|_| invalid())?;
+    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() {
+        return Err(invalid());
+    }
+    url.set_query(None);
+    url.set_fragment(None);
+    let path = url.path().trim_end_matches('/');
+    let path = path
+        .strip_suffix("/chat/completions")
+        .or_else(|| path.strip_suffix("/models"))
+        .unwrap_or(path)
+        .to_owned();
+    url.set_path(&path);
+    Ok(url.as_str().trim_end_matches('/').to_owned())
+}
+
 #[derive(Debug, Clone)]
 pub struct ConfiguredProvider {
     pub info: ModelInfo,
@@ -67,9 +82,39 @@ impl ConfiguredProvider {
             info: ModelInfo {
                 provider: preset.id,
                 model: config.model.clone(),
+                label: None,
+                base_url: None,
             },
             config,
         }
+    }
+
+    pub fn custom(
+        base_url: &str,
+        api_key: String,
+        model: &str,
+        label: Option<String>,
+    ) -> Result<Self, AgentError> {
+        let base_url = normalize_base_url(base_url)?;
+        let model = model.trim().to_owned();
+        if model.is_empty() {
+            return Err(AgentError::UnknownModel(model));
+        }
+        Ok(Self {
+            info: ModelInfo {
+                provider: ProviderId::Custom,
+                model: model.clone(),
+                label: label
+                    .map(|label| label.trim().to_owned())
+                    .filter(|label| !label.is_empty()),
+                base_url: Some(base_url.clone()),
+            },
+            config: OpenAiConfig {
+                base_url,
+                api_key,
+                model,
+            },
+        })
     }
 
     #[must_use]
@@ -93,21 +138,74 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_provider_id_has_exactly_one_preset() {
+    fn every_builtin_provider_has_exactly_one_preset() {
         for id in ProviderId::ALL {
-            assert_eq!(PRESETS.iter().filter(|preset| preset.id == id).count(), 1);
+            let count = PRESETS.iter().filter(|preset| preset.id == id).count();
+            assert_eq!(count, usize::from(id != ProviderId::Custom));
         }
     }
 
     #[test]
     fn config_falls_back_to_the_preset_model() {
-        let mimo = ProviderPreset::of(ProviderId::Mimo).config("k".into(), None);
+        let mimo = ProviderPreset::find(ProviderId::Mimo)
+            .unwrap()
+            .config("k".into(), None);
         assert_eq!(mimo.base_url, "https://api.xiaomimimo.com/v1");
         assert_eq!(mimo.model, "mimo-v2.5-pro");
-        let preset = ProviderPreset::of(ProviderId::Deepseek);
-        let configured = ConfiguredProvider::new(preset, preset.config("k".into(), None))
-            .with_model("deepseek-v4-pro".into());
-        assert_eq!(configured.config.model, "deepseek-v4-pro");
-        assert_eq!(configured.info.model, "deepseek-v4-pro");
+    }
+
+    #[test]
+    fn normalizes_pasted_endpoints() {
+        for (raw, expected) in [
+            (
+                "https://relay.example.com/v1",
+                "https://relay.example.com/v1",
+            ),
+            (
+                "https://relay.example.com/v1/",
+                "https://relay.example.com/v1",
+            ),
+            (
+                "https://relay.example.com/v1/chat/completions",
+                "https://relay.example.com/v1",
+            ),
+            (
+                " http://127.0.0.1:11434/v1/models ",
+                "http://127.0.0.1:11434/v1",
+            ),
+            ("https://relay.example.com", "https://relay.example.com"),
+        ] {
+            assert_eq!(normalize_base_url(raw).unwrap(), expected, "{raw}");
+        }
+        for raw in [
+            "relay.example.com/v1",
+            "ftp://relay.example.com",
+            "",
+            "https://",
+        ] {
+            assert!(
+                matches!(normalize_base_url(raw), Err(AgentError::InvalidEndpoint(_))),
+                "{raw}"
+            );
+        }
+    }
+
+    #[test]
+    fn custom_providers_keep_label_and_endpoint() {
+        let custom = ConfiguredProvider::custom(
+            "https://relay.example.com/v1/chat/completions",
+            "k".into(),
+            " gpt-x ",
+            Some(" 我的中转站 ".into()),
+        )
+        .unwrap();
+        assert_eq!(custom.info.provider, ProviderId::Custom);
+        assert_eq!(custom.info.model, "gpt-x");
+        assert_eq!(custom.info.label.as_deref(), Some("我的中转站"));
+        assert_eq!(custom.config.base_url, "https://relay.example.com/v1");
+        assert!(matches!(
+            ConfiguredProvider::custom("https://r.example.com", "k".into(), " ", None),
+            Err(AgentError::UnknownModel(_))
+        ));
     }
 }

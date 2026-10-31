@@ -14,6 +14,10 @@ pub enum AgentError {
     NotConfigured,
     #[error("the provider rejected the API key")]
     InvalidKey,
+    #[error("the provider does not serve model {0}")]
+    UnknownModel(String),
+    #[error("not a usable http(s) endpoint: {0}")]
+    InvalidEndpoint(String),
 }
 
 impl AgentError {
@@ -25,6 +29,8 @@ impl AgentError {
             Self::Cancelled => (FailureKind::Cancelled, false),
             Self::NotConfigured => (FailureKind::NotConfigured, false),
             Self::InvalidKey => (FailureKind::InvalidKey, false),
+            Self::UnknownModel(_) => (FailureKind::UnknownModel, false),
+            Self::InvalidEndpoint(_) => (FailureKind::InvalidEndpoint, false),
         };
         Failure {
             kind,

@@ -49,13 +49,22 @@ export class HubStore {
     return providers;
   }
 
-  async configureProvider(
-    provider: ProviderId,
-    apiKey: string,
-    model?: string,
-  ): Promise<{ model: ModelInfo | null; failure: Failure | null }> {
+  async configureProvider(input: {
+    provider: ProviderId;
+    apiKey: string;
+    model?: string;
+    baseUrl?: string;
+    label?: string;
+  }): Promise<{ model: ModelInfo | null; failure: Failure | null }> {
     const { model: active, failure } = await this.client.request(
-      { type: "configure_provider", provider, apiKey, model: model ?? null },
+      {
+        type: "configure_provider",
+        provider: input.provider,
+        apiKey: input.apiKey,
+        model: input.model ?? null,
+        baseUrl: input.baseUrl ?? null,
+        label: input.label ?? null,
+      },
       "provider_configured",
     );
     if (!failure) this.#update((state) => ({ ...state, model: active, modelLoaded: true }));

@@ -18,7 +18,7 @@ export function ModelBadge({ model }: { model: ModelInfo | null }) {
   return (
     <View style={styles.badge} accessibilityLabel={t("model-current")}>
       <SvgXml xml={providerSvg(model.provider)} width={18} height={18} color={color.ink} />
-      <Text style={styles.name}>{t(providerKey(model.provider))}</Text>
+      <Text style={styles.name}>{model.label ?? t(providerKey(model.provider))}</Text>
       <Text style={styles.model} numberOfLines={1}>
         {model.model}
       </Text>

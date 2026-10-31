@@ -100,20 +100,24 @@ impl Connector for FixedConnector {
         Arc::clone(&self.0)
     }
 
-    fn check(&self, config: OpenAiConfig) -> BoxFuture<'static, Result<(), AgentError>> {
-        let valid = config.api_key == VALID_KEY;
-        Box::pin(async move {
-            if valid {
-                Ok(())
-            } else {
-                Err(AgentError::InvalidKey)
-            }
-        })
+    fn check(
+        &self,
+        config: OpenAiConfig,
+        verify_model: bool,
+    ) -> BoxFuture<'static, Result<(), AgentError>> {
+        let result = if config.api_key != VALID_KEY {
+            Err(AgentError::InvalidKey)
+        } else if verify_model && config.model != "relay-model" {
+            Err(AgentError::UnknownModel(config.model))
+        } else {
+            Ok(())
+        };
+        Box::pin(async move { result })
     }
 }
 
 fn deepseek(key: &str) -> ConfiguredProvider {
-    let preset = ProviderPreset::of(ProviderId::Deepseek);
+    let preset = ProviderPreset::find(ProviderId::Deepseek).unwrap();
     ConfiguredProvider::new(preset, preset.config(key.into(), None))
 }
 
@@ -429,6 +433,8 @@ async fn configure(client: &mut TestClient, key: &str) -> Response {
             provider: ProviderId::Deepseek,
             api_key: key.into(),
             model: Some("deepseek-v4-pro".into()),
+            base_url: None,
+            label: None,
         })
         .await
 }
@@ -537,6 +543,8 @@ async fn paired_devices_cannot_configure_providers() {
                 provider: ProviderId::Deepseek,
                 api_key: VALID_KEY.into(),
                 model: None,
+                base_url: None,
+                label: None,
             },
         })
         .await;
@@ -554,4 +562,100 @@ async fn paired_devices_cannot_configure_providers() {
         }
     }
     hub.shutdown().await;
+}
+
+async fn configure_custom(client: &mut TestClient, base_url: &str, model: &str) -> Response {
+    client
+        .request(Request::ConfigureProvider {
+            provider: ProviderId::Custom,
+            api_key: VALID_KEY.into(),
+            model: Some(model.into()),
+            base_url: Some(base_url.into()),
+            label: Some("我的中转站".into()),
+        })
+        .await
+}
+
+#[tokio::test]
+async fn custom_relays_are_validated_saved_and_restored() {
+    let secrets: Arc<dyn SecretStore> = Arc::new(MemorySecrets::default());
+    let dir = std::env::temp_dir().join(format!("xiaoban-custom-{}", uuid_like()));
+    let config = HubConfig {
+        data_dir: Some(dir.clone()),
+        ..HubConfig::ephemeral()
+    };
+    let fresh = runtime_with(
+        ScriptedProvider::new(["好"]),
+        StablePrefix::new("system"),
+        None,
+        Arc::clone(&secrets),
+    );
+    let hub = Hub::start(config.clone(), fresh.clone()).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+
+    let Response::Providers { providers } = client.request(Request::ListProviders).await else {
+        panic!("expected providers");
+    };
+    let custom = providers
+        .iter()
+        .find(|p| p.id == ProviderId::Custom)
+        .unwrap();
+    assert_eq!(custom.default_model, None);
+    assert_eq!(custom.console_url, None);
+
+    for (base_url, model, kind) in [
+        (
+            "relay.example.com/v1",
+            "relay-model",
+            FailureKind::InvalidEndpoint,
+        ),
+        (
+            "https://relay.example.com/v1",
+            "typo",
+            FailureKind::UnknownModel,
+        ),
+    ] {
+        let Response::ProviderConfigured {
+            model: None,
+            failure: Some(failure),
+        } = configure_custom(&mut client, base_url, model).await
+        else {
+            panic!("{base_url} {model} should be rejected");
+        };
+        assert_eq!(failure.kind, kind);
+    }
+    assert_eq!(secrets.load(ProviderId::Custom).unwrap(), None);
+
+    let Response::ProviderConfigured {
+        model: Some(model),
+        failure: None,
+    } = configure_custom(
+        &mut client,
+        "https://relay.example.com/v1/chat/completions",
+        "relay-model",
+    )
+    .await
+    else {
+        panic!("a valid relay should be accepted");
+    };
+    assert_eq!(model.provider, ProviderId::Custom);
+    assert_eq!(
+        model.base_url.as_deref(),
+        Some("https://relay.example.com/v1")
+    );
+    assert_eq!(model.label.as_deref(), Some("我的中转站"));
+    drop(client);
+    hub.shutdown().await;
+
+    let hub = Hub::start(config, fresh).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let Response::ModelStatus {
+        model: Some(restored),
+    } = client.request(Request::ModelStatus).await
+    else {
+        panic!("the relay should survive a restart");
+    };
+    assert_eq!(restored, model);
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(dir);
 }

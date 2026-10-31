@@ -14,4 +14,11 @@ export type Request =
   | { type: "usage_summary" }
   | { type: "model_status" }
   | { type: "list_providers" }
-  | { type: "configure_provider"; provider: ProviderId; apiKey: string; model: string | null };
+  | {
+      type: "configure_provider";
+      provider: ProviderId;
+      apiKey: string;
+      model: string | null;
+      baseUrl: string | null;
+      label: string | null;
+    };

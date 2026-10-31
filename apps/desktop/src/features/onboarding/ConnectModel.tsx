@@ -12,9 +12,15 @@ export function ConnectModel() {
   const { t } = useI18n();
   const store = useHub();
   const keyId = useId();
+  const baseUrlId = useId();
+  const modelId = useId();
+  const labelId = useId();
   const [providers, setProviders] = useState<ProviderOption[]>([]);
   const [selected, setSelected] = useState<ProviderId | null>(null);
   const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [customModel, setCustomModel] = useState("");
+  const [label, setLabel] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<PlainMessageKey | null>(null);
@@ -28,14 +34,27 @@ export function ConnectModel() {
 
   const provider = providers.find((option) => option.id === selected) ?? null;
   const providerName = provider ? t(providerKey(provider.id)) : "";
+  const isCustom = provider?.id === "custom";
+  const ready =
+    provider !== null &&
+    apiKey.trim() !== "" &&
+    (!isCustom || (baseUrl.trim() !== "" && customModel.trim() !== ""));
+  const edit = (setter: (value: string) => void) => (value: string) => {
+    setter(value);
+    setError(null);
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!provider || !apiKey.trim()) return;
+    if (!provider || !ready) return;
     setChecking(true);
     setError(null);
     try {
-      const { failure } = await store.configureProvider(provider.id, apiKey);
+      const { failure } = await store.configureProvider(
+        isCustom
+          ? { provider: provider.id, apiKey, baseUrl, model: customModel, label }
+          : { provider: provider.id, apiKey },
+      );
       if (failure) setError(failureKey(failure.kind));
     } catch (cause) {
       setError(describeError(cause));
@@ -83,7 +102,9 @@ export function ConnectModel() {
               </span>
               <span className="provider-option__text">
                 <span className="provider-option__name">{t(providerKey(option.id))}</span>
-                <span className="provider-option__model">{option.defaultModel}</span>
+                <span className="provider-option__model">
+                  {option.defaultModel ?? t("custom-description")}
+                </span>
               </span>
               {index === 0 && (
                 <span className="provider-option__badge">{t("onboarding-recommended")}</span>
@@ -92,6 +113,50 @@ export function ConnectModel() {
           ))}
         </fieldset>
 
+        {isCustom && (
+          <div className="onboarding__custom">
+            <div className="onboarding__field">
+              <label htmlFor={baseUrlId}>{t("custom-base-url-label")}</label>
+              <input
+                id={baseUrlId}
+                className="onboarding__input"
+                value={baseUrl}
+                onChange={(event) => edit(setBaseUrl)(event.target.value)}
+                placeholder={t("custom-base-url-placeholder")}
+                autoComplete="off"
+                spellCheck={false}
+                inputMode="url"
+              />
+            </div>
+            <div className="onboarding__row">
+              <div className="onboarding__field">
+                <label htmlFor={modelId}>{t("custom-model-label")}</label>
+                <input
+                  id={modelId}
+                  className="onboarding__input"
+                  value={customModel}
+                  onChange={(event) => edit(setCustomModel)(event.target.value)}
+                  placeholder={t("custom-model-placeholder")}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="onboarding__field">
+                <label htmlFor={labelId}>{t("custom-label-label")}</label>
+                <input
+                  id={labelId}
+                  className="onboarding__input"
+                  value={label}
+                  onChange={(event) => setLabel(event.target.value)}
+                  placeholder={t("custom-label-placeholder")}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+            <p className="onboarding__warning">{t("custom-trust-warning")}</p>
+          </div>
+        )}
+
         <div className="onboarding__field">
           <label htmlFor={keyId}>{t("onboarding-key-label")}</label>
           <div className="onboarding__key">
@@ -99,11 +164,10 @@ export function ConnectModel() {
               id={keyId}
               type={revealed ? "text" : "password"}
               value={apiKey}
-              onChange={(event) => {
-                setApiKey(event.target.value);
-                setError(null);
-              }}
-              placeholder={t("onboarding-key-placeholder", { provider: providerName })}
+              onChange={(event) => edit(setApiKey)(event.target.value)}
+              placeholder={t("onboarding-key-placeholder", {
+                provider: isCustom ? label.trim() || providerName : providerName,
+              })}
               autoComplete="off"
               spellCheck={false}
             />
@@ -121,11 +185,11 @@ export function ConnectModel() {
               </svg>
             </button>
           </div>
-          {provider && (
+          {provider?.consoleUrl && (
             <button
               type="button"
               className="onboarding__link"
-              onClick={() => void openExternal(provider.consoleUrl)}
+              onClick={() => provider.consoleUrl && void openExternal(provider.consoleUrl)}
             >
               {t("onboarding-get-key", { provider: providerName })}
             </button>
@@ -139,11 +203,7 @@ export function ConnectModel() {
           </p>
         )}
 
-        <button
-          type="submit"
-          className="onboarding__submit"
-          disabled={!provider || !apiKey.trim() || checking}
-        >
+        <button type="submit" className="onboarding__submit" disabled={!ready || checking}>
           {checking && <span className="onboarding__spinner" aria-hidden="true" />}
           {t(checking ? "onboarding-checking" : "onboarding-submit")}
         </button>

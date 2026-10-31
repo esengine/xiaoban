@@ -35,31 +35,66 @@ struct Args {
     locale: Option<String>,
     #[arg(
         long,
-        help = "deepseek or mimo; defaults to the first provider with an API key in the environment"
+        help = "deepseek, mimo or custom; defaults to the first provider with an API key in the environment"
     )]
     provider: Option<String>,
-    #[arg(long, help = "Override the provider's default model")]
+    #[arg(
+        long,
+        help = "Override the provider's default model; required for custom"
+    )]
     model: Option<String>,
+    #[arg(
+        long,
+        help = "OpenAI-compatible endpoint for the custom provider, e.g. a relay"
+    )]
+    base_url: Option<String>,
+    #[arg(
+        long,
+        help = "Name of the environment variable holding the custom provider's key"
+    )]
+    api_key_env: Option<String>,
     #[arg(long)]
     no_advertise: bool,
 }
 
+fn custom(args: &Args) -> anyhow::Result<ConfiguredProvider> {
+    let base_url = args
+        .base_url
+        .as_deref()
+        .context("--base-url is required for custom")?;
+    let model = args
+        .model
+        .clone()
+        .context("--model is required for custom")?;
+    let key_env = args
+        .api_key_env
+        .as_deref()
+        .context("--api-key-env is required for custom")?;
+    let api_key = std::env::var(key_env).with_context(|| format!("{key_env} is not set"))?;
+    Ok(ConfiguredProvider::custom(base_url, api_key, &model, None)?)
+}
+
 fn configured(args: &Args) -> anyhow::Result<Option<ConfiguredProvider>> {
-    let configured = match &args.provider {
-        Some(id) => {
-            let id = ProviderId::parse(id).with_context(|| format!("unknown provider {id}"))?;
-            let preset = ProviderPreset::of(id);
-            let config = preset
-                .from_env()
-                .with_context(|| format!("{} is not set", preset.key_env))?;
-            Some(ConfiguredProvider::new(preset, config))
-        }
-        None => first_configured_from_env(),
+    let Some(id) = &args.provider else {
+        return Ok(
+            first_configured_from_env().map(|configured| match &args.model {
+                Some(model) => configured.with_model(model.clone()),
+                None => configured,
+            }),
+        );
     };
-    Ok(match (configured, &args.model) {
-        (Some(configured), Some(model)) => Some(configured.with_model(model.clone())),
-        (configured, _) => configured,
-    })
+    let id = ProviderId::parse(id).with_context(|| format!("unknown provider {id}"))?;
+    let Some(preset) = ProviderPreset::find(id) else {
+        return custom(args).map(Some);
+    };
+    let config = preset
+        .from_env()
+        .with_context(|| format!("{} is not set", preset.key_env))?;
+    let configured = ConfiguredProvider::new(preset, config);
+    Ok(Some(match &args.model {
+        Some(model) => configured.with_model(model.clone()),
+        None => configured,
+    }))
 }
 
 #[tokio::main]

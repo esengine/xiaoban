@@ -53,6 +53,7 @@ pair-submitting = Connecting…
 
 provider-deepseek = DeepSeek
 provider-mimo = Xiaomi MiMo
+provider-custom = Custom / relay
 model-not-connected = No model connected
 model-current = Current model
 
@@ -70,5 +71,15 @@ onboarding-submit = Test and continue
 onboarding-checking = Testing…
 onboarding-key-local = Your key stays in this computer’s keychain
 failure-invalid-key = That key didn’t work. Check that you copied all of it.
+failure-unknown-model = That endpoint doesn’t serve this model. Check the model name.
+failure-invalid-endpoint = The endpoint must start with http:// or https://
+custom-description = Any OpenAI-compatible endpoint works, such as a relay or a local Ollama
+custom-base-url-label = Endpoint
+custom-base-url-placeholder = https://your-relay/v1
+custom-model-label = Model
+custom-model-placeholder = e.g. deepseek-v4-flash
+custom-label-label = Name (optional)
+custom-label-placeholder = e.g. My relay
+custom-trust-warning = Your key will be sent to this address. Make sure you trust it.
 pair-hello = Connect your home computer
 pair-home-lead = I live on your home computer. Open Xiaoban there, then enter the address and pairing code it shows.

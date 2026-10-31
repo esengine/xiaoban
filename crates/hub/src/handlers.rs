@@ -68,6 +68,8 @@ pub async fn handle(
             provider,
             api_key,
             model,
+            base_url,
+            label,
         } => {
             if !local {
                 return Err(ProtocolError::new(
@@ -75,7 +77,14 @@ pub async fn handle(
                     "providers can only be configured on the hub's own machine",
                 ));
             }
-            model::configure(state, provider, &api_key, model).await?
+            let selection = model::Selection {
+                provider: Some(provider),
+                api_key,
+                model,
+                base_url,
+                label,
+            };
+            model::configure(state, selection).await?
         }
         Request::UsageSummary => {
             let totals = state.store.usage_totals().await?;

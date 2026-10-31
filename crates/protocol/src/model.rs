@@ -43,15 +43,17 @@ pub struct Usage {
 pub enum ProviderId {
     Deepseek,
     Mimo,
+    Custom,
 }
 
 impl ProviderId {
-    pub const ALL: [Self; 2] = [Self::Deepseek, Self::Mimo];
+    pub const ALL: [Self; 3] = [Self::Deepseek, Self::Mimo, Self::Custom];
 
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Deepseek => "deepseek",
             Self::Mimo => "mimo",
+            Self::Custom => "custom",
         }
     }
 
@@ -65,15 +67,17 @@ impl ProviderId {
 pub struct ModelInfo {
     pub provider: ProviderId,
     pub model: String,
+    pub label: Option<String>,
+    pub base_url: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderOption {
     pub id: ProviderId,
-    pub default_model: String,
+    pub default_model: Option<String>,
     pub models: Vec<String>,
-    pub console_url: String,
+    pub console_url: Option<String>,
     pub configured: bool,
 }
 
@@ -119,6 +123,8 @@ pub enum FailureKind {
     Model,
     NotConfigured,
     InvalidKey,
+    UnknownModel,
+    InvalidEndpoint,
     Network,
     Cancelled,
     Budget,

@@ -35,13 +35,56 @@ impl OpenAiCompatible {
         self.url("chat/completions")
     }
 
-    pub async fn check(&self) -> Result<(), AgentError> {
+    pub async fn check(&self, verify_model: bool) -> Result<(), AgentError> {
         let response = self
             .client
             .get(self.url("models"))
             .bearer_auth(&self.config.api_key)
             .send()
             .await?;
+        let status = response.status();
+        if status == reqwest::StatusCode::NOT_FOUND
+            || status == reqwest::StatusCode::METHOD_NOT_ALLOWED
+        {
+            return self.probe().await;
+        }
+        let response = ensure_success(response).await?;
+        if !verify_model {
+            return Ok(());
+        }
+        let listed = response
+            .json::<ModelList>()
+            .await
+            .map(|list| {
+                list.data
+                    .into_iter()
+                    .map(|model| model.id)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if listed.is_empty() || listed.contains(&self.config.model) {
+            Ok(())
+        } else {
+            Err(AgentError::UnknownModel(self.config.model.clone()))
+        }
+    }
+
+    async fn probe(&self) -> Result<(), AgentError> {
+        let response = self
+            .client
+            .post(self.endpoint())
+            .bearer_auth(&self.config.api_key)
+            .json(&json!({
+                "model": self.config.model,
+                "messages": [{ "role": "user", "content": "ping" }],
+                "max_tokens": 1,
+                "stream": false,
+            }))
+            .send()
+            .await?;
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Err(AgentError::UnknownModel(self.config.model.clone()));
+        }
         ensure_success(response).await.map(drop)
     }
 }
@@ -59,6 +102,17 @@ async fn ensure_success(response: reqwest::Response) -> Result<reqwest::Response
         status: status.as_u16(),
         body,
     })
+}
+
+#[derive(Deserialize)]
+struct ModelList {
+    #[serde(default)]
+    data: Vec<ListedModel>,
+}
+
+#[derive(Deserialize)]
+struct ListedModel {
+    id: String,
 }
 
 #[derive(Deserialize)]

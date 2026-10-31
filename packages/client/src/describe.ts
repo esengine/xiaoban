@@ -6,6 +6,8 @@ const FAILURE_KEYS = {
   model: "failure-model",
   not_configured: "failure-not-configured",
   invalid_key: "failure-invalid-key",
+  unknown_model: "failure-unknown-model",
+  invalid_endpoint: "failure-invalid-endpoint",
   network: "failure-network",
   cancelled: "failure-cancelled",
   budget: "failure-budget",
@@ -32,6 +34,7 @@ const CONNECTION_KEYS = {
 const PROVIDER_KEYS = {
   deepseek: "provider-deepseek",
   mimo: "provider-mimo",
+  custom: "provider-custom",
 } as const satisfies Record<ProviderId, PlainMessageKey>;
 
 export function providerKey(id: ProviderId): PlainMessageKey {

@@ -53,6 +53,7 @@ pair-submitting = 连接中…
 
 provider-deepseek = DeepSeek
 provider-mimo = 小米 MiMo
+provider-custom = 自定义 / 中转站
 model-not-connected = 还没有连接模型
 model-current = 当前模型
 
@@ -70,5 +71,15 @@ onboarding-submit = 测试并继续
 onboarding-checking = 正在测试…
 onboarding-key-local = 密钥只存在这台电脑的钥匙串里
 failure-invalid-key = 密钥不对，检查一下有没有复制完整
+failure-unknown-model = 这个地址上没有这个模型，检查一下模型名
+failure-invalid-endpoint = 接口地址不对，要以 http:// 或 https:// 开头
+custom-description = 兼容 OpenAI 格式的接口都行，比如中转站、本机 Ollama
+custom-base-url-label = 接口地址
+custom-base-url-placeholder = https://你的中转站/v1
+custom-model-label = 模型名
+custom-model-placeholder = 比如 deepseek-v4-flash
+custom-label-label = 叫它什么（可选）
+custom-label-placeholder = 比如：我的中转站
+custom-trust-warning = 密钥会发给这个地址，请确认你信任它。
 pair-hello = 连接家里的电脑
 pair-home-lead = 我住在你家里的电脑上。先在电脑上打开小伴，把显示的地址和配对码填在这里。
