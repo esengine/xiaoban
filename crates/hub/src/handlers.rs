@@ -216,7 +216,10 @@ async fn set_autonomy(state: &SharedState, level: AutonomyLevel) -> Handled {
 async fn remember(state: &SharedState, subject: &str, value: &str) -> Handled {
     let subject = trimmed(subject).ok_or_else(|| bad_request("memory subject is empty"))?;
     let value = trimmed(value).ok_or_else(|| bad_request("memory is empty"))?;
-    let memory = state.store.remember(subject, value).await?;
+    let memory = state
+        .store
+        .remember(subject, value, xiaoban_protocol::MemoryCategory::Other)
+        .await?;
     state.publish(Event::MemorySaved {
         memory: memory.clone(),
     });

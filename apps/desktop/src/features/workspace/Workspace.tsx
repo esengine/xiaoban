@@ -6,6 +6,7 @@ import { PairingDialog } from "../pairing/PairingDialog.tsx";
 import { range, stopCount } from "../trip/format.ts";
 import { MapIcon } from "../trip/icons.tsx";
 import { useTrip } from "../trip/TripCard.tsx";
+import { MemoryGraph } from "./MemoryGraph.tsx";
 
 function TripOutput({ tripId, onOpen }: { tripId: string; onOpen: () => void }) {
   const { t } = useI18n();
@@ -38,7 +39,7 @@ export function Workspace({
 }) {
   const { t } = useI18n();
   const store = useHub();
-  const { memories, devices, messages } = useHubState(store);
+  const { memories, devices, messages, usedMemories } = useHubState(store);
   const tripIds = [
     ...new Set(
       (threadId ? (messages[threadId] ?? []) : []).flatMap((message) =>
@@ -62,18 +63,7 @@ export function Workspace({
         </section>
       )}
       <section className="workspace__section">
-        <h2 className="workspace__title">{t("workspace-memories")}</h2>
-        {memories.length > 0 ? (
-          <ul className="memory-chips">
-            {memories.map((memory) => (
-              <li key={memory.id} className="memory-chip">
-                {t("workspace-memory", { subject: memory.subject, value: memory.value })}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="workspace__empty">{t("workspace-memories-empty")}</p>
-        )}
+        <MemoryGraph memories={memories} used={usedMemories} />
         <p className="workspace__hint">{t("workspace-memories-hint")}</p>
       </section>
       <section className="workspace__section">

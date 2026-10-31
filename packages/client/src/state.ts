@@ -44,6 +44,7 @@ export interface Settled extends TurnTrace {
 export interface HubState {
   status: ConnectionStatus;
   hub: HubInfo | null;
+  usedMemories: string[];
   model: ModelInfo | null;
   modelLoaded: boolean;
   preferences: Preferences | null;
@@ -62,6 +63,7 @@ export interface HubState {
 export const initialHubState: HubState = {
   status: "idle",
   hub: null,
+  usedMemories: [],
   model: null,
   modelLoaded: false,
   preferences: null,
@@ -134,6 +136,12 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "thread_updated":
       return { ...state, threads: upsertThread(state.threads, event.thread) };
+    case "memories_used":
+      return {
+        ...state,
+        memories: event.memories.reduce(upsertMemory, state.memories),
+        usedMemories: event.memories.map((memory) => memory.id),
+      };
     case "memory_saved": {
       const running = Object.values(state.drafts)
         .filter((draft) => !draft.failure)
@@ -162,6 +170,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "turn_started":
       return {
         ...state,
+        usedMemories: [],
         drafts: {
           ...state.drafts,
           [event.turnId]: {

@@ -376,6 +376,23 @@ async fn current_epoch(
     Ok((epoch, prefix, carried.into_iter().collect()))
 }
 
+async fn mark_used(state: &SharedState, turn_id: &str, answer: &str) {
+    let Ok(memories) = state.store.list_memories().await else {
+        return;
+    };
+    let used = memory::used_by(answer, &memories);
+    if used.is_empty() {
+        return;
+    }
+    match state.store.mark_memories_used(used).await {
+        Ok(memories) => state.publish(Event::MemoriesUsed {
+            turn_id: turn_id.to_owned(),
+            memories,
+        }),
+        Err(failure) => tracing::warn!(%failure, "could not count memory use"),
+    }
+}
+
 async fn drive(
     state: &SharedState,
     thread_id: &str,
@@ -459,6 +476,7 @@ async fn drive(
         )
         .await
         .map_err(Failure::from)?;
+    mark_used(state, turn_id, &outcome.text).await;
     let message = state
         .store
         .append_message(

@@ -67,9 +67,17 @@ const components: Components = {
 };
 
 export const RichText = memo(function RichText({ text }: { text: string }) {
+  const { t } = useI18n();
   return (
     <div className="rich">
-      <Markdown remarkPlugins={[remarkGfm, remarkInlineTags]} components={components}>
+      <Markdown
+        remarkPlugins={[remarkGfm, remarkInlineTags]}
+        remarkRehypeOptions={{
+          footnoteLabel: t("rich-footnotes"),
+          footnoteBackLabel: t("rich-footnote-back"),
+        }}
+        components={components}
+      >
         {text}
       </Markdown>
     </div>

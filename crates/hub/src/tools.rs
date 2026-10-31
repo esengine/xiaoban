@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ToolCall, ToolRunner, ToolSpec};
 use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
-use xiaoban_protocol::{Attachment, Event, Location, ServiceId};
+use xiaoban_protocol::{Attachment, Event, Location, MemoryCategory, ServiceId};
 
 use crate::services::ServiceError;
 use crate::state::SharedState;
@@ -117,21 +117,30 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs
 }
 
+fn remember_spec(l: &Localizer) -> ToolSpec {
+    spec(
+        REMEMBER,
+        l.text(keys::TOOL_REMEMBER_DESCRIPTION),
+        object(
+            &json!({
+                "subject": text(l, keys::TOOL_REMEMBER_SUBJECT),
+                "value": text(l, keys::TOOL_REMEMBER_VALUE),
+                "category": {
+                    "type": "string",
+                    "enum": MemoryCategory::ALL.map(MemoryCategory::as_str),
+                    "description": l.text(keys::TOOL_REMEMBER_CATEGORY),
+                },
+            }),
+            &["subject", "value", "category"],
+        ),
+    )
+}
+
 fn base_specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let l = localizer;
     let day = trip_day(l);
     vec![
-        spec(
-            REMEMBER,
-            l.text(keys::TOOL_REMEMBER_DESCRIPTION),
-            object(
-                &json!({
-                    "subject": text(l, keys::TOOL_REMEMBER_SUBJECT),
-                    "value": text(l, keys::TOOL_REMEMBER_VALUE),
-                }),
-                &["subject", "value"],
-            ),
-        ),
+        remember_spec(l),
         spec(
             WEATHER,
             l.text(keys::TOOL_WEATHER_DESCRIPTION),
@@ -228,6 +237,8 @@ fn error(message: &str) -> String {
 struct RememberArgs {
     subject: String,
     value: String,
+    #[serde(default)]
+    category: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -350,7 +361,8 @@ impl<'a> HubTools<'a> {
         if subject.is_empty() || value.is_empty() {
             return error("subject and value must not be empty");
         }
-        match self.state.store.remember(subject, value).await {
+        let category = MemoryCategory::parse(args.category.as_deref().unwrap_or_default());
+        match self.state.store.remember(subject, value, category).await {
             Ok(memory) => {
                 self.state.publish(Event::MemorySaved { memory });
                 json!({ "saved": true }).to_string()

@@ -24,6 +24,7 @@ export type Event =
   | { type: "tool_used"; turnId: string; tool: string; callId: string; detail: string | null }
   | { type: "tool_finished"; turnId: string; callId: string; result: StepResult }
   | { type: "memory_saved"; memory: Memory }
+  | { type: "memories_used"; turnId: string; memories: Array<Memory> }
   | { type: "confirm_requested"; confirm: ConfirmRequest }
   | { type: "confirm_resolved"; confirmId: string; choice: ConfirmChoice }
   | { type: "turn_paused"; turnId: string; paused: boolean; byUser: boolean };

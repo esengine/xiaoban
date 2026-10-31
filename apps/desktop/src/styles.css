@@ -3256,3 +3256,194 @@ button.quote-block__main {
     animation: none;
   }
 }
+
+.memory-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memory-graph__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.memory-graph__count {
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.memory-graph__sky {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 40%, var(--dark-raised), var(--dark-island));
+}
+
+.memory-graph__sky svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.memory-graph__sky line {
+  stroke: var(--dark-text);
+  stroke-opacity: 0.12;
+}
+
+.memory-graph__dot {
+  animation: memory-drift 8s ease-in-out infinite alternate;
+}
+
+.memory-graph__star {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: memory-pop var(--motion-slow) var(--ease-spring) both;
+  pointer-events: none;
+}
+
+.memory-graph__glow {
+  fill: var(--dark-text);
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+  animation: memory-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes memory-drift {
+  from {
+    transform: translate(-1px, 1px);
+  }
+  to {
+    transform: translate(1.5px, -1px);
+  }
+}
+
+@keyframes memory-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+@keyframes memory-glow {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.8);
+  }
+}
+
+.memory-graph__few {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dark-text-muted);
+}
+
+.memory-graph__tip {
+  position: absolute;
+  z-index: 2;
+  width: 170px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--dark-island) 25%, transparent);
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  animation: fade-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.memory-graph__tip span {
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.memory-graph__legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.memory-graph__legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-ink-mid);
+}
+
+.memory-graph__legend span,
+.memory-graph__list li > span:first-child {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+}
+
+.memory-graph__sub {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.memory-graph__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-graph__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-line-soft);
+  font-size: 12px;
+}
+
+.memory-graph__list[data-used] {
+  gap: 6px;
+}
+
+.memory-graph__list[data-used] li {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--color-ground);
+}
+
+.memory-graph__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.memory-graph__date {
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-graph__dot,
+  .memory-graph__star,
+  .memory-graph__glow {
+    animation: none;
+  }
+}

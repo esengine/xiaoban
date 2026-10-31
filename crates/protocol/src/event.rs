@@ -61,6 +61,10 @@ pub enum Event {
     MemorySaved {
         memory: Memory,
     },
+    MemoriesUsed {
+        turn_id: String,
+        memories: Vec<Memory>,
+    },
     ConfirmRequested {
         confirm: ConfirmRequest,
     },
@@ -93,6 +97,7 @@ impl Event {
             | Self::ToolUsed { .. }
             | Self::ToolFinished { .. }
             | Self::MemorySaved { .. }
+            | Self::MemoriesUsed { .. }
             | Self::ConfirmResolved { .. }
             | Self::TurnPaused { .. } => None,
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),

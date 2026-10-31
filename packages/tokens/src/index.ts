@@ -27,6 +27,9 @@ export const color = {
   tripRust: "#B5541C",
   tripTeal: "#1F7A8C",
   scrim: "#15171C14",
+  memoryLikes: "#8E5BD1",
+  memoryPlans: "#C9A227",
+  memoryOther: "#8A90A0",
 } as const;
 
 export const dark = {

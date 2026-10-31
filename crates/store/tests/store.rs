@@ -1,4 +1,4 @@
-use xiaoban_protocol::{Platform, Quote, Role, Usage};
+use xiaoban_protocol::{MemoryCategory, Platform, Quote, Role, Usage};
 use xiaoban_store::{EpochReason, NewMessage, Store};
 
 #[tokio::test]
@@ -169,17 +169,30 @@ async fn usage_totals_sum_every_turn() {
 #[tokio::test]
 async fn remembering_a_topic_again_replaces_the_value() {
     let store = Store::open_in_memory().unwrap();
-    let first = store.remember("称呼".into(), "阿哲".into()).await.unwrap();
-    store
-        .remember("家里".into(), "老婆和儿子".into())
+    let first = store
+        .remember("称呼".into(), "阿哲".into(), MemoryCategory::Other)
         .await
         .unwrap();
-    let updated = store.remember("称呼".into(), "哲哥".into()).await.unwrap();
+    store
+        .remember("家里".into(), "老婆和儿子".into(), MemoryCategory::Family)
+        .await
+        .unwrap();
+    let updated = store
+        .remember("称呼".into(), "哲哥".into(), MemoryCategory::Other)
+        .await
+        .unwrap();
     assert_eq!(updated.id, first.id);
     let memories = store.list_memories().await.unwrap();
     assert_eq!(memories.len(), 2);
     assert_eq!(memories[0].subject, "称呼");
     assert_eq!(memories[0].value, "哲哥");
+    assert_eq!(memories[1].category, MemoryCategory::Family);
+    let used = store
+        .mark_memories_used(vec![memories[1].id.clone()])
+        .await
+        .unwrap();
+    assert_eq!(used[0].uses, 1);
+    assert!(used[0].last_used_at.is_some());
 }
 
 #[tokio::test]

@@ -223,8 +223,56 @@ pub struct Memory {
     pub id: String,
     pub subject: String,
     pub value: String,
+    #[serde(default)]
+    pub category: MemoryCategory,
+    #[serde(default)]
+    pub uses: u32,
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub last_used_at: Option<i64>,
     #[ts(type = "number")]
     pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryCategory {
+    Family,
+    Food,
+    HomeWork,
+    Likes,
+    Plans,
+    #[default]
+    Other,
+}
+
+impl MemoryCategory {
+    pub const ALL: [Self; 6] = [
+        Self::Family,
+        Self::Food,
+        Self::HomeWork,
+        Self::Likes,
+        Self::Plans,
+        Self::Other,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Family => "family",
+            Self::Food => "food",
+            Self::HomeWork => "home_work",
+            Self::Likes => "likes",
+            Self::Plans => "plans",
+            Self::Other => "other",
+        }
+    }
+
+    pub fn parse(text: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|category| category.as_str() == text)
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

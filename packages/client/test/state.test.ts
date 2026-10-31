@@ -57,14 +57,30 @@ describe("applyEvent", () => {
   });
 
   it("collects memories the agent saves and updates them in place", () => {
-    const memory = { id: "k1", subject: "称呼", value: "阿哲", updatedAt: 1 };
+    const memory = {
+      id: "k1",
+      subject: "称呼",
+      value: "阿哲",
+      updatedAt: 1,
+      category: "other" as const,
+      uses: 0,
+      lastUsedAt: null,
+    };
     let state = applyEvent(initialHubState, { type: "memory_saved", memory });
     state = applyEvent(state, { type: "memory_saved", memory: { ...memory, value: "哲哥" } });
     expect(state.memories).toEqual([{ ...memory, value: "哲哥" }]);
   });
 
   it("keeps the tools and memories of a turn after it completes", () => {
-    const memory = { id: "k1", subject: "称呼", value: "阿哲", updatedAt: 1 };
+    const memory = {
+      id: "k1",
+      subject: "称呼",
+      value: "阿哲",
+      updatedAt: 1,
+      category: "other" as const,
+      uses: 0,
+      lastUsedAt: null,
+    };
     let state = applyEvent(
       initialHubState,
       { type: "turn_started", threadId: "t1", turnId: "u1" },

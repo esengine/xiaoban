@@ -111,6 +111,11 @@ CREATE TABLE declined_services (
     r"
 ALTER TABLE messages ADD COLUMN files TEXT;
 ",
+    r"
+ALTER TABLE memories ADD COLUMN category TEXT NOT NULL DEFAULT 'other';
+ALTER TABLE memories ADD COLUMN uses INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE memories ADD COLUMN last_used_at INTEGER;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {
