@@ -149,6 +149,7 @@ export function project(
   camera: Camera,
   width: number,
   height: number,
+  focal = FOCAL,
 ): Projected | null {
   const px = point.x - camera.target.x;
   const py = point.y - camera.target.y;
@@ -163,7 +164,7 @@ export function project(
   const z2 = py * sinP + z1 * cosP;
   const depth = z2 + camera.distance;
   if (depth <= 20) return null;
-  const scale = FOCAL / depth;
+  const scale = focal / depth;
   return { x: width / 2 + x1 * scale, y: height / 2 + y2 * scale, scale, depth };
 }
 

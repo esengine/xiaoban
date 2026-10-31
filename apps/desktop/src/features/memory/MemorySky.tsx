@@ -25,6 +25,24 @@ const IDLE_MS = 3_000;
 const SPIN = 0.0017;
 const HIT = 10;
 const FOCAL = 700;
+const BACKDROP_STARS = 900;
+const BACKDROP_FOCAL = 150;
+const BACKDROP_RADIUS = 3_000;
+const BACKDROP_DISTANCE = 200;
+
+const backdrop = Array.from({ length: BACKDROP_STARS }, (_, index) => {
+  const u = ((index * 0.6180339887) % 1) * Math.PI * 2;
+  const v = Math.acos(1 - (2 * (index + 0.5)) / BACKDROP_STARS);
+  return {
+    at: {
+      x: BACKDROP_RADIUS * Math.sin(v) * Math.cos(u),
+      y: BACKDROP_RADIUS * Math.cos(v),
+      z: BACKDROP_RADIUS * Math.sin(v) * Math.sin(u),
+    },
+    size: index % 7 === 0 ? 1.5 : 1,
+    alpha: 0.25 + ((index * 37) % 10) / 25,
+  };
+});
 const FAR_SAMPLE = 3_000;
 
 export const CLUSTER_LABELS: Record<MemoryCategory, PlainMessageKey> = {
@@ -41,6 +59,30 @@ function readColor(variable: string): string {
     getComputedStyle(document.documentElement).getPropertyValue(variable).trim() ||
     color.memoryOther
   );
+}
+
+const sprites = new Map<string, HTMLCanvasElement>();
+const SPRITE = 64;
+
+function sprite(tint: string): HTMLCanvasElement {
+  const cached = sprites.get(tint);
+  if (cached) return cached;
+  const node = document.createElement("canvas");
+  node.width = SPRITE;
+  node.height = SPRITE;
+  const context = node.getContext("2d");
+  if (context) {
+    const half = SPRITE / 2;
+    const gradient = context.createRadialGradient(half, half, 0, half, half, half);
+    gradient.addColorStop(0, tint);
+    gradient.addColorStop(0.18, tint);
+    gradient.addColorStop(0.45, /^#[0-9a-f]{6}$/i.test(tint) ? `${tint}59` : tint);
+    gradient.addColorStop(1, "transparent");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, SPRITE, SPRITE);
+  }
+  sprites.set(tint, node);
+  return node;
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -207,6 +249,19 @@ export function MemorySky({
         camera.current = { ...camera.current, yaw: camera.current.yaw + SPIN };
       }
       const cam = camera.current;
+      const backdropCamera: Camera = {
+        ...cam,
+        target: { x: 0, y: 0, z: 0 },
+        distance: BACKDROP_DISTANCE,
+      };
+      context.fillStyle = dark.text;
+      for (const star of backdrop) {
+        const at = project(star.at, backdropCamera, width, height, BACKDROP_FOCAL);
+        if (!at) continue;
+        context.globalAlpha = Math.min(0.75, star.alpha);
+        context.fillRect(at.x, at.y, star.size, star.size);
+      }
+      context.globalAlpha = 1;
       const scope = (planet: PlanetNode) =>
         (only === null || planet.cluster === only) &&
         (level.kind === "all" ||
@@ -229,13 +284,28 @@ export function MemorySky({
       for (const { planet, at } of projected) {
         const inside = scope(planet);
         const hit = hits.has(planet.memory.id);
-        const radius = Math.max(1.4, planet.size * at.scale * (level.kind === "galaxy" ? 1.6 : 1));
-        context.globalAlpha =
-          (searching ? (hit ? 1 : 0.12) : inside ? (planet.dim ? 0.45 : 0.9) : 0.15) *
-          Math.min(1, at.scale * 2.2);
-        context.fillStyle = colors[planet.cluster] ?? color.memoryOther;
+        const radius = Math.max(
+          2,
+          planet.size * at.scale * 1.4 * (level.kind === "galaxy" ? 1.6 : 1),
+        );
+        const strength =
+          (searching ? (hit ? 1 : 0.12) : inside ? (planet.dim ? 0.5 : 1) : 0.18) *
+          Math.min(1, at.scale * 2.6);
+        const glow = radius * (planet.memory.pinned || usedSet.has(planet.memory.id) ? 10 : 7);
+        context.globalCompositeOperation = "lighter";
+        context.globalAlpha = strength;
+        context.drawImage(
+          sprite(colors[planet.cluster] ?? color.memoryOther),
+          at.x - glow,
+          at.y - glow,
+          glow * 2,
+          glow * 2,
+        );
+        context.globalCompositeOperation = "source-over";
+        context.globalAlpha = Math.min(1, strength * 1.1);
+        context.fillStyle = dark.text;
         context.beginPath();
-        context.arc(at.x, at.y, radius, 0, Math.PI * 2);
+        context.arc(at.x, at.y, Math.max(0.8, radius * 0.45), 0, Math.PI * 2);
         context.fill();
         if (planet.memory.pinned && level.kind === "galaxy") {
           context.globalAlpha = 0.85;
@@ -391,7 +461,7 @@ export function MemorySky({
             if (Math.hypot(dx, dy) > 3) start.moved = true;
             camera.current = {
               ...camera.current,
-              yaw: start.yaw + dx * 0.006,
+              yaw: start.yaw - dx * 0.006,
               pitch: Math.max(-1.2, Math.min(1.2, start.pitch + dy * 0.004)),
             };
             lastInput.current = performance.now();
