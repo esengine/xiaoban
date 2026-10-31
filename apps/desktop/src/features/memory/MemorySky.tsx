@@ -25,22 +25,14 @@ const IDLE_MS = 3_000;
 const SPIN = 0.0017;
 const HIT = 10;
 const FOCAL = 700;
-const BACKDROP_STARS = 900;
-const BACKDROP_FOCAL = 150;
-const BACKDROP_RADIUS = 3_000;
-const BACKDROP_DISTANCE = 200;
-
-const backdrop = Array.from({ length: BACKDROP_STARS }, (_, index) => {
-  const u = ((index * 0.6180339887) % 1) * Math.PI * 2;
-  const v = Math.acos(1 - (2 * (index + 0.5)) / BACKDROP_STARS);
+const NEBULA = Array.from({ length: 7 }, (_, index) => {
+  const angle = index * 2.399963;
+  const reach = 30 + (index % 4) * 26;
   return {
-    at: {
-      x: BACKDROP_RADIUS * Math.sin(v) * Math.cos(u),
-      y: BACKDROP_RADIUS * Math.cos(v),
-      z: BACKDROP_RADIUS * Math.sin(v) * Math.sin(u),
-    },
-    size: index % 7 === 0 ? 1.5 : 1,
-    alpha: 0.25 + ((index * 37) % 10) / 25,
+    x: Math.cos(angle) * reach,
+    y: ((index % 3) - 1) * 26,
+    z: Math.sin(angle) * reach,
+    size: 110 + (index % 3) * 40,
   };
 });
 const FAR_SAMPLE = 3_000;
@@ -249,18 +241,29 @@ export function MemorySky({
         camera.current = { ...camera.current, yaw: camera.current.yaw + SPIN };
       }
       const cam = camera.current;
-      const backdropCamera: Camera = {
-        ...cam,
-        target: { x: 0, y: 0, z: 0 },
-        distance: BACKDROP_DISTANCE,
-      };
-      context.fillStyle = dark.text;
-      for (const star of backdrop) {
-        const at = project(star.at, backdropCamera, width, height, BACKDROP_FOCAL);
-        if (!at) continue;
-        context.globalAlpha = Math.min(0.75, star.alpha);
-        context.fillRect(at.x, at.y, star.size, star.size);
+      context.globalCompositeOperation = "lighter";
+      for (const cluster of sky.clusters) {
+        if (cluster.count === 0 || (only !== null && cluster.id !== only)) continue;
+        const tint = colors[cluster.id] ?? color.memoryOther;
+        const near = level.kind !== "all" && level.cluster === cluster.id;
+        for (const puff of NEBULA) {
+          const at = project(
+            {
+              x: cluster.at.x + puff.x,
+              y: cluster.at.y + puff.y,
+              z: cluster.at.z + puff.z,
+            },
+            cam,
+            width,
+            height,
+          );
+          if (!at) continue;
+          const size = puff.size * at.scale;
+          context.globalAlpha = (near ? 0.05 : 0.09) * Math.min(1, at.scale * 3);
+          context.drawImage(sprite(tint), at.x - size, at.y - size, size * 2, size * 2);
+        }
       }
+      context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
       const scope = (planet: PlanetNode) =>
         (only === null || planet.cluster === only) &&
