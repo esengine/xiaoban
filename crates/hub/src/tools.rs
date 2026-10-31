@@ -113,6 +113,7 @@ fn trip_day(l: &Localizer) -> Value {
 pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let mut specs = base_specs(localizer);
     specs.extend(crate::operate_tools::specs(localizer));
+    specs.extend(crate::file_tools::specs(localizer));
     specs
 }
 
@@ -539,6 +540,8 @@ impl ToolRunner for HubTools<'_> {
                 crate::operate_tools::TYPE_TEXT => self.element_action(arguments, true).await,
                 crate::operate_tools::PRESS_KEYS => self.press_keys(arguments).await,
                 crate::operate_tools::DO_STEPS => self.do_steps(arguments).await,
+                crate::file_tools::FILE_SEARCH => self.file_search(arguments).await,
+                crate::file_tools::FILE_READ => self.file_read(arguments).await,
                 crate::operate_tools::CONFIRM => self.confirm(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,

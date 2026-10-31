@@ -37,6 +37,18 @@ tool-type-text-description = Fill the field with this number, replacing what is 
 tool-type-text-text = Text to fill in
 tool-press-keys-description = Press a shortcut or key in the app, such as cmd+s, cmd+shift+e, return, tab or esc. Returns the new screen.
 tool-press-keys-keys = Key combination joined with +
+tool-file-search-description = Search a large file the user sent for passages about something; returns page numbers and snippets. Large files only come with an outline and the opening, so search first when asked about details, then read those pages with file_read.
+tool-file-read-description = Read pages from to to of a file the user sent (sheets and text files count chunks as pages). Up to about 8000 characters per call; tells you where it stopped.
+tool-file-id = File id from the attachment note in the message
+tool-file-query = What to look for, in words likely to appear in the file
+tool-file-from = First page
+tool-file-to = Last page
+file-note-full = Attachment { $name } ({ $pages } pages, full text)
+file-note-on-demand = Attachment { $name } ({ $pages } pages; too long, so only the outline and opening are here; use file_search / file_read with file = { $id } for details)
+file-note-image = Attached image { $name }
+file-note-unreadable = Attachment { $name } (no text could be read from it)
+file-note-outline = Outline
+file-note-preview = Opening
 tool-do-steps-description = Do several steps in one go; much faster than clicking one by one, so prefer it whenever steps can be chained. Each step is click (an element number), type (fill an element), keys (a shortcut) or text (type a string straight into the app, such as 12+34= in a calculator). Only group steps on the same screen; end the batch at a step that opens a new window or menu, then continue from the new screen. Stops at the first failing step and says which one; returns the new screen.
 tool-do-steps-summary = What this group of steps does, shown to the user, such as "Type 12+34="
 tool-do-steps-steps = Steps to do in order

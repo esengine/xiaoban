@@ -161,7 +161,7 @@ export class HubStore {
   async send(
     threadId: string,
     text: string,
-    options: { context?: ContextNote[]; quote?: Quote | null } = {},
+    options: { context?: ContextNote[]; quote?: Quote | null; files?: string[] } = {},
   ): Promise<string> {
     const { turnId } = await this.client.request(
       {
@@ -170,6 +170,7 @@ export class HubStore {
         text,
         context: options.context ?? [],
         quote: options.quote ?? null,
+        files: options.files ?? [],
       },
       "turn_accepted",
     );
@@ -269,6 +270,11 @@ export class HubStore {
 
   async declineSearch(threadId: string): Promise<void> {
     await this.client.request({ type: "decline_service", service: "web_search", threadId }, "ack");
+  }
+
+  async fileData(fileId: string): Promise<string> {
+    const { url } = await this.client.request({ type: "file_data", fileId }, "file_data");
+    return url;
   }
 
   async cancel(turnId: string): Promise<void> {

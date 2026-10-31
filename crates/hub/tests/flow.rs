@@ -215,6 +215,7 @@ async fn local_client_sends_a_message_and_receives_streamed_reply() {
             text: "明天几点出门".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await
     else {
@@ -315,6 +316,7 @@ async fn converse(client: &mut TestClient, thread_id: &str, text: &str, context:
             text: text.into(),
             context,
             quote: None,
+            files: Vec::new(),
         })
         .await
     else {
@@ -390,6 +392,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
             text: "一".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await;
     client.next_id += 1;
@@ -402,6 +405,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
                 text: "二".into(),
                 context: Vec::new(),
                 quote: None,
+                files: Vec::new(),
             },
         })
         .await;
@@ -519,6 +523,7 @@ async fn onboarding_configures_a_provider_and_hot_swaps_the_model() {
             text: "在吗".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await;
     let failure = loop {
@@ -979,6 +984,7 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
             text: "明天几点出门".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await
     else {
@@ -1038,6 +1044,7 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
             text: "那 8 点半呢".into(),
             context: Vec::new(),
             quote: Some(xiaoban_protocol::Quote::plain("7:40")),
+            files: Vec::new(),
         })
         .await
     else {
@@ -1701,6 +1708,7 @@ async fn answer_confirms(
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn operating_apps_asks_for_permission_apps_and_actions() {
     let operator = Arc::new(FakeOperator::default());
     operator
@@ -1738,6 +1746,7 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
             text: "导出周报".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await
     else {
@@ -1767,6 +1776,7 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
             text: "开好了".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await
     else {
@@ -1836,6 +1846,7 @@ async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
             text: "算 12+34".into(),
             context: Vec::new(),
             quote: None,
+            files: Vec::new(),
         })
         .await
     else {
@@ -1870,5 +1881,50 @@ async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
         .clone();
     assert!(result.contains("\"finished_steps\":2"));
     assert!(result.contains("导出 PDF"));
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn attached_files_reach_the_model() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([vec![ModelChunk::Text(
+        "周五三点".into(),
+    )]]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let dir = std::env::temp_dir().join(format!("xiaoban-flow-{}", uuid::Uuid::now_v7()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let note = dir.join("通知.txt");
+    std::fs::write(&note, "家长会改到周五下午三点").unwrap();
+    let Response::TurnAccepted { message, .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "家长会几点".into(),
+            context: Vec::new(),
+            quote: None,
+            files: vec![note.to_string_lossy().into_owned()],
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    assert_eq!(message.files.len(), 1);
+    assert_eq!(message.files[0].name, "通知.txt");
+    assert_eq!(message.files[0].mode, xiaoban_protocol::FileMode::Full);
+    for _ in 0..200 {
+        if !provider.requests().is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let sent = provider.requests()[0]
+        .messages
+        .last()
+        .unwrap()
+        .content
+        .clone();
+    assert!(sent.contains("家长会改到周五下午三点"));
     hub.shutdown().await;
 }

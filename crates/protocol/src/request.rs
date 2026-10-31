@@ -30,6 +30,8 @@ pub enum Request {
         context: Vec<ContextNote>,
         #[serde(default)]
         quote: Option<crate::Quote>,
+        #[serde(default)]
+        files: Vec<String>,
     },
     CancelTurn {
         turn_id: String,
@@ -111,6 +113,9 @@ pub enum Request {
         text: String,
     },
     Locate,
+    FileData {
+        file_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -121,6 +126,9 @@ pub enum Request {
 )]
 pub enum Response {
     Ack,
+    FileData {
+        url: String,
+    },
     Threads {
         threads: Vec<Thread>,
     },

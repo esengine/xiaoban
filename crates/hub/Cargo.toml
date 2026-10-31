@@ -12,6 +12,8 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+base64 = "0.23.1"
+calamine = { version = "0.37", default-features = false }
 clap.workspace = true
 futures-util.workspace = true
 hex.workspace = true
@@ -19,6 +21,7 @@ if-addrs.workspace = true
 jiff.workspace = true
 keyring.workspace = true
 mdns-sd.workspace = true
+pdf-extract = { version = "0.12", default-features = false }
 reqwest = { workspace = true, features = ["query"] }
 serde.workspace = true
 serde_json.workspace = true
@@ -34,6 +37,7 @@ xiaoban-agent.workspace = true
 xiaoban-i18n.workspace = true
 xiaoban-protocol.workspace = true
 xiaoban-store.workspace = true
+zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 xiaoban-i18n.workspace = true

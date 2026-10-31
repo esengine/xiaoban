@@ -5,6 +5,8 @@ mod config;
 mod confirms;
 mod discovery;
 mod error;
+mod file_tools;
+mod files;
 mod handlers;
 mod interpret;
 mod location;

@@ -9,6 +9,7 @@ const reply: Message = {
   role: "assistant",
   text: "7:40 出门",
   quote: null,
+  files: [],
   replaces: null,
   attachment: null,
   createdAt: 3,

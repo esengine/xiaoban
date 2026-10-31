@@ -31,7 +31,13 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             text,
             context,
             quote,
-        } => send(state, thread_id, &text, context, quote).await,
+            files,
+        } => {
+            if !local && !files.is_empty() {
+                return Err(bad_request("files can only be attached on this computer"));
+            }
+            send(state, thread_id, &text, context, quote, files).await
+        }
         Request::CancelTurn { turn_id } => cancel(state, &turn_id),
         Request::RetryTurn { thread_id } => {
             let (turn_id, message) = turns::retry(state, thread_id).await?;
@@ -92,6 +98,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             interpret_answer(state, question, &answer).await
         }
         Request::Locate => locate(state, local).await,
+        Request::FileData { file_id } => file_data(state, &file_id),
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
         | Request::OperateStatus
@@ -118,19 +125,28 @@ async fn create_thread(state: &SharedState, title: Option<&str>) -> Handled {
     Ok(Response::Thread { thread })
 }
 
+fn file_data(state: &SharedState, file_id: &str) -> Handled {
+    state
+        .files
+        .data_url_by_id(file_id)
+        .map(|url| Response::FileData { url })
+        .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such image"))
+}
+
 async fn send(
     state: &SharedState,
     thread_id: String,
     text: &str,
     context: Vec<ContextNote>,
     quote: Option<Quote>,
+    files: Vec<String>,
 ) -> Handled {
     let text = trimmed(text).ok_or_else(|| bad_request("message is empty"))?;
     let quote = quote.and_then(|quote| {
         let text = trimmed(&quote.text)?;
         Some(Quote { text, ..quote })
     });
-    let (turn_id, message) = turns::start(state, thread_id, text, context, quote).await?;
+    let (turn_id, message) = turns::start(state, thread_id, text, context, quote, files).await?;
     Ok(Response::TurnAccepted { turn_id, message })
 }
 

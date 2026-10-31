@@ -108,6 +108,9 @@ CREATE TABLE declined_services (
     PRIMARY KEY (thread_id, service)
 ) WITHOUT ROWID;
 ",
+    r"
+ALTER TABLE messages ADD COLUMN files TEXT;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

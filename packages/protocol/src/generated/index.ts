@@ -15,6 +15,8 @@ export type { ErrorCode } from "./ErrorCode.ts";
 export type { Event } from "./Event.ts";
 export type { Failure } from "./Failure.ts";
 export type { FailureKind } from "./FailureKind.ts";
+export type { FileInfo } from "./FileInfo.ts";
+export type { FileMode } from "./FileMode.ts";
 export type { HubInfo } from "./HubInfo.ts";
 export type { Interpretation } from "./Interpretation.ts";
 export type { Location } from "./Location.ts";

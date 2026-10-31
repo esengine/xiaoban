@@ -20,6 +20,27 @@ pub enum Role {
     Assistant,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum FileMode {
+    Image,
+    Full,
+    OnDemand,
+    Unreadable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct FileInfo {
+    pub id: String,
+    pub name: String,
+    pub mime: String,
+    #[ts(type = "number")]
+    pub size: u64,
+    pub pages: Option<u32>,
+    pub mode: FileMode,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Quote {
@@ -52,6 +73,8 @@ pub struct Message {
     pub role: Role,
     pub text: String,
     pub quote: Option<Quote>,
+    #[serde(default)]
+    pub files: Vec<FileInfo>,
     pub replaces: Option<String>,
     pub attachment: Option<crate::Attachment>,
     #[ts(type = "number")]

@@ -18,6 +18,7 @@ import type { Usage } from "./Usage.ts";
 
 export type Response =
   | { type: "ack" }
+  | { type: "file_data"; url: string }
   | { type: "threads"; threads: Array<Thread> }
   | { type: "thread"; thread: Thread }
   | { type: "messages"; messages: Array<Message> }

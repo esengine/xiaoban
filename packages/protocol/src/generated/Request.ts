@@ -16,6 +16,7 @@ export type Request =
       text: string;
       context: Array<ContextNote>;
       quote: Quote | null;
+      files: Array<string>;
     }
   | { type: "cancel_turn"; turnId: string }
   | { type: "retry_turn"; threadId: string }
@@ -59,4 +60,5 @@ export type Request =
   | { type: "pause_turn"; turnId: string }
   | { type: "resume_turn"; turnId: string }
   | { type: "add_note"; turnId: string; text: string }
-  | { type: "locate" };
+  | { type: "locate" }
+  | { type: "file_data"; fileId: string };

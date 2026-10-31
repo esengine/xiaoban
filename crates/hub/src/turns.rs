@@ -8,7 +8,8 @@ use xiaoban_agent::{
 };
 use xiaoban_i18n::keys;
 use xiaoban_protocol::{
-    ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Quote, Role,
+    ContextNote, ErrorCode, Event, Failure, FileInfo, FileMode, Message, ProtocolError, ProviderId,
+    Quote, Role,
 };
 use xiaoban_store::{Epoch, EpochReason, NewMessage, StoreError};
 
@@ -93,6 +94,78 @@ fn launch(
 struct Job {
     wire: String,
     replaces: Option<String>,
+    images: Vec<String>,
+}
+
+const DEEPSEEK_VISION: &str = "deepseek-v4-flash-vision-exp";
+const MIMO_VISION: &str = "mimo-v2.5";
+
+fn vision_model(state: &SharedState) -> Option<String> {
+    let provider = state.active().model.as_ref()?.provider;
+    match provider {
+        ProviderId::Deepseek => Some(DEEPSEEK_VISION.to_owned()),
+        ProviderId::Mimo => Some(MIMO_VISION.to_owned()),
+        ProviderId::Custom => None,
+    }
+}
+
+fn attachments(state: &SharedState, files: &[FileInfo]) -> (Vec<ContextNote>, Vec<String>) {
+    let l = &state.localizer;
+    let mut notes = Vec::new();
+    let mut images = Vec::new();
+    for info in files {
+        let count = info.pages.unwrap_or(0).to_string();
+        let name = ("name", info.name.as_str());
+        let counted = [name, ("pages", count.as_str())];
+        let (label, body) = match info.mode {
+            FileMode::Image => {
+                images.extend(state.files.data_url(info));
+                (l.format(keys::FILE_NOTE_IMAGE, &[name]), String::new())
+            }
+            FileMode::Full => (
+                l.format(keys::FILE_NOTE_FULL, &counted),
+                state.files.pages(&info.id).unwrap_or_default().join("\n"),
+            ),
+            FileMode::OnDemand => {
+                let pages = state.files.pages(&info.id).unwrap_or_default();
+                (
+                    l.format(
+                        keys::FILE_NOTE_ON_DEMAND,
+                        &[name, ("pages", count.as_str()), ("id", info.id.as_str())],
+                    ),
+                    format!(
+                        "{}:\n{}\n\n{}:\n{}",
+                        l.text(keys::FILE_NOTE_OUTLINE),
+                        crate::files::outline(&pages),
+                        l.text(keys::FILE_NOTE_PREVIEW),
+                        crate::files::preview(&pages),
+                    ),
+                )
+            }
+            FileMode::Unreadable => (l.format(keys::FILE_NOTE_UNREADABLE, &[name]), String::new()),
+        };
+        notes.push(ContextNote { label, body });
+    }
+    (notes, images)
+}
+
+async fn ingest(state: &SharedState, paths: Vec<String>) -> Result<Vec<FileInfo>, ProtocolError> {
+    if paths.len() > crate::files::MAX_FILES {
+        return Err(ProtocolError::new(
+            ErrorCode::BadRequest,
+            "at most 9 files per message",
+        ));
+    }
+    let files = state.files.clone();
+    tokio::task::spawn_blocking(move || {
+        paths
+            .iter()
+            .map(|path| files.ingest(std::path::Path::new(path)))
+            .collect::<Result<Vec<_>, _>>()
+    })
+    .await
+    .map_err(|_| ProtocolError::new(ErrorCode::Internal, "reading the files stopped"))?
+    .map_err(|failure| ProtocolError::new(ErrorCode::BadRequest, failure))
 }
 
 fn notes(state: &SharedState, quote: Option<&str>, context: Vec<ContextNote>) -> Vec<ContextNote> {
@@ -115,22 +188,28 @@ pub async fn start(
     text: String,
     context: Vec<ContextNote>,
     quote: Option<Quote>,
+    paths: Vec<String>,
 ) -> Result<(String, Message), ProtocolError> {
     state.store.thread(thread_id.clone()).await?;
+    let files = ingest(state, paths).await?;
     let (turn_id, cancel) = claim(state, &thread_id)?;
 
+    let (file_notes, images) = attachments(state, &files);
     let wire = user_wire(
         &text,
         &notes(
             state,
             quote.as_ref().map(|quote| quote.text.as_str()),
-            context,
+            file_notes.into_iter().chain(context).collect(),
         ),
     );
     let accepted = async {
         let message = state
             .store
-            .append_message(thread_id.clone(), NewMessage::user(text).quoting(quote))
+            .append_message(
+                thread_id.clone(),
+                NewMessage::user(text).quoting(quote).with_files(files),
+            )
             .await?;
         let thread = state.store.touch_thread(thread_id.clone()).await?;
         Ok::<_, StoreError>((message, thread))
@@ -151,6 +230,7 @@ pub async fn start(
     let job = Job {
         wire,
         replaces: None,
+        images,
     };
     launch(state, thread_id, turn_id.clone(), job, cancel);
     Ok((turn_id, message))
@@ -161,6 +241,7 @@ pub fn resume(state: &SharedState, thread_id: String, wire: &str) -> Result<Stri
     let job = Job {
         wire: user_wire(wire, &notes(state, None, Vec::new())),
         replaces: None,
+        images: Vec::new(),
     };
     launch(state, thread_id, turn_id.clone(), job, cancel);
     Ok(turn_id)
@@ -177,10 +258,12 @@ pub async fn retry(
         .find(|message| message.role == Role::User)
         .cloned()
         .ok_or_else(|| ProtocolError::new(ErrorCode::BadRequest, "nothing to answer yet"))?;
+    let (file_notes, images) = attachments(state, &asked.files);
     let job = match messages.last() {
         Some(last) if last.role == Role::Assistant => Job {
             wire: state.localizer.text(keys::TURN_REGENERATE),
             replaces: Some(last.replaces.clone().unwrap_or_else(|| last.id.clone())),
+            images,
         },
         _ => Job {
             wire: user_wire(
@@ -188,10 +271,11 @@ pub async fn retry(
                 &notes(
                     state,
                     asked.quote.as_ref().map(|quote| quote.text.as_str()),
-                    Vec::new(),
+                    file_notes,
                 ),
             ),
             replaces: None,
+            images,
         },
     };
     let (turn_id, cancel) = claim(state, &thread_id)?;
@@ -299,7 +383,12 @@ async fn drive(
     job: Job,
     cancel: CancellationToken,
 ) -> Result<(), Failure> {
-    let Job { wire, replaces } = job;
+    let Job {
+        wire,
+        replaces,
+        images,
+    } = job;
+    let model = (!images.is_empty()).then(|| vision_model(state)).flatten();
     let (epoch, prefix, transcript) = current_epoch(state, thread_id)
         .await
         .map_err(Failure::from)?;
@@ -332,7 +421,15 @@ async fn drive(
     let agent = state.active().agent;
     let tools = HubTools::new(state, thread_id, turn_id, cancel.clone());
     let outcome = agent
-        .run_turn(&prefix, &transcript, &wire, &tools, tx, cancel)
+        .run_turn_with(
+            &prefix,
+            &transcript,
+            ChatMessage::new(ChatRole::User, wire.clone()).with_images(images),
+            model,
+            &tools,
+            tx,
+            cancel,
+        )
         .await;
     let _ = forward.await;
 

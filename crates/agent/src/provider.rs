@@ -162,7 +162,10 @@ mod tests {
             .with_images(vec!["data:image/png;base64,AAA".into()]);
         let wire = message.wire();
         assert_eq!(wire["content"][0]["text"], "哪个好看");
-        assert_eq!(wire["content"][1]["image_url"]["url"], "data:image/png;base64,AAA");
+        assert_eq!(
+            wire["content"][1]["image_url"]["url"],
+            "data:image/png;base64,AAA"
+        );
         assert!(wire.get("images").is_none());
         let plain = ChatMessage::new(ChatRole::User, "你好").wire();
         assert_eq!(plain["content"], "你好");

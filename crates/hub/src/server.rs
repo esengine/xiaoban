@@ -86,6 +86,10 @@ impl Hub {
             operator: runtime.operator,
             confirms: crate::confirms::Confirms::default(),
             pauses: crate::pauses::Pauses::default(),
+            files: crate::files::Files::new(config.data_dir.as_ref().map_or_else(
+                || std::env::temp_dir().join(format!("xiaoban-files-{}", uuid::Uuid::now_v7())),
+                |dir| dir.join("files"),
+            )),
             web: runtime.web,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,

@@ -37,6 +37,18 @@ tool-type-text-description = 把文字填进某个编号的输入框，会替换
 tool-type-text-text = 要填的文字
 tool-press-keys-description = 在软件里按快捷键或按键，比如 cmd+s、cmd+shift+e、return、tab、esc。做完会带回新画面。
 tool-press-keys-keys = 按键组合，用 + 连接
+tool-file-search-description = 在用户发来的大文件里按关键词找相关段落，返回页码和片段。大文件只给了目录和开头，问到具体内容时先用它找，再用 file_read 读那几页。
+tool-file-read-description = 读用户发来的文件的第 from 到 to 页（表格和文本按段算页）。一次最多约 8000 字，没读完会告诉你读到哪页。
+tool-file-id = 文件 id，来自消息里的附件说明
+tool-file-query = 要找的内容，用文件里可能出现的词
+tool-file-from = 从第几页开始
+tool-file-to = 读到第几页
+file-note-full = 附件 { $name }（{ $pages } 页，全文）
+file-note-on-demand = 附件 { $name }（{ $pages } 页，太长只给目录和开头；需要细节时用 file_search / file_read，file = { $id }）
+file-note-image = 附件图片 { $name }
+file-note-unreadable = 附件 { $name }（这种文件读不出文字）
+file-note-outline = 目录
+file-note-preview = 开头
 tool-do-steps-description = 一次连着做好几步，比逐个点快得多，能连着做就优先用它。每步是 click（点编号）、type（往编号输入框填字）、keys（按快捷键）、text（直接往软件里打一串字，比如计算器里打 12+34=）。只把同一个画面上的步骤放在一起；某步会打开新窗口或菜单时，就在那步结束，看了新画面再继续。哪一步失败会停下并告诉你，最后带回新画面。
 tool-do-steps-summary = 这组步骤在做什么，给用户看，比如“输入 12+34=”
 tool-do-steps-steps = 按顺序要做的步骤
