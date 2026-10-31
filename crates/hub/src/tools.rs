@@ -119,6 +119,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs.push(crate::file_tools::recall_spec(localizer));
     specs.extend(crate::file_tools::history_specs(localizer));
     specs.extend(crate::thread_tools::specs(localizer));
+    specs.extend(crate::subthreads::specs(localizer));
     specs
 }
 
@@ -389,7 +390,7 @@ impl<'a> HubTools<'a> {
         self.attachment.lock().unwrap().clone()
     }
 
-    fn attach(&self, attachment: Attachment) {
+    pub(crate) fn attach(&self, attachment: Attachment) {
         let mut slot = self.attachment.lock().unwrap();
         if !matches!(*slot, Some(Attachment::Trip { .. })) {
             *slot = Some(attachment);
@@ -651,6 +652,8 @@ impl ToolRunner for HubTools<'_> {
                 | crate::operate_tools::TYPE_TEXT
                 | crate::operate_tools::PRESS_KEYS
                 | crate::operate_tools::DO_STEPS
+                | crate::subthreads::OPEN_SUBTHREADS
+                | crate::subthreads::MESSAGE_SUBTHREAD
                 | crate::operate_tools::CONFIRM
         )
     }
@@ -677,6 +680,8 @@ impl ToolRunner for HubTools<'_> {
                 crate::file_tools::HISTORY_SEARCH => self.history_search(arguments).await,
                 crate::file_tools::HISTORY_READ => self.history_read(arguments).await,
                 crate::thread_tools::LIST_THREADS => self.list_threads(arguments).await,
+                crate::subthreads::OPEN_SUBTHREADS => self.open_subthreads(arguments).await,
+                crate::subthreads::MESSAGE_SUBTHREAD => self.message_subthread(arguments).await,
                 crate::thread_tools::FIND_THREADS => self.find_threads(arguments).await,
                 crate::file_tools::HISTORY_OUTLINE => self.history_outline().await,
                 crate::thread_tools::READ_THREAD => self.read_thread(arguments).await,

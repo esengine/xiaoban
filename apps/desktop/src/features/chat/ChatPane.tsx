@@ -34,6 +34,7 @@ import {
   selectedMarkdown,
 } from "./QuoteBlock.tsx";
 import { RichText } from "./RichText.tsx";
+import { SubthreadCards } from "./SubthreadCards.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
 import { type Row, toRows } from "./versions.ts";
 
@@ -54,6 +55,7 @@ interface Props {
   onQuote: (quote: Quote | null) => void;
   onNewThreadWith: (quote: Quote) => void;
   onOpenTrip: (tripId: string, version: number | null) => void;
+  onOpenThread: (threadId: string) => void;
 }
 
 interface Queued {
@@ -372,6 +374,9 @@ export function ChatPane(props: Props) {
         />
       );
     }
+    if (attachment?.kind === "subthreads") {
+      return <SubthreadCards threadIds={attachment.threadIds} onOpen={props.onOpenThread} />;
+    }
     if (attachment?.kind === "service_needed") {
       return <SearchCard threadId={threadId} answered={messages.at(-1)?.id !== message.id} />;
     }
@@ -523,6 +528,16 @@ function UserItem({
 }) {
   const { t } = useI18n();
   const store = useHub();
+  if (message.attachment?.kind === "report") {
+    return (
+      <li className="report" data-message-id={message.id} onContextMenu={onContextMenu}>
+        <b className="report__title">
+          {t("subthread-report-title", { title: message.attachment.title })}
+        </b>
+        <RichText text={message.text} />
+      </li>
+    );
+  }
   return (
     <>
       {message.files.length > 0 && (

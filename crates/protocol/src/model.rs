@@ -6,6 +6,8 @@ use ts_rs::TS;
 pub struct Thread {
     pub id: String,
     pub title: Option<String>,
+    #[serde(default)]
+    pub parent_id: Option<String>,
     pub last_message: Option<String>,
     #[ts(type = "number")]
     pub created_at: i64,

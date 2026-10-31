@@ -169,4 +169,6 @@ pub struct TripCalendar {
 pub enum Attachment {
     Trip { trip_id: String, version: u32 },
     ServiceNeeded { service: ServiceId },
+    Subthreads { thread_ids: Vec<String> },
+    Report { thread_id: String, title: String },
 }

@@ -36,6 +36,21 @@ export function useConfirmText(confirm: ConfirmRequest) {
       ] satisfies Choice[],
     };
   }
+  if (kind.kind === "open_subthreads") {
+    return {
+      title: t("confirm-subthreads-title", { count: kind.titles.length }),
+      hint: t("confirm-subthreads-hint"),
+      detail: [
+        kind.reason,
+        ...kind.titles.map((title) => t("confirm-subthreads-item", { title })),
+      ].join("\n"),
+      choices: [
+        { choice: "no", label: t("confirm-subthreads-no") },
+        { choice: "edit", label: t("confirm-subthreads-edit") },
+        { choice: "yes", label: t("confirm-subthreads-yes"), primary: true },
+      ] satisfies Choice[],
+    };
+  }
   if (kind.kind === "action") {
     return {
       title: kind.title,

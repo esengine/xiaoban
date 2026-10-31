@@ -188,7 +188,7 @@ async fn remember(state: &SharedState, key: &'static str, app_id: &str) {
 }
 
 impl HubTools<'_> {
-    async fn ask(&self, kind: ConfirmKind) -> ConfirmChoice {
+    pub(crate) async fn ask(&self, kind: ConfirmKind) -> ConfirmChoice {
         confirms::ask(self.state, self.turn_id, self.thread_id, kind, &self.cancel).await
     }
 

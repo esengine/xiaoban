@@ -15,6 +15,7 @@ pub struct OperatePermissions {
 )]
 pub enum ConfirmKind {
     AllowApp { app: String },
+    OpenSubthreads { titles: Vec<String>, reason: String },
     BorrowMouse { app: String },
     Action { title: String, detail: String },
     Permissions,

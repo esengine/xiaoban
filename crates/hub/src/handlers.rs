@@ -217,7 +217,8 @@ async fn send(
         let text = trimmed(&quote.text)?;
         Some(Quote { text, ..quote })
     });
-    let (turn_id, message) = turns::start(state, thread_id, text, context, quote, files).await?;
+    let (turn_id, message) =
+        turns::start(state, thread_id, text, context, quote, files, None).await?;
     Ok(Response::TurnAccepted { turn_id, message })
 }
 

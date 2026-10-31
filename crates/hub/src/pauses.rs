@@ -11,6 +11,7 @@ use crate::state::SharedState;
 pub struct Pauses {
     turns: Mutex<HashMap<String, watch::Sender<bool>>>,
     notes: Mutex<HashMap<String, Vec<String>>>,
+    reports: Mutex<std::collections::HashSet<String>>,
 }
 
 impl Pauses {
@@ -46,6 +47,14 @@ impl Pauses {
             .get_mut(turn_id)
             .map(std::mem::take)
             .unwrap_or_default()
+    }
+
+    pub fn expect_report(&self, turn_id: &str) {
+        self.reports.lock().unwrap().insert(turn_id.to_owned());
+    }
+
+    pub fn take_report(&self, turn_id: &str) -> bool {
+        self.reports.lock().unwrap().remove(turn_id)
     }
 
     pub fn forget(&self, turn_id: &str) {

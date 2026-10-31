@@ -2066,3 +2066,68 @@ async fn new_threads_are_titled_by_the_model_after_the_first_answer() {
     }
     panic!("the thread was never titled");
 }
+
+#[tokio::test]
+async fn subthreads_open_after_confirmation_and_report_back() {
+    let provider = ScriptedProvider::sequence([
+        vec![tool_call(
+            "open_subthreads",
+            &serde_json::json!({
+                "reason": "分别去查",
+                "tasks": [{ "title": "苏州周末", "task": "查苏州周末去哪" }],
+            }),
+        )],
+        vec![ModelChunk::Text("好的".into())],
+        vec![ModelChunk::Text("好的".into())],
+        vec![ModelChunk::Text("好的".into())],
+        vec![ModelChunk::Text("好的".into())],
+    ]);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "比较一下周末去哪".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let mut answers: Vec<Answer> = vec![(
+        |kind| matches!(kind, ConfirmKind::OpenSubthreads { titles, .. } if titles == &["苏州周末".to_owned()]),
+        ConfirmChoice::Yes,
+    )];
+    answer_confirms(&mut client, &thread, &mut answers, 1).await;
+    assert_eq!(answers.len(), 0);
+    for _ in 0..300 {
+        let Response::Messages { messages, .. } = client
+            .request(Request::ListMessages {
+                thread_id: thread.clone(),
+                before: None,
+                limit: None,
+            })
+            .await
+        else {
+            panic!("expected messages");
+        };
+        if messages.iter().any(|message| {
+            matches!(&message.attachment, Some(xiaoban_protocol::Attachment::Report { title, .. }) if title == "苏州周末")
+        }) {
+            let Response::Threads { threads } = client.request(Request::ListThreads).await else {
+                panic!("expected threads");
+            };
+            assert!(threads.iter().any(|candidate| candidate.parent_id.as_deref() == Some(thread.as_str())));
+            hub.shutdown().await;
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("the subthread never reported back");
+}

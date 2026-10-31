@@ -1,3 +1,4 @@
+import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Thread } from "@xiaoban/protocol";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -96,6 +97,24 @@ export function ThreadList({ threads, primaryId, activeId, onSelect, onNew }: Pr
       ),
   );
 
+  const { drafts, confirms } = useHubState(store);
+  const statusOf = (id: string): "need" | "running" | "done" =>
+    confirms.some((confirm) => confirm.threadId === id)
+      ? "need"
+      : Object.values(drafts).some((draft) => draft.threadId === id && !draft.failure)
+        ? "running"
+        : "done";
+  const known = new Set(threads.map((thread) => thread.id));
+  const nested = visible
+    .filter((thread) => !thread.parentId || !known.has(thread.parentId))
+    .flatMap((thread) => [
+      { thread, child: false },
+      ...threads
+        .filter((candidate) => candidate.parentId === thread.id)
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((candidate) => ({ thread: candidate, child: true })),
+    ]);
+
   const finishRename = (thread: Thread, value: string) => {
     setRenaming(null);
     const title = value.trim();
@@ -136,12 +155,13 @@ export function ThreadList({ threads, primaryId, activeId, onSelect, onNew }: Pr
         </button>
       </div>
       <ul className="threads__list">
-        {visible.map((thread) => {
+        {nested.map(({ thread, child }) => {
           const primary = thread.id === primaryId;
+          const status = child ? statusOf(thread.id) : null;
           const title = titleOf(thread);
           const isUnread = unread.has(thread.id) && thread.id !== activeId;
           return (
-            <li key={thread.id}>
+            <li key={thread.id} data-child={child || undefined}>
               <button
                 type="button"
                 className="thread-row"
@@ -200,6 +220,11 @@ export function ThreadList({ threads, primaryId, activeId, onSelect, onNew }: Pr
                     </time>
                   </span>
                   <span className="thread-row__bottom">
+                    {status && (
+                      <span className="thread-row__status" data-status={status}>
+                        {t(`thread-status-${status}`)}
+                      </span>
+                    )}
                     {thread.lastMessage && (
                       <span className="thread-row__last">{plain(thread.lastMessage)}</span>
                     )}

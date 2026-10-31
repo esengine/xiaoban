@@ -5,7 +5,8 @@ use crate::{Result, Store, StoreError, new_id, now_ms};
 
 const SELECT: &str = "SELECT id, title, created_at, updated_at,
     (SELECT text FROM messages WHERE messages.thread_id = threads.id
-     ORDER BY created_at DESC, rowid DESC LIMIT 1)
+     ORDER BY created_at DESC, rowid DESC LIMIT 1),
+    parent_id
     FROM threads";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
@@ -15,6 +16,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
         created_at: row.get(2)?,
         updated_at: row.get(3)?,
         last_message: row.get(4)?,
+        parent_id: row.get(5)?,
     })
 }
 
@@ -26,22 +28,32 @@ fn by_id(conn: &Connection, id: &str) -> Result<Thread> {
 
 impl Store {
     pub async fn create_thread(&self, title: Option<String>) -> Result<Thread> {
+        self.create_child_thread(title, None).await
+    }
+
+    pub async fn create_child_thread(
+        &self,
+        title: Option<String>,
+        parent_id: Option<String>,
+    ) -> Result<Thread> {
         self.with(move |conn| {
             let now = now_ms();
             let thread = Thread {
                 id: new_id(),
                 title,
+                parent_id,
                 last_message: None,
                 created_at: now,
                 updated_at: now,
             };
             conn.execute(
-                "INSERT INTO threads (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
+                "INSERT INTO threads (id, title, created_at, updated_at, parent_id) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![
                     thread.id,
                     thread.title,
                     thread.created_at,
-                    thread.updated_at
+                    thread.updated_at,
+                    thread.parent_id
                 ],
             )?;
             Ok(thread)

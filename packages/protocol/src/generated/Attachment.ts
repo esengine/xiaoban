@@ -3,4 +3,6 @@ import type { ServiceId } from "./ServiceId.ts";
 
 export type Attachment =
   | { kind: "trip"; tripId: string; version: number }
-  | { kind: "service_needed"; service: ServiceId };
+  | { kind: "service_needed"; service: ServiceId }
+  | { kind: "subthreads"; threadIds: Array<string> }
+  | { kind: "report"; threadId: string; title: string };

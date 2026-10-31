@@ -3,6 +3,7 @@
 export type Thread = {
   id: string;
   title: string | null;
+  parentId: string | null;
   lastMessage: string | null;
   createdAt: number;
   updatedAt: number;

@@ -146,6 +146,9 @@ CREATE TABLE memory_usage (
     cached_tokens INTEGER NOT NULL
 );
 ",
+    r"
+ALTER TABLE threads ADD COLUMN parent_id TEXT REFERENCES threads(id) ON DELETE CASCADE;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

@@ -122,6 +122,7 @@ function Home() {
           quote={quotes[activeId] ?? null}
           onQuote={(quote) => setQuote(activeId, quote)}
           onNewThreadWith={(quote) => void newThreadWith(quote)}
+          onOpenThread={setSelected}
           onOpenTrip={openTrip}
         />
       ) : (

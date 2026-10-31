@@ -72,6 +72,15 @@ impl Turns {
         true
     }
 
+    pub fn running_in(&self, thread_id: &str) -> Option<String> {
+        self.running
+            .lock()
+            .unwrap()
+            .by_thread
+            .get(thread_id)
+            .cloned()
+    }
+
     pub fn busy(&self) -> bool {
         !self.running.lock().unwrap().by_turn.is_empty()
     }
@@ -307,6 +316,7 @@ pub async fn start(
     context: Vec<ContextNote>,
     quote: Option<Quote>,
     paths: Vec<String>,
+    attachment: Option<xiaoban_protocol::Attachment>,
 ) -> Result<(String, Message), ProtocolError> {
     state.store.thread(thread_id.clone()).await?;
     let files = ingest(state, paths).await?;
@@ -333,7 +343,10 @@ pub async fn start(
             .store
             .append_message(
                 thread_id.clone(),
-                NewMessage::user(text).quoting(quote).with_files(files),
+                NewMessage::user(text)
+                    .quoting(quote)
+                    .with_files(files)
+                    .attaching(attachment),
             )
             .await?;
         let thread = state.store.touch_thread(thread_id.clone()).await?;
@@ -543,6 +556,9 @@ async fn after_answer(state: &SharedState, thread_id: &str, turn_id: &str, outco
     mark_used(state, turn_id, &outcome.text).await;
     name_thread(state, thread_id, &outcome.text);
     crate::archive::remember_peak(state, thread_id, outcome.peak_input).await;
+    if state.pauses.take_report(turn_id) {
+        crate::subthreads::report(state, thread_id, &outcome.text);
+    }
 }
 
 async fn mark_used(state: &SharedState, turn_id: &str, answer: &str) {

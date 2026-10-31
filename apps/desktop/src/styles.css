@@ -4521,3 +4521,130 @@ button.sent-files__image {
 .mention__item[data-active] {
   background: var(--color-accent-wash);
 }
+
+.threads__list li[data-child] .thread-row {
+  position: relative;
+  padding-left: 34px;
+}
+
+.threads__list li[data-child] .thread-row::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 0;
+  height: 50%;
+  width: 8px;
+  border-left: 1px solid var(--color-line-strong);
+  border-bottom: 1px solid var(--color-line-strong);
+  border-bottom-left-radius: 6px;
+}
+
+.threads__list li[data-child] .thread-row__mark {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+
+.thread-row__status {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.thread-row__status[data-status="running"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.thread-row__status[data-status="done"] {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.thread-row__status[data-status="need"] {
+  background: var(--color-attention-soft);
+  color: var(--color-attention-ink);
+}
+
+.subthreads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.subthreads__hint {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.subthreads__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  --status: var(--color-success);
+}
+
+.subthreads__item[data-status="running"] {
+  --status: var(--color-accent);
+}
+
+.subthreads__item[data-status="need"] {
+  --status: var(--color-attention);
+}
+
+.subthreads__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--status);
+}
+
+.subthreads__item b {
+  flex: none;
+}
+
+.subthreads__line {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subthreads__state {
+  flex: none;
+  font-size: 12px;
+  color: var(--status);
+}
+
+.report {
+  align-self: flex-start;
+  max-width: 86%;
+  padding: 10px 14px;
+  border-left: 3px solid var(--color-success);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font-size: 13px;
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.report__title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--color-success);
+}
