@@ -21,6 +21,7 @@ const TOOL_CHARS: usize = 300;
 const SNIPPET_BUDGET: usize = 800;
 const SNIPPET_CHARS: usize = 300;
 const SNIPPETS: usize = 3;
+const RECALL_MIN: usize = 4;
 pub const SEARCH_HITS: usize = 8;
 pub const READ_CHARS: usize = 6_000;
 
@@ -187,19 +188,25 @@ pub async fn archive(
     Some(carried)
 }
 
+const PAIR_WEIGHT: usize = 3;
+const MIN_SINGLES: usize = 2;
+
 pub fn score(text: &str, wanted: &[String]) -> usize {
     let lower = text.to_lowercase();
-    wanted
+    let pairs = wanted
         .iter()
-        .filter(|term| lower.contains(term.as_str()))
-        .count()
+        .filter(|term| !term.starts_with('#') && lower.contains(term.as_str()))
+        .count();
+    let singles = wanted
+        .iter()
+        .filter_map(|term| term.strip_prefix('#'))
+        .filter(|single| lower.contains(single))
+        .count();
+    pairs * PAIR_WEIGHT + if singles >= MIN_SINGLES { singles } else { 0 }
 }
 
 pub fn wanted(query: &str) -> Vec<String> {
-    let terms: HashSet<String> = crate::memory::terms(query)
-        .into_iter()
-        .filter(|term| !term.starts_with('#'))
-        .collect();
+    let terms: HashSet<String> = crate::memory::terms(query).into_iter().collect();
     terms.into_iter().collect()
 }
 
@@ -230,7 +237,7 @@ pub async fn recalled(state: &SharedState, thread_id: &str, text: &str) -> Optio
     let mut scored: Vec<(usize, &Message)> = old
         .iter()
         .map(|message| (score(&message.text, &wanted), message))
-        .filter(|(hits, _)| *hits >= 2.min(wanted.len()) && *hits > 0)
+        .filter(|(hits, _)| *hits >= RECALL_MIN)
         .collect();
     scored.sort_by_key(|(hits, _)| std::cmp::Reverse(*hits));
     let mut used = 0;
@@ -267,5 +274,8 @@ mod tests {
         assert!(split_at(&messages[..9]).is_none());
         let chunks = render(&messages[..at]);
         assert!(chunks[0].contains("[user] q0"));
+        let wanted = wanted("鸡兔同笼答案");
+        assert!(score("笼子里有鸡和兔共 35 只", &wanted) > 0);
+        assert_eq!(score("今天天气不错", &wanted), 0);
     }
 }

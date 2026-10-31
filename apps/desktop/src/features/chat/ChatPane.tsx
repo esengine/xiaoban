@@ -62,6 +62,7 @@ interface Queued {
   text: string;
   quote: Quote | null;
   files: string[];
+  threads: string[];
 }
 
 const OLDER_THRESHOLD = 240;
@@ -167,6 +168,7 @@ export function ChatPane(props: Props) {
     void store.send(nextQueued.threadId, nextQueued.text, {
       quote: nextQueued.quote,
       files: nextQueued.files,
+      threads: nextQueued.threads,
     });
   }, [running, nextQueued, store]);
   const end = useRef<HTMLLIElement>(null);
@@ -268,8 +270,12 @@ export function ChatPane(props: Props) {
     });
     return () => void stop.then((unlisten) => unlisten());
   }, [addPaths]);
-  const send = (text: string, sentQuote: Quote | null = null, files: string[] = []) =>
-    store.send(threadId, text, { quote: sentQuote, files });
+  const send = (
+    text: string,
+    sentQuote: Quote | null = null,
+    files: string[] = [],
+    threads: string[] = [],
+  ) => store.send(threadId, text, { quote: sentQuote, files, threads });
   const quoteWith = (quote: Quote | null, range: Range | null = null) => {
     highlightSource(quote ? range : null);
     onQuote(quote);
@@ -479,7 +485,8 @@ export function ChatPane(props: Props) {
         quote={quote}
         onClearQuote={() => quoteWith(null)}
         attachments={attachments}
-        onSend={async (text) => {
+        threadId={threadId}
+        onSend={async (text, threadRefs) => {
           const files = attachments.ready.map((file) => file.path);
           if (running) {
             if (isCancel(text, t("composer-cancel-words"))) {
@@ -487,9 +494,12 @@ export function ChatPane(props: Props) {
               return;
             }
             counter += 1;
-            setQueued((list) => [...list, { id: counter, threadId, text, quote, files }]);
+            setQueued((list) => [
+              ...list,
+              { id: counter, threadId, text, quote, files, threads: threadRefs },
+            ]);
           } else {
-            await send(text, quote, files);
+            await send(text, quote, files, threadRefs);
           }
           quoteWith(null);
           attachments.clear();

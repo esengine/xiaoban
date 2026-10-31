@@ -37,6 +37,8 @@ pub enum Request {
         quote: Option<crate::Quote>,
         #[serde(default)]
         files: Vec<String>,
+        #[serde(default)]
+        threads: Vec<String>,
     },
     CancelTurn {
         turn_id: String,

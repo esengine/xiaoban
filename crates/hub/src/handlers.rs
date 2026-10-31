@@ -48,9 +48,14 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             context,
             quote,
             files,
+            threads,
         } => {
             if !local && !files.is_empty() {
                 return Err(bad_request("files can only be attached on this computer"));
+            }
+            let mut context = context;
+            for other in threads.iter().filter(|other| **other != thread_id) {
+                context.extend(crate::thread_tools::reference(state, other).await);
             }
             send(state, thread_id, &text, context, quote, files).await
         }

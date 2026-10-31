@@ -180,9 +180,17 @@ impl HubTools<'_> {
 
 pub const HISTORY_SEARCH: &str = "history_search";
 pub const HISTORY_READ: &str = "history_read";
+pub const HISTORY_OUTLINE: &str = "history_outline";
+const OUTLINE_SPAN: usize = 20;
+const OUTLINE_CHARS: usize = 60;
 
 pub fn history_specs(l: &Localizer) -> Vec<ToolSpec> {
     vec![
+        ToolSpec {
+            name: HISTORY_OUTLINE.to_owned(),
+            description: l.text(keys::TOOL_HISTORY_OUTLINE_DESCRIPTION),
+            parameters: json!({ "type": "object", "properties": {}, "additionalProperties": false }),
+        },
         ToolSpec {
             name: HISTORY_SEARCH.to_owned(),
             description: l.text(keys::TOOL_HISTORY_SEARCH_DESCRIPTION),
@@ -227,6 +235,29 @@ fn role_name(message: &xiaoban_protocol::Message) -> &'static str {
 }
 
 impl HubTools<'_> {
+    pub(crate) async fn history_outline(&self) -> String {
+        let old = crate::archive::archived(self.state, self.thread_id).await;
+        if old.is_empty() {
+            return error("nothing in this conversation has been archived yet");
+        }
+        let sections: Vec<Value> = old
+            .chunks(OUTLINE_SPAN)
+            .enumerate()
+            .map(|(index, chunk)| {
+                let opener = chunk
+                    .iter()
+                    .find(|message| message.role == xiaoban_protocol::Role::User)
+                    .map(|message| message.text.chars().take(OUTLINE_CHARS).collect::<String>());
+                json!({
+                    "at": index * OUTLINE_SPAN,
+                    "time": chunk.first().map(|message| message.created_at),
+                    "opener": opener,
+                })
+            })
+            .collect();
+        json!({ "messages": old.len(), "sections": sections }).to_string()
+    }
+
     pub(crate) async fn history_search(&self, arguments: &str) -> String {
         let Ok(args) = serde_json::from_str::<HistorySearchArgs>(arguments) else {
             return error("arguments must be {query}");

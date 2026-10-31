@@ -1,8 +1,10 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { Quote } from "@xiaoban/protocol";
+import type { Quote, Thread } from "@xiaoban/protocol";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
 import { AttachRow, useVisionChoice, VisionNotice } from "../attach/Attachments.tsx";
 import type { AttachmentsState } from "../attach/useAttachments.ts";
@@ -12,13 +14,16 @@ import { useVoice, type VoiceBlock, type VoiceState } from "../voice/useVoice.ts
 import { QuoteBlock } from "./QuoteBlock.tsx";
 
 interface Props {
+  threadId: string;
   busy: boolean;
   attachments: AttachmentsState;
   quote: Quote | null;
   onClearQuote: () => void;
-  onSend: (text: string) => Promise<unknown>;
+  onSend: (text: string, threads: string[]) => Promise<unknown>;
   onStop: () => Promise<unknown>;
 }
+
+const MENTION_LIMIT = 6;
 
 const PRIVACY = "x-apple.systempreferences:com.apple.preference.security";
 
@@ -101,7 +106,15 @@ function Listening({
   );
 }
 
-export function Composer({ busy, attachments, quote, onClearQuote, onSend, onStop }: Props) {
+export function Composer({
+  threadId,
+  busy,
+  attachments,
+  quote,
+  onClearQuote,
+  onSend,
+  onStop,
+}: Props) {
   const { t, locale } = useI18n();
   const openMenu = useContextMenu();
   const [text, setText] = useState("");
@@ -161,6 +174,28 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
     return () => window.removeEventListener(COMPOSE_EVENT, compose);
   }, []);
 
+  const { threads, preferences } = useHubState(useHub());
+  const [refs, setRefs] = useState<Thread[]>([]);
+  const [picking, setPicking] = useState(0);
+  const mention = /@([^\s@]*)$/.exec(text);
+  const mentionQuery = mention?.[1]?.toLowerCase() ?? null;
+  const nameOf = (thread: Thread) =>
+    thread.id === preferences?.primaryThreadId
+      ? t("app-name")
+      : (thread.title ?? t("thread-untitled"));
+  const choices =
+    mentionQuery === null
+      ? []
+      : threads
+          .filter((thread) => thread.id !== threadId && !refs.some((ref) => ref.id === thread.id))
+          .filter((thread) => nameOf(thread).toLowerCase().includes(mentionQuery))
+          .slice(0, MENTION_LIMIT);
+  const choose = (thread: Thread) => {
+    setRefs((list) => [...list, thread]);
+    setText((current) => current.replace(/@([^\s@]*)$/, ""));
+    setPicking(0);
+    requestAnimationFrame(() => input.current?.focus());
+  };
   const vision = useVisionChoice();
   const [visionAccepted, setVisionAccepted] = useState(false);
   const files = attachments.files;
@@ -174,7 +209,9 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
     if (!value && attachments.ready.length === 0) return;
     if (attachments.blocked || waitingVision) return;
     setText("");
-    await onSend(value);
+    const referenced = refs.map((thread) => thread.id);
+    setRefs([]);
+    await onSend(value, referenced);
   };
   const pick = async () => {
     const chosen = await openDialog({ multiple: true, directory: false });
@@ -273,6 +310,44 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
           {quote && (
             <QuoteBlock key={quote.text} quote={quote} tone="light" onRemove={onClearQuote} />
           )}
+          {refs.map((thread) => (
+            <div key={thread.id} className="thread-ref">
+              <span className="thread-ref__bar" aria-hidden="true" />
+              <span className="thread-ref__text">
+                <b>{t("thread-ref-title", { title: nameOf(thread) })}</b>
+                <span>{t("thread-ref-hint")}</span>
+              </span>
+              <button
+                type="button"
+                className="quote-block__action"
+                aria-label={t("thread-ref-remove")}
+                onClick={() => setRefs((list) => list.filter((ref) => ref.id !== thread.id))}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+          ))}
+          {choices.length > 0 && (
+            <div className="mention" role="listbox" aria-label={t("thread-ref-pick")}>
+              <span className="mention__hint">{t("thread-ref-pick")}</span>
+              {choices.map((thread, index) => (
+                <button
+                  key={thread.id}
+                  type="button"
+                  role="option"
+                  aria-selected={index === picking}
+                  className="mention__item"
+                  data-active={index === picking || undefined}
+                  onPointerEnter={() => setPicking(index)}
+                  onClick={() => choose(thread)}
+                >
+                  {nameOf(thread)}
+                </button>
+              ))}
+            </div>
+          )}
           <AttachRow files={files} onRemove={attachments.remove} />
           {attachments.hasImages && (
             <VisionNotice
@@ -301,6 +376,18 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
                 value={text}
                 onChange={(event) => setText(event.target.value)}
                 onPaste={pasteFiles}
+                onKeyDown={(event) => {
+                  if (choices.length === 0) return;
+                  if (event.key === "ArrowDown") setPicking((picking + 1) % choices.length);
+                  else if (event.key === "ArrowUp")
+                    setPicking((picking - 1 + choices.length) % choices.length);
+                  else if (event.key === "Enter" || event.key === "Tab") {
+                    const thread = choices[picking];
+                    if (thread) choose(thread);
+                  } else if (event.key === "Escape") setText((current) => `${current} `);
+                  else return;
+                  event.preventDefault();
+                }}
                 placeholder={busy ? t("composer-placeholder-busy") : t("composer-placeholder")}
                 autoComplete="off"
               />

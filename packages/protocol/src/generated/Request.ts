@@ -17,6 +17,7 @@ export type Request =
       context: Array<ContextNote>;
       quote: Quote | null;
       files: Array<string>;
+      threads: Array<string>;
     }
   | { type: "cancel_turn"; turnId: string }
   | { type: "retry_turn"; threadId: string }

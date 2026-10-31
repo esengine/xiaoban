@@ -176,6 +176,24 @@ impl Store {
         .await
     }
 
+    pub async fn thread_openers(&self) -> Result<Vec<(String, String, u32)>> {
+        self.with(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT m.thread_id, m.text,
+                        (SELECT COUNT(*) FROM messages c WHERE c.thread_id = m.thread_id)
+                 FROM messages m
+                 WHERE m.role = 'user' AND m.rowid = (
+                     SELECT f.rowid FROM messages f
+                     WHERE f.thread_id = m.thread_id AND f.role = 'user'
+                     ORDER BY f.created_at, f.rowid LIMIT 1
+                 )",
+            )?;
+            let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+            Ok(rows.collect::<rusqlite::Result<_>>()?)
+        })
+        .await
+    }
+
     pub async fn list_messages(&self, thread_id: String) -> Result<Vec<Message>> {
         self.with(move |conn| {
             let mut stmt = conn.prepare(

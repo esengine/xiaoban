@@ -210,7 +210,12 @@ export class HubStore {
   async send(
     threadId: string,
     text: string,
-    options: { context?: ContextNote[]; quote?: Quote | null; files?: string[] } = {},
+    options: {
+      context?: ContextNote[];
+      quote?: Quote | null;
+      files?: string[];
+      threads?: string[];
+    } = {},
   ): Promise<string> {
     const { turnId } = await this.client.request(
       {
@@ -220,6 +225,7 @@ export class HubStore {
         context: options.context ?? [],
         quote: options.quote ?? null,
         files: options.files ?? [],
+        threads: options.threads ?? [],
       },
       "turn_accepted",
     );

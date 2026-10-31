@@ -18,6 +18,7 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   do_steps: { detail: "step-do_steps", plain: "step-do_steps-plain" },
   recall: { detail: "step-recall", plain: "step-recall-plain" },
   history_search: { detail: "step-history_search", plain: "step-history_search-plain" },
+  find_threads: { detail: "step-find_threads", plain: "step-find_threads-plain" },
   forget: { detail: "step-forget", plain: "step-forget-plain" },
   confirm: { detail: "step-confirm", plain: "step-confirm-plain" },
   save_place_detail: {
@@ -30,6 +31,9 @@ const PLAIN: Record<string, PlainMessageKey> = {
   save_trip: "step-save_trip",
   locate: "step-locate",
   history_read: "step-history_read",
+  read_thread: "step-read_thread",
+  list_threads: "step-list_threads",
+  history_outline: "step-history_outline",
 };
 
 export function stepText(t: T, step: TraceStep): string {

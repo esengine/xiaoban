@@ -10,6 +10,7 @@ fn client_frames_use_tagged_camel_case_json() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         },
     };
     let json = serde_json::to_value(&frame).unwrap();
@@ -18,7 +19,7 @@ fn client_frames_use_tagged_camel_case_json() {
         serde_json::json!({
             "type": "request",
             "id": 7,
-            "body": { "type": "send_message", "threadId": "t1", "text": "你好", "context": [], "quote": null, "files": [] }
+            "body": { "type": "send_message", "threadId": "t1", "text": "你好", "context": [], "quote": null, "files": [], "threads": [] }
         })
     );
 }

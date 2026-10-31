@@ -4456,3 +4456,68 @@ button.sent-files__image {
   margin: 0;
   border-radius: 16px;
 }
+
+.thread-ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--color-ground);
+  font-size: 12px;
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.thread-ref__bar {
+  flex: none;
+  width: 3px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--color-trip-rust);
+}
+
+.thread-ref__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.thread-ref__text span {
+  color: var(--color-faint);
+}
+
+.mention {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow:
+    0 12px 32px color-mix(in srgb, var(--color-ink) 18%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-ink) 8%, transparent);
+  animation: context-menu-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.mention__hint {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.mention__item {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mention__item[data-active] {
+  background: var(--color-accent-wash);
+}

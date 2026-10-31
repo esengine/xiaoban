@@ -33,7 +33,8 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         WEB_SEARCH
         | FIND_APPS
         | crate::file_tools::FILE_SEARCH
-        | crate::file_tools::HISTORY_SEARCH => text(&args, "query"),
+        | crate::file_tools::HISTORY_SEARCH
+        | crate::thread_tools::FIND_THREADS => text(&args, "query"),
         crate::file_tools::RECALL => text(&args, "galaxy").or_else(|| text(&args, "query")),
         READ_PAGE => text(&args, "url").and_then(|url| site(&url)),
         WEATHER => text(&args, "place"),

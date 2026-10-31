@@ -217,6 +217,7 @@ async fn local_client_sends_a_message_and_receives_streamed_reply() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -320,6 +321,7 @@ async fn converse(client: &mut TestClient, thread_id: &str, text: &str, context:
             context,
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -400,6 +402,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await;
     client.next_id += 1;
@@ -413,6 +416,7 @@ async fn second_message_is_rejected_while_a_reply_is_running() {
                 context: Vec::new(),
                 quote: None,
                 files: Vec::new(),
+                threads: Vec::new(),
             },
         })
         .await;
@@ -531,6 +535,7 @@ async fn onboarding_configures_a_provider_and_hot_swaps_the_model() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await;
     let failure = loop {
@@ -994,6 +999,7 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -1056,6 +1062,7 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
             context: Vec::new(),
             quote: Some(xiaoban_protocol::Quote::plain("7:40")),
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -1762,6 +1769,7 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -1792,6 +1800,7 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -1862,6 +1871,7 @@ async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
             context: Vec::new(),
             quote: None,
             files: Vec::new(),
+            threads: Vec::new(),
         })
         .await
     else {
@@ -1920,6 +1930,7 @@ async fn attached_files_reach_the_model() {
             context: Vec::new(),
             quote: None,
             files: vec![note.to_string_lossy().into_owned()],
+            threads: Vec::new(),
         })
         .await
     else {
@@ -1958,6 +1969,7 @@ async fn a_backgrounded_reply_frees_the_thread() {
         context: Vec::new(),
         quote: None,
         files: Vec::new(),
+        threads: Vec::new(),
     };
     let Response::TurnAccepted { turn_id, .. } = client.request(send("做个周报")).await else {
         panic!("expected turn");

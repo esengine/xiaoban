@@ -27,6 +27,7 @@ mod services;
 mod session;
 mod state;
 mod steps;
+mod thread_tools;
 mod tidy;
 mod tools;
 mod trip;
