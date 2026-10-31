@@ -17,6 +17,7 @@ pub struct Pairing {
 #[derive(Debug)]
 pub struct Authenticated {
     pub device_id: String,
+    pub local: bool,
     pub issued_token: Option<String>,
 }
 
@@ -65,6 +66,7 @@ pub async fn authenticate(
     match &hello.credential {
         Credential::Local if peer.ip().is_loopback() => Ok(Authenticated {
             device_id: hello.device_id.clone(),
+            local: true,
             issued_token: None,
         }),
         Credential::Local => Err(unauthorized(
@@ -78,6 +80,7 @@ pub async fn authenticate(
             store.mark_device_seen(device.device.id.clone()).await?;
             Ok(Authenticated {
                 device_id: device.device.id,
+                local: false,
                 issued_token: None,
             })
         }
@@ -96,6 +99,7 @@ pub async fn authenticate(
                 .await?;
             Ok(Authenticated {
                 device_id: hello.device_id.clone(),
+                local: false,
                 issued_token: Some(token),
             })
         }

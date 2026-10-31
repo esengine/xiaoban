@@ -12,6 +12,8 @@ pub enum AgentError {
     Cancelled,
     #[error("no model is connected yet")]
     NotConfigured,
+    #[error("the provider rejected the API key")]
+    InvalidKey,
 }
 
 impl AgentError {
@@ -22,6 +24,7 @@ impl AgentError {
             Self::Stream(_) => (FailureKind::Model, true),
             Self::Cancelled => (FailureKind::Cancelled, false),
             Self::NotConfigured => (FailureKind::NotConfigured, false),
+            Self::InvalidKey => (FailureKind::InvalidKey, false),
         };
         Failure {
             kind,

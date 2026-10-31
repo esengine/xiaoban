@@ -1,4 +1,13 @@
-import type { ContextNote, Message, Thread, Usage } from "@xiaoban/protocol";
+import type {
+  ContextNote,
+  Failure,
+  Message,
+  ModelInfo,
+  ProviderId,
+  ProviderOption,
+  Thread,
+  Usage,
+} from "@xiaoban/protocol";
 import type { HubClient } from "./client.ts";
 import { applyEvent, type HubState, initialHubState } from "./state.ts";
 
@@ -32,7 +41,25 @@ export class HubStore {
 
   async refreshModel(): Promise<void> {
     const { model } = await this.client.request({ type: "model_status" }, "model_status");
-    this.#update((state) => ({ ...state, model }));
+    this.#update((state) => ({ ...state, model, modelLoaded: true }));
+  }
+
+  async listProviders(): Promise<ProviderOption[]> {
+    const { providers } = await this.client.request({ type: "list_providers" }, "providers");
+    return providers;
+  }
+
+  async configureProvider(
+    provider: ProviderId,
+    apiKey: string,
+    model?: string,
+  ): Promise<{ model: ModelInfo | null; failure: Failure | null }> {
+    const { model: active, failure } = await this.client.request(
+      { type: "configure_provider", provider, apiKey, model: model ?? null },
+      "provider_configured",
+    );
+    if (!failure) this.#update((state) => ({ ...state, model: active, modelLoaded: true }));
+    return { model: active, failure };
   }
 
   async createThread(title?: string): Promise<Thread> {

@@ -1,10 +1,15 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use std::sync::Arc;
 use tauri::State;
 use tauri::async_runtime::Mutex;
-use xiaoban_agent::{Agent, OpenAiCompatible, UnconfiguredProvider, first_configured_from_env};
-use xiaoban_hub::{Hub, HubConfig, HubHandle, default_hub_name, system_locale, system_prefix};
+
+use xiaoban_agent::{HttpConnector, first_configured_from_env};
+use xiaoban_hub::{
+    Hub, HubConfig, HubHandle, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, default_hub_name,
+    system_locale, system_prefix,
+};
 
 const LAN_BIND: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), 47100);
@@ -25,20 +30,19 @@ impl RunningHub {
 
 pub async fn start(data_dir: PathBuf) -> anyhow::Result<RunningHub> {
     let locale = system_locale();
-    let configured = first_configured_from_env();
-    let prefix = system_prefix(locale);
-    let agent = match &configured {
-        Some(configured) => Agent::new(OpenAiCompatible::new(configured.config.clone()), prefix),
-        None => Agent::new(UnconfiguredProvider, prefix),
+    let runtime = HubRuntime {
+        prefix: system_prefix(locale),
+        connector: Arc::new(HttpConnector),
+        secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
+        fallback: first_configured_from_env(),
     };
     let config = HubConfig {
         data_dir: Some(data_dir),
         bind: LAN_BIND,
         name: default_hub_name(locale),
         advertise: true,
-        model: configured.map(|configured| configured.info),
     };
-    let handle = Hub::start(config, agent).await?;
+    let handle = Hub::start(config, runtime).await?;
     Ok(RunningHub {
         endpoint: handle.ws_url(),
         handle: Mutex::new(Some(handle)),

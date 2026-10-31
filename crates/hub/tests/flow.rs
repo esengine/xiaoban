@@ -1,16 +1,19 @@
+use std::sync::Arc;
 use std::time::Duration;
 
+use futures_util::future::BoxFuture;
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use xiaoban_agent::{
-    Agent, ModelProvider, RecordingProvider, ScriptedProvider, StablePrefix, prefix_reuse,
+    AgentError, ConfiguredProvider, Connector, ModelProvider, OpenAiConfig, ProviderPreset,
+    RecordingProvider, ScriptedProvider, StablePrefix, prefix_reuse,
 };
-use xiaoban_hub::{Hub, HubConfig, HubHandle};
+use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, SecretStore};
 use xiaoban_protocol::{
-    ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event, PROTOCOL_VERSION,
-    Platform, Request, Response, Role, ServerFrame,
+    ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event, FailureKind,
+    PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role, ServerFrame,
 };
 
 struct TestClient {
@@ -82,13 +85,64 @@ impl TestClient {
     }
 }
 
-fn agent(provider: impl ModelProvider) -> Agent {
-    Agent::new(provider, StablePrefix::new("system"))
+const VALID_KEY: &str = "good";
+
+struct FixedConnector(Arc<dyn ModelProvider>);
+
+impl std::fmt::Debug for FixedConnector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("FixedConnector")
+    }
+}
+
+impl Connector for FixedConnector {
+    fn provider(&self, _config: OpenAiConfig) -> Arc<dyn ModelProvider> {
+        Arc::clone(&self.0)
+    }
+
+    fn check(&self, config: OpenAiConfig) -> BoxFuture<'static, Result<(), AgentError>> {
+        let valid = config.api_key == VALID_KEY;
+        Box::pin(async move {
+            if valid {
+                Ok(())
+            } else {
+                Err(AgentError::InvalidKey)
+            }
+        })
+    }
+}
+
+fn deepseek(key: &str) -> ConfiguredProvider {
+    let preset = ProviderPreset::of(ProviderId::Deepseek);
+    ConfiguredProvider::new(preset, preset.config(key.into(), None))
+}
+
+fn runtime_with(
+    provider: impl ModelProvider,
+    prefix: StablePrefix,
+    fallback: Option<ConfiguredProvider>,
+    secrets: Arc<dyn SecretStore>,
+) -> HubRuntime {
+    HubRuntime {
+        prefix,
+        connector: Arc::new(FixedConnector(Arc::new(provider))),
+        secrets,
+        fallback,
+    }
+}
+
+fn runtime(provider: impl ModelProvider) -> HubRuntime {
+    runtime_with(
+        provider,
+        StablePrefix::new("system"),
+        Some(deepseek(VALID_KEY)),
+        Arc::new(MemorySecrets::default()),
+    )
 }
 
 async fn start_hub(chunks: &[&str]) -> HubHandle {
-    let agent = agent(ScriptedProvider::new(chunks.iter().copied()));
-    Hub::start(HubConfig::ephemeral(), agent).await.unwrap()
+    let runtime = runtime(ScriptedProvider::new(chunks.iter().copied()));
+    Hub::start(HubConfig::ephemeral(), runtime).await.unwrap()
 }
 
 #[tokio::test]
@@ -240,7 +294,7 @@ async fn new_thread(client: &mut TestClient) -> String {
 #[tokio::test]
 async fn consecutive_turns_reuse_the_exact_request_prefix() {
     let provider = RecordingProvider::new(ScriptedProvider::new(["好"]));
-    let hub = Hub::start(HubConfig::ephemeral(), agent(provider.clone()))
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
@@ -278,7 +332,7 @@ async fn consecutive_turns_reuse_the_exact_request_prefix() {
 #[tokio::test]
 async fn second_message_is_rejected_while_a_reply_is_running() {
     let provider = ScriptedProvider::new(["慢", "慢"]).with_delay(Duration::from_millis(150));
-    let hub = Hub::start(HubConfig::ephemeral(), agent(provider))
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
@@ -327,7 +381,7 @@ async fn changing_the_stable_prefix_starts_a_new_epoch_that_keeps_history() {
         ..HubConfig::ephemeral()
     };
 
-    let hub = Hub::start(config.clone(), agent(ScriptedProvider::new(["7:40"])))
+    let hub = Hub::start(config.clone(), runtime(ScriptedProvider::new(["7:40"])))
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
@@ -337,7 +391,12 @@ async fn changing_the_stable_prefix_starts_a_new_epoch_that_keeps_history() {
     hub.shutdown().await;
 
     let provider = RecordingProvider::new(ScriptedProvider::new(["带"]));
-    let upgraded = Agent::new(provider.clone(), StablePrefix::new("新版提示词"));
+    let upgraded = runtime_with(
+        provider.clone(),
+        StablePrefix::new("新版提示词"),
+        Some(deepseek(VALID_KEY)),
+        Arc::new(MemorySecrets::default()),
+    );
     let hub = Hub::start(config, upgraded).await.unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
     converse(&mut client, &thread, "要带伞吗", Vec::new()).await;
@@ -362,4 +421,137 @@ fn uuid_like() -> String {
             .unwrap()
             .as_nanos()
     )
+}
+
+async fn configure(client: &mut TestClient, key: &str) -> Response {
+    client
+        .request(Request::ConfigureProvider {
+            provider: ProviderId::Deepseek,
+            api_key: key.into(),
+            model: Some("deepseek-v4-pro".into()),
+        })
+        .await
+}
+
+#[tokio::test]
+async fn onboarding_configures_a_provider_and_hot_swaps_the_model() {
+    let secrets: Arc<dyn SecretStore> = Arc::new(MemorySecrets::default());
+    let dir = std::env::temp_dir().join(format!("xiaoban-onboard-{}", uuid_like()));
+    let config = HubConfig {
+        data_dir: Some(dir.clone()),
+        ..HubConfig::ephemeral()
+    };
+    let fresh = runtime_with(
+        ScriptedProvider::new(["你好"]),
+        StablePrefix::new("system"),
+        None,
+        Arc::clone(&secrets),
+    );
+    let hub = Hub::start(config.clone(), fresh.clone()).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+
+    let Response::ModelStatus { model: None } = client.request(Request::ModelStatus).await else {
+        panic!("a fresh hub should have no model");
+    };
+    let Response::Providers { providers } = client.request(Request::ListProviders).await else {
+        panic!("expected providers");
+    };
+    assert_eq!(providers.len(), ProviderId::ALL.len());
+    assert!(providers.iter().all(|provider| !provider.configured));
+
+    let thread = new_thread(&mut client).await;
+    client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "在吗".into(),
+            context: Vec::new(),
+        })
+        .await;
+    let failure = loop {
+        if let Event::TurnFailed { failure, .. } = client.next_event().await {
+            break failure;
+        }
+    };
+    assert_eq!(failure.kind, FailureKind::NotConfigured);
+
+    let Response::ProviderConfigured {
+        model: None,
+        failure: Some(failure),
+    } = configure(&mut client, "wrong").await
+    else {
+        panic!("a wrong key must not be saved");
+    };
+    assert_eq!(failure.kind, FailureKind::InvalidKey);
+    assert_eq!(secrets.load(ProviderId::Deepseek).unwrap(), None);
+
+    let Response::ProviderConfigured {
+        model: Some(model),
+        failure: None,
+    } = configure(&mut client, VALID_KEY).await
+    else {
+        panic!("a valid key should be accepted");
+    };
+    assert_eq!(model.provider, ProviderId::Deepseek);
+    assert_eq!(model.model, "deepseek-v4-pro");
+    assert_eq!(
+        secrets.load(ProviderId::Deepseek).unwrap().as_deref(),
+        Some(VALID_KEY)
+    );
+    loop {
+        if let Event::ModelChanged { model: Some(_) } = client.next_event().await {
+            break;
+        }
+    }
+
+    converse(&mut client, &thread, "现在呢", Vec::new()).await;
+    drop(client);
+    hub.shutdown().await;
+
+    let hub = Hub::start(config, fresh).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let Response::ModelStatus { model: Some(model) } = client.request(Request::ModelStatus).await
+    else {
+        panic!("the configured model should survive a restart");
+    };
+    assert_eq!(model.model, "deepseek-v4-pro");
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+async fn paired_devices_cannot_configure_providers() {
+    let hub = start_hub(&["好"]).await;
+    let (mut desktop, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let Response::PairingCode { code, .. } = desktop.request(Request::CreatePairingCode).await
+    else {
+        panic!("expected code");
+    };
+    let (mut phone, _) = TestClient::connect(&hub, "phone", Credential::PairingCode { code }).await;
+
+    phone.next_id += 1;
+    let id = phone.next_id;
+    phone
+        .send(&ClientFrame::Request {
+            id,
+            body: Request::ConfigureProvider {
+                provider: ProviderId::Deepseek,
+                api_key: VALID_KEY.into(),
+                model: None,
+            },
+        })
+        .await;
+    loop {
+        match phone.recv().await {
+            ServerFrame::Error {
+                id: Some(got),
+                error,
+            } if got == id => {
+                assert_eq!(error.code, ErrorCode::Unauthorized);
+                break;
+            }
+            ServerFrame::Response { id: got, .. } if got == id => panic!("phone must be rejected"),
+            _ => {}
+        }
+    }
+    hub.shutdown().await;
 }

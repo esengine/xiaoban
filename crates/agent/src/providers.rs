@@ -7,6 +7,8 @@ pub struct ProviderPreset {
     pub id: ProviderId,
     pub base_url: &'static str,
     pub default_model: &'static str,
+    pub models: &'static [&'static str],
+    pub console_url: &'static str,
     pub key_env: &'static str,
 }
 
@@ -15,12 +17,16 @@ pub const PRESETS: [ProviderPreset; 2] = [
         id: ProviderId::Deepseek,
         base_url: "https://api.deepseek.com",
         default_model: "deepseek-v4-flash",
+        models: &["deepseek-v4-flash", "deepseek-v4-pro"],
+        console_url: "https://platform.deepseek.com/api_keys",
         key_env: "DEEPSEEK_API_KEY",
     },
     ProviderPreset {
         id: ProviderId::Mimo,
         base_url: "https://api.xiaomimimo.com/v1",
         default_model: "mimo-v2.5-pro",
+        models: &["mimo-v2.5-pro"],
+        console_url: "https://platform.xiaomimimo.com",
         key_env: "MIMO_API_KEY",
     },
 ];

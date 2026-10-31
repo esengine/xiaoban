@@ -1,3 +1,4 @@
+mod connector;
 mod error;
 mod openai;
 mod prompt;
@@ -7,6 +8,7 @@ mod recording;
 mod scripted;
 mod turn;
 
+pub use connector::{Connector, HttpConnector};
 pub use error::AgentError;
 pub use openai::{OpenAiCompatible, OpenAiConfig};
 pub use prompt::{PrefixReuse, StablePrefix, Transcript, assemble, prefix_reuse, user_wire};

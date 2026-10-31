@@ -21,7 +21,7 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ title: t("app-name") }} />
-          <Stack.Screen name="pair" options={{ title: t("pair-title") }} />
+          <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ title: "" }} />
         </Stack>
       </HubProvider>

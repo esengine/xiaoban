@@ -10,6 +10,7 @@ pub fn run() {
         .init();
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let running = tauri::async_runtime::block_on(hub::start(data_dir))?;

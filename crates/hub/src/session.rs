@@ -42,8 +42,9 @@ pub async fn run(socket: WebSocket, peer: SocketAddr, state: SharedState) {
             Ok(ClientFrame::Request { id, body }) => {
                 let state = Arc::clone(&state);
                 let out = out.clone();
+                let local = session.local;
                 tokio::spawn(async move {
-                    let frame = match handlers::handle(&state, body).await {
+                    let frame = match handlers::handle(&state, local, body).await {
                         Ok(body) => ServerFrame::Response { id, body },
                         Err(error) => ServerFrame::Error {
                             id: Some(id),

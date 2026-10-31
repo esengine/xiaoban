@@ -13,6 +13,7 @@ export interface HubState {
   status: ConnectionStatus;
   hub: HubInfo | null;
   model: ModelInfo | null;
+  modelLoaded: boolean;
   threads: Thread[];
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
@@ -22,6 +23,7 @@ export const initialHubState: HubState = {
   status: "idle",
   hub: null,
   model: null,
+  modelLoaded: false,
   threads: [],
   messages: {},
   drafts: {},
@@ -80,6 +82,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         messages: appendMessage(state, event.message),
         drafts: withoutDraft(state.drafts, event.turnId),
       };
+    case "model_changed":
+      return { ...state, model: event.model, modelLoaded: true };
     case "turn_failed": {
       const draft = state.drafts[event.turnId];
       if (!draft) return state;

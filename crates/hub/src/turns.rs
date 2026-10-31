@@ -132,7 +132,7 @@ async fn current_epoch(
     state: &SharedState,
     thread_id: &str,
 ) -> Result<(Epoch, Transcript), StoreError> {
-    let fingerprint = state.agent.prefix().fingerprint().to_owned();
+    let fingerprint = state.prefix.fingerprint().to_owned();
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
         Some((epoch, entries)) if epoch.prefix_fingerprint == fingerprint => {
             return Ok((epoch, entries.into_iter().map(to_chat).collect()));
@@ -180,7 +180,8 @@ async fn drive(
             }
         })
     };
-    let outcome = state.agent.run_turn(&transcript, &wire, tx, cancel).await;
+    let agent = state.active().agent;
+    let outcome = agent.run_turn(&transcript, &wire, tx, cancel).await;
     let _ = forward.await;
 
     let mut appended = vec![TranscriptEntry::new(EntryRole::User, wire)];

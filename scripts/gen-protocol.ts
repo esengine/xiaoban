@@ -1,13 +1,16 @@
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dirname, "..");
 const generated = join(root, "packages/protocol/src/generated");
 
-execFileSync("cargo", ["test", "-p", "xiaoban-protocol", "--quiet", "export_bindings"], {
+rmSync(generated, { recursive: true, force: true });
+mkdirSync(generated, { recursive: true });
+execFileSync("cargo", ["test", "-p", "xiaoban-protocol", "--quiet", "--test", "export"], {
   cwd: root,
   stdio: "inherit",
+  env: { ...process.env, XIAOBAN_TS_OUT: generated },
 });
 
 const rustLib = readFileSync(join(root, "crates/protocol/src/lib.rs"), "utf8");

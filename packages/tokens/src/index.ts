@@ -17,6 +17,18 @@ export const color = {
   successSoft: "#E3F1EA",
 } as const;
 
+export const dark = {
+  ground: "#15171C",
+  surface: "#1C1E24",
+  raised: "#23262E",
+  line: "#2A2D35",
+  lineStrong: "#4A505C",
+  text: "#FFFFFF",
+  textSoft: "#D5D9E3",
+  textMuted: "#B9BECB",
+  link: "#9AAAE6",
+} as const;
+
 export const radius = {
   sm: 8,
   md: 12,
@@ -59,6 +71,7 @@ const kebab = (key: string) => key.replace(/[A-Z]/g, (char) => `-${char.toLowerC
 export function cssVariables(): string {
   const entries = [
     ...Object.entries(color).map(([key, value]) => [`--color-${kebab(key)}`, value]),
+    ...Object.entries(dark).map(([key, value]) => [`--dark-${kebab(key)}`, value]),
     ...Object.entries(radius).map(([key, value]) => [`--radius-${kebab(key)}`, `${value}px`]),
     ...Object.entries(space).map(([key, value]) => [`--space-${kebab(key)}`, `${value}px`]),
     ["--font-family", font.family],

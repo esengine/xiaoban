@@ -1,7 +1,7 @@
 export const catalogs = {
   "zh-CN":
-    "app-name = 小伴\nhub-default-name = 小伴\n\nprompt-system = 你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。\n\nnav-main = 主导航\ndevice-desktop = 这台电脑\ndevice-ios = iPhone\ndevice-android = 安卓手机\n\nconnection-idle = 未连接\nconnection-connecting = 连接中\nconnection-open = 已连接\nconnection-reconnecting = 重新连接中\nconnection-closed = 已断开\nconnection-waiting-for-hub = 正在连接家里的电脑…\n\nthread-new = 新对话\nthread-untitled = 新的对话\nthread-empty = 还没有对话\nthread-start = 和小伴聊聊\n\ncomposer-label = 对小伴说\ncomposer-placeholder = 说点什么\ncomposer-send = 发送\ncomposer-stop = 停\n\ndraft-thinking = 在想…\ndraft-elapsed = 已想 { $seconds } 秒\ndraft-failed = 没成功：{ $reason }\n\nfailure-model = 模型出了点问题\nfailure-not-configured = 还没有连接模型\nfailure-network = 网络断了\nfailure-cancelled = 已停止\nfailure-budget = 到了花费上限\nfailure-internal = 小伴内部出错了\n\nerror-unsupported-protocol = 电脑上的小伴版本不匹配，请都更新到最新版\nerror-unauthorized = 配对码不对或已过期\nerror-bad-request = 请求有误\nerror-not-found = 找不到这条内容\nerror-busy = 上一条还在回复，稍等一下\nerror-internal = 小伴内部出错了\nerror-unreachable = 连不上电脑，确认手机和电脑在同一个 Wi-Fi 下\n\npair-title = 连接家里的电脑\npair-lead = 在电脑上打开小伴 › 设置 › 设备，把显示的地址和配对码填在这里。\npair-address-placeholder = 电脑地址，比如 192.168.1.8\npair-code-placeholder = 6 位配对码\npair-submit = 连接\npair-submitting = 连接中…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = 小米 MiMo\nmodel-not-connected = 还没有连接模型\nmodel-current = 当前模型\n",
-  en: "app-name = Xiaoban\nhub-default-name = Xiaoban\n\nprompt-system = You are Xiaoban, a friendly companion who helps the user with everyday life. Keep answers short and concrete, and reply in English.\n\nnav-main = Main navigation\ndevice-desktop = This computer\ndevice-ios = iPhone\ndevice-android = Android phone\n\nconnection-idle = Not connected\nconnection-connecting = Connecting\nconnection-open = Connected\nconnection-reconnecting = Reconnecting\nconnection-closed = Disconnected\nconnection-waiting-for-hub = Connecting to your home computer…\n\nthread-new = New conversation\nthread-untitled = New conversation\nthread-empty = No conversations yet\nthread-start = Start chatting\n\ncomposer-label = Message Xiaoban\ncomposer-placeholder = Say something\ncomposer-send = Send\ncomposer-stop = Stop\n\ndraft-thinking = Thinking…\ndraft-elapsed = Thought for { $seconds } s\ndraft-failed = Didn’t work: { $reason }\n\nfailure-model = The model ran into a problem\nfailure-not-configured = No model is connected yet\nfailure-network = The network dropped\nfailure-cancelled = Stopped\nfailure-budget = Spending limit reached\nfailure-internal = Something went wrong inside Xiaoban\n\nerror-unsupported-protocol = Xiaoban versions don’t match. Update both devices.\nerror-unauthorized = The pairing code is wrong or has expired\nerror-bad-request = Invalid request\nerror-not-found = Not found\nerror-busy = Still replying to the previous message\nerror-internal = Something went wrong inside Xiaoban\nerror-unreachable = Can’t reach your computer. Check that both are on the same Wi-Fi.\n\npair-title = Connect your home computer\npair-lead = On your computer, open Xiaoban › Settings › Devices and enter the address and pairing code shown there.\npair-address-placeholder = Computer address, e.g. 192.168.1.8\npair-code-placeholder = 6-digit pairing code\npair-submit = Connect\npair-submitting = Connecting…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = Xiaomi MiMo\nmodel-not-connected = No model connected\nmodel-current = Current model\n",
+    "app-name = 小伴\nhub-default-name = 小伴\n\nprompt-system = 你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。\n\nnav-main = 主导航\ndevice-desktop = 这台电脑\ndevice-ios = iPhone\ndevice-android = 安卓手机\n\nconnection-idle = 未连接\nconnection-connecting = 连接中\nconnection-open = 已连接\nconnection-reconnecting = 重新连接中\nconnection-closed = 已断开\nconnection-waiting-for-hub = 正在连接家里的电脑…\n\nthread-new = 新对话\nthread-untitled = 新的对话\nthread-empty = 还没有对话\nthread-start = 和小伴聊聊\n\ncomposer-label = 对小伴说\ncomposer-placeholder = 说点什么\ncomposer-send = 发送\ncomposer-stop = 停\n\ndraft-thinking = 在想…\ndraft-elapsed = 已想 { $seconds } 秒\ndraft-failed = 没成功：{ $reason }\n\nfailure-model = 模型出了点问题\nfailure-not-configured = 还没有连接模型\nfailure-network = 网络断了\nfailure-cancelled = 已停止\nfailure-budget = 到了花费上限\nfailure-internal = 小伴内部出错了\n\nerror-unsupported-protocol = 电脑上的小伴版本不匹配，请都更新到最新版\nerror-unauthorized = 配对码不对或已过期\nerror-bad-request = 请求有误\nerror-not-found = 找不到这条内容\nerror-busy = 上一条还在回复，稍等一下\nerror-internal = 小伴内部出错了\nerror-unreachable = 连不上电脑，确认手机和电脑在同一个 Wi-Fi 下\n\npair-title = 连接家里的电脑\npair-lead = 在电脑上打开小伴 › 设置 › 设备，把显示的地址和配对码填在这里。\npair-address-placeholder = 电脑地址，比如 192.168.1.8\npair-code-placeholder = 6 位配对码\npair-submit = 连接\npair-submitting = 连接中…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = 小米 MiMo\nmodel-not-connected = 还没有连接模型\nmodel-current = 当前模型\n\nonboarding-hello = 嗨，我是小伴\nonboarding-local-first = 我跑在你自己的设备上，不用注册账号，聊天和记忆都不出你家。\nonboarding-pick-provider = 先给我接一个大模型：\nonboarding-recommended = 推荐\nonboarding-key-label = 密钥\nonboarding-key-placeholder = 粘贴 { $provider } 的密钥\nonboarding-show-key = 显示密钥\nonboarding-hide-key = 隐藏密钥\nonboarding-get-key = 没有密钥？去 { $provider } 申请\nonboarding-cost-note = 日常聊天大约每月几块钱，按你自己的密钥计费。\nonboarding-submit = 测试并继续\nonboarding-checking = 正在测试…\nonboarding-key-local = 密钥只存在这台电脑的钥匙串里\nfailure-invalid-key = 密钥不对，检查一下有没有复制完整\npair-hello = 连接家里的电脑\npair-home-lead = 我住在你家里的电脑上。先在电脑上打开小伴，把显示的地址和配对码填在这里。\n",
+  en: "app-name = Xiaoban\nhub-default-name = Xiaoban\n\nprompt-system = You are Xiaoban, a friendly companion who helps the user with everyday life. Keep answers short and concrete, and reply in English.\n\nnav-main = Main navigation\ndevice-desktop = This computer\ndevice-ios = iPhone\ndevice-android = Android phone\n\nconnection-idle = Not connected\nconnection-connecting = Connecting\nconnection-open = Connected\nconnection-reconnecting = Reconnecting\nconnection-closed = Disconnected\nconnection-waiting-for-hub = Connecting to your home computer…\n\nthread-new = New conversation\nthread-untitled = New conversation\nthread-empty = No conversations yet\nthread-start = Start chatting\n\ncomposer-label = Message Xiaoban\ncomposer-placeholder = Say something\ncomposer-send = Send\ncomposer-stop = Stop\n\ndraft-thinking = Thinking…\ndraft-elapsed = Thought for { $seconds } s\ndraft-failed = Didn’t work: { $reason }\n\nfailure-model = The model ran into a problem\nfailure-not-configured = No model is connected yet\nfailure-network = The network dropped\nfailure-cancelled = Stopped\nfailure-budget = Spending limit reached\nfailure-internal = Something went wrong inside Xiaoban\n\nerror-unsupported-protocol = Xiaoban versions don’t match. Update both devices.\nerror-unauthorized = The pairing code is wrong or has expired\nerror-bad-request = Invalid request\nerror-not-found = Not found\nerror-busy = Still replying to the previous message\nerror-internal = Something went wrong inside Xiaoban\nerror-unreachable = Can’t reach your computer. Check that both are on the same Wi-Fi.\n\npair-title = Connect your home computer\npair-lead = On your computer, open Xiaoban › Settings › Devices and enter the address and pairing code shown there.\npair-address-placeholder = Computer address, e.g. 192.168.1.8\npair-code-placeholder = 6-digit pairing code\npair-submit = Connect\npair-submitting = Connecting…\n\nprovider-deepseek = DeepSeek\nprovider-mimo = Xiaomi MiMo\nmodel-not-connected = No model connected\nmodel-current = Current model\n\nonboarding-hello = Hi, I’m Xiaoban\nonboarding-local-first = I run on your own devices. No account needed, and your chats and memories stay at home.\nonboarding-pick-provider = First, connect me to a model:\nonboarding-recommended = Recommended\nonboarding-key-label = API key\nonboarding-key-placeholder = Paste your { $provider } key\nonboarding-show-key = Show key\nonboarding-hide-key = Hide key\nonboarding-get-key = No key yet? Get one from { $provider }\nonboarding-cost-note = Everyday chatting costs a few yuan a month, billed to your own key.\nonboarding-submit = Test and continue\nonboarding-checking = Testing…\nonboarding-key-local = Your key stays in this computer’s keychain\nfailure-invalid-key = That key didn’t work. Check that you copied all of it.\npair-hello = Connect your home computer\npair-home-lead = I live on your home computer. Open Xiaoban there, then enter the address and pairing code it shows.\n",
 } as const;
 
 export type MessageKey =
@@ -32,6 +32,7 @@ export type MessageKey =
   | "failure-budget"
   | "failure-cancelled"
   | "failure-internal"
+  | "failure-invalid-key"
   | "failure-model"
   | "failure-network"
   | "failure-not-configured"
@@ -39,8 +40,23 @@ export type MessageKey =
   | "model-current"
   | "model-not-connected"
   | "nav-main"
+  | "onboarding-checking"
+  | "onboarding-cost-note"
+  | "onboarding-get-key"
+  | "onboarding-hello"
+  | "onboarding-hide-key"
+  | "onboarding-key-label"
+  | "onboarding-key-local"
+  | "onboarding-key-placeholder"
+  | "onboarding-local-first"
+  | "onboarding-pick-provider"
+  | "onboarding-recommended"
+  | "onboarding-show-key"
+  | "onboarding-submit"
   | "pair-address-placeholder"
   | "pair-code-placeholder"
+  | "pair-hello"
+  | "pair-home-lead"
   | "pair-lead"
   | "pair-submit"
   | "pair-submitting"
@@ -81,6 +97,7 @@ export interface MessageArgs {
   "failure-budget": undefined;
   "failure-cancelled": undefined;
   "failure-internal": undefined;
+  "failure-invalid-key": undefined;
   "failure-model": undefined;
   "failure-network": undefined;
   "failure-not-configured": undefined;
@@ -88,8 +105,23 @@ export interface MessageArgs {
   "model-current": undefined;
   "model-not-connected": undefined;
   "nav-main": undefined;
+  "onboarding-checking": undefined;
+  "onboarding-cost-note": undefined;
+  "onboarding-get-key": { provider: string | number };
+  "onboarding-hello": undefined;
+  "onboarding-hide-key": undefined;
+  "onboarding-key-label": undefined;
+  "onboarding-key-local": undefined;
+  "onboarding-key-placeholder": { provider: string | number };
+  "onboarding-local-first": undefined;
+  "onboarding-pick-provider": undefined;
+  "onboarding-recommended": undefined;
+  "onboarding-show-key": undefined;
+  "onboarding-submit": undefined;
   "pair-address-placeholder": undefined;
   "pair-code-placeholder": undefined;
+  "pair-hello": undefined;
+  "pair-home-lead": undefined;
   "pair-lead": undefined;
   "pair-submit": undefined;
   "pair-submitting": undefined;

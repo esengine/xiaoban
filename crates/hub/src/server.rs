@@ -8,12 +8,11 @@ use axum::routing::get;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
-use xiaoban_agent::Agent;
 use xiaoban_protocol::HubInfo;
 use xiaoban_store::Store;
 
 use crate::state::{HubState, SharedState};
-use crate::{HubConfig, HubError, discovery, session};
+use crate::{HubConfig, HubError, HubRuntime, discovery, model, session};
 
 const HUB_ID_KEY: &str = "hub_id";
 
@@ -45,7 +44,7 @@ impl HubHandle {
 }
 
 impl Hub {
-    pub async fn start(config: HubConfig, agent: Agent) -> Result<HubHandle, HubError> {
+    pub async fn start(config: HubConfig, runtime: HubRuntime) -> Result<HubHandle, HubError> {
         let store = if let Some(dir) = &config.data_dir {
             std::fs::create_dir_all(dir)?;
             Store::open(&dir.join("xiaoban.db"))?
@@ -64,11 +63,17 @@ impl Hub {
             name: config.name.clone(),
             version: env!("CARGO_PKG_VERSION").to_owned(),
         };
+        let restored = model::restore(&store, &runtime.secrets, runtime.fallback.clone())
+            .await
+            .map_err(|error| HubError::Startup(error.detail))?;
+        let active = model::activate(&*runtime.connector, &runtime.prefix, restored);
         let state: SharedState = Arc::new(HubState {
             info: info.clone(),
             store,
-            agent,
-            model: config.model.clone(),
+            prefix: runtime.prefix,
+            connector: runtime.connector,
+            secrets: runtime.secrets,
+            active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),
             turns: crate::turns::Turns::default(),

@@ -3,7 +3,6 @@ use ts_rs::TS;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Thread {
     pub id: String,
     pub title: Option<String>,
@@ -15,7 +14,6 @@ pub struct Thread {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(export)]
 pub enum Role {
     User,
     Assistant,
@@ -23,7 +21,6 @@ pub enum Role {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Message {
     pub id: String,
     pub thread_id: String,
@@ -35,7 +32,6 @@ pub struct Message {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Usage {
     pub input_tokens: u32,
     pub output_tokens: u32,
@@ -44,7 +40,6 @@ pub struct Usage {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(export)]
 pub enum ProviderId {
     Deepseek,
     Mimo,
@@ -67,7 +62,6 @@ impl ProviderId {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct ModelInfo {
     pub provider: ProviderId,
     pub model: String,
@@ -75,7 +69,16 @@ pub struct ModelInfo {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
+pub struct ProviderOption {
+    pub id: ProviderId,
+    pub default_model: String,
+    pub models: Vec<String>,
+    pub console_url: String,
+    pub configured: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub struct ContextNote {
     pub label: String,
     pub body: String,
@@ -83,7 +86,6 @@ pub struct ContextNote {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(export)]
 pub enum Platform {
     Desktop,
     Ios,
@@ -93,7 +95,6 @@ pub enum Platform {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Device {
     pub id: String,
     pub name: String,
@@ -106,7 +107,6 @@ pub struct Device {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct HubInfo {
     pub id: String,
     pub name: String,
@@ -115,10 +115,10 @@ pub struct HubInfo {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(export)]
 pub enum FailureKind {
     Model,
     NotConfigured,
+    InvalidKey,
     Network,
     Cancelled,
     Budget,
@@ -127,7 +127,6 @@ pub enum FailureKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct Failure {
     pub kind: FailureKind,
     pub retryable: bool,

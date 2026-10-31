@@ -36,10 +36,11 @@ impl std::fmt::Debug for Agent {
 
 impl Agent {
     pub fn new(provider: impl ModelProvider, prefix: StablePrefix) -> Self {
-        Self {
-            provider: Arc::new(provider),
-            prefix,
-        }
+        Self::from_shared(Arc::new(provider), prefix)
+    }
+
+    pub fn from_shared(provider: Arc<dyn ModelProvider>, prefix: StablePrefix) -> Self {
+        Self { provider, prefix }
     }
 
     pub fn prefix(&self) -> &StablePrefix {

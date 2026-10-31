@@ -1,9 +1,13 @@
 use xiaoban_protocol::{ErrorCode, ProtocolError, Request, Response};
 
 use crate::state::SharedState;
-use crate::turns;
+use crate::{model, turns};
 
-pub async fn handle(state: &SharedState, request: Request) -> Result<Response, ProtocolError> {
+pub async fn handle(
+    state: &SharedState,
+    local: bool,
+    request: Request,
+) -> Result<Response, ProtocolError> {
     Ok(match request {
         Request::ListThreads => Response::Threads {
             threads: state.store.list_threads().await?,
@@ -57,8 +61,22 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
             Response::Ack
         }
         Request::ModelStatus => Response::ModelStatus {
-            model: state.model.clone(),
+            model: state.active().model,
         },
+        Request::ListProviders => model::list_providers(state).await?,
+        Request::ConfigureProvider {
+            provider,
+            api_key,
+            model,
+        } => {
+            if !local {
+                return Err(ProtocolError::new(
+                    ErrorCode::Unauthorized,
+                    "providers can only be configured on the hub's own machine",
+                ));
+            }
+            model::configure(state, provider, &api_key, model).await?
+        }
         Request::UsageSummary => {
             let totals = state.store.usage_totals().await?;
             Response::Usage {

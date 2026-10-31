@@ -205,6 +205,9 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
+      '@tauri-apps/plugin-opener':
+        specifier: ^2.7.2
+        version: 2.7.2
       '@xiaoban/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -1564,6 +1567,9 @@ packages:
     resolution: {integrity: sha512-JI9bHfudSRJikGOrjbXEm6RjzzvmKuLc+JixB1NE8hNzQkNlCCIC3pTES3uypkR9lxHrsbxzcnSwhI2IxBQphw==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-opener@2.7.2':
+    resolution: {integrity: sha512-LyybP1VSzTMQiaFYcsbAse47KpivlyXdLZMQzGLEnkgQacGESnpjAfFoQ6h5sqWgAdZDH9szYjPzHMpv0Sz+TQ==}
 
   '@turbo/darwin-64@2.11.10':
     resolution: {integrity: sha512-By4idRap5+nLnMuRzLB4qkOPRlvNdyY1ne4VJYDyUoUB11H94k7uif9mbe3JT8JSNXs1D68uMcBj6hJ/jMQRvA==}
@@ -4913,6 +4919,10 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.12.4
       '@tauri-apps/cli-win32-ia32-msvc': 2.12.4
       '@tauri-apps/cli-win32-x64-msvc': 2.12.4
+
+  '@tauri-apps/plugin-opener@2.7.2':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
 
   '@turbo/darwin-64@2.11.10':
     optional: true

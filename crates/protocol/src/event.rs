@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Failure, Message, Thread, Usage};
+use crate::{Failure, Message, ModelInfo, Thread, Usage};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -9,7 +9,6 @@ use crate::{Failure, Message, Thread, Usage};
     rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
-#[ts(export)]
 pub enum Event {
     ThreadUpdated {
         thread: Thread,
@@ -37,6 +36,9 @@ pub enum Event {
         turn_id: String,
         failure: Failure,
     },
+    ModelChanged {
+        model: Option<ModelInfo>,
+    },
 }
 
 impl Event {
@@ -47,7 +49,10 @@ impl Event {
                 Some(&message.thread_id)
             }
             Self::TurnStarted { thread_id, .. } => Some(thread_id),
-            Self::Thinking { .. } | Self::TextDelta { .. } | Self::TurnFailed { .. } => None,
+            Self::Thinking { .. }
+            | Self::TextDelta { .. }
+            | Self::TurnFailed { .. }
+            | Self::ModelChanged { .. } => None,
         }
     }
 }

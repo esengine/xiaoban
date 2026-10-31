@@ -6,4 +6,6 @@ pub enum HubError {
     Store(#[from] StoreError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    #[error("hub failed to start: {0}")]
+    Startup(String),
 }

@@ -3,12 +3,14 @@ use std::path::PathBuf;
 
 use anyhow::Context as _;
 use clap::Parser;
+use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
-use xiaoban_agent::{
-    Agent, ConfiguredProvider, OpenAiCompatible, PRESETS, ProviderPreset, UnconfiguredProvider,
-    first_configured_from_env,
+
+use xiaoban_agent::{ConfiguredProvider, HttpConnector, ProviderPreset, first_configured_from_env};
+use xiaoban_hub::{
+    Hub, HubConfig, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, default_hub_name, system_locale,
+    system_prefix,
 };
-use xiaoban_hub::{Hub, HubConfig, default_hub_name, system_locale, system_prefix};
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::ProviderId;
 
@@ -60,21 +62,6 @@ fn configured(args: &Args) -> anyhow::Result<Option<ConfiguredProvider>> {
     })
 }
 
-fn agent(configured: Option<&ConfiguredProvider>, locale: Locale) -> Agent {
-    let prefix = system_prefix(locale);
-    let Some(configured) = configured else {
-        let names: Vec<_> = PRESETS.iter().map(|preset| preset.key_env).collect();
-        tracing::warn!(expected = ?names, "no provider API key found; replies will fail until one is set");
-        return Agent::new(UnconfiguredProvider, prefix);
-    };
-    tracing::info!(
-        provider = configured.info.provider.as_str(),
-        model = %configured.info.model,
-        "model provider configured"
-    );
-    Agent::new(OpenAiCompatible::new(configured.config.clone()), prefix)
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -85,8 +72,12 @@ async fn main() -> anyhow::Result<()> {
         .locale
         .as_deref()
         .map_or_else(system_locale, Locale::negotiate);
-    let configured = configured(&args)?;
-    let agent = agent(configured.as_ref(), locale);
+    let runtime = HubRuntime {
+        prefix: system_prefix(locale),
+        connector: Arc::new(HttpConnector),
+        secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
+        fallback: configured(&args)?,
+    };
 
     let hub = Hub::start(
         HubConfig {
@@ -94,9 +85,8 @@ async fn main() -> anyhow::Result<()> {
             bind: args.bind,
             name: args.name.unwrap_or_else(|| default_hub_name(locale)),
             advertise: !args.no_advertise,
-            model: configured.map(|configured| configured.info),
         },
-        agent,
+        runtime,
     )
     .await?;
 

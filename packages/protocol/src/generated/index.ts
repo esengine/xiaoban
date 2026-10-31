@@ -13,6 +13,7 @@ export type { ModelInfo } from "./ModelInfo.ts";
 export type { Platform } from "./Platform.ts";
 export type { ProtocolError } from "./ProtocolError.ts";
 export type { ProviderId } from "./ProviderId.ts";
+export type { ProviderOption } from "./ProviderOption.ts";
 export type { RelayFrame } from "./RelayFrame.ts";
 export type { RelayRole } from "./RelayRole.ts";
 export type { Request } from "./Request.ts";

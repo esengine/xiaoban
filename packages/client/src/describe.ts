@@ -5,6 +5,7 @@ import { type ConnectionStatus, HubRequestError } from "./client.ts";
 const FAILURE_KEYS = {
   model: "failure-model",
   not_configured: "failure-not-configured",
+  invalid_key: "failure-invalid-key",
   network: "failure-network",
   cancelled: "failure-cancelled",
   budget: "failure-budget",

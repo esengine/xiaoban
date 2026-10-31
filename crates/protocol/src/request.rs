@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{ContextNote, Device, Message, ModelInfo, Thread, Usage};
+use crate::{
+    ContextNote, Device, Failure, Message, ModelInfo, ProviderId, ProviderOption, Thread, Usage,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -9,7 +11,6 @@ use crate::{ContextNote, Device, Message, ModelInfo, Thread, Usage};
     rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
-#[ts(export)]
 pub enum Request {
     ListThreads,
     CreateThread {
@@ -34,6 +35,12 @@ pub enum Request {
     },
     UsageSummary,
     ModelStatus,
+    ListProviders,
+    ConfigureProvider {
+        provider: ProviderId,
+        api_key: String,
+        model: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -42,7 +49,6 @@ pub enum Request {
     rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
-#[ts(export)]
 pub enum Response {
     Ack,
     Threads {
@@ -72,5 +78,12 @@ pub enum Response {
     },
     ModelStatus {
         model: Option<ModelInfo>,
+    },
+    Providers {
+        providers: Vec<ProviderOption>,
+    },
+    ProviderConfigured {
+        model: Option<ModelInfo>,
+        failure: Option<Failure>,
     },
 }

@@ -9,7 +9,6 @@ use crate::{Event, HubInfo, Platform, Request, Response};
     rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
-#[ts(export)]
 pub enum Credential {
     Local,
     Paired { token: String },
@@ -18,7 +17,6 @@ pub enum Credential {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct DeviceHello {
     pub device_id: String,
     pub name: String,
@@ -32,7 +30,6 @@ pub struct DeviceHello {
     rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
-#[ts(export)]
 pub enum ClientFrame {
     Hello {
         protocol: u32,
@@ -47,7 +44,6 @@ pub enum ClientFrame {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
-#[ts(export)]
 pub enum ErrorCode {
     UnsupportedProtocol,
     Unauthorized,
@@ -59,7 +55,6 @@ pub enum ErrorCode {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct ProtocolError {
     pub code: ErrorCode,
     pub detail: String,
@@ -80,7 +75,6 @@ impl ProtocolError {
     rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
-#[ts(export)]
 pub enum ServerFrame {
     Welcome {
         protocol: u32,

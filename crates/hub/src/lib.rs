@@ -3,6 +3,9 @@ mod config;
 mod discovery;
 mod error;
 mod handlers;
+mod model;
+mod runtime;
+mod secrets;
 mod server;
 mod session;
 mod state;
@@ -10,6 +13,8 @@ mod turns;
 
 pub use config::HubConfig;
 pub use error::HubError;
+pub use runtime::HubRuntime;
+pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};
 pub use server::{Hub, HubHandle};
 
 use xiaoban_agent::StablePrefix;

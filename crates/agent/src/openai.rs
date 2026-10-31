@@ -27,12 +27,38 @@ impl OpenAiCompatible {
         }
     }
 
-    fn endpoint(&self) -> String {
-        format!(
-            "{}/chat/completions",
-            self.config.base_url.trim_end_matches('/')
-        )
+    fn url(&self, path: &str) -> String {
+        format!("{}/{path}", self.config.base_url.trim_end_matches('/'))
     }
+
+    fn endpoint(&self) -> String {
+        self.url("chat/completions")
+    }
+
+    pub async fn check(&self) -> Result<(), AgentError> {
+        let response = self
+            .client
+            .get(self.url("models"))
+            .bearer_auth(&self.config.api_key)
+            .send()
+            .await?;
+        ensure_success(response).await.map(drop)
+    }
+}
+
+async fn ensure_success(response: reqwest::Response) -> Result<reqwest::Response, AgentError> {
+    let status = response.status();
+    if status.is_success() {
+        return Ok(response);
+    }
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err(AgentError::InvalidKey);
+    }
+    let body = response.text().await.unwrap_or_default();
+    Err(AgentError::Status {
+        status: status.as_u16(),
+        body,
+    })
 }
 
 #[derive(Deserialize)]
@@ -117,22 +143,16 @@ impl ModelProvider for OpenAiCompatible {
             .send();
 
         stream::once(async move {
-            let response = send.await?;
-            let status = response.status();
-            if !status.is_success() {
-                let body = response.text().await.unwrap_or_default();
-                return Err(AgentError::Status {
-                    status: status.as_u16(),
-                    body,
-                });
-            }
-            Ok(response
-                .bytes_stream()
-                .eventsource()
-                .map_err(|err| AgentError::Stream(err.to_string()))
-                .and_then(|event| async move { decode(&event.data) })
-                .map_ok(|chunks| stream::iter(chunks.into_iter().map(Ok)))
-                .try_flatten())
+            let response = ensure_success(send.await?).await?;
+            Ok::<_, AgentError>(
+                response
+                    .bytes_stream()
+                    .eventsource()
+                    .map_err(|err| AgentError::Stream(err.to_string()))
+                    .and_then(|event| async move { decode(&event.data) })
+                    .map_ok(|chunks| stream::iter(chunks.into_iter().map(Ok)))
+                    .try_flatten(),
+            )
         })
         .try_flatten()
         .boxed()
