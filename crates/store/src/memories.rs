@@ -261,6 +261,58 @@ impl Store {
         .await
     }
 
+    pub async fn merge_galaxy(
+        &self,
+        from: String,
+        into: String,
+        cluster: MemoryCategory,
+    ) -> Result<bool> {
+        self.with(move |conn| {
+            let tx = conn.transaction()?;
+            let source: Option<String> = tx
+                .query_row("SELECT id FROM memory_galaxies WHERE name = ?1", [&from], |row| row.get(0))
+                .optional()?;
+            let Some(source) = source else {
+                return Ok(false);
+            };
+            let existing: Option<String> = tx
+                .query_row("SELECT id FROM memory_galaxies WHERE name = ?1", [&into], |row| row.get(0))
+                .optional()?;
+            if existing.is_none() {
+                tx.execute(
+                    "UPDATE memory_galaxies SET name = ?2, cluster = ?3, dirty = 1 WHERE id = ?1",
+                    params![source, into, cluster.as_str()],
+                )?;
+            } else if let Some(target) = existing.filter(|target| *target != source) {
+                tx.execute("UPDATE memories SET galaxy_id = ?2 WHERE galaxy_id = ?1", params![source, target])?;
+                tx.execute("DELETE FROM memory_galaxies WHERE id = ?1", [&source])?;
+                tx.execute(
+                    "UPDATE memory_galaxies SET dirty = 1, cluster = ?2 WHERE id = ?1",
+                    params![target, cluster.as_str()],
+                )?;
+            }
+            tx.execute(
+                "UPDATE memories SET category = ?2 WHERE galaxy_id IN (SELECT id FROM memory_galaxies WHERE name = ?1)",
+                params![into, cluster.as_str()],
+            )?;
+            tx.commit()?;
+            Ok(true)
+        })
+        .await
+    }
+
+    pub async fn drop_empty_galaxies(&self) -> Result<()> {
+        self.with(|conn| {
+            conn.execute(
+                "DELETE FROM memory_galaxies WHERE id NOT IN
+                 (SELECT galaxy_id FROM memories WHERE galaxy_id IS NOT NULL AND superseded_by IS NULL)",
+                [],
+            )?;
+            Ok(())
+        })
+        .await
+    }
+
     pub async fn forget_memory(&self, subject: String) -> Result<Option<String>> {
         self.with(move |conn| {
             let id: Option<String> = conn

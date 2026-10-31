@@ -65,6 +65,20 @@ impl AliasUpdates {
     }
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct Review {
+    #[serde(default)]
+    galaxies: Vec<GalaxyChange>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GalaxyChange {
+    name: String,
+    into: String,
+    #[serde(default)]
+    cluster: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct Merge {
     keep: String,
@@ -87,13 +101,14 @@ struct Move {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Tally {
+    pub galaxies: usize,
     pub merged: usize,
     pub replaced: usize,
     pub moved: usize,
     pub summaries: usize,
 }
 
-fn parse(text: &str) -> Option<Plan> {
+fn parse<T: serde::de::DeserializeOwned>(text: &str) -> Option<T> {
     let start = text.find('{')?;
     let end = text.rfind('}')?;
     (start < end)
@@ -116,7 +131,7 @@ fn describe(memories: &[Memory]) -> serde_json::Value {
         .collect()
 }
 
-async fn ask(state: &SharedState, input: String) -> Option<Plan> {
+async fn ask<T: serde::de::DeserializeOwned>(state: &SharedState, input: String) -> Option<T> {
     let prefix = StablePrefix::new(state.localizer.text(xiaoban_i18n::keys::PROMPT_MEMORY_TIDY));
     let (events, _) = mpsc::channel(1);
     let outcome = state
@@ -201,6 +216,66 @@ async fn apply(state: &SharedState, plan: Plan, allowed: &HashSet<String>, tally
     }
 }
 
+async fn review(state: &SharedState, tally: &mut Tally) {
+    let (Ok(memories), Ok(galaxies)) = (
+        state.store.list_memories().await,
+        state.store.list_galaxies().await,
+    ) else {
+        return;
+    };
+    if galaxies.len() < 2 {
+        return;
+    }
+    let count = |name: &str| {
+        memories
+            .iter()
+            .filter(|memory| memory.galaxy.as_deref() == Some(name))
+            .count()
+    };
+    let input = json!({
+        "task": "review",
+        "clusters": MemoryCategory::ALL.map(MemoryCategory::as_str),
+        "galaxies": galaxies.iter().map(|galaxy| json!({
+            "name": galaxy.name,
+            "cluster": galaxy.cluster.as_str(),
+            "count": count(&galaxy.name),
+            "summary": galaxy.summary,
+        })).collect::<Vec<_>>(),
+    })
+    .to_string();
+    let Some(plan) = ask::<Review>(state, input).await else {
+        return;
+    };
+    let known: HashMap<&str, MemoryCategory> = galaxies
+        .iter()
+        .map(|galaxy| (galaxy.name.as_str(), galaxy.cluster))
+        .collect();
+    for change in plan.galaxies {
+        let Some(current) = known.get(change.name.as_str()).copied() else {
+            continue;
+        };
+        let into = change.into.trim().to_owned();
+        if into.is_empty() {
+            continue;
+        }
+        let cluster = change
+            .cluster
+            .as_deref()
+            .map_or(current, MemoryCategory::parse);
+        if into == change.name && cluster == current {
+            continue;
+        }
+        if state
+            .store
+            .merge_galaxy(change.name, into, cluster)
+            .await
+            .unwrap_or(false)
+        {
+            tally.galaxies += 1;
+        }
+    }
+}
+
 async fn tidy_galaxy(state: &SharedState, galaxy: &MemoryGalaxy, tally: &mut Tally) {
     let Ok(memories) = state.store.galaxy_memories(galaxy.id.clone()).await else {
         return;
@@ -210,7 +285,7 @@ async fn tidy_galaxy(state: &SharedState, galaxy: &MemoryGalaxy, tally: &mut Tal
         "memories": describe(&memories),
     })
     .to_string();
-    let Some(mut plan) = ask(state, input).await else {
+    let Some(mut plan) = ask::<Plan>(state, input).await else {
         return;
     };
     let allowed: HashSet<String> = memories.iter().map(|memory| memory.id.clone()).collect();
@@ -247,7 +322,7 @@ async fn place_loose(
             "memories": describe(batch),
         })
         .to_string();
-        let Some(plan) = ask(state, input).await else {
+        let Some(plan) = ask::<Plan>(state, input).await else {
             continue;
         };
         let allowed: HashSet<String> = batch.iter().map(|memory| memory.id.clone()).collect();
@@ -270,10 +345,12 @@ pub async fn run(state: &SharedState) -> Tally {
     if !loose.is_empty() {
         place_loose(state, &loose, &galaxies, &mut tally).await;
     }
+    review(state, &mut tally).await;
     let dirty = state.store.dirty_galaxies().await.unwrap_or_default();
     for galaxy in &dirty {
         tidy_galaxy(state, galaxy, &mut tally).await;
     }
+    let _ = state.store.drop_empty_galaxies().await;
     let now = xiaoban_store::now_ms();
     let count = state
         .store
@@ -284,6 +361,7 @@ pub async fn run(state: &SharedState) -> Tally {
     let _ = state.store.set_setting(COUNT_KEY, count.to_string()).await;
     let log = json!({
         "at": now,
+        "galaxies": tally.galaxies,
         "merged": tally.merged,
         "replaced": tally.replaced,
         "moved": tally.moved,
@@ -344,7 +422,7 @@ mod tests {
 
     #[test]
     fn plans_are_read_from_the_model_answer() {
-        let plan = parse(
+        let plan: Plan = parse(
             r#"好的：{"summary":"儿子 6 岁，花生过敏","aliases":["孩子"],"merge":[{"keep":"a","drop":["b"]}],"replace":[],"alias_updates":{"a":["娃"]},"moves":[{"id":"c","galaxy":"学校","cluster":"family"}]}"#,
         )
         .unwrap();
@@ -355,11 +433,11 @@ mod tests {
             [("a".to_owned(), vec!["娃".to_owned()])]
         );
         assert_eq!(plan.moves[0].galaxy, "学校");
-        assert!(parse("没有 JSON").is_none());
-        let listed =
+        assert!(parse::<Plan>("没有 JSON").is_none());
+        let listed: Plan =
             parse(r#"{"alias_updates":[{"id":"a","aliases":["家人"]}],"moves":[]}"#).unwrap();
         assert_eq!(listed.alias_updates.into_pairs()[0].1, ["家人"]);
-        let empty = parse(r#"{"summary":"","alias_updates":[],"moves":[]}"#).unwrap();
+        let empty: Plan = parse(r#"{"summary":"","alias_updates":[],"moves":[]}"#).unwrap();
         assert_eq!(empty.alias_updates.into_pairs(), Vec::new());
     }
 }
