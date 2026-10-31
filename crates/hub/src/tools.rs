@@ -33,6 +33,11 @@ fn object(properties: &Value, required: &[&str]) -> Value {
     })
 }
 
+fn with_description(mut schema: Value, description: String) -> Value {
+    schema["description"] = Value::String(description);
+    schema
+}
+
 fn spec(name: &str, description: String, parameters: Value) -> ToolSpec {
     ToolSpec {
         name: name.to_owned(),
@@ -83,7 +88,7 @@ fn trip_day(l: &Localizer) -> Value {
                 }),
                 &["mode", "minutes"],
             ),
-            "detail": detail,
+            "detail": with_description(detail, l.text(keys::TOOL_SAVE_TRIP_STOP_DETAIL)),
         }),
         &["name", "time", "note"],
     );
@@ -351,7 +356,10 @@ impl<'a> HubTools<'a> {
     async fn save_trip(&self, arguments: &str) -> String {
         let draft = match serde_json::from_str::<TripDraft>(arguments) {
             Ok(draft) => draft,
-            Err(failure) => return error(&format!("invalid trip: {failure}")),
+            Err(failure) => {
+                tracing::warn!(%failure, "save_trip arguments rejected");
+                return error(&format!("invalid trip: {failure}"));
+            }
         };
         let verified = matches!(self.key(ServiceId::WebSearch).await, Key::Ready(_));
         match trip::save(self.state, self.thread_id, draft, verified).await {

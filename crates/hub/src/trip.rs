@@ -18,8 +18,7 @@ pub struct TripDraft {
     needs: Option<String>,
     reminder: Option<String>,
     cost: Option<String>,
-    #[serde(default)]
-    update: bool,
+    update: Option<bool>,
     days: Vec<DayDraft>,
 }
 
@@ -55,14 +54,12 @@ struct ReviewDraft {
 #[derive(Debug, Deserialize)]
 struct DetailDraft {
     why: String,
-    #[serde(default)]
-    suits: Vec<String>,
+    suits: Option<Vec<String>>,
     duration: Option<String>,
     quiet: Option<String>,
     tickets: Option<String>,
     tickets_source: Option<SourceDraft>,
-    #[serde(default)]
-    reviews: Vec<ReviewDraft>,
+    reviews: Option<Vec<ReviewDraft>>,
 }
 
 fn source(draft: SourceDraft) -> Option<SourceLink> {
@@ -82,6 +79,7 @@ fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
     let reviews = if verified {
         draft
             .reviews
+            .unwrap_or_default()
             .into_iter()
             .filter_map(|review| {
                 let text = review.text.trim().to_owned();
@@ -100,6 +98,7 @@ fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
         why,
         suits: draft
             .suits
+            .unwrap_or_default()
             .into_iter()
             .map(|suit| suit.trim().to_owned())
             .filter(|suit| !suit.is_empty())
@@ -116,7 +115,16 @@ fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
 #[derive(Debug, Deserialize)]
 struct LegDraft {
     mode: TravelMode,
-    minutes: u32,
+    minutes: f64,
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn minutes(value: f64) -> u32 {
+    if value.is_finite() {
+        value.round().clamp(1.0, 24.0 * 60.0) as u32
+    } else {
+        1
+    }
 }
 
 fn filled(text: Option<String>) -> Option<String> {
@@ -190,7 +198,7 @@ pub async fn save(
                 location: None,
                 next: stop.next.filter(|_| index + 1 < count).map(|leg| TripLeg {
                     mode: leg.mode,
-                    minutes: leg.minutes.max(1),
+                    minutes: minutes(leg.minutes),
                     estimated: true,
                 }),
                 detail: stop
@@ -206,7 +214,7 @@ pub async fn save(
             stops,
         });
     }
-    let existing = if draft.update {
+    let existing = if draft.update.unwrap_or(false) {
         state
             .store
             .latest_trip_in_thread(thread_id.to_owned())
@@ -249,4 +257,25 @@ pub async fn save(
         "display": "the app shows this trip as a card under your reply; keep the reply short and do not list the itinerary again",
     });
     Ok((trip, report))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drafts_accept_nulls_and_fractional_minutes() {
+        let draft: TripDraft = serde_json::from_str(
+            r#"{"title":"杭州","city":"杭州","party":"3 人","needs":null,"reminder":null,"cost":null,"update":null,
+                "days":[{"date":"2026-11-14","change":null,"stops":[
+                  {"name":"断桥","time":"09:00","note":"人少","next":{"mode":"walk","minutes":15.0},
+                   "detail":{"why":"湖景","suits":null,"duration":null,"quiet":null,"tickets":null,"tickets_source":null,"reviews":null}},
+                  {"name":"孤山","time":"10:00","note":"草坪","next":null,"detail":null}]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(draft.update, None);
+        let leg = draft.days[0].stops[0].next.as_ref().unwrap();
+        assert_eq!(minutes(leg.minutes), 15);
+        assert_eq!(minutes(f64::NAN), 1);
+    }
 }

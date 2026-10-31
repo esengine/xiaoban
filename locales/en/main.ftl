@@ -35,6 +35,7 @@ tool-save-trip-day-change = One sentence on what you changed for this day, such 
 tool-save-trip-stop-name = Place name that can be found on Amap, such as "China National Tea Museum"
 tool-save-trip-stop-time = Arrival time, such as "09:00"
 tool-save-trip-stop-note = One short note, such as "quiet in the morning, easy with a stroller"
+tool-save-trip-stop-detail = Place details. Required for sights, restaurants and malls, written from what you found online; leave out for stations, airports and hotels
 tool-save-trip-next-mode = How to get to the next stop: walk, taxi or transit
 tool-save-trip-next-minutes = Roughly how many minutes to the next stop, from your own estimate
 tool-save-trip-detail-why = Why it is worth going, two or three concrete highlights (best spot, best time, seasonal sights)

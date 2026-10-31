@@ -35,6 +35,7 @@ tool-save-trip-day-change = 这天因为天气等原因做了什么调整，一�
 tool-save-trip-stop-name = 地点名称，要能在高德上搜到，比如“中国茶叶博物馆”
 tool-save-trip-stop-time = 到达时间，比如“09:00”
 tool-save-trip-stop-note = 一句备注，比如“早上人少，推车好走”
+tool-save-trip-stop-detail = 地点详情。景点、餐厅、商场都必须填，内容来自你联网查到的资料；车站、机场、酒店这类交通和住宿点不填
 tool-save-trip-next-mode = 去下一站怎么走：walk 步行、taxi 打车、transit 公交地铁
 tool-save-trip-next-minutes = 去下一站大约要几分钟，按你的经验估
 tool-save-trip-detail-why = 为什么值得去，两三句具体的亮点（最佳位置、最佳时间、季节看点）
