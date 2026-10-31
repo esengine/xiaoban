@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "tauri dev --runner \"$PWD/../../scripts/dev-runner.ts\"",
     "dev:web": "vite",
     "build:web": "vite build",
     "tauri": "tauri",

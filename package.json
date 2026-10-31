@@ -8,7 +8,7 @@
   },
   "scripts": {
     "gen:protocol": "node scripts/gen-protocol.ts",
-    "dev:desktop": "pnpm --filter @xiaoban/desktop tauri dev",
+    "dev:desktop": "pnpm --filter @xiaoban/desktop dev",
     "dev:mobile": "pnpm --filter @xiaoban/mobile start",
     "dev:hub": "cargo run -p xiaoban-hub",
     "typecheck": "turbo run typecheck",
