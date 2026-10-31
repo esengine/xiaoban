@@ -7,6 +7,7 @@ import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
+import { OperateConsent } from "../features/operate/OperateConsent.tsx";
 import { Rail } from "../features/shell/Rail.tsx";
 import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
 import { Workspace } from "../features/workspace/Workspace.tsx";
@@ -22,7 +23,8 @@ interface OpenTrip {
 function Home() {
   const { t } = useI18n();
   const store = useHub();
-  const { threads, status, preferences } = useHubState(store);
+  const { threads, status, preferences, confirms } = useHubState(store);
+  const consent = confirms.find((confirm) => confirm.kind.kind === "permissions");
   const panels = usePanels();
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, string>>({});
@@ -72,6 +74,7 @@ function Home() {
           onBack={() => setTrip(null)}
           onLatest={() => setTrip({ ...trip, version: null })}
         />
+        {consent && <OperateConsent key={consent.id} confirm={consent} />}
       </div>
     );
   }
@@ -107,6 +110,7 @@ function Home() {
       <div className="panel panel--workspace" data-open={panels.workspace}>
         <Workspace threadId={activeId} onOpenTrip={openTrip} />
       </div>
+      {consent && <OperateConsent key={consent.id} confirm={consent} />}
     </div>
   );
 }

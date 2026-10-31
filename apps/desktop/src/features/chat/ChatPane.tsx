@@ -6,6 +6,7 @@ import type { Message } from "@xiaoban/protocol";
 import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
+import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { Composer } from "./Composer.tsx";
@@ -337,6 +338,13 @@ export function ChatPane(props: Props) {
         {trailing.map((draft) => (
           <DraftItem key={draft.turnId} draft={draft} onRetry={() => retry(draft.turnId)} />
         ))}
+        {state.confirms
+          .filter((confirm) => confirm.threadId === threadId && confirm.kind.kind !== "permissions")
+          .map((confirm) => (
+            <li key={confirm.id} className="bubble bubble--assistant bubble--confirm">
+              <ConfirmCard confirm={confirm} />
+            </li>
+          ))}
         {fresh && messages.length > 0 && (
           <li className="suggestions">
             {SUGGESTIONS.map((key) => (

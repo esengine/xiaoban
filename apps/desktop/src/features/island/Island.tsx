@@ -7,14 +7,16 @@ import { motion } from "@xiaoban/tokens";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { isBetweenSteps, stepText } from "../chat/Steps.tsx";
+import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 
-type Mode = "idle" | "compact" | "medium" | "done";
+type Mode = "idle" | "compact" | "medium" | "done" | "confirm";
 
 const SIZES: Record<Mode, readonly [number, number]> = {
   idle: [132, 36],
   compact: [132, 36],
   medium: [440, 48],
   done: [320, 44],
+  confirm: [440, 196],
 };
 const DRAG_THRESHOLD = 4;
 const FLASH_MS = 3_000;
@@ -93,7 +95,16 @@ export function Island() {
       : null;
   const done = finished ?? justFinished;
 
-  const mode: Mode = done ? "done" : running ? (hover || flash ? "medium" : "compact") : "idle";
+  const confirm = state.confirms[0] ?? null;
+  const mode: Mode = confirm
+    ? "confirm"
+    : done
+      ? "done"
+      : running
+        ? hover || flash
+          ? "medium"
+          : "compact"
+        : "idle";
 
   const [dragging, setDragging] = useState(false);
   const press = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
@@ -179,6 +190,12 @@ export function Island() {
         </button>
       </span>
     );
+  } else if (mode === "confirm" && confirm) {
+    content = (
+      <span className="island__row island__row--confirm">
+        <ConfirmCard confirm={confirm} />
+      </span>
+    );
   } else if (mode === "done" && done) {
     content = (
       <span className="island__row island__row--done">
@@ -208,7 +225,7 @@ export function Island() {
   });
 
   const size = SIZES[mode];
-  const target = done?.threadId ?? running?.threadId ?? null;
+  const target = confirm?.threadId ?? done?.threadId ?? running?.threadId ?? null;
 
   return (
     <div className="island-stage">
@@ -216,6 +233,7 @@ export function Island() {
         className="island"
         data-idle={(mode === "idle" && !hover && !dragging) || undefined}
         data-dragging={dragging || undefined}
+        data-confirm={mode === "confirm" || undefined}
         style={{ width: size[0], height: size[1], borderRadius: size[1] / 2 }}
       >
         <button

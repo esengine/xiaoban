@@ -40,6 +40,7 @@ export const dark = {
   textMuted: "#B9BECB",
   link: "#9AAAE6",
   island: "#0B0C0F",
+  attentionText: "#F3C9A1",
   islandRing: "#FFFFFF14",
 } as const;
 

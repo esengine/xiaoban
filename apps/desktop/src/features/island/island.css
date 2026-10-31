@@ -37,6 +37,40 @@ html[data-window="island"] #root {
     box-shadow var(--motion-fast) var(--ease-standard);
 }
 
+.island[data-confirm] {
+  box-shadow: 0 0 0 2px var(--color-attention);
+}
+
+.island__row--confirm {
+  align-self: stretch;
+  padding: 16px;
+  white-space: normal;
+}
+
+.island .confirm-card {
+  width: 100%;
+  pointer-events: auto;
+}
+
+.island .confirm-card__hint {
+  color: var(--dark-attention-text);
+}
+
+.island .confirm-card__detail {
+  background: var(--dark-surface);
+  color: var(--dark-text-soft);
+}
+
+.island .confirm-card__choice {
+  background: var(--dark-line);
+  color: var(--dark-text);
+}
+
+.island .confirm-card__choice[data-primary] {
+  background: var(--dark-text);
+  color: var(--color-ink);
+}
+
 .island[data-idle] {
   opacity: 0.55;
 }
