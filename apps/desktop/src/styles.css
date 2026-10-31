@@ -2797,3 +2797,16 @@ button {
     transition: none;
   }
 }
+
+.threads,
+.rail,
+.workspace {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.threads :is(input, textarea, [contenteditable="true"]),
+.workspace :is(input, textarea, [contenteditable="true"]) {
+  user-select: text;
+  -webkit-user-select: text;
+}
