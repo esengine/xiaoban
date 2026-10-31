@@ -3,6 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { FileInfo } from "@xiaoban/protocol";
 import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { useImageViewer } from "../viewer/ImageViewer.tsx";
 import type { Attached } from "./useAttachments.ts";
 
 type Kind = "pdf" | "doc" | "sheet" | "text" | "file";
@@ -66,6 +67,7 @@ export function AttachRow({
   onRemove: (key: string) => void;
 }) {
   const { t } = useI18n();
+  const show = useImageViewer();
   if (files.length === 0) return null;
   return (
     <div className="attach__row">
@@ -80,7 +82,21 @@ export function AttachRow({
           <span key={file.key} className="attach__item" data-problem={problem ? true : undefined}>
             {file.image && file.preview ? (
               <span className="attach__thumb">
-                <img src={file.preview} alt={file.name} />
+                <button
+                  type="button"
+                  className="attach__zoom"
+                  aria-label={t("viewer-open", { name: file.name })}
+                  onClick={(event) => {
+                    const images = files.filter((item) => item.image && item.preview);
+                    show(
+                      images.map((item) => ({ src: item.preview ?? "", name: item.name })),
+                      images.indexOf(file),
+                      event.currentTarget,
+                    );
+                  }}
+                >
+                  <img src={file.preview} alt={file.name} />
+                </button>
                 <Remove
                   onClick={() => onRemove(file.key)}
                   label={t("attach-remove", { name: file.name })}
@@ -163,23 +179,42 @@ export function DropZone({ count }: { count: number }) {
 
 const imageCache = new Map<string, Promise<string>>();
 
-function SentImage({ file }: { file: FileInfo }) {
+function loadImage(store: ReturnType<typeof useHub>, file: FileInfo): Promise<string> {
+  const pending = imageCache.get(file.id) ?? store.fileData(file.id);
+  imageCache.set(file.id, pending);
+  pending.catch(() => imageCache.delete(file.id));
+  return pending;
+}
+
+function SentImage({ file, onOpen }: { file: FileInfo; onOpen: (target: Element) => void }) {
+  const { t } = useI18n();
   const store = useHub();
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    const pending = imageCache.get(file.id) ?? store.fileData(file.id);
-    imageCache.set(file.id, pending);
-    void pending.then((loaded) => alive && setUrl(loaded)).catch(() => imageCache.delete(file.id));
+    void loadImage(store, file)
+      .then((loaded) => alive && setUrl(loaded))
+      .catch(() => undefined);
     return () => {
       alive = false;
     };
   }, [file.id, store]);
-  return <span className="sent-files__image">{url && <img src={url} alt={file.name} />}</span>;
+  return (
+    <button
+      type="button"
+      className="sent-files__image"
+      aria-label={t("viewer-open", { name: file.name })}
+      onClick={(event) => onOpen(event.currentTarget)}
+    >
+      {url && <img src={url} alt={file.name} />}
+    </button>
+  );
 }
 
 export function SentFiles({ files }: { files: FileInfo[] }) {
   const { t } = useI18n();
+  const store = useHub();
+  const show = useImageViewer();
   if (files.length === 0) return null;
   const images = files.filter((file) => file.mode === "image");
   const documents = files.filter((file) => file.mode !== "image");
@@ -195,7 +230,22 @@ export function SentFiles({ files }: { files: FileInfo[] }) {
       {images.length > 0 && (
         <div className="sent-files__images" data-columns={columns}>
           {images.map((file) => (
-            <SentImage key={file.id} file={file} />
+            <SentImage
+              key={file.id}
+              file={file}
+              onOpen={(target) =>
+                void Promise.all(images.map((image) => loadImage(store, image))).then((urls) =>
+                  show(
+                    images.map((image, position) => ({
+                      src: urls[position] ?? "",
+                      name: image.name,
+                    })),
+                    images.indexOf(file),
+                    target,
+                  ),
+                )
+              }
+            />
           ))}
         </div>
       )}

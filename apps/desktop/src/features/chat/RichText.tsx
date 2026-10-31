@@ -3,6 +3,7 @@ import { type ComponentProps, memo, type ReactNode, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { openExternal } from "../../lib/external.ts";
+import { useImageViewer } from "../viewer/ImageViewer.tsx";
 import { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 
 function textOf(node: ReactNode): string {
@@ -29,6 +30,72 @@ function CodeBlock({ children }: ComponentProps<"pre">) {
         {copied ? t("rich-copied") : t("rich-copy")}
       </button>
     </div>
+  );
+}
+
+function ReplyImage({ src, alt }: { src: string; alt: string }) {
+  const { t } = useI18n();
+  const show = useImageViewer();
+  const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
+  if (!src.startsWith("https://")) return <span>{alt}</span>;
+  let site = "";
+  try {
+    site = new URL(src).hostname.replace(/^www\./, "");
+  } catch {
+    return <span>{alt}</span>;
+  }
+  if (state === "failed") {
+    return (
+      <span className="rich__image-failed">
+        {t("rich-image-failed")}
+        <a
+          href={src}
+          onClick={(event) => {
+            event.preventDefault();
+            void openExternal(src);
+          }}
+        >
+          {t("rich-image-open")}
+        </a>
+      </span>
+    );
+  }
+  return (
+    <span className="rich__image">
+      <button
+        type="button"
+        className="rich__image-button"
+        data-state={state}
+        aria-label={t("viewer-open", { name: alt || site })}
+        onClick={(event) => {
+          const root = event.currentTarget.closest(".rich");
+          const nodes = Array.from(
+            root?.querySelectorAll<HTMLImageElement>(
+              ".rich__image-button[data-state='ready'] img",
+            ) ?? [],
+          );
+          const images = nodes.map((node) => ({
+            src: node.src,
+            name: node.alt || site,
+            source: node.src,
+          }));
+          const index = nodes.findIndex((node) => node.src === src);
+          show(images, Math.max(0, index), event.currentTarget);
+        }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onLoad={() => setState("ready")}
+          onError={() => setState("failed")}
+        />
+      </button>
+      <span className="rich__image-caption">
+        {alt ? t("rich-image-caption", { alt, site }) : t("rich-image-site", { site })}
+      </span>
+    </span>
   );
 }
 
@@ -60,7 +127,7 @@ const components: Components = {
       <table>{children}</table>
     </div>
   ),
-  img: ({ alt }) => <span>{alt}</span>,
+  img: ({ src, alt }) => <ReplyImage src={typeof src === "string" ? src : ""} alt={alt ?? ""} />,
   kbd: ({ children }) => (
     <kbd className="rich__kbd">{typeof children === "string" ? keyLabel(children) : children}</kbd>
   ),

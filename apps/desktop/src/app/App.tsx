@@ -11,6 +11,7 @@ import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
 import { Rail } from "../features/shell/Rail.tsx";
 import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
+import { ImageViewerProvider } from "../features/viewer/ImageViewer.tsx";
 import { Workspace } from "../features/workspace/Workspace.tsx";
 import { useHub } from "./hub.tsx";
 import { usePanels } from "./usePanels.ts";
@@ -123,11 +124,13 @@ export function App() {
   if (!modelLoaded || !preferences) return <main className="splash" aria-busy="true" />;
   return (
     <ContextMenuProvider>
-      {preferences.onboarded ? (
-        <Home />
-      ) : (
-        <Onboarding startAt={model ? 1 : 0} onFinish={() => {}} />
-      )}
+      <ImageViewerProvider>
+        {preferences.onboarded ? (
+          <Home />
+        ) : (
+          <Onboarding startAt={model ? 1 : 0} onFinish={() => {}} />
+        )}
+      </ImageViewerProvider>
     </ContextMenuProvider>
   );
 }

@@ -45,6 +45,8 @@ pub fn run() {
             island::island_quit,
             uploads::describe_files,
             uploads::stash_file,
+            uploads::save_image,
+            uploads::preview_image,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,

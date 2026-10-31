@@ -71,6 +71,37 @@ pub fn stash_file(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<String
         .join(UPLOADS)
         .join(uuid::Uuid::now_v7().to_string());
     std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    let path = dir.join(clean(&name));
+    std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+fn unique(dir: &std::path::Path, name: &str) -> std::path::PathBuf {
+    let path = std::path::Path::new(name);
+    let stem = path
+        .file_stem()
+        .map_or_else(|| "image".into(), |stem| stem.to_string_lossy());
+    let ext = path
+        .extension()
+        .map(|ext| ext.to_string_lossy().into_owned());
+    let named = |index: u32| {
+        let base = if index == 0 {
+            stem.to_string()
+        } else {
+            format!("{stem} ({index})")
+        };
+        dir.join(
+            ext.as_ref()
+                .map_or(base.clone(), |ext| format!("{base}.{ext}")),
+        )
+    };
+    (0..1_000)
+        .map(named)
+        .find(|candidate| !candidate.exists())
+        .unwrap_or_else(|| dir.join(name))
+}
+
+fn clean(name: &str) -> String {
     let safe: String = name
         .chars()
         .map(|c| {
@@ -81,11 +112,31 @@ pub fn stash_file(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<String
             }
         })
         .collect();
-    let path = dir.join(if safe.trim().is_empty() {
+    if safe.trim().is_empty() {
         "image.png".to_owned()
     } else {
         safe
-    });
+    }
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn save_image(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<String, String> {
+    let dir = app
+        .path()
+        .download_dir()
+        .map_err(|error| error.to_string())?;
+    let path = unique(&dir, &clean(&name));
     std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
     Ok(path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn preview_image(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = stash_file(app.clone(), name, bytes)?;
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|error| error.to_string())
 }
