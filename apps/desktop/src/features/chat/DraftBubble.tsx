@@ -59,7 +59,7 @@ export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => v
         <span className="bubble bubble--assistant bubble--thinking">
           <span className="shimmer">{t("draft-thinking")}</span>
           {elapsed >= waiting.showElapsedMs && (
-            <span className="bubble__note">
+            <span key={Math.floor(elapsed / 1000)} className="bubble__note">
               {t("draft-elapsed", { seconds: Math.floor(elapsed / 1000) })}
             </span>
           )}

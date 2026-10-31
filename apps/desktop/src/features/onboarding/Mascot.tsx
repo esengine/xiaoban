@@ -7,10 +7,12 @@ export function MascotFace({ thinking = false }: { thinking?: boolean }) {
     >
       <circle cx="12" cy="12" r="8" />
       <g className="mascot-face__eyes">
-        <circle cx="9" cy="11" r="0.8" />
-        <circle cx="15" cy="11" r="0.8" />
+        <g className="mascot-face__lids">
+          <circle cx="9" cy="11" r={thinking ? 0.9 : 0.8} />
+          <circle cx="15" cy="11" r={thinking ? 0.9 : 0.8} />
+        </g>
       </g>
-      <path d={thinking ? "M9.5 15.5h5" : "M9 15c1.6 1.2 4.4 1.2 6 0"} />
+      <path d={thinking ? "M10 15.5h4" : "M9 15c1.6 1.2 4.4 1.2 6 0"} />
     </svg>
   );
 }

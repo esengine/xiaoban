@@ -2,7 +2,8 @@ import type { TraceStep, TurnTrace } from "@xiaoban/client";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Memory } from "@xiaoban/protocol";
-import { useState } from "react";
+import { motion } from "@xiaoban/tokens";
+import { useEffect, useState } from "react";
 import { isBetweenSteps, StepList, stepText } from "./Steps.tsx";
 
 const TOOL_NAMES: Record<string, PlainMessageKey> = {
@@ -34,6 +35,16 @@ export function WorkingLine({ steps }: { steps: readonly TraceStep[] }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const current = steps.at(-1);
+  const text = !current || isBetweenSteps(steps) ? t("step-thinking") : stepText(t, current);
+  const [shown, setShown] = useState(text);
+  const [leaving, setLeaving] = useState<string | null>(null);
+  useEffect(() => {
+    if (text === shown) return;
+    setLeaving(shown);
+    setShown(text);
+    const timer = window.setTimeout(() => setLeaving(null), motion.standard);
+    return () => window.clearTimeout(timer);
+  }, [text, shown]);
   if (!current) return null;
   return (
     <li className="working" aria-live="polite">
@@ -45,15 +56,20 @@ export function WorkingLine({ steps }: { steps: readonly TraceStep[] }) {
         onClick={() => setOpen((value) => !value)}
       >
         <span className="working-line__dot" aria-hidden="true" />
-        {isBetweenSteps(steps) ? (
-          <span key="thinking" className="working-line__text">
-            {t("step-thinking")}
+        <span className="working-line__texts">
+          {leaving && (
+            <span
+              key={`leaving-${leaving}`}
+              className="working-line__text--leaving"
+              aria-hidden="true"
+            >
+              {leaving}
+            </span>
+          )}
+          <span key={text} className="working-line__text">
+            {text}
           </span>
-        ) : (
-          <span key={current.callId} className="working-line__text">
-            {stepText(t, current)}
-          </span>
-        )}
+        </span>
       </button>
       {open && <StepList steps={steps} live />}
     </li>
