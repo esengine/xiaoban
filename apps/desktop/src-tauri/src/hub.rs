@@ -41,6 +41,7 @@ pub async fn start(
         locator,
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),
+        apps: Arc::new(crate::apps::system()),
         web: Arc::new(DeepseekWeb::new()),
         fallback: first_configured_from_env(),
     };

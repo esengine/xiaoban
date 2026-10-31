@@ -9,6 +9,8 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   read_page: { detail: "step-read_page", plain: "step-read_page-plain" },
   weather: { detail: "step-weather", plain: "step-weather-plain" },
   remember: { detail: "step-remember", plain: "step-remember-plain" },
+  find_apps: { detail: "step-find_apps", plain: "step-find_apps-plain" },
+  open_app: { detail: "step-open_app", plain: "step-open_app-plain" },
   save_place_detail: {
     detail: "step-save_place_detail",
     plain: "step-save_place_detail-plain",
@@ -44,6 +46,10 @@ export function stepResult(t: T, step: TraceStep): string | null {
         : t("step-found-plain", { count: result.count });
     case "page":
       return result.title || null;
+    case "matched":
+      return result.names.length > 0
+        ? t("step-matched", { names: result.names.join(t("step-sources-joiner")) })
+        : t("step-matched-none");
     case "saved":
       return t("step-saved", { version: result.version });
     case "failed":

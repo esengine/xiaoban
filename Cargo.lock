@@ -6133,6 +6133,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "block2",
+ "futures-util",
  "jiff",
  "objc2",
  "objc2-av-foundation",

@@ -11,8 +11,8 @@ use xiaoban_agent::{
     ProviderPreset, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
 use xiaoban_hub::{
-    Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig, HubHandle, HubRuntime,
-    MemorySecrets, NoRouter, Page, Prompts, Router, SecretStore, ServiceError, Web,
+    AppEntry, Apps, Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig, HubHandle,
+    HubRuntime, MemorySecrets, NoRouter, Page, Prompts, Router, SecretStore, ServiceError, Web,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
@@ -166,6 +166,7 @@ fn runtime_with(
             }],
         })),
         router: Arc::new(NoRouter),
+        apps: Arc::new(FakeApps::default()),
         web: Arc::new(FakeWeb),
         fallback,
     }
@@ -1496,5 +1497,69 @@ async fn place_details_update_one_stop_in_a_new_version() {
     let missing = &provider.requests()[3];
     let answer = missing.messages.last().unwrap();
     assert!(answer.content.contains("no stop named 不存在"));
+    hub.shutdown().await;
+}
+
+#[derive(Debug, Default)]
+struct FakeApps {
+    opened: std::sync::Mutex<Vec<String>>,
+}
+
+impl Apps for FakeApps {
+    fn list(&self) -> BoxFuture<'static, Vec<AppEntry>> {
+        Box::pin(async {
+            vec![
+                AppEntry {
+                    id: "com.tencent.xinWeChat".into(),
+                    name: "微信".into(),
+                    aliases: vec!["WeChat".into()],
+                },
+                AppEntry {
+                    id: "com.apple.Keynote".into(),
+                    name: "Keynote 讲演".into(),
+                    aliases: vec!["Keynote".into()],
+                },
+            ]
+        })
+    }
+
+    fn open(&self, id: String) -> BoxFuture<'static, Result<(), String>> {
+        self.opened.lock().unwrap().push(id);
+        Box::pin(async { Ok(()) })
+    }
+}
+
+#[tokio::test]
+async fn apps_are_found_by_name_and_only_listed_ids_open() {
+    let apps = Arc::new(FakeApps::default());
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "find_apps",
+            &serde_json::json!({ "query": "wechat 微信" }),
+        )],
+        vec![tool_call(
+            "open_app",
+            &serde_json::json!({ "id": "rm -rf /", "name": "x" }),
+        )],
+        vec![tool_call(
+            "open_app",
+            &serde_json::json!({ "id": "com.tencent.xinWeChat", "name": "微信" }),
+        )],
+        vec![ModelChunk::Text("打开了".into())],
+    ]));
+    let mut runtime = runtime(provider.clone());
+    runtime.apps = apps.clone();
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "打开微信", Vec::new()).await;
+
+    let requests = provider.requests();
+    let result = |index: usize| requests[index].messages.last().unwrap().content.clone();
+    assert!(result(1).contains("com.tencent.xinWeChat"));
+    assert!(!result(1).contains("Keynote"));
+    assert!(result(2).contains("unknown app id"));
+    assert!(result(3).contains("opened"));
+    assert_eq!(*apps.opened.lock().unwrap(), ["com.tencent.xinWeChat"]);
     hub.shutdown().await;
 }

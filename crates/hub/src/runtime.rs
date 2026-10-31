@@ -3,6 +3,7 @@ use std::sync::Arc;
 use xiaoban_agent::{ConfiguredProvider, Connector};
 use xiaoban_i18n::Locale;
 
+use crate::apps::Apps;
 use crate::location::Locator;
 use crate::prompts::Prompts;
 use crate::router::Router;
@@ -19,6 +20,7 @@ pub struct HubRuntime {
     pub locator: Arc<dyn Locator>,
     pub weather: Arc<dyn Weather>,
     pub router: Arc<dyn Router>,
+    pub apps: Arc<dyn Apps>,
     pub web: Arc<dyn Web>,
     pub fallback: Option<ConfiguredProvider>,
 }

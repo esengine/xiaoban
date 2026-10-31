@@ -4,5 +4,6 @@ export type StepResult =
   | { kind: "found"; count: number; sources: Array<string> }
   | { kind: "page"; title: string }
   | { kind: "saved"; version: number }
+  | { kind: "matched"; names: Array<string> }
   | { kind: "failed" }
   | { kind: "done" };

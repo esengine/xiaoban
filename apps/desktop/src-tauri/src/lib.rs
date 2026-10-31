@@ -1,3 +1,4 @@
+mod apps;
 mod calendar;
 mod hub;
 mod island;

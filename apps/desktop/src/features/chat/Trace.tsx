@@ -13,6 +13,8 @@ const TOOL_NAMES: Record<string, PlainMessageKey> = {
   save_trip: "tool-name-trip",
   save_place_detail: "tool-name-detail",
   locate: "tool-name-locate",
+  find_apps: "tool-name-apps",
+  open_app: "tool-name-apps",
 };
 
 export function useToolName() {

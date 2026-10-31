@@ -4,7 +4,9 @@ use xiaoban_protocol::StepResult;
 
 #[cfg(test)]
 use crate::tools::LOCATE;
-use crate::tools::{READ_PAGE, REMEMBER, SAVE_PLACE_DETAIL, SAVE_TRIP, WEATHER, WEB_SEARCH};
+use crate::tools::{
+    FIND_APPS, OPEN_APP, READ_PAGE, REMEMBER, SAVE_PLACE_DETAIL, SAVE_TRIP, WEATHER, WEB_SEARCH,
+};
 
 const MAX_SOURCES: usize = 3;
 const MAX_DETAIL: usize = 60;
@@ -28,12 +30,13 @@ pub fn site(url: &str) -> Option<String> {
 pub fn detail(call: &ToolCall) -> Option<String> {
     let args = arguments(call);
     match call.function.name.as_str() {
-        WEB_SEARCH => text(&args, "query"),
+        WEB_SEARCH | FIND_APPS => text(&args, "query"),
         READ_PAGE => text(&args, "url").and_then(|url| site(&url)),
         WEATHER => text(&args, "place"),
         REMEMBER => text(&args, "subject"),
         SAVE_TRIP => text(&args, "title"),
         SAVE_PLACE_DETAIL => text(&args, "stop"),
+        OPEN_APP => text(&args, "name"),
         _ => None,
     }
 }
@@ -66,6 +69,17 @@ pub fn result(call: &ToolCall, output: &str) -> StepResult {
                 sources,
             }
         }
+        FIND_APPS => StepResult::Matched {
+            names: output
+                .get("apps")
+                .and_then(Value::as_array)
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|app| text(app, "name"))
+                .take(MAX_SOURCES)
+                .collect(),
+        },
         READ_PAGE => StepResult::Page {
             title: text(&output, "title").unwrap_or_default(),
         },

@@ -93,6 +93,7 @@ pub enum StepResult {
     Found { count: u32, sources: Vec<String> },
     Page { title: String },
     Saved { version: u32 },
+    Matched { names: Vec<String> },
     Failed,
     Done,
 }

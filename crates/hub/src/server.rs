@@ -82,6 +82,7 @@ impl Hub {
             locator: runtime.locator,
             weather: runtime.weather,
             router: runtime.router,
+            apps: runtime.apps,
             web: runtime.web,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,

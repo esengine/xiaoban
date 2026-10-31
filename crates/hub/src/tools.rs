@@ -16,6 +16,8 @@ pub const REMEMBER: &str = "remember";
 pub const WEATHER: &str = "weather";
 pub const READ_PAGE: &str = "read_page";
 pub const LOCATE: &str = "locate";
+pub const FIND_APPS: &str = "find_apps";
+pub const OPEN_APP: &str = "open_app";
 pub const WEB_SEARCH: &str = "web_search";
 pub const SAVE_TRIP: &str = "save_trip";
 pub const SAVE_PLACE_DETAIL: &str = "save_place_detail";
@@ -147,6 +149,25 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
             ),
         ),
         spec(
+            FIND_APPS,
+            l.text(keys::TOOL_FIND_APPS_DESCRIPTION),
+            object(
+                &json!({ "query": text(l, keys::TOOL_FIND_APPS_QUERY) }),
+                &["query"],
+            ),
+        ),
+        spec(
+            OPEN_APP,
+            l.text(keys::TOOL_OPEN_APP_DESCRIPTION),
+            object(
+                &json!({
+                    "id": text(l, keys::TOOL_OPEN_APP_ID),
+                    "name": text(l, keys::TOOL_OPEN_APP_NAME),
+                }),
+                &["id", "name"],
+            ),
+        ),
+        spec(
             LOCATE,
             l.text(keys::TOOL_LOCATE_DESCRIPTION),
             object(&json!({}), &[]),
@@ -205,6 +226,16 @@ struct RememberArgs {
 struct WeatherArgs {
     place: String,
     days: Option<u8>,
+}
+
+#[derive(Deserialize)]
+struct AppQuery {
+    query: String,
+}
+
+#[derive(Deserialize)]
+struct AppTarget {
+    id: String,
 }
 
 #[derive(Deserialize)]
@@ -341,6 +372,35 @@ impl<'a> HubTools<'a> {
         }
     }
 
+    async fn find_apps(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<AppQuery>(arguments) else {
+            return error("arguments must be {query}");
+        };
+        let apps = self.state.apps.list().await;
+        let found: Vec<_> = crate::apps::find(&apps, &args.query)
+            .into_iter()
+            .map(|app| json!({ "id": app.id, "name": app.name }))
+            .collect();
+        json!({ "apps": found }).to_string()
+    }
+
+    async fn open_app(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<AppTarget>(arguments) else {
+            return error("arguments must be {id, name}");
+        };
+        let apps = self.state.apps.list().await;
+        let Some(app) = apps.into_iter().find(|app| app.id == args.id) else {
+            return error("unknown app id; call find_apps first and use an id it returned");
+        };
+        match self.state.apps.open(app.id).await {
+            Ok(()) => json!({ "opened": app.name }).to_string(),
+            Err(failure) => {
+                tracing::warn!(%failure, "could not open app");
+                error("the app could not be opened")
+            }
+        }
+    }
+
     async fn locate(&self) -> String {
         match self.state.locator.locate().await {
             Location::Found { city, district } => {
@@ -431,6 +491,8 @@ impl ToolRunner for HubTools<'_> {
                 WEATHER => self.weather(arguments).await,
                 READ_PAGE => self.read_page(arguments).await,
                 LOCATE => self.locate().await,
+                FIND_APPS => self.find_apps(arguments).await,
+                OPEN_APP => self.open_app(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,

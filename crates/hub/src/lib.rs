@@ -1,3 +1,4 @@
+mod apps;
 mod auth;
 mod calendar;
 mod config;
@@ -25,6 +26,7 @@ mod trip_requests;
 mod turns;
 mod weather;
 
+pub use apps::{AppEntry, Apps, NoApps};
 pub use config::HubConfig;
 pub use error::HubError;
 pub use location::{FixedLocator, Locator, NoLocator};
