@@ -15,6 +15,11 @@ const TOOL_NAMES: Record<string, PlainMessageKey> = {
   locate: "tool-name-locate",
   find_apps: "tool-name-apps",
   open_app: "tool-name-apps",
+  look_at_app: "tool-name-operate",
+  click: "tool-name-operate",
+  type_text: "tool-name-operate",
+  press_keys: "tool-name-operate",
+  confirm: "tool-name-operate",
 };
 
 export function useToolName() {

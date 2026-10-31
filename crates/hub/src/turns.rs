@@ -315,7 +315,7 @@ async fn drive(
         })
     };
     let agent = state.active().agent;
-    let tools = HubTools::new(state, thread_id);
+    let tools = HubTools::new(state, thread_id, turn_id, cancel.clone());
     let outcome = agent
         .run_turn(&prefix, &transcript, &wire, &tools, tx, cancel)
         .await;

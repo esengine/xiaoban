@@ -1,4 +1,5 @@
 import type {
+  ConfirmRequest,
   Device,
   Event,
   Failure,
@@ -54,6 +55,7 @@ export interface HubState {
   trips: Readonly<Record<string, Trip>>;
   latestTrip: Readonly<Record<string, number>>;
   services: ServiceStatus[];
+  confirms: ConfirmRequest[];
 }
 
 export const initialHubState: HubState = {
@@ -71,6 +73,7 @@ export const initialHubState: HubState = {
   trips: {},
   latestTrip: {},
   services: [],
+  confirms: [],
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -107,6 +110,19 @@ function withoutDraft(drafts: HubState["drafts"], turnId: string): HubState["dra
 
 export function applyEvent(state: HubState, event: Event, now = Date.now()): HubState {
   switch (event.type) {
+    case "confirm_requested":
+      return {
+        ...state,
+        confirms: [
+          ...state.confirms.filter((confirm) => confirm.id !== event.confirm.id),
+          event.confirm,
+        ],
+      };
+    case "confirm_resolved":
+      return {
+        ...state,
+        confirms: state.confirms.filter((confirm) => confirm.id !== event.confirmId),
+      };
     case "thread_updated":
       return { ...state, threads: upsertThread(state.threads, event.thread) };
     case "memory_saved": {

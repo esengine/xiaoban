@@ -5,7 +5,9 @@ use crate::{
     AutonomyLevel, ContextNote, Device, Failure, Location, Memory, Message, ModelInfo, Preferences,
     ProviderId, ProviderOption, Thread, Usage,
 };
-use crate::{ServiceId, ServiceStatus, Trip, TripCalendar};
+use crate::{
+    ConfirmChoice, ConfirmRequest, OperatePermissions, ServiceId, ServiceStatus, Trip, TripCalendar,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -92,6 +94,12 @@ pub enum Request {
         trip_id: String,
         version: Option<u32>,
     },
+    AnswerConfirm {
+        confirm_id: String,
+        choice: ConfirmChoice,
+    },
+    PendingConfirms,
+    OperateStatus,
     Locate,
 }
 
@@ -168,6 +176,12 @@ pub enum Response {
     },
     TripCalendar {
         calendar: TripCalendar,
+    },
+    PendingConfirms {
+        confirms: Vec<ConfirmRequest>,
+    },
+    OperateStatus {
+        permissions: OperatePermissions,
     },
 }
 

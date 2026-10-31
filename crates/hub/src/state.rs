@@ -33,6 +33,8 @@ pub struct HubState {
     pub weather: Arc<dyn crate::weather::Weather>,
     pub router: Arc<dyn crate::router::Router>,
     pub apps: Arc<dyn crate::apps::Apps>,
+    pub operator: Arc<dyn crate::operate::Operator>,
+    pub confirms: crate::confirms::Confirms,
     pub web: Arc<dyn crate::services::Web>,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,

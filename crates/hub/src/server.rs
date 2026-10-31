@@ -83,6 +83,8 @@ impl Hub {
             weather: runtime.weather,
             router: runtime.router,
             apps: runtime.apps,
+            operator: runtime.operator,
+            confirms: crate::confirms::Confirms::default(),
             web: runtime.web,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,

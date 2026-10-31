@@ -11,6 +11,11 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   remember: { detail: "step-remember", plain: "step-remember-plain" },
   find_apps: { detail: "step-find_apps", plain: "step-find_apps-plain" },
   open_app: { detail: "step-open_app", plain: "step-open_app-plain" },
+  look_at_app: { detail: "step-look_at_app", plain: "step-look_at_app-plain" },
+  click: { detail: "step-click", plain: "step-click-plain" },
+  type_text: { detail: "step-type_text", plain: "step-type_text-plain" },
+  press_keys: { detail: "step-press_keys", plain: "step-press_keys-plain" },
+  confirm: { detail: "step-confirm", plain: "step-confirm-plain" },
   save_place_detail: {
     detail: "step-save_place_detail",
     plain: "step-save_place_detail-plain",

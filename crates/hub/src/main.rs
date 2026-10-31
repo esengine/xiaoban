@@ -9,7 +9,7 @@ use tracing_subscriber::EnvFilter;
 use xiaoban_agent::{ConfiguredProvider, HttpConnector, ProviderPreset, first_configured_from_env};
 use xiaoban_hub::{
     DeepseekWeb, Hub, HubConfig, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, NoApps, NoLocator,
-    NoRouter, OpenMeteo, Prompts, default_hub_name, system_locale,
+    NoOperator, NoRouter, OpenMeteo, Prompts, default_hub_name, system_locale,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::ProviderId;
@@ -116,6 +116,7 @@ async fn main() -> anyhow::Result<()> {
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),
         apps: Arc::new(NoApps),
+        operator: Arc::new(NoOperator),
         web: Arc::new(DeepseekWeb::new()),
         fallback: configured(&args)?,
     };

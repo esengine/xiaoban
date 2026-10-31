@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use futures_util::future::BoxFuture;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ToolCall, ToolRunner, ToolSpec};
 use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
 use xiaoban_protocol::{Attachment, Event, Location, ServiceId};
@@ -110,6 +111,12 @@ fn trip_day(l: &Localizer) -> Value {
 }
 
 pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
+    let mut specs = base_specs(localizer);
+    specs.extend(crate::operate_tools::specs(localizer));
+    specs
+}
+
+fn base_specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let l = localizer;
     let day = trip_day(l);
     vec![
@@ -255,16 +262,27 @@ pub enum Key {
 }
 
 pub struct HubTools<'a> {
-    state: &'a SharedState,
-    thread_id: &'a str,
+    pub(crate) state: &'a SharedState,
+    pub(crate) thread_id: &'a str,
+    pub(crate) turn_id: &'a str,
+    pub(crate) cancel: CancellationToken,
+    pub(crate) allowed_once: Mutex<Vec<String>>,
     attachment: Mutex<Option<Attachment>>,
 }
 
 impl<'a> HubTools<'a> {
-    pub fn new(state: &'a SharedState, thread_id: &'a str) -> Self {
+    pub fn new(
+        state: &'a SharedState,
+        thread_id: &'a str,
+        turn_id: &'a str,
+        cancel: CancellationToken,
+    ) -> Self {
         Self {
             state,
             thread_id,
+            turn_id,
+            cancel,
+            allowed_once: Mutex::new(Vec::new()),
             attachment: Mutex::new(None),
         }
     }
@@ -493,6 +511,11 @@ impl ToolRunner for HubTools<'_> {
                 LOCATE => self.locate().await,
                 FIND_APPS => self.find_apps(arguments).await,
                 OPEN_APP => self.open_app(arguments).await,
+                crate::operate_tools::LOOK_AT_APP => self.look_at_app(arguments).await,
+                crate::operate_tools::CLICK => self.element_action(arguments, false).await,
+                crate::operate_tools::TYPE_TEXT => self.element_action(arguments, true).await,
+                crate::operate_tools::PRESS_KEYS => self.press_keys(arguments).await,
+                crate::operate_tools::CONFIRM => self.confirm(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,

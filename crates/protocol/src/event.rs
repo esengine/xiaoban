@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Device, Failure, Memory, Message, ModelInfo, Thread, Usage};
+use crate::{
+    ConfirmChoice, ConfirmRequest, Device, Failure, Memory, Message, ModelInfo, Thread, Usage,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -59,6 +61,13 @@ pub enum Event {
     MemorySaved {
         memory: Memory,
     },
+    ConfirmRequested {
+        confirm: ConfirmRequest,
+    },
+    ConfirmResolved {
+        confirm_id: String,
+        choice: ConfirmChoice,
+    },
 }
 
 impl Event {
@@ -78,7 +87,9 @@ impl Event {
             | Self::DevicePaired { .. }
             | Self::ToolUsed { .. }
             | Self::ToolFinished { .. }
-            | Self::MemorySaved { .. } => None,
+            | Self::MemorySaved { .. }
+            | Self::ConfirmResolved { .. } => None,
+            Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
         }
     }
 }

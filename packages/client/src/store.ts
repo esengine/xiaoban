@@ -1,5 +1,6 @@
 import type {
   AutonomyLevel,
+  ConfirmChoice,
   ContextNote,
   Device,
   Failure,
@@ -8,6 +9,7 @@ import type {
   Memory,
   Message,
   ModelInfo,
+  OperatePermissions,
   Preferences,
   ProviderId,
   ProviderOption,
@@ -228,6 +230,27 @@ export class HubStore {
     return calendar;
   }
 
+  async refreshConfirms(): Promise<void> {
+    const { confirms } = await this.client.request(
+      { type: "pending_confirms" },
+      "pending_confirms",
+    );
+    this.#update((state) => ({ ...state, confirms }));
+  }
+
+  async answerConfirm(confirmId: string, choice: ConfirmChoice): Promise<void> {
+    await this.client.request({ type: "answer_confirm", confirmId, choice }, "ack");
+    this.#update((state) => ({
+      ...state,
+      confirms: state.confirms.filter((confirm) => confirm.id !== confirmId),
+    }));
+  }
+
+  async operateStatus(): Promise<OperatePermissions> {
+    const { permissions } = await this.client.request({ type: "operate_status" }, "operate_status");
+    return permissions;
+  }
+
   async refreshServices(): Promise<ServiceStatus[]> {
     const { services } = await this.client.request({ type: "services" }, "services");
     this.#update((state) => ({ ...state, services }));
@@ -259,6 +282,7 @@ export class HubStore {
       this.refreshMemories(),
       this.refreshDevices(),
       this.refreshServices(),
+      this.refreshConfirms(),
     ]).catch(() => undefined);
   }
 

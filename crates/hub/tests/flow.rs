@@ -12,13 +12,15 @@ use xiaoban_agent::{
 };
 use xiaoban_hub::{
     AppEntry, Apps, Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig, HubHandle,
-    HubRuntime, MemorySecrets, NoRouter, Page, Prompts, Router, SecretStore, ServiceError, Web,
+    HubRuntime, MemorySecrets, NoRouter, Operator, Page, Prompts, Router, SecretStore,
+    ServiceError, Snapshot, UiAction, UiElement, Web,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
-    Attachment, AutonomyLevel, ClientFrame, ContextNote, Coord, Credential, DeviceHello, ErrorCode,
-    Event, FailureKind, Interpretation, Location, PROTOCOL_VERSION, Platform, ProtocolError,
-    ProviderId, Request, Response, Role, ServerFrame, ServiceId, Sky, TravelMode, TripLeg,
+    Attachment, AutonomyLevel, ClientFrame, ConfirmChoice, ConfirmKind, ContextNote, Coord,
+    Credential, DeviceHello, ErrorCode, Event, FailureKind, Interpretation, Location,
+    OperatePermissions, PROTOCOL_VERSION, Platform, ProtocolError, ProviderId, Request, Response,
+    Role, ServerFrame, ServiceId, Sky, TravelMode, TripLeg,
 };
 
 struct TestClient {
@@ -167,6 +169,7 @@ fn runtime_with(
         })),
         router: Arc::new(NoRouter),
         apps: Arc::new(FakeApps::default()),
+        operator: Arc::new(FakeOperator::default()),
         web: Arc::new(FakeWeb),
         fallback,
     }
@@ -1561,5 +1564,219 @@ async fn apps_are_found_by_name_and_only_listed_ids_open() {
     assert!(result(2).contains("unknown app id"));
     assert!(result(3).contains("opened"));
     assert_eq!(*apps.opened.lock().unwrap(), ["com.tencent.xinWeChat"]);
+    hub.shutdown().await;
+}
+
+#[derive(Debug)]
+struct FakeOperator {
+    control: std::sync::atomic::AtomicBool,
+    actions: std::sync::Mutex<Vec<String>>,
+}
+
+impl Default for FakeOperator {
+    fn default() -> Self {
+        Self {
+            control: std::sync::atomic::AtomicBool::new(true),
+            actions: std::sync::Mutex::default(),
+        }
+    }
+}
+
+impl Operator for FakeOperator {
+    fn permissions(&self) -> OperatePermissions {
+        OperatePermissions {
+            control: self.control.load(std::sync::atomic::Ordering::SeqCst),
+            capture: false,
+        }
+    }
+
+    fn snapshot(&self, app_id: String) -> BoxFuture<'static, Result<Snapshot, String>> {
+        self.actions.lock().unwrap().push(format!("look {app_id}"));
+        Box::pin(async {
+            Ok(Snapshot {
+                app: "Keynote 讲演".into(),
+                window: Some("周报".into()),
+                elements: vec![UiElement {
+                    index: 0,
+                    role: "button".into(),
+                    label: "导出 PDF".into(),
+                    value: None,
+                    disabled: false,
+                }],
+                truncated: false,
+            })
+        })
+    }
+
+    fn act(
+        &self,
+        app_id: String,
+        index: u32,
+        action: UiAction,
+    ) -> BoxFuture<'static, Result<(), String>> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("{action:?} {index} {app_id}"));
+        Box::pin(async { Ok(()) })
+    }
+
+    fn keys(&self, app_id: String, combo: String) -> BoxFuture<'static, Result<(), String>> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("keys {combo} {app_id}"));
+        Box::pin(async { Ok(()) })
+    }
+}
+
+type Answer = (fn(&ConfirmKind) -> bool, ConfirmChoice);
+
+async fn answer_confirms(
+    client: &mut TestClient,
+    thread: &str,
+    answers: &mut Vec<Answer>,
+    replies: usize,
+) {
+    for _ in 0..400 {
+        let Response::PendingConfirms { confirms } = client.request(Request::PendingConfirms).await
+        else {
+            panic!("expected confirms");
+        };
+        for confirm in confirms {
+            let position = answers
+                .iter()
+                .position(|(matches, _)| matches(&confirm.kind))
+                .unwrap_or_else(|| panic!("unexpected confirm {:?}", confirm.kind));
+            let (_, choice) = answers.remove(position);
+            let Response::Ack = client
+                .request(Request::AnswerConfirm {
+                    confirm_id: confirm.id,
+                    choice,
+                })
+                .await
+            else {
+                panic!("expected ack");
+            };
+        }
+        let Response::Messages { messages } = client
+            .request(Request::ListMessages {
+                thread_id: thread.into(),
+            })
+            .await
+        else {
+            panic!("expected messages");
+        };
+        if messages
+            .iter()
+            .filter(|message| message.role == Role::Assistant)
+            .count()
+            >= replies
+        {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("the turn never finished");
+}
+
+#[tokio::test]
+async fn operating_apps_asks_for_permission_apps_and_actions() {
+    let operator = Arc::new(FakeOperator::default());
+    operator
+        .control
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+    let look = || {
+        tool_call(
+            "look_at_app",
+            &serde_json::json!({ "app": "com.apple.Keynote", "name": "Keynote" }),
+        )
+    };
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![look()],
+        vec![ModelChunk::Text("没权限".into())],
+        vec![look()],
+        vec![tool_call(
+            "click",
+            &serde_json::json!({ "app": "com.apple.Keynote", "element": 0, "label": "导出 PDF" }),
+        )],
+        vec![tool_call(
+            "confirm",
+            &serde_json::json!({ "title": "要发给「老婆」吗？", "detail": "周报.pdf" }),
+        )],
+        vec![ModelChunk::Text("没发".into())],
+    ]));
+    let mut runtime = runtime(provider.clone());
+    runtime.operator = operator.clone();
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "导出周报".into(),
+            context: Vec::new(),
+            quote: None,
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let mut answers: Vec<Answer> = vec![(
+        |kind| matches!(kind, ConfirmKind::Permissions),
+        ConfirmChoice::No,
+    )];
+    answer_confirms(&mut client, &thread, &mut answers, 1).await;
+    assert!(operator.actions.lock().unwrap().is_empty());
+    assert!(
+        provider.requests()[1]
+            .messages
+            .last()
+            .unwrap()
+            .content
+            .contains("not allowed")
+    );
+
+    operator
+        .control
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "开好了".into(),
+            context: Vec::new(),
+            quote: None,
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let mut answers: Vec<Answer> = vec![
+        (
+            |kind| matches!(kind, ConfirmKind::AllowApp { app } if app == "Keynote 讲演"),
+            ConfirmChoice::Always,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::Action { .. }),
+            ConfirmChoice::No,
+        ),
+    ];
+    answer_confirms(&mut client, &thread, &mut answers, 2).await;
+    assert_eq!(answers.len(), 0);
+    assert_eq!(
+        *operator.actions.lock().unwrap(),
+        ["look com.apple.Keynote", "Press 0 com.apple.Keynote"]
+    );
+    let last = provider
+        .requests()
+        .last()
+        .unwrap()
+        .messages
+        .last()
+        .unwrap()
+        .content
+        .clone();
+    assert!(last.contains("no: do not do it"));
     hub.shutdown().await;
 }

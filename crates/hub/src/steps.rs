@@ -34,9 +34,11 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         READ_PAGE => text(&args, "url").and_then(|url| site(&url)),
         WEATHER => text(&args, "place"),
         REMEMBER => text(&args, "subject"),
-        SAVE_TRIP => text(&args, "title"),
+        SAVE_TRIP | crate::operate_tools::CONFIRM => text(&args, "title"),
         SAVE_PLACE_DETAIL => text(&args, "stop"),
-        OPEN_APP => text(&args, "name"),
+        OPEN_APP | crate::operate_tools::LOOK_AT_APP => text(&args, "name"),
+        crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
+        crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
         _ => None,
     }
 }
