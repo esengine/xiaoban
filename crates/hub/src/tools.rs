@@ -120,6 +120,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs.extend(crate::file_tools::history_specs(localizer));
     specs.extend(crate::thread_tools::specs(localizer));
     specs.extend(crate::subthreads::specs(localizer));
+    specs.push(crate::agents::spec(localizer));
     specs
 }
 
@@ -365,6 +366,7 @@ pub struct HubTools<'a> {
     pub(crate) cancel: CancellationToken,
     pub(crate) allowed_once: Mutex<Vec<String>>,
     pub(crate) mouse_once: Mutex<Vec<String>>,
+    pub(crate) sub_agent: bool,
     attachment: Mutex<Option<Attachment>>,
 }
 
@@ -382,7 +384,20 @@ impl<'a> HubTools<'a> {
             cancel,
             allowed_once: Mutex::new(Vec::new()),
             mouse_once: Mutex::new(Vec::new()),
+            sub_agent: false,
             attachment: Mutex::new(None),
+        }
+    }
+
+    pub fn sub_agent(
+        state: &'a SharedState,
+        thread_id: &'a str,
+        turn_id: &'a str,
+        cancel: CancellationToken,
+    ) -> Self {
+        Self {
+            sub_agent: true,
+            ..Self::new(state, thread_id, turn_id, cancel)
         }
     }
 
@@ -652,6 +667,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::operate_tools::TYPE_TEXT
                 | crate::operate_tools::PRESS_KEYS
                 | crate::operate_tools::DO_STEPS
+                | crate::agents::SPAWN_AGENTS
                 | crate::subthreads::OPEN_SUBTHREADS
                 | crate::subthreads::MESSAGE_SUBTHREAD
                 | crate::operate_tools::CONFIRM
@@ -680,7 +696,11 @@ impl ToolRunner for HubTools<'_> {
                 crate::file_tools::HISTORY_SEARCH => self.history_search(arguments).await,
                 crate::file_tools::HISTORY_READ => self.history_read(arguments).await,
                 crate::thread_tools::LIST_THREADS => self.list_threads(arguments).await,
+                crate::subthreads::OPEN_SUBTHREADS if self.sub_agent => {
+                    error("a sub-agent cannot open subthreads")
+                }
                 crate::subthreads::OPEN_SUBTHREADS => self.open_subthreads(arguments).await,
+                crate::agents::SPAWN_AGENTS => self.spawn_agents(arguments, &call.id).await,
                 crate::subthreads::MESSAGE_SUBTHREAD => self.message_subthread(arguments).await,
                 crate::thread_tools::FIND_THREADS => self.find_threads(arguments).await,
                 crate::file_tools::HISTORY_OUTLINE => self.history_outline().await,

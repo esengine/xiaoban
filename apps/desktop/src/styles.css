@@ -4648,3 +4648,36 @@ button.sent-files__image {
   font-size: 12px;
   color: var(--color-success);
 }
+
+.agents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-ground);
+  font-weight: 400;
+}
+
+.agents__head {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.agents__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.agents__state {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-accent);
+}
+
+.agents__row[data-done] .agents__state {
+  color: var(--color-success);
+}

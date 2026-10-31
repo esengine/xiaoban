@@ -1,4 +1,4 @@
-import type { TraceStep, TurnTrace } from "@xiaoban/client";
+import type { AgentState, TraceStep, TurnTrace } from "@xiaoban/client";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Memory } from "@xiaoban/protocol";
@@ -31,7 +31,13 @@ export function useToolName() {
   };
 }
 
-export function WorkingLine({ steps }: { steps: readonly TraceStep[] }) {
+export function WorkingLine({
+  steps,
+  agents,
+}: {
+  steps: readonly TraceStep[];
+  agents?: Record<string, AgentState[]> | undefined;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const current = steps.at(-1);
@@ -71,7 +77,7 @@ export function WorkingLine({ steps }: { steps: readonly TraceStep[] }) {
           </span>
         </span>
       </button>
-      {open && <StepList steps={steps} live />}
+      {open && <StepList steps={steps} live agents={agents} />}
     </li>
   );
 }

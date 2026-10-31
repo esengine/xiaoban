@@ -2131,3 +2131,42 @@ async fn subthreads_open_after_confirmation_and_report_back() {
     }
     panic!("the subthread never reported back");
 }
+
+#[tokio::test]
+async fn sub_agents_run_in_parallel_and_return_together() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "spawn_agents",
+            &serde_json::json!({
+                "tasks": [
+                    { "title": "查苏州", "task": "苏州周末去哪" },
+                    { "title": "查杭州", "task": "杭州周末去哪" },
+                ],
+            }),
+        )],
+        vec![ModelChunk::Text("园林".into())],
+        vec![ModelChunk::Text("西湖".into())],
+        vec![ModelChunk::Text("汇总好了".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "比较苏州和杭州", Vec::new()).await;
+    let requests = provider.requests();
+    let result = requests
+        .last()
+        .unwrap()
+        .messages
+        .iter()
+        .rev()
+        .find(|message| message.role == xiaoban_agent::ChatRole::Tool)
+        .unwrap()
+        .content
+        .clone();
+    assert!(result.contains("查苏州"));
+    assert!(result.contains("查杭州"));
+    assert!(result.contains("园林") && result.contains("西湖"));
+    hub.shutdown().await;
+}

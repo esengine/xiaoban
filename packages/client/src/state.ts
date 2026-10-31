@@ -29,8 +29,16 @@ export interface TurnTrace {
   memories: Memory[];
 }
 
+export interface AgentState {
+  title: string;
+  step: string | null;
+  steps: number;
+  done: boolean;
+}
+
 export interface Draft extends TurnTrace {
   paused?: boolean;
+  agents?: Record<string, AgentState[]>;
   background?: boolean;
   reasoning?: string;
   reasoningSince?: number | undefined;
@@ -137,6 +145,25 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         ...state,
         archivedBefore: { ...state.archivedBefore, [event.threadId]: event.before },
       };
+    case "agent_progress": {
+      const draft = state.drafts[event.turnId];
+      if (!draft) return state;
+      const list = [...(draft.agents?.[event.callId] ?? [])];
+      const previous = list[event.agent];
+      list[event.agent] = {
+        title: event.title,
+        step: event.step ?? previous?.step ?? null,
+        steps: (previous?.steps ?? 0) + (event.step ? 1 : 0),
+        done: event.done,
+      };
+      return {
+        ...state,
+        drafts: {
+          ...state.drafts,
+          [event.turnId]: { ...draft, agents: { ...draft.agents, [event.callId]: list } },
+        },
+      };
+    }
     case "turn_backgrounded": {
       const draft = state.drafts[event.turnId];
       if (!draft) return state;

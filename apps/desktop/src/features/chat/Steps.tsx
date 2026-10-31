@@ -1,4 +1,4 @@
-import type { TraceStep } from "@xiaoban/client";
+import type { AgentState, TraceStep } from "@xiaoban/client";
 import type { MessageKey, PlainMessageKey, Translator } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 
@@ -96,7 +96,35 @@ function StepIcon({ step }: { step: TraceStep }) {
 export const isBetweenSteps = (steps: readonly TraceStep[]): boolean =>
   steps.length > 0 && steps.every((step) => step.result !== null);
 
-export function StepList({ steps, live = false }: { steps: readonly TraceStep[]; live?: boolean }) {
+function AgentCard({ agents }: { agents: AgentState[] }) {
+  const { t } = useI18n();
+  return (
+    <span className="agents">
+      <span className="agents__head">{t("agents-head", { count: agents.length })}</span>
+      {agents.map((agent, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: agents are numbered by the hub
+        <span key={index} className="agents__row" data-done={agent.done || undefined}>
+          <span className="agents__title">{t("agents-title", { title: agent.title })}</span>
+          <span className="agents__state">
+            {agent.done
+              ? t("agents-done", { steps: agent.steps })
+              : t("agents-working", { steps: agent.steps + 1 })}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function StepList({
+  steps,
+  live = false,
+  agents,
+}: {
+  steps: readonly TraceStep[];
+  live?: boolean;
+  agents?: Record<string, AgentState[]> | undefined;
+}) {
   const { t } = useI18n();
   return (
     <ol className="trace-steps">
@@ -112,6 +140,7 @@ export function StepList({ steps, live = false }: { steps: readonly TraceStep[];
             <span className="trace-step__body">
               {stepText(t, step)}
               {result && <span className="trace-step__result">{result}</span>}
+              {agents?.[step.callId] && <AgentCard agents={agents[step.callId] ?? []} />}
             </span>
           </li>
         );

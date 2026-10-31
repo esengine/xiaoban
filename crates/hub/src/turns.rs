@@ -455,7 +455,7 @@ fn parse_transcript(entries: &[String]) -> Transcript {
         .collect()
 }
 
-async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreError> {
+pub(crate) async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreError> {
     let memories = state.store.list_memories().await?;
     let galaxies = state.store.list_galaxies().await?;
     Ok(memory::snapshot(

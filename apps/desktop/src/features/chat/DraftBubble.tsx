@@ -140,7 +140,7 @@ export function DraftBubble({
     if (draft.steps.length > 0)
       return (
         <>
-          <WorkingLine steps={draft.steps} />
+          <WorkingLine steps={draft.steps} agents={draft.agents} />
           {hint}
         </>
       );

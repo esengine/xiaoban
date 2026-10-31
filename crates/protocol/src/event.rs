@@ -79,6 +79,14 @@ pub enum Event {
         confirm_id: String,
         choice: ConfirmChoice,
     },
+    AgentProgress {
+        turn_id: String,
+        call_id: String,
+        agent: u32,
+        title: String,
+        step: Option<String>,
+        done: bool,
+    },
     ThreadArchived {
         thread_id: String,
         #[ts(type = "number")]
@@ -117,7 +125,8 @@ impl Event {
             | Self::MemoryForgotten { .. }
             | Self::ConfirmResolved { .. }
             | Self::TurnPaused { .. }
-            | Self::TurnBackgrounded { .. } => None,
+            | Self::TurnBackgrounded { .. }
+            | Self::AgentProgress { .. } => None,
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),
         }
