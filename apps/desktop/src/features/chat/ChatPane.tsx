@@ -26,7 +26,13 @@ import { flyToMe } from "./flyToMe.ts";
 import { InlineText } from "./InlineText.tsx";
 import { PanelToggle } from "./PanelToggle.tsx";
 import { plain } from "./plain.ts";
-import { highlightSource, jumpTo, QuoteBlock, quoteOf, selectedMarkdown } from "./QuoteBlock.tsx";
+import {
+  findAndJump,
+  highlightSource,
+  QuoteBlock,
+  quoteOf,
+  selectedMarkdown,
+} from "./QuoteBlock.tsx";
 import { RichText } from "./RichText.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
 import { type Row, toRows } from "./versions.ts";
@@ -506,6 +512,7 @@ function UserItem({
   onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
 }) {
   const { t } = useI18n();
+  const store = useHub();
   return (
     <>
       {message.files.length > 0 && (
@@ -522,7 +529,7 @@ function UserItem({
           <QuoteBlock
             quote={message.quote}
             tone="blue"
-            onOpen={() => jumpTo(message.quote?.messageId)}
+            onOpen={() => findAndJump(store, message.threadId, message.quote?.messageId)}
           />
         )}
         <InlineText text={message.text} />

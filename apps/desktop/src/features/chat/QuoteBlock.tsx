@@ -45,7 +45,7 @@ export const QuoteBlock = memo(function QuoteBlock({
   quote: Quote;
   tone: "light" | "blue";
   onRemove?: () => void;
-  onOpen?: () => boolean;
+  onOpen?: () => boolean | Promise<boolean>;
 }) {
   const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
@@ -86,9 +86,11 @@ export const QuoteBlock = memo(function QuoteBlock({
           className="quote-block__main"
           onClick={(event) => {
             event.stopPropagation();
-            if (onOpen()) return;
-            setGone(true);
-            window.setTimeout(() => setGone(false), GONE_MS);
+            void Promise.resolve(onOpen()).then((found) => {
+              if (found) return;
+              setGone(true);
+              window.setTimeout(() => setGone(false), GONE_MS);
+            });
           }}
         >
           {body}
@@ -192,6 +194,28 @@ export function highlightSource(range: Range | null) {
   if (!highlights || !Highlight) return;
   if (range) highlights.set(HIGHLIGHT, new Highlight(range));
   else highlights.delete(HIGHLIGHT);
+}
+
+const MAX_PAGES = 40;
+
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+export async function findAndJump(
+  store: {
+    getSnapshot: () => { olderMessages: Record<string, boolean> };
+    loadOlderMessages: (threadId: string) => Promise<number>;
+  },
+  threadId: string,
+  messageId: string | null | undefined,
+): Promise<boolean> {
+  if (!messageId) return false;
+  if (jumpTo(messageId)) return true;
+  for (let page = 0; page < MAX_PAGES && store.getSnapshot().olderMessages[threadId]; page += 1) {
+    await store.loadOlderMessages(threadId);
+    await nextFrame();
+    if (jumpTo(messageId)) return true;
+  }
+  return false;
 }
 
 export function jumpTo(messageId: string | null | undefined): boolean {
