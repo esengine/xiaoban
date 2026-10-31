@@ -17,7 +17,8 @@
     "format": "biome check --write . && cargo fmt --all",
     "gen:i18n": "node scripts/gen-i18n.ts",
     "gen": "pnpm gen:protocol && pnpm gen:i18n && pnpm gen:icons",
-    "gen:icons": "node scripts/gen-provider-icons.ts && node scripts/gen-app-icons.ts"
+    "gen:icons": "node scripts/gen-provider-icons.ts",
+    "gen:app-icons": "node scripts/gen-app-icons.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",
