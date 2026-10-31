@@ -425,3 +425,4 @@ looking-elapsed = 已用 { $seconds } 秒
 looking-stop = 停止
 looking-slow = 比平时久一些，可能是网站打开慢，小伴还在继续
 working-show-steps = 看每一步
+step-thinking = 在想下一步…

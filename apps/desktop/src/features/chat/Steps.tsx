@@ -69,7 +69,10 @@ function StepIcon({ step }: { step: TraceStep }) {
   );
 }
 
-export function StepList({ steps }: { steps: readonly TraceStep[] }) {
+export const isBetweenSteps = (steps: readonly TraceStep[]): boolean =>
+  steps.length > 0 && steps.every((step) => step.result !== null);
+
+export function StepList({ steps, live = false }: { steps: readonly TraceStep[]; live?: boolean }) {
   const { t } = useI18n();
   return (
     <ol className="trace-steps">
@@ -89,6 +92,12 @@ export function StepList({ steps }: { steps: readonly TraceStep[] }) {
           </li>
         );
       })}
+      {live && isBetweenSteps(steps) && (
+        <li className="trace-step trace-step--thinking" data-current>
+          <span className="trace-step__now" aria-hidden="true" />
+          <span className="trace-step__body">{t("step-thinking")}</span>
+        </li>
+      )}
     </ol>
   );
 }

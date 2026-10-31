@@ -2483,6 +2483,10 @@ button {
   font-weight: 500;
 }
 
+.trace-step--thinking .trace-step__body {
+  color: var(--color-ink-mid);
+}
+
 .trace-step__result {
   display: block;
   margin-top: 1px;

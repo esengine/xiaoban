@@ -428,3 +428,4 @@ looking-elapsed = { $seconds }s so far
 looking-stop = Stop
 looking-slow = Taking longer than usual, a site may be slow. Xiaoban is still on it
 working-show-steps = Show each step
+step-thinking = Working out the next step…

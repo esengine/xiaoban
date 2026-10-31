@@ -24,7 +24,7 @@ function LookingPanel({ draft, onStop }: { draft: Draft; onStop: () => void }) {
           {t("looking-stop")}
         </button>
       </div>
-      {draft.steps.length > 0 && <StepList steps={draft.steps} />}
+      {draft.steps.length > 0 && <StepList steps={draft.steps} live />}
       {elapsed > SLOW_MS && <p className="looking__slow">{t("looking-slow")}</p>}
     </section>
   );

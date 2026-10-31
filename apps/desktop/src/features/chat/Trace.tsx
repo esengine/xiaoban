@@ -3,7 +3,7 @@ import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Memory } from "@xiaoban/protocol";
 import { useState } from "react";
-import { StepList, stepText } from "./Steps.tsx";
+import { isBetweenSteps, StepList, stepText } from "./Steps.tsx";
 
 const TOOL_NAMES: Record<string, PlainMessageKey> = {
   remember: "tool-name-remember",
@@ -37,11 +37,17 @@ export function WorkingLine({ steps }: { steps: readonly TraceStep[] }) {
         onClick={() => setOpen((value) => !value)}
       >
         <span className="working-line__dot" aria-hidden="true" />
-        <span key={current.callId} className="working-line__text">
-          {stepText(t, current)}
-        </span>
+        {isBetweenSteps(steps) ? (
+          <span key="thinking" className="working-line__text">
+            {t("step-thinking")}
+          </span>
+        ) : (
+          <span key={current.callId} className="working-line__text">
+            {stepText(t, current)}
+          </span>
+        )}
       </button>
-      {open && <StepList steps={steps} />}
+      {open && <StepList steps={steps} live />}
     </li>
   );
 }
