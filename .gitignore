@@ -1,0 +1,10 @@
+/target
+node_modules
+dist
+.turbo
+.expo
+*.tsbuildinfo
+.DS_Store
+/apps/desktop/src-tauri/gen
+/apps/mobile/ios
+/apps/mobile/android

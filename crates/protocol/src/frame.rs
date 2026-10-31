@@ -1,0 +1,102 @@
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+use crate::{Event, HubInfo, Platform, Request, Response};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum Credential {
+    Local,
+    Paired { token: String },
+    PairingCode { code: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DeviceHello {
+    pub device_id: String,
+    pub name: String,
+    pub platform: Platform,
+    pub credential: Credential,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "type",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum ClientFrame {
+    Hello {
+        protocol: u32,
+        device: DeviceHello,
+    },
+    Request {
+        #[ts(type = "number")]
+        id: u64,
+        body: Request,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum ErrorCode {
+    UnsupportedProtocol,
+    Unauthorized,
+    BadRequest,
+    NotFound,
+    Internal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ProtocolError {
+    pub code: ErrorCode,
+    pub message: String,
+}
+
+impl ProtocolError {
+    pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "type",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+#[ts(export)]
+pub enum ServerFrame {
+    Welcome {
+        protocol: u32,
+        hub: HubInfo,
+        device_token: Option<String>,
+    },
+    Response {
+        #[ts(type = "number")]
+        id: u64,
+        body: Response,
+    },
+    Error {
+        #[ts(type = "number | null")]
+        id: Option<u64>,
+        error: ProtocolError,
+    },
+    Event {
+        event: Event,
+    },
+}

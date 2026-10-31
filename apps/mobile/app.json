@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "小伴",
+    "slug": "xiaoban",
+    "scheme": "xiaoban",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "app.xiaoban.mobile",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "小伴需要在局域网里找到你家里的电脑。",
+        "NSBonjourServices": ["_xiaoban._tcp"]
+      }
+    },
+    "android": {
+      "package": "app.xiaoban.mobile"
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-status-bar"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

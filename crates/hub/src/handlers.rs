@@ -1,0 +1,59 @@
+use xiaoban_protocol::{ErrorCode, ProtocolError, Request, Response};
+
+use crate::state::SharedState;
+use crate::turns;
+
+const DEFAULT_TITLE: &str = "新的对话";
+
+pub async fn handle(state: &SharedState, request: Request) -> Result<Response, ProtocolError> {
+    Ok(match request {
+        Request::ListThreads => Response::Threads {
+            threads: state.store.list_threads().await?,
+        },
+        Request::CreateThread { title } => {
+            let title = title
+                .map(|title| title.trim().to_owned())
+                .filter(|title| !title.is_empty())
+                .unwrap_or_else(|| DEFAULT_TITLE.to_owned());
+            let thread = state.store.create_thread(title).await?;
+            state.publish(xiaoban_protocol::Event::ThreadUpdated {
+                thread: thread.clone(),
+            });
+            Response::Thread { thread }
+        }
+        Request::ListMessages { thread_id } => Response::Messages {
+            messages: state.store.list_messages(thread_id).await?,
+        },
+        Request::SendMessage { thread_id, text } => {
+            let text = text.trim().to_owned();
+            if text.is_empty() {
+                return Err(ProtocolError::new(
+                    ErrorCode::BadRequest,
+                    "message is empty",
+                ));
+            }
+            let (turn_id, message) = turns::start(state, thread_id, text).await?;
+            Response::TurnAccepted { turn_id, message }
+        }
+        Request::CancelTurn { turn_id } => {
+            if !state.turns.cancel(&turn_id) {
+                return Err(ProtocolError::new(
+                    ErrorCode::NotFound,
+                    "turn is not running",
+                ));
+            }
+            Response::Ack
+        }
+        Request::CreatePairingCode => {
+            let (code, expires_at) = state.pairing.issue();
+            Response::PairingCode { code, expires_at }
+        }
+        Request::ListDevices => Response::Devices {
+            devices: state.store.list_devices().await?,
+        },
+        Request::RevokeDevice { device_id } => {
+            state.store.revoke_device(device_id).await?;
+            Response::Ack
+        }
+    })
+}

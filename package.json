@@ -1,0 +1,23 @@
+{
+  "name": "xiaoban",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "gen:protocol": "node scripts/gen-protocol.ts",
+    "dev:desktop": "pnpm --filter @xiaoban/desktop tauri dev",
+    "dev:mobile": "pnpm --filter @xiaoban/mobile start",
+    "dev:hub": "cargo run -p xiaoban-hub",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test && cargo test --workspace",
+    "lint": "biome check . && cargo clippy --workspace --all-targets -- -D warnings",
+    "format": "biome check --write . && cargo fmt --all"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
+    "turbo": "^2.11.10"
+  }
+}
