@@ -344,6 +344,10 @@ html[data-window="island"] #root {
   color: var(--dark-link);
 }
 
+.island__fade {
+  animation: island-now-in var(--motion-standard) var(--ease-standard) both;
+}
+
 .island__now {
   min-width: 0;
   overflow: hidden;
@@ -463,7 +467,8 @@ html[data-window="island"] #root {
 
   .island__eyes,
   .island__steps ul,
-  .island__now {
+  .island__now,
+  .island__fade {
     animation: none;
   }
 }

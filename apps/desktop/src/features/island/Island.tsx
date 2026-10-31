@@ -22,6 +22,8 @@ const SIZES: Record<Mode, readonly [number, number]> = {
 };
 const CARD_RADIUS = 30;
 const LARGE_STEPS = 4;
+const THINK_SETTLE_MS = 600;
+const APP_TOOLS = new Set(["open_app", "look_at_app"]);
 const CONFIRM_SHORT = 112;
 const DRAG_THRESHOLD = 4;
 const FLASH_MS = 3_000;
@@ -40,6 +42,19 @@ function latestRunning(drafts: Readonly<Record<string, Draft>>): Draft | null {
       .filter((draft) => !draft.failure)
       .sort((a, b) => b.startedAt - a.startedAt)[0] ?? null
   );
+}
+
+function useSettled(value: boolean, delay: number): boolean {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    if (!value) {
+      setSettled(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSettled(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+  return settled;
 }
 
 function Face({ paused = false }: { paused?: boolean }) {
@@ -120,6 +135,10 @@ export function Island() {
             : "compact"
         : "idle";
   const paused = running?.paused ?? false;
+  const thinking = useSettled(
+    running ? running.steps.length === 0 || isBetweenSteps(running.steps) : false,
+    THINK_SETTLE_MS,
+  );
   const operating = running ? isOperating(running) : false;
 
   const targetSize: readonly [number, number] =
@@ -164,12 +183,24 @@ export function Island() {
       : (thread?.title ?? t("thread-untitled"));
   };
   const open = (threadId: string | null) => void invoke("island_open_main", { threadId });
+  const actionText = (draft: Draft) => {
+    const current = draft.steps.find((step) => step.result === null);
+    if (current) return stepText(t, current);
+    const last = draft.steps.at(-1);
+    return !last || thinking ? t("step-thinking") : stepText(t, last);
+  };
   const lineText = (draft: Draft) => {
     if (draft.paused) return t("island-paused");
-    const current = draft.steps.at(-1);
-    const text =
-      !current || isBetweenSteps(draft.steps) ? t("step-thinking") : stepText(t, current);
+    const text = actionText(draft);
     return draft.steps.length > 0 ? t("island-step-line", { text, n: draft.steps.length }) : text;
+  };
+  const titleText = (draft: Draft) => {
+    if (draft.paused) return t("island-paused");
+    const app = draft.steps.findLast((step) => APP_TOOLS.has(step.tool) && step.detail)?.detail;
+    const n = Math.max(draft.steps.length, 1);
+    return app
+      ? t("island-title-app", { app, n })
+      : t("island-title", { title: threadTitle(draft.threadId), n });
   };
   const pauseButton = (draft: Draft, className: string) => (
     <button
@@ -209,7 +240,9 @@ export function Island() {
     content = (
       <span className="island__row island__row--medium">
         <Face paused={paused} />
-        <span className="island__text">{lineText(running)}</span>
+        <span key={lineText(running)} className="island__text island__fade">
+          {lineText(running)}
+        </span>
         {operating && pauseButton(running, "island__chip")}
         <button
           type="button"
@@ -234,7 +267,7 @@ export function Island() {
       <span className="island__row island__row--large">
         <span className="island__head">
           <Face paused={paused} />
-          <span className="island__title">{lineText(running)}</span>
+          <span className="island__title">{titleText(running)}</span>
           <button
             type="button"
             className="island__collapse"
