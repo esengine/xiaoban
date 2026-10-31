@@ -134,16 +134,19 @@ fn day_weather(day: &Day) -> DayWeather {
     }
 }
 
-async fn forecast(state: &SharedState, city: &str) -> HashMap<String, Day> {
+async fn forecast(state: &SharedState, city: &str) -> (HashMap<String, Day>, Option<String>) {
     match state.weather.forecast(city.to_owned(), MAX_DAYS).await {
-        Ok(forecast) => forecast
-            .days
-            .into_iter()
-            .map(|day| (day.date.clone(), day))
-            .collect(),
+        Ok(forecast) => (
+            forecast
+                .days
+                .into_iter()
+                .map(|day| (day.date.clone(), day))
+                .collect(),
+            Some(forecast.timezone).filter(|zone| !zone.is_empty()),
+        ),
         Err(error) => {
             tracing::warn!(%error, city, "no forecast for trip");
-            HashMap::new()
+            (HashMap::new(), None)
         }
     }
 }
@@ -172,7 +175,7 @@ pub async fn save(
     verified: bool,
 ) -> Result<(Trip, Value), StoreError> {
     let city = draft.city.trim().to_owned();
-    let weather = forecast(state, &city).await;
+    let (weather, timezone) = forecast(state, &city).await;
     let mut days = Vec::with_capacity(draft.days.len());
     for day in draft.days {
         let count = day.stops.len();
@@ -222,6 +225,7 @@ pub async fn save(
                 version: 0,
                 title: draft.title.trim().to_owned(),
                 city,
+                timezone,
                 party: draft.party.trim().to_owned(),
                 needs: filled(draft.needs),
                 reminder: filled(draft.reminder),

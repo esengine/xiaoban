@@ -21,6 +21,12 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         } => configure(state, local, service, &api_key, resume_thread_id).await,
         Request::DeclineService { service, thread_id } => decline(state, service, thread_id).await,
         Request::GetTrip { trip_id, version } => trip(state, trip_id, version).await,
+        Request::TripCalendar { trip_id, version } => {
+            let (trip, _) = load_trip(state, trip_id, version).await?;
+            Ok(Response::TripCalendar {
+                calendar: crate::calendar::build(&trip),
+            })
+        }
         _ => Err(ProtocolError::new(
             ErrorCode::BadRequest,
             "not a trip request",
@@ -103,11 +109,19 @@ async fn decline(state: &SharedState, service: ServiceId, thread_id: String) -> 
     Ok(Response::Ack)
 }
 
-async fn trip(state: &SharedState, trip_id: String, version: Option<u32>) -> Handled {
-    let (trip, latest) = state
+async fn load_trip(
+    state: &SharedState,
+    trip_id: String,
+    version: Option<u32>,
+) -> Result<(xiaoban_protocol::Trip, u32), ProtocolError> {
+    state
         .store
         .trip(trip_id, version)
         .await?
-        .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such trip"))?;
+        .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such trip"))
+}
+
+async fn trip(state: &SharedState, trip_id: String, version: Option<u32>) -> Handled {
+    let (trip, latest) = load_trip(state, trip_id, version).await?;
     Ok(Response::Trip { trip, latest })
 }

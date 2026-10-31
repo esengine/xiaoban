@@ -128,6 +128,7 @@ pub struct Trip {
     pub version: u32,
     pub title: String,
     pub city: String,
+    pub timezone: Option<String>,
     pub party: String,
     pub needs: Option<String>,
     pub reminder: Option<String>,
@@ -136,6 +137,27 @@ pub struct Trip {
     pub days: Vec<TripDay>,
     #[ts(type = "number")]
     pub created_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarEvent {
+    pub uid: String,
+    pub title: String,
+    #[ts(type = "number")]
+    pub start: i64,
+    #[ts(type = "number")]
+    pub end: i64,
+    pub location: String,
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct TripCalendar {
+    pub trip_id: String,
+    pub events: Vec<CalendarEvent>,
+    pub ics: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

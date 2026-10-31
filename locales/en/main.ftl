@@ -408,3 +408,5 @@ tool-progress-locate = Finding where you are…
 place-review = “{ $text }”
 trip-card-meta = { $range } · { $party }
 trip-unverified-lead = { $text } ·{ " " }
+trip-toast-calendar-handed = Sent { $count } events to your calendar app. Click “Add” there
+trip-toast-calendar-retry = Didn’t open? Try again

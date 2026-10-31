@@ -6,6 +6,10 @@
   <true/>
   <key>CFBundleDevelopmentRegion</key>
   <string>zh-Hans</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>把小伴排好的行程写进你的日历，放在单独的「小伴行程」日历里。</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>把小伴排好的行程写进你的日历，放在单独的「小伴行程」日历里。</string>
   <key>NSLocationUsageDescription</key>
   <string>用来猜你所在的城市，只在你让小伴查的时候用一次。</string>
   <key>NSLocationWhenInUseUsageDescription</key>

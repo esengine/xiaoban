@@ -1,4 +1,5 @@
 mod auth;
+mod calendar;
 mod config;
 mod discovery;
 mod error;

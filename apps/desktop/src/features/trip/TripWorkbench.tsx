@@ -22,7 +22,7 @@ import { PlaceDetail, type StopRef } from "./PlaceDetail.tsx";
 import { useTrip } from "./TripCard.tsx";
 import { useToast } from "./useToast.tsx";
 
-type CalendarOutcome = { added: number } | "denied" | "failed";
+type CalendarOutcome = { added: number } | { handed: number } | "denied" | "failed";
 
 const CALENDAR_APP = "ical://";
 const CALENDAR_SETTINGS =
@@ -76,10 +76,12 @@ export function TripWorkbench(props: Props) {
   };
   const sync = async () => {
     const outcome = isTauri()
-      ? await invoke<CalendarOutcome>("calendar_sync", {
-          trip,
-          calendar: t("trip-calendar-name"),
-        }).catch((): CalendarOutcome => "failed")
+      ? await store
+          .tripCalendar(trip.id, trip.version)
+          .then((calendar) =>
+            invoke<CalendarOutcome>("calendar_sync", { calendar, name: t("trip-calendar-name") }),
+          )
+          .catch((): CalendarOutcome => "failed")
       : "failed";
     if (outcome === "denied") {
       show({
@@ -91,6 +93,11 @@ export function TripWorkbench(props: Props) {
       });
     } else if (outcome === "failed") {
       show({ text: t("trip-toast-calendar-failed") });
+    } else if ("handed" in outcome) {
+      show({
+        text: t("trip-toast-calendar-handed", { count: outcome.handed }),
+        action: { label: t("trip-toast-calendar-retry"), run: () => void sync() },
+      });
     } else {
       show({
         text: t("trip-toast-calendar", { count: outcome.added }),

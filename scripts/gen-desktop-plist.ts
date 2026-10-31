@@ -7,6 +7,8 @@ const DEVELOPMENT_REGION = "zh-Hans";
 const LANGUAGES = ["zh-Hans", "en"] as const;
 const DESKTOP_KEYS = [
   "CFBundleDisplayName",
+  "NSCalendarsFullAccessUsageDescription",
+  "NSCalendarsUsageDescription",
   "NSLocationUsageDescription",
   "NSLocationWhenInUseUsageDescription",
   "NSMicrophoneUsageDescription",

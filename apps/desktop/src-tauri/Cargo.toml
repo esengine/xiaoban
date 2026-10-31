@@ -14,6 +14,7 @@ tauri-build = { version = "2.7", features = [] }
 
 [dependencies]
 anyhow.workspace = true
+jiff.workspace = true
 serde.workspace = true
 tauri = { version = "2.12", features = [] }
 tauri-plugin-opener = "2.7"
@@ -31,7 +32,8 @@ objc2 = "0.6"
 objc2-av-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "AVCaptureDevice", "AVMediaFormat"] }
 objc2-avf-audio = "0.3"
 objc2-core-location = "0.3"
-objc2-foundation = "0.3"
+objc2-event-kit = { version = "0.3", default-features = false, features = ["std", "block2", "EKCalendar", "EKCalendarItem", "EKEvent", "EKEventStore", "EKObject", "EKSource", "EKTypes"] }
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSDate", "NSError", "NSPredicate", "NSString", "NSURL"] }
 objc2-speech = "0.3"
 
 [lints]

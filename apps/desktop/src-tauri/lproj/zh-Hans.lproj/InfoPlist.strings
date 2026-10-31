@@ -1,4 +1,6 @@
 "CFBundleDisplayName" = "小伴";
+"NSCalendarsFullAccessUsageDescription" = "把小伴排好的行程写进你的日历，放在单独的「小伴行程」日历里。";
+"NSCalendarsUsageDescription" = "把小伴排好的行程写进你的日历，放在单独的「小伴行程」日历里。";
 "NSLocationUsageDescription" = "用来猜你所在的城市，只在你让小伴查的时候用一次。";
 "NSLocationWhenInUseUsageDescription" = "用来猜你所在的城市，只在你让小伴查的时候用一次。";
 "NSMicrophoneUsageDescription" = "用来听你说话，把语音变成文字。只在你按下麦克风时使用。";

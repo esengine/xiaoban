@@ -11,6 +11,7 @@ import type { ProviderOption } from "./ProviderOption.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
 import type { Thread } from "./Thread.ts";
 import type { Trip } from "./Trip.ts";
+import type { TripCalendar } from "./TripCalendar.ts";
 import type { Usage } from "./Usage.ts";
 
 export type Response =
@@ -38,4 +39,5 @@ export type Response =
   | { type: "located"; location: Location }
   | { type: "services"; services: Array<ServiceStatus> }
   | { type: "service_configured"; connected: boolean; services: Array<ServiceStatus> }
-  | { type: "trip"; trip: Trip; latest: number };
+  | { type: "trip"; trip: Trip; latest: number }
+  | { type: "trip_calendar"; calendar: TripCalendar };

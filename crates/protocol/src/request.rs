@@ -5,7 +5,7 @@ use crate::{
     AutonomyLevel, ContextNote, Device, Failure, Location, Memory, Message, ModelInfo, Preferences,
     ProviderId, ProviderOption, Thread, Usage,
 };
-use crate::{ServiceId, ServiceStatus, Trip};
+use crate::{ServiceId, ServiceStatus, Trip, TripCalendar};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -88,6 +88,10 @@ pub enum Request {
         trip_id: String,
         version: Option<u32>,
     },
+    TripCalendar {
+        trip_id: String,
+        version: Option<u32>,
+    },
     Locate,
 }
 
@@ -161,6 +165,9 @@ pub enum Response {
     Trip {
         trip: Trip,
         latest: u32,
+    },
+    TripCalendar {
+        calendar: TripCalendar,
     },
 }
 

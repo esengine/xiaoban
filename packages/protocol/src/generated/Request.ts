@@ -50,4 +50,5 @@ export type Request =
   | { type: "configure_service"; service: ServiceId; apiKey: string; resumeThreadId: string | null }
   | { type: "decline_service"; service: ServiceId; threadId: string }
   | { type: "get_trip"; tripId: string; version: number | null }
+  | { type: "trip_calendar"; tripId: string; version: number | null }
   | { type: "locate" };

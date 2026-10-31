@@ -1,3 +1,4 @@
+mod calendar;
 mod hub;
 mod location;
 mod voice;
@@ -24,6 +25,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             hub::hub_endpoint,
+            calendar::calendar_sync,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,

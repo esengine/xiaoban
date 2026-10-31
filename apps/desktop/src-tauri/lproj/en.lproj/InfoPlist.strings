@@ -1,4 +1,6 @@
 "CFBundleDisplayName" = "Xiaoban";
+"NSCalendarsFullAccessUsageDescription" = "Adds trips Xiaoban planned to a separate “Xiaoban trips” calendar.";
+"NSCalendarsUsageDescription" = "Adds trips Xiaoban planned to a separate “Xiaoban trips” calendar.";
 "NSLocationUsageDescription" = "Used to guess which city you are in, only when you ask Xiaoban to look it up.";
 "NSLocationWhenInUseUsageDescription" = "Used to guess which city you are in, only when you ask Xiaoban to look it up.";
 "NSMicrophoneUsageDescription" = "Used to hear you and turn speech into text, only while you hold the microphone.";

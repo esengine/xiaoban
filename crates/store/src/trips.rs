@@ -104,6 +104,7 @@ mod tests {
             version: 0,
             title: "杭州 · 3 天".into(),
             city: "杭州".into(),
+            timezone: None,
             party: "2 大 1 小".into(),
             needs: None,
             reminder: None,

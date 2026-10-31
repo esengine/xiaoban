@@ -405,3 +405,5 @@ tool-progress-locate = 正在定位…
 place-review = “{ $text }”
 trip-card-meta = { $range } · { $party }
 trip-unverified-lead = { $text } ·{ " " }
+trip-toast-calendar-handed = 已交给日历 · { $count } 个日程，在日历里点「添加」
+trip-toast-calendar-retry = 没打开？再试一次

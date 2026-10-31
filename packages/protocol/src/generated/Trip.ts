@@ -7,6 +7,7 @@ export type Trip = {
   version: number;
   title: string;
   city: string;
+  timezone: string | null;
   party: string;
   needs: string | null;
   reminder: string | null;

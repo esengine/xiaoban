@@ -15,6 +15,7 @@ import type {
   ServiceStatus,
   Thread,
   Trip,
+  TripCalendar,
   Usage,
 } from "@xiaoban/protocol";
 import type { HubClient } from "./client.ts";
@@ -217,6 +218,14 @@ export class HubStore {
       },
     }));
     return trip;
+  }
+
+  async tripCalendar(tripId: string, version: number | null): Promise<TripCalendar> {
+    const { calendar } = await this.client.request(
+      { type: "trip_calendar", tripId, version },
+      "trip_calendar",
+    );
+    return calendar;
   }
 
   async refreshServices(): Promise<ServiceStatus[]> {

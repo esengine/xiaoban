@@ -1316,6 +1316,19 @@ async fn deepseek_users_search_with_their_model_key_and_routes_replace_estimates
     assert!(detail.checked_at.is_some());
     assert_eq!(day.stops[1].detail, None);
 
+    assert_eq!(trip.timezone.as_deref(), Some("Asia/Shanghai"));
+    let Response::TripCalendar { calendar } = client
+        .request(Request::TripCalendar {
+            trip_id: trip.id.clone(),
+            version: None,
+        })
+        .await
+    else {
+        panic!("expected calendar");
+    };
+    assert_eq!(calendar.events.len(), 2);
+    assert!(calendar.ics.contains("SUMMARY:断桥"));
+
     let Response::Services { services } = client.request(Request::Services).await else {
         panic!("expected services");
     };
