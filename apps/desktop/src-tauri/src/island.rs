@@ -18,7 +18,7 @@ pub const HOVER_EVENT: &str = "island://hover";
 const HOVER_POLL: Duration = Duration::from_millis(100);
 const STATE_FILE: &str = "island.json";
 const GAP_BELOW_MENU_BAR: f64 = 8.0;
-const MARGIN: f64 = 10.0;
+const MARGIN: f64 = 16.0;
 const SNAP_DISTANCE: f64 = 40.0;
 const SETTLE: Duration = Duration::from_millis(500);
 const IDLE: (f64, f64) = (132.0, 36.0);
@@ -189,16 +189,31 @@ fn hovering(app: &AppHandle, window: &WebviewWindow) -> bool {
     (left..right).contains(&cursor.x) && (top..bottom).contains(&cursor.y)
 }
 
-fn watch_hover(app: &AppHandle) {
+fn main_shown(app: &AppHandle) -> bool {
+    app.get_webview_window(MAIN).is_some_and(|main| {
+        main.is_visible().unwrap_or(false) && !main.is_minimized().unwrap_or(false)
+    })
+}
+
+fn watch(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let mut inside = false;
+        let mut shown = false;
         loop {
             tokio::time::sleep(HOVER_POLL).await;
             let Some(window) = app.get_webview_window(LABEL) else {
                 return;
             };
-            let now = hovering(&app, &window);
+            let wanted = !main_shown(&app);
+            if wanted != shown {
+                shown = wanted;
+                let _ = if wanted { window.show() } else { window.hide() };
+                if !wanted {
+                    show_slot(&app, false);
+                }
+            }
+            let now = shown && hovering(&app, &window);
             if now != inside {
                 inside = now;
                 tracing::debug!(now, cursor = ?app.cursor_position(), origin = ?window.outer_position(), "island hover");
@@ -251,8 +266,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
             home.top - MARGIN,
         ));
     }
-    island.show()?;
-    watch_hover(app);
+    watch(app);
     let handle = app.clone();
     let window = island.clone();
     island.on_window_event(move |event| {
