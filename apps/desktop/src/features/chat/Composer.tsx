@@ -13,12 +13,16 @@ interface Props {
   onStop: () => Promise<unknown>;
 }
 
-const SETTINGS = "x-apple.systempreferences:com.apple.preference.security";
+const PRIVACY = "x-apple.systempreferences:com.apple.preference.security";
 
-const BLOCKS: Record<VoiceBlock, { message: PlainMessageKey; pane: string | null }> = {
-  microphone: { message: "voice-denied-microphone", pane: "Privacy_Microphone" },
-  speech: { message: "voice-denied-speech", pane: "Privacy_SpeechRecognition" },
-  unavailable: { message: "voice-unavailable", pane: null },
+const BLOCKS: Record<VoiceBlock, { message: PlainMessageKey; settings: string | null }> = {
+  microphone: { message: "voice-denied-microphone", settings: `${PRIVACY}?Privacy_Microphone` },
+  speech: { message: "voice-denied-speech", settings: `${PRIVACY}?Privacy_SpeechRecognition` },
+  dictation: {
+    message: "voice-dictation-off",
+    settings: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension",
+  },
+  unavailable: { message: "voice-unavailable", settings: null },
 };
 
 function MicIcon({ size }: { size: number }) {
@@ -193,11 +197,11 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
         <div role="alert" className="voice-alert">
           <MicIcon size={16} />
           <span className="voice-alert__text">{t(block.message)}</span>
-          {block.pane && (
+          {block.settings && (
             <button
               type="button"
               className="voice-alert__action"
-              onClick={() => void openExternal(`${SETTINGS}?${block.pane}`)}
+              onClick={() => void openExternal(block.settings ?? "")}
             >
               {t("voice-open-settings")}
             </button>

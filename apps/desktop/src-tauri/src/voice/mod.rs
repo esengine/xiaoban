@@ -18,6 +18,12 @@ pub enum StartOutcome {
     Unavailable,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EndReason {
+    DictationOff,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Transcript {
     pub text: String,

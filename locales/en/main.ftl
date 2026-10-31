@@ -252,3 +252,4 @@ panel-list-hide = Hide conversations { $shortcut }
 panel-list-show = Show conversations { $shortcut }
 panel-workspace-hide = Hide workspace { $shortcut }
 panel-workspace-show = Show workspace { $shortcut }
+voice-dictation-off = Turn on Dictation in System Settings › Keyboard to use voice input

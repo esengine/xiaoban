@@ -249,3 +249,4 @@ panel-list-hide = 收起会话列表 { $shortcut }
 panel-list-show = 展开会话列表 { $shortcut }
 panel-workspace-hide = 收起工作区 { $shortcut }
 panel-workspace-show = 展开工作区 { $shortcut }
+voice-dictation-off = 要用语音输入，先在系统设置 › 键盘里打开「听写」

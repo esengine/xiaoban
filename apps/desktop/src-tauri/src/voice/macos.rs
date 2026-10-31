@@ -15,7 +15,7 @@ use objc2_speech::{
 use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 
-use super::{ENDED_EVENT, LEVEL_EVENT, StartOutcome, TRANSCRIPT_EVENT, Transcript};
+use super::{ENDED_EVENT, EndReason, LEVEL_EVENT, StartOutcome, TRANSCRIPT_EVENT, Transcript};
 
 const BUS: usize = 0;
 const BUFFER_FRAMES: u32 = 1024;
@@ -98,6 +98,13 @@ fn level(buffer: &AVAudioPCMBuffer) -> f32 {
     ((db - SILENCE_DB) / -SILENCE_DB).clamp(0.0, 1.0)
 }
 
+const DICTATION_DOMAIN: &str = "kLSRErrorDomain";
+const DICTATION_OFF: isize = 201;
+
+fn is_dictation_off(error: &NSError) -> bool {
+    error.code() == DICTATION_OFF && error.domain().to_string() == DICTATION_DOMAIN
+}
+
 fn teardown() -> Option<Session> {
     let session = SESSION.with_borrow_mut(Option::take)?;
     unsafe {
@@ -107,7 +114,7 @@ fn teardown() -> Option<Session> {
     Some(session)
 }
 
-fn begin(app: &AppHandle, language: &str) -> StartOutcome {
+fn begin(app: &AppHandle, language: &str, on_device: bool) -> StartOutcome {
     if SESSION.with_borrow(Option::is_some) {
         return StartOutcome::Listening;
     }
@@ -125,7 +132,7 @@ fn begin(app: &AppHandle, language: &str) -> StartOutcome {
     let request = unsafe { SFSpeechAudioBufferRecognitionRequest::new() };
     unsafe {
         request.setShouldReportPartialResults(true);
-        if recognizer.supportsOnDeviceRecognition() {
+        if on_device && recognizer.supportsOnDeviceRecognition() {
             request.setRequiresOnDeviceRecognition(true);
         }
     }
@@ -161,14 +168,29 @@ fn begin(app: &AppHandle, language: &str) -> StartOutcome {
 
     let handler = {
         let app = app.clone();
+        let language = language.to_owned();
         RcBlock::new(
             move |result: *mut SFSpeechRecognitionResult, error: *mut NSError| {
                 let result = unsafe { result.as_ref() };
                 let done =
                     result.is_none_or(|result| unsafe { result.isFinal() }) || !error.is_null();
-                if !error.is_null() {
-                    let error = unsafe { &*error };
-                    tracing::warn!(code = error.code(), domain = %error.domain(), "voice recognition ended with an error");
+                if let Some(error) = unsafe { error.as_ref() } {
+                    tracing::warn!(code = error.code(), domain = %error.domain(), on_device, "voice recognition ended with an error");
+                    if result.is_none() && is_dictation_off(error) {
+                        let app = app.clone();
+                        let language = language.clone();
+                        let _ = app.clone().run_on_main_thread(move || {
+                            if teardown().is_none() {
+                                return;
+                            }
+                            let retried = on_device
+                                && begin(&app, &language, false) == StartOutcome::Listening;
+                            if !retried {
+                                let _ = app.emit(ENDED_EVENT, Some(EndReason::DictationOff));
+                            }
+                        });
+                        return;
+                    }
                 }
                 if let Some(result) = result {
                     let text = unsafe { result.bestTranscription().formattedString() }.to_string();
@@ -178,7 +200,7 @@ fn begin(app: &AppHandle, language: &str) -> StartOutcome {
                     let app = app.clone();
                     let _ = app.clone().run_on_main_thread(move || {
                         if teardown().is_some() {
-                            let _ = app.emit(ENDED_EVENT, ());
+                            let _ = app.emit(ENDED_EVENT, None::<EndReason>);
                         }
                     });
                 }
@@ -209,7 +231,7 @@ pub async fn start(app: AppHandle, language: String) -> StartOutcome {
     let handle = app.clone();
     let scheduled = app.run_on_main_thread(move || {
         if MainThreadMarker::new().is_some() {
-            let _ = reply.send(begin(&handle, &language));
+            let _ = reply.send(begin(&handle, &language, true));
         }
     });
     if scheduled.is_err() {
@@ -246,6 +268,6 @@ pub fn cancel(app: &AppHandle) {
         if let Some(session) = session {
             unsafe { session.task.cancel() };
         }
-        let _ = handle.emit(ENDED_EVENT, ());
+        let _ = handle.emit(ENDED_EVENT, None::<EndReason>);
     });
 }

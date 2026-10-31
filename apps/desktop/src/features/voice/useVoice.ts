@@ -7,7 +7,7 @@ const FINAL_WAIT_MS = 3000;
 
 type StartOutcome = "listening" | "microphone_denied" | "speech_denied" | "unavailable";
 
-export type VoiceBlock = "microphone" | "speech" | "unavailable";
+export type VoiceBlock = "microphone" | "speech" | "dictation" | "unavailable";
 
 export type VoiceState =
   | { phase: "idle" }
@@ -64,7 +64,13 @@ export function useVoice(language: string, onText: (text: string) => void) {
             : current,
         );
       }),
-      listen("voice://ended", settle),
+      listen<"dictation_off" | null>("voice://ended", ({ payload }) => {
+        if (payload === "dictation_off") {
+          cancelled.current = true;
+          setBlocked("dictation");
+        }
+        settle();
+      }),
     ];
     return () => {
       for (const subscription of subscriptions) void subscription.then((stop) => stop());
