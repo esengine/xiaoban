@@ -137,6 +137,7 @@ async fn ask<T: serde::de::DeserializeOwned>(state: &SharedState, input: String)
     let outcome = state
         .active()
         .agent
+        .without_thinking()
         .run_turn(
             &prefix,
             &Transcript::default(),

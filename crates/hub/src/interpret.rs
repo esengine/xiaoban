@@ -72,6 +72,7 @@ pub async fn answer(
     let outcome = state
         .active()
         .agent
+        .without_thinking()
         .run_turn(
             &prefix,
             &Transcript::default(),

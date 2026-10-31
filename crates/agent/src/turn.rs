@@ -59,6 +59,7 @@ impl ToolRunner for NoTools {
 #[derive(Clone)]
 pub struct Agent {
     provider: Arc<dyn ModelProvider>,
+    thinking: Option<bool>,
 }
 
 impl std::fmt::Debug for Agent {
@@ -116,7 +117,18 @@ impl Agent {
     }
 
     pub fn from_shared(provider: Arc<dyn ModelProvider>) -> Self {
-        Self { provider }
+        Self {
+            provider,
+            thinking: None,
+        }
+    }
+
+    #[must_use]
+    pub fn without_thinking(&self) -> Self {
+        Self {
+            provider: Arc::clone(&self.provider),
+            thinking: Some(false),
+        }
     }
 
     pub async fn run_turn(
@@ -231,6 +243,7 @@ impl Agent {
     ) -> Result<Step, AgentError> {
         let mut request = assemble_with(prefix, transcript, tail);
         request.model = model.map(str::to_owned);
+        request.thinking = self.thinking;
         let mut stream = self.provider.stream(request);
         let mut step = Step::default();
         loop {

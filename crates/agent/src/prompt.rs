@@ -121,6 +121,7 @@ pub fn assemble_with(
         messages,
         tools: prefix.tools().to_vec(),
         model: None,
+        thinking: None,
     }
 }
 

@@ -132,6 +132,7 @@ pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
     pub tools: Vec<ToolSpec>,
     pub model: Option<String>,
+    pub thinking: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -236,6 +236,9 @@ impl ModelProvider for OpenAiCompatible {
         if !request.tools.is_empty() {
             body["tools"] = request.tools.iter().map(ToolSpec::wire).collect();
         }
+        if request.thinking == Some(false) && self.config.base_url.contains("deepseek.com") {
+            body["thinking"] = json!({ "type": "disabled" });
+        }
         let send = self
             .client
             .post(self.endpoint())
