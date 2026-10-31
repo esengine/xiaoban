@@ -14,7 +14,7 @@ use crate::weather::{MAX_DAYS, WeatherError};
 
 pub const REMEMBER: &str = "remember";
 pub const WEATHER: &str = "weather";
-pub const FIND_PLACES: &str = "find_places";
+pub const READ_PAGE: &str = "read_page";
 pub const WEB_SEARCH: &str = "web_search";
 pub const SAVE_TRIP: &str = "save_trip";
 const DEFAULT_DAYS: u8 = 7;
@@ -47,6 +47,17 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
             "name": text(l, keys::TOOL_SAVE_TRIP_STOP_NAME),
             "time": text(l, keys::TOOL_SAVE_TRIP_STOP_TIME),
             "note": text(l, keys::TOOL_SAVE_TRIP_STOP_NOTE),
+            "next": object(
+                &json!({
+                    "mode": {
+                        "type": "string",
+                        "enum": ["walk", "taxi", "transit"],
+                        "description": l.text(keys::TOOL_SAVE_TRIP_NEXT_MODE),
+                    },
+                    "minutes": { "type": "integer", "minimum": 1, "description": l.text(keys::TOOL_SAVE_TRIP_NEXT_MINUTES) },
+                }),
+                &["mode", "minutes"],
+            ),
         }),
         &["name", "time", "note"],
     );
@@ -87,22 +98,19 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
             ),
         ),
         spec(
-            FIND_PLACES,
-            l.text(keys::TOOL_FIND_PLACES_DESCRIPTION),
-            object(
-                &json!({
-                    "query": text(l, keys::TOOL_FIND_PLACES_QUERY),
-                    "city": text(l, keys::TOOL_FIND_PLACES_CITY),
-                }),
-                &["query"],
-            ),
-        ),
-        spec(
             WEB_SEARCH,
             l.text(keys::TOOL_WEB_SEARCH_DESCRIPTION),
             object(
                 &json!({ "query": text(l, keys::TOOL_WEB_SEARCH_QUERY) }),
                 &["query"],
+            ),
+        ),
+        spec(
+            READ_PAGE,
+            l.text(keys::TOOL_READ_PAGE_DESCRIPTION),
+            object(
+                &json!({ "url": text(l, keys::TOOL_READ_PAGE_URL) }),
+                &["url"],
             ),
         ),
         spec(
@@ -142,9 +150,8 @@ struct WeatherArgs {
 }
 
 #[derive(Deserialize)]
-struct FindArgs {
-    query: String,
-    city: Option<String>,
+struct PageArgs {
+    url: String,
 }
 
 #[derive(Deserialize)]
@@ -185,10 +192,8 @@ impl<'a> HubTools<'a> {
     }
 
     pub async fn key(&self, service: ServiceId) -> Key {
-        match self.state.secrets.load_service(service) {
-            Ok(Some(key)) if !key.trim().is_empty() => return Key::Ready(key),
-            Ok(_) => {}
-            Err(error) => tracing::error!(%error, "failed to read service key"),
+        if let Some(key) = crate::trip_requests::search_key(self.state) {
+            return Key::Ready(key);
         }
         let declined = self
             .state
@@ -212,13 +217,17 @@ impl<'a> HubTools<'a> {
 
     fn declined() -> String {
         error(
-            "the user chose not to connect this service in this conversation; continue from your own knowledge and say that places and travel times are unverified",
+            "the user chose not to connect web search in this conversation; continue from your own knowledge and say that prices, opening hours and other details are unverified",
         )
     }
 
     fn failed(failure: ServiceError) -> String {
         match failure {
-            ServiceError::InvalidKey => error("the saved key was rejected by the service"),
+            ServiceError::InvalidKey => error("the saved DeepSeek key was rejected"),
+            ServiceError::NoBalance => {
+                error("the DeepSeek account has no balance left; tell the user to top it up")
+            }
+            ServiceError::NotFound => error("nothing usable was found"),
             ServiceError::Unavailable => error("the service is unavailable right now"),
         }
     }
@@ -259,33 +268,32 @@ impl<'a> HubTools<'a> {
         }
     }
 
-    async fn find_places(&self, arguments: &str) -> String {
-        let Ok(args) = serde_json::from_str::<FindArgs>(arguments) else {
-            return error("arguments must be {query, city?}");
-        };
-        let key = match self.key(ServiceId::Amap).await {
-            Key::Ready(key) => key,
-            Key::Declined => return Self::declined(),
-            Key::Missing => return self.missing(ServiceId::Amap),
-        };
-        let city = args.city.filter(|city| !city.trim().is_empty());
-        match self.state.maps.find(key, args.query, city).await {
-            Ok(places) => json!({ "places": places }).to_string(),
-            Err(failure) => Self::failed(failure),
-        }
-    }
-
     async fn web_search(&self, arguments: &str) -> String {
         let Ok(args) = serde_json::from_str::<SearchArgs>(arguments) else {
             return error("arguments must be {query}");
         };
-        let key = match self.key(ServiceId::Bocha).await {
+        let key = match self.key(ServiceId::WebSearch).await {
             Key::Ready(key) => key,
             Key::Declined => return Self::declined(),
-            Key::Missing => return self.missing(ServiceId::Bocha),
+            Key::Missing => return self.missing(ServiceId::WebSearch),
         };
-        match self.state.search.search(key, args.query).await {
+        match self.state.web.search(key, args.query, None).await {
             Ok(hits) => json!({ "results": hits }).to_string(),
+            Err(failure) => Self::failed(failure),
+        }
+    }
+
+    async fn read_page(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<PageArgs>(arguments) else {
+            return error("arguments must be {url}");
+        };
+        let key = match self.key(ServiceId::WebSearch).await {
+            Key::Ready(key) => key,
+            Key::Declined => return Self::declined(),
+            Key::Missing => return self.missing(ServiceId::WebSearch),
+        };
+        match self.state.web.fetch(key, args.url).await {
+            Ok(page) => serde_json::to_string(&page).unwrap_or_default(),
             Err(failure) => Self::failed(failure),
         }
     }
@@ -295,12 +303,8 @@ impl<'a> HubTools<'a> {
             Ok(draft) => draft,
             Err(failure) => return error(&format!("invalid trip: {failure}")),
         };
-        let key = match self.key(ServiceId::Amap).await {
-            Key::Ready(key) => Some(key),
-            Key::Declined => None,
-            Key::Missing => return self.missing(ServiceId::Amap),
-        };
-        match trip::save(self.state, self.thread_id, draft, key).await {
+        let verified = matches!(self.key(ServiceId::WebSearch).await, Key::Ready(_));
+        match trip::save(self.state, self.thread_id, draft, verified).await {
             Ok((trip, report)) => {
                 *self.attachment.lock().unwrap() = Some(Attachment::Trip {
                     trip_id: trip.id.clone(),
@@ -323,7 +327,7 @@ impl ToolRunner for HubTools<'_> {
             match call.function.name.as_str() {
                 REMEMBER => self.remember(arguments).await,
                 WEATHER => self.weather(arguments).await,
-                FIND_PLACES => self.find_places(arguments).await,
+                READ_PAGE => self.read_page(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 other => error(&format!("unknown tool {other}")),

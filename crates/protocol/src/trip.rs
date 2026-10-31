@@ -4,17 +4,15 @@ use ts_rs::TS;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceId {
-    Amap,
-    Bocha,
+    WebSearch,
 }
 
 impl ServiceId {
-    pub const ALL: [Self; 2] = [Self::Amap, Self::Bocha];
+    pub const ALL: [Self; 1] = [Self::WebSearch];
 
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Amap => "amap",
-            Self::Bocha => "bocha",
+            Self::WebSearch => "web_search",
         }
     }
 }
@@ -60,9 +58,24 @@ pub struct TripStop {
     pub name: String,
     pub time: String,
     pub note: String,
-    pub address: Option<String>,
     pub location: Option<Coord>,
-    pub hop: Option<String>,
+    pub next: Option<TripLeg>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum TravelMode {
+    Walk,
+    Taxi,
+    Transit,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct TripLeg {
+    pub mode: TravelMode,
+    pub minutes: u32,
+    pub estimated: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -93,16 +106,6 @@ pub struct Trip {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct Place {
-    pub name: String,
-    pub address: String,
-    pub location: Coord,
-    pub kind: String,
-    pub distance: Option<u32>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
     tag = "kind",
     rename_all = "snake_case",
@@ -111,14 +114,4 @@ pub struct Place {
 pub enum Attachment {
     Trip { trip_id: String, version: u32 },
     ServiceNeeded { service: ServiceId },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "camelCase")]
-pub struct MapView {
-    pub image: String,
-    pub center: Coord,
-    pub zoom: u8,
-    pub width: u32,
-    pub height: u32,
 }

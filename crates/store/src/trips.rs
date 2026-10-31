@@ -142,20 +142,21 @@ mod tests {
     #[tokio::test]
     async fn declined_services_are_per_thread() {
         let store = Store::open_in_memory().unwrap();
-        let thread = store.create_thread(None).await.unwrap();
+        let first = store.create_thread(None).await.unwrap();
+        let second = store.create_thread(None).await.unwrap();
         store
-            .decline_service(thread.id.clone(), ServiceId::Amap)
+            .decline_service(first.id.clone(), ServiceId::WebSearch)
             .await
             .unwrap();
         assert!(
             store
-                .service_declined(thread.id.clone(), ServiceId::Amap)
+                .service_declined(first.id, ServiceId::WebSearch)
                 .await
                 .unwrap()
         );
         assert!(
             !store
-                .service_declined(thread.id, ServiceId::Bocha)
+                .service_declined(second.id, ServiceId::WebSearch)
                 .await
                 .unwrap()
         );

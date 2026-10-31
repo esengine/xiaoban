@@ -1,9 +1,7 @@
-mod amap;
 mod auth;
 mod config;
 mod discovery;
 mod error;
-mod geo;
 mod handlers;
 mod interpret;
 mod location;
@@ -12,6 +10,7 @@ mod model;
 mod network;
 mod preferences;
 mod prompts;
+mod router;
 mod runtime;
 mod secrets;
 mod server;
@@ -24,15 +23,15 @@ mod trip_requests;
 mod turns;
 mod weather;
 
-pub use amap::{Amap, Maps, Travel};
 pub use config::HubConfig;
 pub use error::HubError;
 pub use location::{FixedLocator, Locator, NoLocator};
 pub use prompts::Prompts;
+pub use router::{NoRouter, Router};
 pub use runtime::HubRuntime;
 pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};
 pub use server::{Hub, HubHandle};
-pub use services::{Bocha, Hit, Search, ServiceError};
+pub use services::{DeepseekWeb, Hit, Page, ServiceError, Web};
 pub use weather::{Day, FixedWeather, Forecast, Now, OpenMeteo, Weather, WeatherError};
 
 use xiaoban_i18n::{Locale, Localizer, keys};

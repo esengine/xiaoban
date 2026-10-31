@@ -8,7 +8,7 @@ use tracing_subscriber::EnvFilter;
 
 use xiaoban_agent::{ConfiguredProvider, HttpConnector, ProviderPreset, first_configured_from_env};
 use xiaoban_hub::{
-    Amap, Bocha, Hub, HubConfig, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, NoLocator,
+    DeepseekWeb, Hub, HubConfig, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, NoLocator, NoRouter,
     OpenMeteo, Prompts, default_hub_name, system_locale,
 };
 use xiaoban_i18n::Locale;
@@ -114,8 +114,8 @@ async fn main() -> anyhow::Result<()> {
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         locator: Arc::new(NoLocator),
         weather: Arc::new(OpenMeteo::for_locale(locale)),
-        maps: Arc::new(Amap::new()),
-        search: Arc::new(Bocha::new()),
+        router: Arc::new(NoRouter),
+        web: Arc::new(DeepseekWeb::new()),
         fallback: configured(&args)?,
     };
 

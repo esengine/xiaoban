@@ -16,6 +16,7 @@ pub type SharedState = Arc<HubState>;
 pub struct Active {
     pub agent: Agent,
     pub model: Option<ModelInfo>,
+    pub search_key: Option<String>,
 }
 
 #[derive(Debug)]
@@ -30,8 +31,8 @@ pub struct HubState {
     pub secrets: Arc<dyn SecretStore>,
     pub locator: Arc<dyn crate::location::Locator>,
     pub weather: Arc<dyn crate::weather::Weather>,
-    pub maps: Arc<dyn crate::amap::Maps>,
-    pub search: Arc<dyn crate::services::Search>,
+    pub router: Arc<dyn crate::router::Router>,
+    pub web: Arc<dyn crate::services::Web>,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,
     pub turns: Turns,

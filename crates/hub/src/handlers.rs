@@ -95,9 +95,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         request @ (Request::Services
         | Request::ConfigureService { .. }
         | Request::DeclineService { .. }
-        | Request::GetTrip { .. }
-        | Request::TripMap { .. }
-        | Request::NearbyFood { .. }) => trip_requests::handle(state, local, request).await,
+        | Request::GetTrip { .. }) => trip_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

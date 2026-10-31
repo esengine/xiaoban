@@ -2,11 +2,9 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
-use xiaoban_i18n::keys;
-use xiaoban_protocol::{DayWeather, Trip, TripDay, TripStop};
+use xiaoban_protocol::{DayWeather, TravelMode, Trip, TripDay, TripLeg, TripStop};
 use xiaoban_store::StoreError;
 
-use crate::amap::Travel;
 use crate::state::SharedState;
 use crate::weather::{Day, MAX_DAYS};
 
@@ -35,6 +33,13 @@ struct StopDraft {
     name: String,
     time: String,
     note: String,
+    next: Option<LegDraft>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LegDraft {
+    mode: TravelMode,
+    minutes: u32,
 }
 
 fn filled(text: Option<String>) -> Option<String> {
@@ -66,49 +71,19 @@ async fn forecast(state: &SharedState, city: &str) -> HashMap<String, Day> {
     }
 }
 
-fn hop_text(state: &SharedState, travel: Travel) -> String {
-    let (key, minutes) = match travel {
-        Travel::Walk { minutes } => (keys::TRIP_HOP_WALK, minutes),
-        Travel::Drive { minutes } => (keys::TRIP_HOP_DRIVE, minutes),
-    };
-    state
-        .localizer
-        .format(key, &[("minutes", &minutes.to_string())])
-}
-
-async fn locate_stops(
-    state: &SharedState,
-    key: &str,
-    city: &str,
-    stops: &mut [TripStop],
-    unresolved: &mut Vec<String>,
-) {
+async fn route_stops(state: &SharedState, city: &str, stops: &mut [TripStop]) {
     for stop in stops.iter_mut() {
-        match state
-            .maps
-            .find(key.to_owned(), stop.name.clone(), Some(city.to_owned()))
-            .await
-        {
-            Ok(places) => match places.into_iter().next() {
-                Some(place) => {
-                    stop.location = Some(place.location);
-                    stop.address = Some(place.address).filter(|address| !address.is_empty());
-                }
-                None => unresolved.push(stop.name.clone()),
-            },
-            Err(error) => {
-                tracing::warn!(%error, stop = %stop.name, "could not locate stop");
-                unresolved.push(stop.name.clone());
-            }
-        }
+        stop.location = state
+            .router
+            .locate(city.to_owned(), stop.name.clone())
+            .await;
     }
     for index in 1..stops.len() {
         let (Some(from), Some(to)) = (stops[index - 1].location, stops[index].location) else {
             continue;
         };
-        match state.maps.travel(key.to_owned(), from, to).await {
-            Ok(travel) => stops[index - 1].hop = Some(hop_text(state, travel)),
-            Err(error) => tracing::warn!(%error, "could not measure hop"),
+        if let Some(leg) = state.router.leg(from, to).await {
+            stops[index - 1].next = Some(leg);
         }
     }
 }
@@ -117,28 +92,30 @@ pub async fn save(
     state: &SharedState,
     thread_id: &str,
     draft: TripDraft,
-    key: Option<String>,
+    verified: bool,
 ) -> Result<(Trip, Value), StoreError> {
     let city = draft.city.trim().to_owned();
     let weather = forecast(state, &city).await;
-    let mut unresolved = Vec::new();
     let mut days = Vec::with_capacity(draft.days.len());
     for day in draft.days {
+        let count = day.stops.len();
         let mut stops: Vec<TripStop> = day
             .stops
             .into_iter()
-            .map(|stop| TripStop {
+            .enumerate()
+            .map(|(index, stop)| TripStop {
                 name: stop.name.trim().to_owned(),
                 time: stop.time.trim().to_owned(),
                 note: stop.note.trim().to_owned(),
-                address: None,
                 location: None,
-                hop: None,
+                next: stop.next.filter(|_| index + 1 < count).map(|leg| TripLeg {
+                    mode: leg.mode,
+                    minutes: leg.minutes.max(1),
+                    estimated: true,
+                }),
             })
             .collect();
-        if let Some(key) = &key {
-            locate_stops(state, key, &city, &mut stops, &mut unresolved).await;
-        }
+        route_stops(state, &city, &mut stops).await;
         days.push(TripDay {
             weather: weather.get(&day.date).map(day_weather),
             date: day.date,
@@ -169,7 +146,7 @@ pub async fn save(
                 needs: filled(draft.needs),
                 reminder: filled(draft.reminder),
                 cost: filled(draft.cost),
-                verified: key.is_some(),
+                verified,
                 days,
                 created_at: 0,
             },
@@ -184,7 +161,6 @@ pub async fn save(
         "saved": true,
         "version": trip.version,
         "verified": trip.verified,
-        "unresolved_stops": unresolved,
         "forecast": forecast,
         "display": "the app shows this trip as a card under your reply; keep the reply short and do not list the itinerary again",
     });

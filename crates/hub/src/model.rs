@@ -47,12 +47,15 @@ async fn load_secret(
 pub fn activate(connector: &dyn Connector, configured: Option<ConfiguredProvider>) -> Active {
     match configured {
         Some(configured) => Active {
+            search_key: (configured.info.provider == ProviderId::Deepseek)
+                .then(|| configured.config.api_key.clone()),
             agent: Agent::from_shared(connector.provider(configured.config)),
             model: Some(configured.info),
         },
         None => Active {
             agent: Agent::new(UnconfiguredProvider),
             model: None,
+            search_key: None,
         },
     }
 }

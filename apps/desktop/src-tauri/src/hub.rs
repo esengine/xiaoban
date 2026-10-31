@@ -7,7 +7,7 @@ use tauri::async_runtime::Mutex;
 
 use xiaoban_agent::{HttpConnector, first_configured_from_env};
 use xiaoban_hub::{
-    Amap, Bocha, Hub, HubConfig, HubHandle, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets,
+    DeepseekWeb, Hub, HubConfig, HubHandle, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, NoRouter,
     OpenMeteo, Prompts, default_hub_name, system_locale,
 };
 
@@ -40,8 +40,8 @@ pub async fn start(
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         locator,
         weather: Arc::new(OpenMeteo::for_locale(locale)),
-        maps: Arc::new(Amap::new()),
-        search: Arc::new(Bocha::new()),
+        router: Arc::new(NoRouter),
+        web: Arc::new(DeepseekWeb::new()),
         fallback: first_configured_from_env(),
     };
     let config = HubConfig {
