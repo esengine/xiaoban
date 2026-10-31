@@ -56,21 +56,26 @@ function Viewer({ open, onClose }: { open: Open; onClose: () => void }) {
   const [closing, setClosing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [entered, setEntered] = useState(false);
+  const [, setLoaded] = useState(0);
   const image: ViewerImage = open.images[index] ?? open.images[0] ?? { src: "", name: "" };
   const picture = useRef<HTMLImageElement>(null);
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const [from, setFrom] = useState<string | null>(null);
 
   useLayoutEffect(() => {
-    const target = picture.current?.getBoundingClientRect();
+    const node = picture.current;
+    const target = node?.getBoundingClientRect();
     const start = open.from;
-    if (!target || !start || target.width === 0) {
+    const fit = fitOf(node);
+    if (!node || !target || !start || !node.naturalWidth || target.width === 0) {
       setEntered(true);
       return;
     }
+    const shownWidth = node.naturalWidth * fit;
+    const shownHeight = node.naturalHeight * fit;
     const dx = start.left + start.width / 2 - (target.left + target.width / 2);
     const dy = start.top + start.height / 2 - (target.top + target.height / 2);
-    const ratio = Math.max(start.width / target.width, start.height / target.height);
+    const ratio = Math.max(start.width / shownWidth, start.height / shownHeight);
     setFrom(`translate(${dx}px, ${dy}px) scale(${ratio})`);
     requestAnimationFrame(() => requestAnimationFrame(() => setEntered(true)));
   }, [open.from]);
@@ -103,11 +108,7 @@ function Viewer({ open, onClose }: { open: Open; onClose: () => void }) {
     return () => window.removeEventListener("keydown", key, true);
   }, [close, go, open.images.length]);
 
-  const fitScale = () => {
-    const node = picture.current;
-    if (!node?.naturalWidth) return 1;
-    return node.getBoundingClientRect().width / node.naturalWidth / (scale ?? 1);
-  };
+  const fitScale = () => fitOf(picture.current);
   const current = scale ?? 1;
   const shownPercent = Math.round((picture.current?.naturalWidth ? fitScale() : 1) * current * 100);
 
@@ -157,9 +158,9 @@ function Viewer({ open, onClose }: { open: Open; onClose: () => void }) {
   });
   handlers.current = {
     wheel: (event) => {
-      if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
-      zoom(event.deltaY < 0 ? 1.1 : 1 / 1.1);
+      const step = event.ctrlKey ? 0.01 : 0.002;
+      zoom(Math.exp(-event.deltaY * step));
     },
     dblclick: () => {
       if (scale === null) {
@@ -267,6 +268,7 @@ function Viewer({ open, onClose }: { open: Open; onClose: () => void }) {
           src={image.src}
           alt={image.name}
           draggable={false}
+          onLoad={() => setLoaded((count) => count + 1)}
           className="viewer__image"
           style={{
             transform:
@@ -318,6 +320,11 @@ function Viewer({ open, onClose }: { open: Open; onClose: () => void }) {
       {toast && <span className="viewer__toast">{toast}</span>}
     </div>
   );
+}
+
+function fitOf(node: HTMLImageElement | null): number {
+  if (!node?.naturalWidth || !node.naturalHeight) return 1;
+  return Math.min(1, node.offsetWidth / node.naturalWidth, node.offsetHeight / node.naturalHeight);
 }
 
 async function toPng(blob: Blob): Promise<Blob> {
