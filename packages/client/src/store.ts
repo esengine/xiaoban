@@ -78,12 +78,12 @@ export class HubStore {
     subject: string;
     question: string;
     answer: string;
-  }): Promise<{ memory: Memory | null; reply: string | null }> {
-    const { memory, reply } = await this.client.request(
+  }): Promise<{ memory: Memory | null; reply: string | null; failure: Failure | null }> {
+    const { memory, reply, failure } = await this.client.request(
       { type: "interpret_answer", ...input },
       "interpreted",
     );
-    return { memory, reply };
+    return { memory, reply, failure };
   }
 
   async completeOnboarding(): Promise<void> {
