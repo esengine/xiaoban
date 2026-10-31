@@ -31,6 +31,7 @@ export interface TurnTrace {
 
 export interface Draft extends TurnTrace {
   paused?: boolean;
+  background?: boolean;
   reasoning?: string;
   reasoningSince?: number | undefined;
   reasoningUntil?: number | undefined;
@@ -127,6 +128,14 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           event.confirm,
         ],
       };
+    case "turn_backgrounded": {
+      const draft = state.drafts[event.turnId];
+      if (!draft) return state;
+      return {
+        ...state,
+        drafts: { ...state.drafts, [event.turnId]: { ...draft, background: true } },
+      };
+    }
     case "turn_paused": {
       const draft = state.drafts[event.turnId];
       if (!draft) return state;

@@ -106,6 +106,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::PendingConfirms
         | Request::OperateStatus
         | Request::PauseTurn { .. }
+        | Request::BackgroundTurn { .. }
         | Request::ResumeTurn { .. }
         | Request::AddNote { .. }) => crate::operate_tools::handle(state, request),
         request @ (Request::Services

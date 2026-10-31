@@ -296,6 +296,10 @@ export class HubStore {
     await this.client.request({ type: "cancel_turn", turnId }, "ack");
   }
 
+  async background(turnId: string): Promise<void> {
+    await this.client.request({ type: "background_turn", turnId }, "ack");
+  }
+
   async pause(turnId: string): Promise<void> {
     await this.client.request({ type: "pause_turn", turnId }, "ack");
   }

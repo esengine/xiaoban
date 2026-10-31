@@ -5,6 +5,7 @@ import { waiting } from "@xiaoban/tokens";
 import { useEffect, useRef, useState } from "react";
 import { MascotFace } from "../onboarding/Mascot.tsx";
 import { RichText } from "./RichText.tsx";
+import { isBetweenSteps, stepText } from "./Steps.tsx";
 import { WorkingLine } from "./Trace.tsx";
 
 export function useElapsed(since: number, active: boolean): number {
@@ -57,7 +58,52 @@ function Reasoning({ draft }: { draft: Draft }) {
   );
 }
 
-export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => void }) {
+const BACKGROUND_AFTER_MS = 10_000;
+
+function LongWait({ since, onBackground }: { since: number; onBackground: () => void }) {
+  const { t } = useI18n();
+  const elapsed = useElapsed(since, true);
+  if (elapsed < BACKGROUND_AFTER_MS) return null;
+  return (
+    <li className="long-wait">
+      <span className="long-wait__text">
+        {t("draft-long-wait", { seconds: Math.floor(elapsed / 1000) })}
+      </span>
+      <button type="button" className="long-wait__button" onClick={onBackground}>
+        {t("draft-background")}
+      </button>
+    </li>
+  );
+}
+
+export function BackgroundCard({ draft, title }: { draft: Draft; title: string }) {
+  const { t } = useI18n();
+  const current = draft.steps.at(-1);
+  const line = current && !isBetweenSteps(draft.steps) ? stepText(t, current) : t("step-thinking");
+  return (
+    <li className="background-card" aria-live="polite">
+      <span className="background-card__head">
+        <b className="background-card__title">{title || t("draft-background-untitled")}</b>
+        <span className="background-card__state">{t("draft-background-running")}</span>
+      </span>
+      <span key={line} className="background-card__line">
+        {draft.steps.length > 0
+          ? t("island-step-line", { text: line, n: draft.steps.length })
+          : line}
+      </span>
+    </li>
+  );
+}
+
+export function DraftBubble({
+  draft,
+  onRetry,
+  onBackground,
+}: {
+  draft: Draft;
+  onRetry: () => void;
+  onBackground?: () => void;
+}) {
   const { t } = useI18n();
   const waitingForText = draft.text === "" && !draft.failure;
   const elapsed = useElapsed(draft.startedAt, waitingForText);
@@ -87,24 +133,42 @@ export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => v
   }
 
   const reasoned = draft.reasoningSince !== undefined;
+  const hint = onBackground ? (
+    <LongWait since={draft.startedAt} onBackground={onBackground} />
+  ) : null;
   if (waitingForText) {
-    if (draft.steps.length > 0) return <WorkingLine steps={draft.steps} />;
-    if (reasoned) return <Reasoning draft={draft} />;
+    if (draft.steps.length > 0)
+      return (
+        <>
+          <WorkingLine steps={draft.steps} />
+          {hint}
+        </>
+      );
+    if (reasoned)
+      return (
+        <>
+          <Reasoning draft={draft} />
+          {hint}
+        </>
+      );
     if (elapsed < waiting.silentMs) return null;
     return (
-      <li className="thinking" aria-live="polite">
-        <span className="thinking__face" aria-hidden="true">
-          <MascotFace thinking />
-        </span>
-        <span className="bubble bubble--assistant bubble--thinking">
-          <span className="shimmer">{t("draft-thinking")}</span>
-          {elapsed >= waiting.showElapsedMs && (
-            <span key={Math.floor(elapsed / 1000)} className="bubble__note">
-              {t("draft-elapsed", { seconds: Math.floor(elapsed / 1000) })}
-            </span>
-          )}
-        </span>
-      </li>
+      <>
+        <li className="thinking" aria-live="polite">
+          <span className="thinking__face" aria-hidden="true">
+            <MascotFace thinking />
+          </span>
+          <span className="bubble bubble--assistant bubble--thinking">
+            <span className="shimmer">{t("draft-thinking")}</span>
+            {elapsed >= waiting.showElapsedMs && (
+              <span key={Math.floor(elapsed / 1000)} className="bubble__note">
+                {t("draft-elapsed", { seconds: Math.floor(elapsed / 1000) })}
+              </span>
+            )}
+          </span>
+        </li>
+        {hint}
+      </>
     );
   }
   return (

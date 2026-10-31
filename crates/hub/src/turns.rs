@@ -46,9 +46,29 @@ impl Turns {
 
     fn release(&self, turn_id: &str) {
         let mut running = self.running.lock().unwrap();
-        if let Some((thread_id, _)) = running.by_turn.remove(turn_id) {
+        if let Some((thread_id, _)) = running.by_turn.remove(turn_id)
+            && running
+                .by_thread
+                .get(&thread_id)
+                .is_some_and(|current| current == turn_id)
+        {
             running.by_thread.remove(&thread_id);
         }
+    }
+
+    pub fn background(&self, turn_id: &str) -> bool {
+        let mut running = self.running.lock().unwrap();
+        let Some((thread_id, _)) = running.by_turn.get(turn_id).cloned() else {
+            return false;
+        };
+        if running
+            .by_thread
+            .get(&thread_id)
+            .is_some_and(|current| current == turn_id)
+        {
+            running.by_thread.remove(&thread_id);
+        }
+        true
     }
 
     pub fn busy(&self) -> bool {

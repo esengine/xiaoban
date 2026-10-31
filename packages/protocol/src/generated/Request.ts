@@ -57,6 +57,7 @@ export type Request =
   | { type: "answer_confirm"; confirmId: string; choice: ConfirmChoice }
   | { type: "pending_confirms" }
   | { type: "operate_status" }
+  | { type: "background_turn"; turnId: string }
   | { type: "pause_turn"; turnId: string }
   | { type: "resume_turn"; turnId: string }
   | { type: "add_note"; turnId: string; text: string }

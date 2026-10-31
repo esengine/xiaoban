@@ -436,6 +436,16 @@ pub fn handle(state: &SharedState, request: Request) -> Result<Response, Protoco
         Request::OperateStatus => Ok(Response::OperateStatus {
             permissions: state.operator.permissions(),
         }),
+        Request::BackgroundTurn { turn_id } => {
+            if !state.turns.background(&turn_id) {
+                return Err(ProtocolError::new(
+                    ErrorCode::NotFound,
+                    "that reply has already finished",
+                ));
+            }
+            state.publish(xiaoban_protocol::Event::TurnBackgrounded { turn_id });
+            Ok(Response::Ack)
+        }
         Request::PauseTurn { turn_id } => {
             pauses::set(state, &turn_id, true, false);
             Ok(Response::Ack)

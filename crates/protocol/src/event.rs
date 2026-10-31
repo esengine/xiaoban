@@ -79,6 +79,9 @@ pub enum Event {
         confirm_id: String,
         choice: ConfirmChoice,
     },
+    TurnBackgrounded {
+        turn_id: String,
+    },
     TurnPaused {
         turn_id: String,
         paused: bool,
@@ -108,7 +111,8 @@ impl Event {
             | Self::MemoriesUsed { .. }
             | Self::MemoryForgotten { .. }
             | Self::ConfirmResolved { .. }
-            | Self::TurnPaused { .. } => None,
+            | Self::TurnPaused { .. }
+            | Self::TurnBackgrounded { .. } => None,
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
         }
     }

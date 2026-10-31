@@ -14,7 +14,7 @@ import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { Composer } from "./Composer.tsx";
-import { DraftBubble } from "./DraftBubble.tsx";
+import { BackgroundCard, DraftBubble } from "./DraftBubble.tsx";
 import { flyToMe } from "./flyToMe.ts";
 import { InlineText } from "./InlineText.tsx";
 import { PanelToggle } from "./PanelToggle.tsx";
@@ -142,7 +142,7 @@ export function ChatPane(props: Props) {
   const drafts = draftsForThread(state, threadId);
   const thread = state.threads.find((candidate) => candidate.id === threadId);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
-  const running = drafts.find((draft) => !draft.failure);
+  const running = drafts.find((draft) => !draft.failure && !draft.background);
   const [queued, setQueued] = useState<Queued[]>([]);
   const waitingHere = queued.filter((item) => item.threadId === threadId);
   const nextQueued = waitingHere[0];
@@ -171,6 +171,10 @@ export function ChatPane(props: Props) {
     (regenerating.turnId === draft.turnId || (regenerating.turnId === null && !draft.failure));
   const placed = drafts.find(inPlace) ?? null;
   const trailing = drafts.filter((draft) => draft !== placed);
+  const questionFor = (draft: Draft) =>
+    messages
+      .filter((message) => message.role === "user" && message.createdAt <= draft.startedAt)
+      .at(-1)?.text ?? "";
   const delivered =
     running && running !== placed && running.text === "" && running.tools.length === 0 && lastUser
       ? lastUser.id
@@ -340,7 +344,14 @@ export function ChatPane(props: Props) {
       );
     }
     if (placed && regenerating?.root === row.root) {
-      return <DraftItem key={row.root} draft={placed} onRetry={() => retry(placed.turnId)} />;
+      return (
+        <DraftItem
+          key={row.root}
+          draft={placed}
+          question={questionFor(placed)}
+          onRetry={() => retry(placed.turnId)}
+        />
+      );
     }
     const count = row.versions.length;
     const index = Math.min(picked[row.root] ?? count - 1, count - 1);
@@ -386,7 +397,12 @@ export function ChatPane(props: Props) {
       <ol ref={list} className="chat__messages" aria-live="polite">
         {rows.map(renderRow)}
         {trailing.map((draft) => (
-          <DraftItem key={draft.turnId} draft={draft} onRetry={() => retry(draft.turnId)} />
+          <DraftItem
+            key={draft.turnId}
+            draft={draft}
+            question={questionFor(draft)}
+            onRetry={() => retry(draft.turnId)}
+          />
         ))}
         {waitingHere.map((item) => (
           <li key={item.id} className="bubble bubble--user bubble--queued">
@@ -516,11 +532,25 @@ function AnswerItem({
   );
 }
 
-function DraftItem({ draft, onRetry }: { draft: Draft; onRetry: () => void }) {
+function DraftItem({
+  draft,
+  question,
+  onRetry,
+}: {
+  draft: Draft;
+  question: string;
+  onRetry: () => void;
+}) {
+  const store = useHub();
+  if (draft.background && !draft.failure) return <BackgroundCard draft={draft} title={question} />;
   return (
     <>
       {draft.tools.length > 0 && draft.text !== "" && <TraceSummary trace={draft} />}
-      <DraftBubble draft={draft} onRetry={onRetry} />
+      <DraftBubble
+        draft={draft}
+        onRetry={onRetry}
+        onBackground={() => void store.background(draft.turnId)}
+      />
       <MemoryChips memories={draft.memories} />
     </>
   );

@@ -29,4 +29,5 @@ export type Event =
   | { type: "memories_used"; turnId: string; memories: Array<Memory> }
   | { type: "confirm_requested"; confirm: ConfirmRequest }
   | { type: "confirm_resolved"; confirmId: string; choice: ConfirmChoice }
+  | { type: "turn_backgrounded"; turnId: string }
   | { type: "turn_paused"; turnId: string; paused: boolean; byUser: boolean };

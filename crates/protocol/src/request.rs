@@ -102,6 +102,9 @@ pub enum Request {
     },
     PendingConfirms,
     OperateStatus,
+    BackgroundTurn {
+        turn_id: String,
+    },
     PauseTurn {
         turn_id: String,
     },

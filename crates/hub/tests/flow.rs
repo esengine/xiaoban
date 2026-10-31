@@ -1928,3 +1928,39 @@ async fn attached_files_reach_the_model() {
     assert!(sent.contains("家长会改到周五下午三点"));
     hub.shutdown().await;
 }
+
+#[tokio::test]
+async fn a_backgrounded_reply_frees_the_thread() {
+    let provider = ScriptedProvider::new(["慢", "慢"]).with_delay(Duration::from_millis(150));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let send = |text: &str| Request::SendMessage {
+        thread_id: thread.clone(),
+        text: text.into(),
+        context: Vec::new(),
+        quote: None,
+        files: Vec::new(),
+    };
+    let Response::TurnAccepted { turn_id, .. } = client.request(send("做个周报")).await else {
+        panic!("expected turn");
+    };
+    let Response::Ack = client
+        .request(Request::BackgroundTurn {
+            turn_id: turn_id.clone(),
+        })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    let Response::TurnAccepted {
+        turn_id: second, ..
+    } = client.request(send("顺便问下天气")).await
+    else {
+        panic!("the thread should accept a new message");
+    };
+    assert_ne!(second, turn_id);
+    hub.shutdown().await;
+}
