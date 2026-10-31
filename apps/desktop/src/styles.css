@@ -1848,7 +1848,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 20px 32px;
+  padding: 20px 32px 0;
+  overflow-y: auto;
 }
 
 .trip__back {
@@ -1893,6 +1894,9 @@ button {
   margin: 2px 0 0;
   font-size: 13px;
   color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .trip__reminder {
@@ -1906,20 +1910,24 @@ button {
 }
 
 .trip__days {
-  flex: 1;
-  min-height: 0;
+  flex: none;
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  overflow: auto;
+  overflow-x: auto;
 }
 
 .trip__say {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
   display: flex;
   gap: var(--space-sm);
   width: 100%;
   max-width: 760px;
   align-self: center;
+  padding: var(--space-md) 0 20px;
+  background: linear-gradient(to bottom, transparent, var(--color-ground) var(--space-md));
 }
 
 .trip__say-field {
@@ -2441,7 +2449,7 @@ button {
   text-align: left;
 }
 
-.steps {
+.trace-steps {
   list-style: none;
   margin: 0;
   padding: var(--space-md);
@@ -2452,11 +2460,11 @@ button {
   gap: 10px;
 }
 
-.working .steps {
+.working .trace-steps {
   background: var(--color-surface);
 }
 
-.step {
+.trace-step {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -2465,17 +2473,17 @@ button {
   animation: bubble-in var(--motion-standard) var(--ease-standard) both;
 }
 
-.step__body {
+.trace-step__body {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.step[data-current] .step__body {
+.trace-step[data-current] .trace-step__body {
   font-weight: 500;
 }
 
-.step__result {
+.trace-step__result {
   display: block;
   margin-top: 1px;
   font-size: 11px;
@@ -2483,8 +2491,8 @@ button {
   color: var(--color-muted);
 }
 
-.step__icon,
-.step__now {
+.trace-step__icon,
+.trace-step__now {
   flex: none;
   width: 18px;
   height: 18px;
@@ -2494,13 +2502,13 @@ button {
   place-items: center;
 }
 
-.step__icon {
+.trace-step__icon {
   background: var(--color-success-soft);
   color: var(--color-success);
   animation: fade-in var(--motion-standard) var(--ease-standard) both;
 }
 
-.step__icon svg {
+.trace-step__icon svg {
   width: 11px;
   height: 11px;
   fill: none;
@@ -2510,17 +2518,17 @@ button {
   stroke-linejoin: round;
 }
 
-.step__icon--failed {
+.trace-step__icon--failed {
   background: var(--color-line-soft);
   color: var(--color-faint);
 }
 
-.step__icon--failed svg {
+.trace-step__icon--failed svg {
   width: 10px;
   height: 10px;
 }
 
-.step__now::before {
+.trace-step__now::before {
   content: "";
   width: 8px;
   height: 8px;
@@ -2588,8 +2596,8 @@ button {
   .toast,
   .looking,
   .looking__slow,
-  .step,
-  .step__icon {
+  .trace-step,
+  .trace-step__icon {
     animation: fade-in var(--motion-fast) linear both;
   }
 
@@ -2598,7 +2606,7 @@ button {
   .caret,
   .button--stop,
   .spinner,
-  .step__now::before,
+  .trace-step__now::before,
   .voice-panel__mic,
   .working-line__dot,
   .mascot-face--thinking .mascot-face__eyes {

@@ -50,10 +50,10 @@ export function stepResult(t: T, step: TraceStep): string | null {
 }
 
 function StepIcon({ step }: { step: TraceStep }) {
-  if (!step.result) return <span className="step__now" aria-hidden="true" />;
+  if (!step.result) return <span className="trace-step__now" aria-hidden="true" />;
   if (step.result.kind === "failed") {
     return (
-      <span className="step__icon step__icon--failed" aria-hidden="true">
+      <span className="trace-step__icon trace-step__icon--failed" aria-hidden="true">
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path d="M6 6l12 12M18 6L6 18" />
         </svg>
@@ -61,7 +61,7 @@ function StepIcon({ step }: { step: TraceStep }) {
     );
   }
   return (
-    <span className="step__icon" aria-hidden="true">
+    <span className="trace-step__icon" aria-hidden="true">
       <svg aria-hidden="true" viewBox="0 0 24 24">
         <path d="M5 12l5 5 9-10" />
       </svg>
@@ -72,15 +72,19 @@ function StepIcon({ step }: { step: TraceStep }) {
 export function StepList({ steps }: { steps: readonly TraceStep[] }) {
   const { t } = useI18n();
   return (
-    <ol className="steps">
+    <ol className="trace-steps">
       {steps.map((step) => {
         const result = stepResult(t, step);
         return (
-          <li key={step.callId} className="step" data-current={step.result ? undefined : true}>
+          <li
+            key={step.callId}
+            className="trace-step"
+            data-current={step.result ? undefined : true}
+          >
             <StepIcon step={step} />
-            <span className="step__body">
+            <span className="trace-step__body">
               {stepText(t, step)}
-              {result && <span className="step__result">{result}</span>}
+              {result && <span className="trace-step__result">{result}</span>}
             </span>
           </li>
         );

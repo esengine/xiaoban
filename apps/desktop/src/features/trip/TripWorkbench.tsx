@@ -151,7 +151,9 @@ export function TripWorkbench(props: Props) {
         <header className="trip__header">
           <div className="trip__heading">
             <h1 className="trip__title">{trip.title}</h1>
-            <p className="trip__facts">{facts}</p>
+            <p className="trip__facts" title={facts}>
+              {facts}
+            </p>
           </div>
           <button type="button" className="button button--line" onClick={() => void sync()}>
             <CalendarIcon />
