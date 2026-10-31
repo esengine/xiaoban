@@ -2724,14 +2724,8 @@ button {
   margin: 0;
 }
 
-.operate-consent__grid {
-  margin-top: 6px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-sm);
-}
-
 .operate-consent__permission {
+  margin-top: 6px;
   display: flex;
   flex-direction: column;
   padding: 10px 12px;

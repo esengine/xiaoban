@@ -54,15 +54,9 @@ export function OperateConsent({ confirm }: { confirm: ConfirmRequest }) {
         </section>
         <section>
           <b>{t("operate-consent-permissions")}</b>
-          <div className="operate-consent__grid">
-            <div className="operate-consent__permission">
-              <b>{t("operate-consent-control")}</b>
-              <span>{t("operate-consent-control-body")}</span>
-            </div>
-            <div className="operate-consent__permission">
-              <b>{t("operate-consent-capture")}</b>
-              <span>{t("operate-consent-capture-body")}</span>
-            </div>
+          <div className="operate-consent__permission">
+            <b>{t("operate-consent-control")}</b>
+            <span>{t("operate-consent-control-body")}</span>
           </div>
         </section>
         <section>

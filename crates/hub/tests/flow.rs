@@ -1586,7 +1586,6 @@ impl Operator for FakeOperator {
     fn permissions(&self) -> OperatePermissions {
         OperatePermissions {
             control: self.control.load(std::sync::atomic::Ordering::SeqCst),
-            capture: false,
         }
     }
 

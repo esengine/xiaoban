@@ -7,7 +7,7 @@ use futures_util::future::BoxFuture;
 use objc2_app_kit::NSRunningApplication;
 use objc2_application_services::{AXError, AXIsProcessTrusted, AXUIElement};
 use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType};
-use objc2_core_graphics::{CGEvent, CGEventFlags, CGPreflightScreenCaptureAccess};
+use objc2_core_graphics::{CGEvent, CGEventFlags};
 use objc2_foundation::NSString;
 use tokio::sync::oneshot;
 use xiaoban_hub::{MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement};
@@ -331,7 +331,6 @@ impl Operator for MacOperator {
     fn permissions(&self) -> OperatePermissions {
         OperatePermissions {
             control: unsafe { AXIsProcessTrusted() },
-            capture: CGPreflightScreenCaptureAccess(),
         }
     }
 
