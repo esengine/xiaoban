@@ -57,4 +57,5 @@ export type Request =
   | { type: "operate_status" }
   | { type: "pause_turn"; turnId: string }
   | { type: "resume_turn"; turnId: string }
+  | { type: "add_note"; turnId: string; text: string }
   | { type: "locate" };

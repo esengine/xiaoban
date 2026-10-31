@@ -4,8 +4,7 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
-
-const OPERATE_TOOLS = new Set(["look_at_app", "click", "type_text", "press_keys", "confirm"]);
+import { isOperating } from "../operate/tools.ts";
 
 interface Pointer {
   x: number;
@@ -47,9 +46,7 @@ export function OperateOverlay() {
     return () => void stop.then((unlisten) => unlisten());
   }, []);
 
-  const active = Object.values(drafts).find(
-    (draft) => !draft.failure && draft.tools.some((tool) => OPERATE_TOOLS.has(tool)),
-  );
+  const active = Object.values(drafts).find((draft) => !draft.failure && isOperating(draft));
   const waiting = confirms.length > 0;
   const edge = waiting ? "confirm" : active ? (active.paused ? "paused" : "working") : null;
 

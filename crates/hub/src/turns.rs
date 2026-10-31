@@ -70,6 +70,7 @@ fn claim(
             "a reply is still in progress in this thread",
         )
     })?;
+    state.pauses.start(&turn_id);
     Ok((turn_id, cancel))
 }
 

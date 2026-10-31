@@ -25,20 +25,38 @@ html[data-window="island"] #root {
 .island {
   position: relative;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
   background: var(--dark-island);
   color: var(--dark-text);
-  box-shadow: 0 0 0 1px var(--dark-island-ring);
+  --island-lift: 0 4px 12px color-mix(in srgb, var(--dark-island) 35%, transparent);
+  --island-delay: 120ms;
+  box-shadow:
+    var(--island-lift),
+    0 0 0 1px var(--dark-island-ring);
   transition:
     width var(--motion-island) var(--ease-spring),
     height var(--motion-island) var(--ease-spring),
-    border-radius var(--motion-island) var(--ease-spring),
+    border-radius var(--motion-island) var(--ease-standard),
     opacity var(--motion-standard) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-fast) var(--ease-standard);
+    box-shadow 300ms var(--ease-standard);
+}
+
+.island[data-mode="medium"],
+.island[data-mode="done"] {
+  --island-delay: 140ms;
+}
+
+.island[data-mode="large"],
+.island[data-mode="confirm"] {
+  --island-delay: 160ms;
 }
 
 .island[data-confirm] {
-  box-shadow: 0 0 0 2px var(--color-attention);
+  box-shadow:
+    var(--island-lift),
+    0 0 0 2px var(--color-attention);
 }
 
 .island__row--confirm {
@@ -97,8 +115,17 @@ html[data-window="island"] #root {
   pointer-events: none;
   display: flex;
   align-items: center;
-  animation: island-in var(--motion-standard) var(--ease-standard) calc(var(--motion-island) / 2)
-    both;
+  animation: island-in 220ms var(--ease-standard) var(--island-delay) both;
+}
+
+.island[data-mode="large"] .island__content,
+.island[data-mode="confirm"] .island__content {
+  animation-duration: 240ms;
+}
+
+.island[data-mode="large"] .island__content {
+  pointer-events: auto;
+  align-items: stretch;
 }
 
 .island__content--leaving {
@@ -109,6 +136,7 @@ html[data-window="island"] #root {
   from {
     opacity: 0;
     filter: blur(4px);
+    transform: scale(0.96);
   }
 }
 
@@ -158,6 +186,10 @@ html[data-window="island"] #root {
   place-items: center;
 }
 
+.island__face[data-paused] {
+  background: var(--dark-line-strong);
+}
+
 .island__face svg {
   width: 18px;
   height: 18px;
@@ -198,13 +230,200 @@ html[data-window="island"] #root {
   font-size: 13px;
 }
 
+.island__chip {
+  pointer-events: auto;
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--dark-line);
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.island__row--large {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 14px 16px;
+  font-size: 13px;
+  white-space: normal;
+}
+
+.island__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.island__head .island__face {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+}
+
+.island__title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.island__collapse {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--dark-line);
+  color: var(--dark-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.island__collapse svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.island__steps {
+  --island-step: 20px;
+  --island-step-gap: 8px;
+  flex: none;
+  height: calc(var(--island-step) * 4 + var(--island-step-gap) * 3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.island__steps ul {
+  margin: 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--island-step-gap);
+  color: var(--dark-text-soft);
+  animation: island-steps-up 240ms var(--ease-standard) both;
+}
+
+@keyframes island-steps-up {
+  from {
+    transform: translateY(calc(var(--island-step) + var(--island-step-gap)));
+  }
+}
+
+.island__steps li {
+  flex: none;
+  height: var(--island-step);
+  line-height: var(--island-step);
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.island__steps li > span[aria-hidden] {
+  flex: none;
+  width: 14px;
+  text-align: center;
+}
+
+.island__steps li[data-now] {
+  color: var(--dark-link);
+}
+
+.island__now {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: island-now-in var(--motion-standard) var(--ease-standard) both;
+}
+
+@keyframes island-now-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.island__note {
+  display: flex;
+  min-width: 0;
+}
+
+.island__note-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.island__note input {
+  user-select: text;
+  -webkit-user-select: text;
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: var(--dark-surface);
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.island__hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dark-text-muted);
+}
+
+.island__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.island__action {
+  flex: 1;
+  height: 34px;
+  border: 0;
+  border-radius: 17px;
+  background: var(--dark-line);
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.island__action[data-stop] {
+  background: var(--color-attention);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
 .island__stop {
   pointer-events: auto;
   flex: none;
-  height: 30px;
+  height: 32px;
   padding: 0 12px;
   border: 0;
-  border-radius: 15px;
+  border-radius: 16px;
   background: var(--color-attention);
   color: var(--color-ink);
   font: inherit;
@@ -242,7 +461,9 @@ html[data-window="island"] #root {
     animation: fade-in var(--motion-fast) linear both;
   }
 
-  .island__eyes {
+  .island__eyes,
+  .island__steps ul,
+  .island__now {
     animation: none;
   }
 }

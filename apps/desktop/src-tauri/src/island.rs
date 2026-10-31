@@ -189,9 +189,11 @@ fn hovering(app: &AppHandle, window: &WebviewWindow) -> bool {
     (left..right).contains(&cursor.x) && (top..bottom).contains(&cursor.y)
 }
 
-fn main_shown(app: &AppHandle) -> bool {
+fn main_in_front(app: &AppHandle) -> bool {
     app.get_webview_window(MAIN).is_some_and(|main| {
-        main.is_visible().unwrap_or(false) && !main.is_minimized().unwrap_or(false)
+        main.is_visible().unwrap_or(false)
+            && !main.is_minimized().unwrap_or(false)
+            && main.is_focused().unwrap_or(false)
     })
 }
 
@@ -205,7 +207,7 @@ fn watch(app: &AppHandle) {
             let Some(window) = app.get_webview_window(LABEL) else {
                 return;
             };
-            let wanted = !main_shown(&app);
+            let wanted = !main_in_front(&app);
             if wanted != shown {
                 shown = wanted;
                 let _ = if wanted { window.show() } else { window.hide() };

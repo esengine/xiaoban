@@ -39,6 +39,10 @@ pub trait ToolRunner: Send + Sync {
     fn reusable(&self, _name: &str) -> bool {
         true
     }
+
+    fn notes(&self) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -135,7 +139,8 @@ impl Agent {
             let (message, calls) = step.into_message();
             let text = message.content.clone();
             tail.push(message);
-            if calls.is_empty() {
+            let notes = tools.notes();
+            if calls.is_empty() && notes.is_empty() {
                 return Ok(TurnOutcome {
                     text,
                     usage,
@@ -173,6 +178,10 @@ impl Agent {
                     })
                     .await;
                 tail.push(ChatMessage::tool_result(call.id.clone(), result));
+            }
+            let notes = [notes, tools.notes()].concat();
+            if !notes.is_empty() {
+                tail.push(ChatMessage::new(ChatRole::User, notes.join("\n")));
             }
         }
     }

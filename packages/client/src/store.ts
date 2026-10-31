@@ -274,6 +274,18 @@ export class HubStore {
     await this.client.request({ type: "cancel_turn", turnId }, "ack");
   }
 
+  async pause(turnId: string): Promise<void> {
+    await this.client.request({ type: "pause_turn", turnId }, "ack");
+  }
+
+  async resume(turnId: string): Promise<void> {
+    await this.client.request({ type: "resume_turn", turnId }, "ack");
+  }
+
+  async addNote(turnId: string, text: string): Promise<void> {
+    await this.client.request({ type: "add_note", turnId, text }, "ack");
+  }
+
   #refreshInBackground(): void {
     Promise.all([
       this.refreshThreads(),

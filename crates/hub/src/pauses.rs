@@ -10,6 +10,7 @@ use crate::state::SharedState;
 #[derive(Debug, Default)]
 pub struct Pauses {
     turns: Mutex<HashMap<String, watch::Sender<bool>>>,
+    notes: Mutex<HashMap<String, Vec<String>>>,
 }
 
 impl Pauses {
@@ -22,8 +23,34 @@ impl Pauses {
             .clone()
     }
 
+    pub fn start(&self, turn_id: &str) {
+        self.notes
+            .lock()
+            .unwrap()
+            .insert(turn_id.to_owned(), Vec::new());
+    }
+
+    pub fn add_note(&self, turn_id: &str, text: &str) -> bool {
+        self.notes
+            .lock()
+            .unwrap()
+            .get_mut(turn_id)
+            .map(|notes| notes.push(text.to_owned()))
+            .is_some()
+    }
+
+    pub fn take_notes(&self, turn_id: &str) -> Vec<String> {
+        self.notes
+            .lock()
+            .unwrap()
+            .get_mut(turn_id)
+            .map(std::mem::take)
+            .unwrap_or_default()
+    }
+
     pub fn forget(&self, turn_id: &str) {
         self.turns.lock().unwrap().remove(turn_id);
+        self.notes.lock().unwrap().remove(turn_id);
     }
 }
 

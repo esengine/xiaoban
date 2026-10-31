@@ -106,6 +106,10 @@ pub enum Request {
     ResumeTurn {
         turn_id: String,
     },
+    AddNote {
+        turn_id: String,
+        text: String,
+    },
     Locate,
 }
 

@@ -282,6 +282,22 @@ pub fn handle(state: &SharedState, request: Request) -> Result<Response, Protoco
             pauses::set(state, &turn_id, false, false);
             Ok(Response::Ack)
         }
+        Request::AddNote { turn_id, text } => {
+            let text = text.trim();
+            if text.is_empty() {
+                return Err(ProtocolError::new(
+                    ErrorCode::BadRequest,
+                    "the note is empty",
+                ));
+            }
+            if !state.pauses.add_note(&turn_id, text) {
+                return Err(ProtocolError::new(
+                    ErrorCode::NotFound,
+                    "that reply has already finished",
+                ));
+            }
+            Ok(Response::Ack)
+        }
         _ => Err(ProtocolError::new(
             ErrorCode::BadRequest,
             "not an operate request",

@@ -8,17 +8,20 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { useHub } from "../../app/hub.tsx";
 import { isBetweenSteps, stepText } from "../chat/Steps.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
+import { isOperating } from "../operate/tools.ts";
 
-type Mode = "idle" | "compact" | "medium" | "done" | "confirm";
+type Mode = "idle" | "compact" | "medium" | "large" | "done" | "confirm";
 
 const SIZES: Record<Mode, readonly [number, number]> = {
   idle: [132, 36],
   compact: [132, 36],
   medium: [440, 48],
+  large: [440, 316],
   done: [320, 44],
   confirm: [440, 196],
 };
-const CONFIRM_RADIUS = 30;
+const CARD_RADIUS = 30;
+const LARGE_STEPS = 4;
 const CONFIRM_SHORT = 112;
 const DRAG_THRESHOLD = 4;
 const FLASH_MS = 3_000;
@@ -39,9 +42,9 @@ function latestRunning(drafts: Readonly<Record<string, Draft>>): Draft | null {
   );
 }
 
-function Face() {
+function Face({ paused = false }: { paused?: boolean }) {
   return (
-    <span className="island__face" aria-hidden="true">
+    <span className="island__face" data-paused={paused || undefined} aria-hidden="true">
       <svg aria-hidden="true" viewBox="0 0 24 24">
         <g className="island__eyes">
           <circle cx="9" cy="11" r="1.1" />
@@ -68,6 +71,8 @@ export function Island() {
     leaveTimer.current = window.setTimeout(() => setHover(false), HOVER_GRACE_MS);
   }, []);
   const [flash, setFlash] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [note, setNote] = useState("");
   const [finished, setFinished] = useState<Finished | null>(null);
   const tracked = useRef<Draft | null>(null);
   const lastStep = running?.steps.at(-1)?.callId;
@@ -98,15 +103,24 @@ export function Island() {
   const done = finished ?? justFinished;
 
   const confirm = state.confirms[0] ?? null;
+  const runningTurn = running?.turnId;
+  useEffect(() => {
+    if (!runningTurn) setExpanded(false);
+    setNote("");
+  }, [runningTurn]);
   const mode: Mode = confirm
     ? "confirm"
     : done
       ? "done"
       : running
-        ? hover || flash
-          ? "medium"
-          : "compact"
+        ? expanded
+          ? "large"
+          : hover || flash
+            ? "medium"
+            : "compact"
         : "idle";
+  const paused = running?.paused ?? false;
+  const operating = running ? isOperating(running) : false;
 
   const targetSize: readonly [number, number] =
     mode === "confirm" && confirm?.kind.kind !== "action"
@@ -150,6 +164,27 @@ export function Island() {
       : (thread?.title ?? t("thread-untitled"));
   };
   const open = (threadId: string | null) => void invoke("island_open_main", { threadId });
+  const lineText = (draft: Draft) => {
+    if (draft.paused) return t("island-paused");
+    const current = draft.steps.at(-1);
+    const text =
+      !current || isBetweenSteps(draft.steps) ? t("step-thinking") : stepText(t, current);
+    return draft.steps.length > 0 ? t("island-step-line", { text, n: draft.steps.length }) : text;
+  };
+  const pauseButton = (draft: Draft, className: string) => (
+    <button
+      type="button"
+      className={className}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+      onClick={(event) => {
+        event.stopPropagation();
+        void (draft.paused ? store.resume(draft.turnId) : store.pause(draft.turnId));
+      }}
+    >
+      {draft.paused ? t("island-resume") : t("island-pause")}
+    </button>
+  );
 
   let content: ReactNode = null;
   if (mode === "idle") {
@@ -162,7 +197,7 @@ export function Island() {
   } else if (mode === "compact" && running) {
     content = (
       <span className="island__row island__row--compact">
-        <Face />
+        <Face paused={paused} />
         {running.steps.length > 0 && (
           <span className="island__count">
             {t("island-step-count", { n: running.steps.length })}
@@ -171,17 +206,11 @@ export function Island() {
       </span>
     );
   } else if (mode === "medium" && running) {
-    const current = running.steps.at(-1);
-    const text =
-      !current || isBetweenSteps(running.steps) ? t("step-thinking") : stepText(t, current);
     content = (
       <span className="island__row island__row--medium">
-        <Face />
-        <span className="island__text">
-          {running.steps.length > 0
-            ? t("island-step-line", { text, n: running.steps.length })
-            : text}
-        </span>
+        <Face paused={paused} />
+        <span className="island__text">{lineText(running)}</span>
+        {operating && pauseButton(running, "island__chip")}
         <button
           type="button"
           className="island__stop"
@@ -194,6 +223,80 @@ export function Island() {
         >
           {t("island-stop")}
         </button>
+      </span>
+    );
+  } else if (mode === "large" && running) {
+    const finished = running.steps.filter((step) => step.result !== null);
+    const current = running.steps.find((step) => step.result === null);
+    const shown = finished.slice(-LARGE_STEPS);
+    const nowText = current ? stepText(t, current) : t("step-thinking");
+    content = (
+      <span className="island__row island__row--large">
+        <span className="island__head">
+          <Face paused={paused} />
+          <span className="island__title">{lineText(running)}</span>
+          <button
+            type="button"
+            className="island__collapse"
+            aria-label={t("island-collapse")}
+            onClick={() => setExpanded(false)}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M6 15l6-6 6 6" />
+            </svg>
+          </button>
+        </span>
+        <span className="island__steps">
+          <ul key={finished.length}>
+            {shown.map((step) => (
+              <li key={step.callId}>
+                <span aria-hidden="true">{"\u2713"}</span>
+                {stepText(t, step)}
+              </li>
+            ))}
+            <li data-now>
+              <span aria-hidden="true">{"\u2192"}</span>
+              <span key={nowText} className="island__now">
+                {nowText}
+              </span>
+            </li>
+          </ul>
+        </span>
+        <form
+          className="island__note"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const text = note.trim();
+            if (!text) return;
+            setNote("");
+            void store.addNote(running.turnId, text).catch(() => setNote(text));
+          }}
+        >
+          <label className="island__note-label" htmlFor="island-note">
+            {t("island-note-label")}
+          </label>
+          <input
+            id="island-note"
+            value={note}
+            placeholder={t("island-note-placeholder")}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </form>
+        {operating && <span className="island__hint">{t("island-hint")}</span>}
+        <span className="island__actions">
+          {operating && pauseButton(running, "island__action")}
+          <button type="button" className="island__action" onClick={() => open(running.threadId)}>
+            {t("island-open-main")}
+          </button>
+          <button
+            type="button"
+            className="island__action"
+            data-stop
+            onClick={() => void store.cancel(running.turnId)}
+          >
+            {t("island-stop")}
+          </button>
+        </span>
       </span>
     );
   } else if (mode === "confirm" && confirm) {
@@ -231,7 +334,7 @@ export function Island() {
   });
 
   const size = targetSize;
-  const radius = mode === "confirm" ? CONFIRM_RADIUS : size[1] / 2;
+  const radius = mode === "confirm" || mode === "large" ? CARD_RADIUS : size[1] / 2;
   const target = confirm?.threadId ?? done?.threadId ?? running?.threadId ?? null;
 
   return (
@@ -241,6 +344,7 @@ export function Island() {
         data-idle={(mode === "idle" && !hover && !dragging) || undefined}
         data-dragging={dragging || undefined}
         data-confirm={mode === "confirm" || undefined}
+        data-mode={mode}
         style={{ width: size[0], height: size[1], borderRadius: radius }}
       >
         <button
@@ -262,7 +366,9 @@ export function Island() {
           onClick={() => {
             const dragged = press.current?.dragged ?? false;
             press.current = null;
-            if (!dragged) open(target);
+            if (dragged) return;
+            if (running && !confirm && !done) setExpanded(true);
+            else open(target);
           }}
           onMouseEnter={enter}
           onMouseLeave={leave}

@@ -299,3 +299,56 @@ async fn actions_run_every_time() {
     assert_eq!(outcome.text, "好");
     assert_eq!(*tools.runs.lock().unwrap(), 3);
 }
+
+#[derive(Default)]
+struct NotingTools {
+    notes: Mutex<Vec<String>>,
+}
+
+impl ToolRunner for NotingTools {
+    fn run<'a>(&'a self, _: &'a ToolCall) -> BoxFuture<'a, String> {
+        Box::pin(async move {
+            self.notes
+                .lock()
+                .unwrap()
+                .push("PDF 里把软装单独列出来".to_owned());
+            "done".to_owned()
+        })
+    }
+
+    fn notes(&self) -> Vec<String> {
+        std::mem::take(&mut *self.notes.lock().unwrap())
+    }
+}
+
+#[tokio::test]
+async fn notes_from_the_user_reach_the_next_step() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![ModelChunk::ToolCallDelta {
+            index: 0,
+            id: Some("a".into()),
+            name: Some("click".into()),
+            arguments: "{}".into(),
+        }],
+        vec![ModelChunk::Text("好".into())],
+    ]));
+    let agent = Agent::new(provider.clone());
+    let tools = NotingTools::default();
+    let (tx, _rx) = mpsc::channel(64);
+    let outcome = agent
+        .run_turn(
+            &StablePrefix::new("system"),
+            &Transcript::default(),
+            "导出 PDF",
+            &tools,
+            tx,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(outcome.text, "好");
+    let second = &provider.requests()[1];
+    let last = second.messages.last().unwrap();
+    assert_eq!(last.role, ChatRole::User);
+    assert_eq!(last.content, "PDF 里把软装单独列出来");
+}

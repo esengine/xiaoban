@@ -501,6 +501,10 @@ impl HubTools<'_> {
 }
 
 impl ToolRunner for HubTools<'_> {
+    fn notes(&self) -> Vec<String> {
+        self.state.pauses.take_notes(self.turn_id)
+    }
+
     fn reusable(&self, name: &str) -> bool {
         !matches!(
             name,
