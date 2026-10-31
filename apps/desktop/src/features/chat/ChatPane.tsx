@@ -2,7 +2,7 @@ import { connectionKey, type Draft, providerKey, type Settled } from "@xiaoban/c
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { Message } from "@xiaoban/protocol";
+import type { Message, Quote } from "@xiaoban/protocol";
 import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
@@ -15,6 +15,7 @@ import { flyToMe } from "./flyToMe.ts";
 import { InlineText } from "./InlineText.tsx";
 import { PanelToggle } from "./PanelToggle.tsx";
 import { plain } from "./plain.ts";
+import { highlightSource, jumpTo, QuoteBlock, quoteOf, selectedMarkdown } from "./QuoteBlock.tsx";
 import { RichText } from "./RichText.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
 import { type Row, toRows } from "./versions.ts";
@@ -32,22 +33,15 @@ interface Props {
   workspaceOpen: boolean;
   onToggleList: () => void;
   onToggleWorkspace: () => void;
-  quote: string | null;
-  onQuote: (text: string | null) => void;
-  onNewThreadWith: (text: string) => void;
+  quote: Quote | null;
+  onQuote: (quote: Quote | null) => void;
+  onNewThreadWith: (quote: Quote) => void;
   onOpenTrip: (tripId: string, version: number | null) => void;
 }
 
 interface Regenerating {
   root: string;
   turnId: string | null;
-}
-
-function selectionWithin(element: Element): string {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return "";
-  const range = selection.getRangeAt(0);
-  return element.contains(range.commonAncestorContainer) ? selection.toString().trim() : "";
 }
 
 function Versions({
@@ -184,8 +178,12 @@ export function ChatPane(props: Props) {
 
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
 
-  const send = (text: string, sentQuote: string | null = null) =>
+  const send = (text: string, sentQuote: Quote | null = null) =>
     store.send(threadId, text, { quote: sentQuote });
+  const quoteWith = (quote: Quote | null, range: Range | null = null) => {
+    highlightSource(quote ? range : null);
+    onQuote(quote);
+  };
   const retry = (turnId: string) => {
     store.dropDraft(turnId);
     void store.retry(threadId);
@@ -216,26 +214,32 @@ export function ChatPane(props: Props) {
   };
 
   const menuFor = (event: MouseEvent<HTMLLIElement>, message: Message, root: string | null) => {
-    const selected = selectionWithin(event.currentTarget);
+    const picked = selectedMarkdown(event.currentTarget);
+    const plainSelection = window.getSelection()?.toString().trim() ?? "";
     const copy = (text: string) => void navigator.clipboard.writeText(text);
     let entries: MenuEntry[];
-    if (selected) {
+    if (picked) {
+      const quote = quoteOf(message, picked.text);
       entries = [
-        { label: t("menu-copy"), shortcut: "⌘C", onSelect: () => copy(selected) },
-        { label: t("menu-quote-selection"), onSelect: () => onQuote(selected) },
-        { label: t("menu-new-thread-with"), onSelect: () => props.onNewThreadWith(selected) },
+        { label: t("menu-copy"), shortcut: "⌘C", onSelect: () => copy(plainSelection) },
+        { label: t("menu-quote-selection"), onSelect: () => quoteWith(quote, picked.range) },
+        { label: t("menu-new-thread-with"), onSelect: () => props.onNewThreadWith(quote) },
         "separator",
         {
           label: t("menu-look-up"),
           disabled: Boolean(running),
-          onSelect: () => void send(t("look-up-message"), selected),
+          onSelect: () => void send(t("look-up-message"), quote),
         },
       ];
     } else if (root) {
       const latest = root === lastAnswer?.root;
       entries = [
         { label: t("menu-copy"), shortcut: "⌘C", onSelect: () => copy(message.text) },
-        { label: t("menu-quote"), shortcut: "⌘R", onSelect: () => onQuote(message.text) },
+        {
+          label: t("menu-quote"),
+          shortcut: "⌘R",
+          onSelect: () => quoteWith(quoteOf(message, message.text)),
+        },
         "separator",
         {
           label: speaking ? t("menu-stop-reading") : t("menu-read-aloud"),
@@ -251,7 +255,7 @@ export function ChatPane(props: Props) {
     } else {
       entries = [
         { label: t("menu-copy"), shortcut: "⌘C", onSelect: () => copy(message.text) },
-        { label: t("menu-quote"), onSelect: () => onQuote(message.text) },
+        { label: t("menu-quote"), onSelect: () => quoteWith(quoteOf(message, message.text)) },
       ];
     }
     openMenu(event, entries);
@@ -266,7 +270,7 @@ export function ChatPane(props: Props) {
           version={attachment.version}
           actions={{
             onOpen: props.onOpenTrip,
-            onRevise: (text) => onQuote(text),
+            onRevise: (text) => quoteWith({ text, from: null, at: null, messageId: null }),
             onConnectSearch: () => setSearchDialog(true),
           }}
         />
@@ -365,8 +369,8 @@ export function ChatPane(props: Props) {
       <Composer
         busy={Boolean(running)}
         quote={quote}
-        onClearQuote={() => onQuote(null)}
-        onSend={(text) => send(text, quote).then(() => onQuote(null))}
+        onClearQuote={() => quoteWith(null)}
+        onSend={(text) => send(text, quote).then(() => quoteWith(null))}
         onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
       />
       {searchDialog && <SearchDialog threadId={threadId} onClose={() => setSearchDialog(false)} />}
@@ -386,8 +390,18 @@ function UserItem({
   const { t } = useI18n();
   return (
     <>
-      <li className="bubble bubble--user" onContextMenu={onContextMenu}>
-        {message.quote && <span className="bubble__quote">{message.quote}</span>}
+      <li
+        className="bubble bubble--user"
+        data-message-id={message.id}
+        onContextMenu={onContextMenu}
+      >
+        {message.quote && (
+          <QuoteBlock
+            quote={message.quote}
+            tone="blue"
+            onOpen={() => jumpTo(message.quote?.messageId)}
+          />
+        )}
         <InlineText text={message.text} />
       </li>
       {delivered && <li className="delivered">{t("delivered")}</li>}
@@ -417,6 +431,7 @@ function AnswerItem({
         className={
           settled ? "bubble bubble--assistant bubble--settled" : "bubble bubble--assistant"
         }
+        data-message-id={message.id}
         onContextMenu={onContextMenu}
       >
         <RichText text={message.text} />

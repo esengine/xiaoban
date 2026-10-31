@@ -1,5 +1,5 @@
 use xiaoban_protocol::{
-    AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Request, Response,
+    AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Quote, Request, Response,
 };
 
 use crate::state::SharedState;
@@ -123,10 +123,13 @@ async fn send(
     thread_id: String,
     text: &str,
     context: Vec<ContextNote>,
-    quote: Option<String>,
+    quote: Option<Quote>,
 ) -> Handled {
     let text = trimmed(text).ok_or_else(|| bad_request("message is empty"))?;
-    let quote = quote.as_deref().and_then(trimmed);
+    let quote = quote.and_then(|quote| {
+        let text = trimmed(&quote.text)?;
+        Some(Quote { text, ..quote })
+    });
     let (turn_id, message) = turns::start(state, thread_id, text, context, quote).await?;
     Ok(Response::TurnAccepted { turn_id, message })
 }

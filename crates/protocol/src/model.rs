@@ -22,12 +22,36 @@ pub enum Role {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+pub struct Quote {
+    pub text: String,
+    #[serde(default)]
+    pub from: Option<Role>,
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub at: Option<i64>,
+    #[serde(default)]
+    pub message_id: Option<String>,
+}
+
+impl Quote {
+    pub fn plain(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            from: None,
+            at: None,
+            message_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub struct Message {
     pub id: String,
     pub thread_id: String,
     pub role: Role,
     pub text: String,
-    pub quote: Option<String>,
+    pub quote: Option<Quote>,
     pub replaces: Option<String>,
     pub attachment: Option<crate::Attachment>,
     #[ts(type = "number")]

@@ -7,7 +7,9 @@ use xiaoban_agent::{
     AgentError, ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire,
 };
 use xiaoban_i18n::keys;
-use xiaoban_protocol::{ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role};
+use xiaoban_protocol::{
+    ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Quote, Role,
+};
 use xiaoban_store::{Epoch, EpochReason, NewMessage, StoreError};
 
 use crate::memory;
@@ -112,12 +114,19 @@ pub async fn start(
     thread_id: String,
     text: String,
     context: Vec<ContextNote>,
-    quote: Option<String>,
+    quote: Option<Quote>,
 ) -> Result<(String, Message), ProtocolError> {
     state.store.thread(thread_id.clone()).await?;
     let (turn_id, cancel) = claim(state, &thread_id)?;
 
-    let wire = user_wire(&text, &notes(state, quote.as_deref(), context));
+    let wire = user_wire(
+        &text,
+        &notes(
+            state,
+            quote.as_ref().map(|quote| quote.text.as_str()),
+            context,
+        ),
+    );
     let accepted = async {
         let message = state
             .store
@@ -176,7 +185,11 @@ pub async fn retry(
         _ => Job {
             wire: user_wire(
                 &asked.text,
-                &notes(state, asked.quote.as_deref(), Vec::new()),
+                &notes(
+                    state,
+                    asked.quote.as_ref().map(|quote| quote.text.as_str()),
+                    Vec::new(),
+                ),
             ),
             replaces: None,
         },

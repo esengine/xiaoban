@@ -1,13 +1,15 @@
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { Quote } from "@xiaoban/protocol";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { openExternal } from "../../lib/external.ts";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { useVoice, type VoiceBlock, type VoiceState } from "../voice/useVoice.ts";
+import { QuoteBlock } from "./QuoteBlock.tsx";
 
 interface Props {
   busy: boolean;
-  quote: string | null;
+  quote: Quote | null;
   onClearQuote: () => void;
   onSend: (text: string) => Promise<unknown>;
   onStop: () => Promise<unknown>;
@@ -218,22 +220,6 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
           </button>
         </div>
       )}
-      {quote && !active && (
-        <div className="quote-chip">
-          <span className="quote-chip__label">{t("quote-label")}</span>
-          <span className="quote-chip__text">{quote}</span>
-          <button
-            type="button"
-            className="voice-alert__close"
-            aria-label={t("quote-remove")}
-            onClick={onClearQuote}
-          >
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
-      )}
       {active ? (
         <Listening
           state={state}
@@ -257,7 +243,14 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
               <MicIcon size={22} />
             </button>
           )}
-          <label className="composer__field" onContextMenu={inputMenu}>
+          <label
+            className="composer__field"
+            data-quoted={quote ? true : undefined}
+            onContextMenu={inputMenu}
+          >
+            {quote && (
+              <QuoteBlock key={quote.text} quote={quote} tone="light" onRemove={onClearQuote} />
+            )}
             <span className="visually-hidden">{t("composer-label")}</span>
             <input
               ref={input}

@@ -28,6 +28,7 @@ export type { Preferences } from "./Preferences.ts";
 export type { ProtocolError } from "./ProtocolError.ts";
 export type { ProviderId } from "./ProviderId.ts";
 export type { ProviderOption } from "./ProviderOption.ts";
+export type { Quote } from "./Quote.ts";
 export type { RelayFrame } from "./RelayFrame.ts";
 export type { RelayRole } from "./RelayRole.ts";
 export type { Request } from "./Request.ts";

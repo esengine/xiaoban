@@ -13,6 +13,7 @@ import type {
   Preferences,
   ProviderId,
   ProviderOption,
+  Quote,
   Response,
   ServiceStatus,
   Thread,
@@ -160,7 +161,7 @@ export class HubStore {
   async send(
     threadId: string,
     text: string,
-    options: { context?: ContextNote[]; quote?: string | null } = {},
+    options: { context?: ContextNote[]; quote?: Quote | null } = {},
   ): Promise<string> {
     const { turnId } = await this.client.request(
       {

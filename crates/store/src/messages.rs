@@ -1,5 +1,5 @@
 use rusqlite::{Row, params};
-use xiaoban_protocol::{Attachment, Message, Role};
+use xiaoban_protocol::{Attachment, Message, Quote, Role};
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
@@ -7,9 +7,14 @@ use crate::{Result, Store, StoreError, new_id, now_ms};
 pub struct NewMessage {
     pub role: Role,
     pub text: String,
-    pub quote: Option<String>,
+    pub quote: Option<Quote>,
     pub replaces: Option<String>,
     pub attachment: Option<Attachment>,
+}
+
+fn read_quote(raw: Option<String>) -> Option<Quote> {
+    let raw = raw?;
+    Some(serde_json::from_str(&raw).unwrap_or_else(|_| Quote::plain(raw)))
 }
 
 impl NewMessage {
@@ -32,7 +37,7 @@ impl NewMessage {
     }
 
     #[must_use]
-    pub fn quoting(mut self, quote: Option<String>) -> Self {
+    pub fn quoting(mut self, quote: Option<Quote>) -> Self {
         self.quote = quote;
         self
     }
@@ -65,7 +70,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<(Message, String)> {
             role: Role::User,
             text: row.get(3)?,
             created_at: row.get(4)?,
-            quote: row.get(5)?,
+            quote: read_quote(row.get(5)?),
             replaces: row.get(6)?,
             attachment: row
                 .get::<_, Option<String>>(7)?
@@ -97,6 +102,12 @@ impl Store {
                 attachment: new.attachment,
                 created_at: now_ms(),
             };
+            let quote = message
+                .quote
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()
+                .map_err(|_| StoreError::Corrupt("messages.quote"))?;
             let attachment = message
                 .attachment
                 .as_ref()
@@ -112,7 +123,7 @@ impl Store {
                     role_to_str(message.role),
                     message.text,
                     message.created_at,
-                    message.quote,
+                    quote,
                     message.replaces,
                     attachment
                 ],

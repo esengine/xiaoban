@@ -2,6 +2,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { Quote } from "@xiaoban/protocol";
 import { useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
@@ -27,7 +28,7 @@ function Home() {
   const consent = confirms.find((confirm) => confirm.kind.kind === "permissions");
   const panels = usePanels();
   const [selected, setSelected] = useState<string | null>(null);
-  const [quotes, setQuotes] = useState<Record<string, string>>({});
+  const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
@@ -46,12 +47,12 @@ function Home() {
     return () => void stop.then((unlisten) => unlisten());
   }, []);
 
-  const setQuote = (threadId: string, text: string | null) =>
-    setQuotes(({ [threadId]: _old, ...rest }) => (text ? { ...rest, [threadId]: text } : rest));
+  const setQuote = (threadId: string, quote: Quote | null) =>
+    setQuotes(({ [threadId]: _old, ...rest }) => (quote ? { ...rest, [threadId]: quote } : rest));
 
-  const newThreadWith = async (text: string) => {
+  const newThreadWith = async (quote: Quote) => {
     const thread = await store.createThread();
-    setQuote(thread.id, text);
+    setQuote(thread.id, quote);
     setSelected(thread.id);
   };
 
@@ -100,8 +101,8 @@ function Home() {
           onToggleList={() => panels.toggle("list")}
           onToggleWorkspace={() => panels.toggle("workspace")}
           quote={quotes[activeId] ?? null}
-          onQuote={(text) => setQuote(activeId, text)}
-          onNewThreadWith={(text) => void newThreadWith(text)}
+          onQuote={(quote) => setQuote(activeId, quote)}
+          onNewThreadWith={(quote) => void newThreadWith(quote)}
           onOpenTrip={openTrip}
         />
       ) : (

@@ -1,4 +1,4 @@
-use xiaoban_protocol::{Platform, Role, Usage};
+use xiaoban_protocol::{Platform, Quote, Role, Usage};
 use xiaoban_store::{EpochReason, NewMessage, Store};
 
 #[tokio::test]
@@ -189,7 +189,7 @@ async fn quotes_and_versions_round_trip() {
     store
         .append_message(
             thread.id.clone(),
-            NewMessage::user("那 8 点半出门来得及吗").quoting(Some("9 点前到".into())),
+            NewMessage::user("那 8 点半出门来得及吗").quoting(Some(Quote::plain("9 点前到"))),
         )
         .await
         .unwrap();
@@ -205,7 +205,10 @@ async fn quotes_and_versions_round_trip() {
         .await
         .unwrap();
     let messages = store.list_messages(thread.id).await.unwrap();
-    assert_eq!(messages[0].quote.as_deref(), Some("9 点前到"));
+    assert_eq!(
+        messages[0].quote.as_ref().map(|quote| quote.text.as_str()),
+        Some("9 点前到")
+    );
     assert_eq!(messages[2].replaces.as_deref(), Some(first.id.as_str()));
     assert_eq!(messages[0].role, Role::User);
 }

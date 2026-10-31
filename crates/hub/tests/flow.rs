@@ -1037,13 +1037,16 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
             thread_id: thread.clone(),
             text: "那 8 点半呢".into(),
             context: Vec::new(),
-            quote: Some("7:40".into()),
+            quote: Some(xiaoban_protocol::Quote::plain("7:40")),
         })
         .await
     else {
         panic!("expected turn");
     };
-    assert_eq!(message.quote.as_deref(), Some("7:40"));
+    assert_eq!(
+        message.quote.as_ref().map(|quote| quote.text.as_str()),
+        Some("7:40")
+    );
     finish_turn(&mut client, &turn_id).await.unwrap();
     let last = recorded
         .requests()

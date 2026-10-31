@@ -3,6 +3,7 @@ import type { AutonomyLevel } from "./AutonomyLevel.ts";
 import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ContextNote } from "./ContextNote.ts";
 import type { ProviderId } from "./ProviderId.ts";
+import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
 
 export type Request =
@@ -14,7 +15,7 @@ export type Request =
       threadId: string;
       text: string;
       context: Array<ContextNote>;
-      quote: string | null;
+      quote: Quote | null;
     }
   | { type: "cancel_turn"; turnId: string }
   | { type: "retry_turn"; threadId: string }

@@ -29,7 +29,7 @@ pub enum Request {
         #[serde(default)]
         context: Vec<ContextNote>,
         #[serde(default)]
-        quote: Option<String>,
+        quote: Option<crate::Quote>,
     },
     CancelTurn {
         turn_id: String,
