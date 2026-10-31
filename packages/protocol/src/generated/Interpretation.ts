@@ -5,5 +5,6 @@ import type { Memory } from "./Memory.ts";
 export type Interpretation =
   | { outcome: "remembered"; memory: Memory }
   | { outcome: "declined" }
+  | { outcome: "locate" }
   | { outcome: "unclear"; reply: string | null }
   | { outcome: "failed"; failure: Failure };

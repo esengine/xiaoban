@@ -182,3 +182,18 @@ pub struct Preferences {
     pub autonomy: AutonomyLevel,
     pub onboarded: bool,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "status",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+pub enum Location {
+    Found {
+        city: String,
+        district: Option<String>,
+    },
+    Denied,
+    Unavailable,
+}

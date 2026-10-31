@@ -10,12 +10,14 @@ use xiaoban_agent::{
     AgentError, ConfiguredProvider, Connector, ModelChunk, ModelProvider, OpenAiConfig,
     ProviderPreset, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
-use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, Prompts, SecretStore};
+use xiaoban_hub::{
+    FixedLocator, Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, Prompts, SecretStore,
+};
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
     AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
-    FailureKind, Interpretation, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role,
-    ServerFrame,
+    FailureKind, Interpretation, Location, PROTOCOL_VERSION, Platform, ProviderId, Request,
+    Response, Role, ServerFrame,
 };
 
 struct TestClient {
@@ -140,6 +142,10 @@ fn runtime_with(
         },
         connector: Arc::new(FixedConnector(Arc::new(provider))),
         secrets,
+        locator: Arc::new(FixedLocator(Location::Found {
+            city: "北京市".into(),
+            district: Some("朝阳区".into()),
+        })),
         fallback,
     }
 }
@@ -787,6 +793,9 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
         vec![ModelChunk::Text(
             r#"{"value":null,"skip":true,"reply":null}"#.into(),
         )],
+        vec![ModelChunk::Text(
+            r#"{"value":null,"skip":false,"locate":true,"reply":null}"#.into(),
+        )],
     ]));
     let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
         .await
@@ -799,6 +808,7 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
                 question: "怎么称呼你？".into(),
                 answer: answer.into(),
                 follow_up: None,
+                can_locate: true,
             })
             .await
     };
@@ -829,6 +839,23 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
     else {
         panic!("declining should move on without remembering: {declined:?}");
     };
+
+    let Response::Interpreted {
+        interpretation: Interpretation::Locate,
+    } = interpret("你猜一下").await
+    else {
+        panic!("asking to guess should request locating");
+    };
+    let Response::Located { location } = client.request(Request::Locate).await else {
+        panic!("expected a location");
+    };
+    assert_eq!(
+        location,
+        Location::Found {
+            city: "北京市".into(),
+            district: Some("朝阳区".into()),
+        }
+    );
 
     let Response::Memories { memories } = client.request(Request::ListMemories).await else {
         panic!("expected memories");

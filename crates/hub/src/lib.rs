@@ -4,6 +4,7 @@ mod discovery;
 mod error;
 mod handlers;
 mod interpret;
+mod location;
 mod memory;
 mod model;
 mod network;
@@ -19,6 +20,7 @@ mod turns;
 
 pub use config::HubConfig;
 pub use error::HubError;
+pub use location::{FixedLocator, Locator, NoLocator};
 pub use prompts::Prompts;
 pub use runtime::HubRuntime;
 pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};

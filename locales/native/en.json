@@ -1,4 +1,6 @@
 {
   "CFBundleDisplayName": "Xiaoban",
-  "NSLocalNetworkUsageDescription": "Xiaoban looks for your home computer on the local network."
+  "NSLocalNetworkUsageDescription": "Xiaoban looks for your home computer on the local network.",
+  "NSLocationUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up.",
+  "NSLocationWhenInUseUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up."
 }

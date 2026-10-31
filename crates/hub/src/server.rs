@@ -79,6 +79,7 @@ impl Hub {
             localizer,
             connector: runtime.connector,
             secrets: runtime.secrets,
+            locator: runtime.locator,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),

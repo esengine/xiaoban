@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    AutonomyLevel, ContextNote, Device, Failure, Memory, Message, ModelInfo, Preferences,
+    AutonomyLevel, ContextNote, Device, Failure, Location, Memory, Message, ModelInfo, Preferences,
     ProviderId, ProviderOption, Thread, Usage,
 };
 
@@ -59,7 +59,9 @@ pub enum Request {
         question: String,
         answer: String,
         follow_up: Option<String>,
+        can_locate: bool,
     },
+    Locate,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -119,6 +121,9 @@ pub enum Response {
     Interpreted {
         interpretation: Interpretation,
     },
+    Located {
+        location: Location,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -130,6 +135,7 @@ pub enum Response {
 pub enum Interpretation {
     Remembered { memory: Memory },
     Declined,
+    Locate,
     Unclear { reply: Option<String> },
     Failed { failure: Failure },
 }

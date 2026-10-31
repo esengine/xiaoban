@@ -582,11 +582,15 @@
 
 .meet-line--typing {
   display: flex;
-  gap: 4px;
   padding: 14px;
 }
 
-.meet-line--typing span {
+.meet-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.meet-dots span {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -594,12 +598,58 @@
   animation: typing 1.2s infinite;
 }
 
-.meet-line--typing span:nth-child(2) {
+.meet-dots span:nth-child(2) {
   animation-delay: 150ms;
 }
 
-.meet-line--typing span:nth-child(3) {
+.meet-dots span:nth-child(3) {
   animation-delay: 300ms;
+}
+
+.meet-line--locating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-ink-mid);
+}
+
+.meet-line--locating .meet-dots span {
+  width: 5px;
+  height: 5px;
+}
+
+.meet-line__pin {
+  display: flex;
+  color: var(--color-accent);
+}
+
+.meet-line--located {
+  align-self: flex-start;
+  padding: 10px 14px;
+  border-radius: 18px 18px 18px 4px;
+  background: var(--color-ground);
+  animation: line-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.meet-line__place {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--color-accent);
+}
+
+.meet-line--note {
+  align-self: flex-start;
+  padding-left: 4px;
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.chip--primary {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .meet-step__end {
@@ -902,7 +952,7 @@
   .step__body,
   .custom-panel,
   .meet-line,
-  .meet-line--typing span,
+  .meet-dots span,
   .phone-step__status::before {
     animation: none;
   }

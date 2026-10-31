@@ -43,7 +43,7 @@ ts-rs = "12"
 uuid = { version = "1.29", features = ["v4", "v7"] }
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 unused_qualifications = "warn"
 
 [workspace.lints.clippy]

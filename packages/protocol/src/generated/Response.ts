@@ -2,6 +2,7 @@
 import type { Device } from "./Device.ts";
 import type { Failure } from "./Failure.ts";
 import type { Interpretation } from "./Interpretation.ts";
+import type { Location } from "./Location.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
@@ -31,4 +32,5 @@ export type Response =
   | { type: "preferences"; preferences: Preferences }
   | { type: "memory"; memory: Memory }
   | { type: "memories"; memories: Array<Memory> }
-  | { type: "interpreted"; interpretation: Interpretation };
+  | { type: "interpreted"; interpretation: Interpretation }
+  | { type: "located"; location: Location };

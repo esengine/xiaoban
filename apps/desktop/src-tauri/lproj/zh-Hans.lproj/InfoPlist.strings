@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "小伴";
+"NSLocationUsageDescription" = "用来猜你所在的城市，只在你让小伴查的时候用一次。";
+"NSLocationWhenInUseUsageDescription" = "用来猜你所在的城市，只在你让小伴查的时候用一次。";

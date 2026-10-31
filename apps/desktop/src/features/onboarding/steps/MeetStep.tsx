@@ -9,9 +9,14 @@ interface Question {
   ask: PlainMessageKey;
   label: PlainMessageKey;
   replies: PlainMessageKey[];
+  locatable?: boolean;
 }
 
 const PASS: PlainMessageKey = "meet-reply-pass";
+const GUESS_REPLIES: readonly PlainMessageKey[] = [
+  "meet-reply-guess-right",
+  "meet-reply-guess-wrong",
+];
 
 const QUESTIONS: readonly Question[] = [
   {
@@ -23,6 +28,7 @@ const QUESTIONS: readonly Question[] = [
     ask: "meet-question-home-and-work",
     label: "memory-topic-home-and-work",
     replies: [PASS],
+    locatable: true,
   },
   {
     ask: "meet-question-household",
@@ -34,7 +40,40 @@ const QUESTIONS: readonly Question[] = [
 type Line =
   | { kind: "ask"; text: string }
   | { kind: "answer"; text: string }
-  | { kind: "remembered"; text: string };
+  | { kind: "remembered"; text: string }
+  | { kind: "located"; place: string; text: string }
+  | { kind: "note"; text: string };
+
+type Reading = "answer" | "location" | null;
+
+function Pin() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 21s-7-6.2-7-11.5a7 7 0 0114 0C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  );
+}
+
+function Dots() {
+  return (
+    <span className="meet-dots" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </span>
+  );
+}
 
 const PAUSE_MS = 450;
 
@@ -48,9 +87,10 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
     { kind: "ask", text: t("meet-question-preferred-name") },
   ]);
   const [index, setIndex] = useState(0);
-  const [reading, setReading] = useState(false);
+  const [reading, setReading] = useState<Reading>(null);
   const [draft, setDraft] = useState("");
   const [followUp, setFollowUp] = useState<string | null>(null);
+  const [guessing, setGuessing] = useState(false);
   const end = useRef<HTMLLIElement>(null);
   const question = QUESTIONS[index];
 
@@ -60,12 +100,38 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
 
   const say = (line: Line) => setLines((current) => [...current, line]);
 
+  const ask = (text: string, guess = false) => {
+    setFollowUp(text);
+    setGuessing(guess);
+    say({ kind: "ask", text });
+  };
+
   const advance = async () => {
     setFollowUp(null);
+    setGuessing(false);
     await pause();
     const following = QUESTIONS[index + 1];
     say({ kind: "ask", text: t(following ? following.ask : "meet-all-set") });
     setIndex((current) => current + 1);
+  };
+
+  const locate = async () => {
+    setReading("location");
+    try {
+      const location = await store.locate();
+      if (location.status === "found") {
+        const place = location.district
+          ? t("location-place", { city: location.city, district: location.district })
+          : location.city;
+        const text = t("meet-location-guess", { place });
+        setFollowUp(text);
+        setGuessing(true);
+        say({ kind: "located", place, text });
+        say({ kind: "note", text: t("meet-location-note") });
+        return;
+      }
+    } catch {}
+    ask(t("meet-location-missing"));
   };
 
   const interpret = async (current: Question, answer: string): Promise<boolean> => {
@@ -76,6 +142,7 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
         question: t(current.ask),
         answer,
         followUp,
+        canLocate: current.locatable === true,
       });
       switch (result.outcome) {
         case "remembered":
@@ -86,12 +153,12 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
           return true;
         case "declined":
           return true;
-        case "unclear": {
-          const reply = result.reply ?? t("meet-unclear");
-          setFollowUp(reply);
-          say({ kind: "ask", text: reply });
+        case "locate":
+          await locate();
           return false;
-        }
+        case "unclear":
+          ask(result.reply ?? t("meet-unclear"));
+          return false;
         case "failed":
           say({
             kind: "ask",
@@ -110,10 +177,10 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
     if (!question || reading || !value) return;
     setDraft("");
     say({ kind: "answer", text: value });
-    setReading(true);
+    setReading("answer");
     const settled = pass || (await interpret(question, value));
     if (settled) await advance();
-    setReading(false);
+    setReading(null);
   };
 
   const submit = (event: FormEvent) => {
@@ -127,17 +194,30 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
         <ol className="meet-step__chat" aria-live="polite">
           {lines.map((line, position) => (
             <li key={`${line.kind}-${position}`} className={`meet-line meet-line--${line.kind}`}>
+              {line.kind === "located" && (
+                <span className="meet-line__place">
+                  <Pin />
+                  {line.place}
+                </span>
+              )}
               {line.text}
             </li>
           ))}
-          {reading && (
+          {reading === "answer" && (
             <li
               className="meet-line meet-line--ask meet-line--typing"
               aria-label={t("meet-reading")}
             >
-              <span />
-              <span />
-              <span />
+              <Dots />
+            </li>
+          )}
+          {reading === "location" && (
+            <li className="meet-line meet-line--ask meet-line--locating">
+              <span className="meet-line__pin">
+                <Pin />
+              </span>
+              {t("meet-locating")}
+              <Dots />
             </li>
           )}
           <li ref={end} className="meet-step__end" aria-hidden="true" />
@@ -145,12 +225,12 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
         {question && (
           <>
             <div className="meet-step__replies">
-              {question.replies.map((reply) => (
+              {(guessing ? [...GUESS_REPLIES, PASS] : question.replies).map((reply, position) => (
                 <button
                   key={reply}
                   type="button"
-                  className="chip"
-                  disabled={reading}
+                  className={guessing && position === 0 ? "chip chip--primary" : "chip"}
+                  disabled={reading !== null}
                   onClick={() => void answer(t(reply), reply === PASS)}
                 >
                   {t(reply)}
@@ -168,7 +248,7 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder={t("meet-input-placeholder")}
                 autoComplete="off"
-                disabled={reading}
+                disabled={reading !== null}
               />
             </form>
           </>

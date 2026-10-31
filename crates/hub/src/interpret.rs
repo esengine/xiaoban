@@ -13,7 +13,17 @@ struct Verdict {
     value: Option<String>,
     #[serde(default)]
     skip: bool,
+    #[serde(default)]
+    locate: bool,
     reply: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Question<'a> {
+    pub subject: &'a str,
+    pub text: &'a str,
+    pub follow_up: Option<&'a str>,
+    pub can_locate: bool,
 }
 
 fn non_empty(value: Option<String>) -> Option<String> {
@@ -38,22 +48,23 @@ fn parse(text: &str) -> Verdict {
     Verdict {
         value: non_empty(verdict.value),
         skip: verdict.skip,
+        locate: verdict.locate,
         reply: non_empty(verdict.reply),
     }
 }
 
 pub async fn answer(
     state: &SharedState,
-    subject: String,
-    question: &str,
-    follow_up: Option<&str>,
+    question: Question<'_>,
     answer: String,
 ) -> Result<Response, StoreError> {
     let prefix = StablePrefix::new(state.prompts.interpret_answer.clone());
+    let subject = question.subject.trim().to_owned();
     let wire = json!({
-        "question": question,
+        "question": question.text.trim(),
         "subject": subject,
-        "followUp": follow_up,
+        "followUp": question.follow_up,
+        "canLocate": question.can_locate,
         "answer": answer,
     })
     .to_string();
@@ -85,6 +96,7 @@ pub async fn answer(
                 Interpretation::Remembered { memory }
             }
             Verdict { skip: true, .. } => Interpretation::Declined,
+            Verdict { locate: true, .. } if question.can_locate => Interpretation::Locate,
             Verdict { reply, .. } => Interpretation::Unclear { reply },
         },
     };
@@ -102,6 +114,7 @@ mod tests {
             Verdict {
                 value: Some("阿哲".into()),
                 skip: false,
+                locate: false,
                 reply: None
             }
         );
@@ -110,6 +123,7 @@ mod tests {
             Verdict {
                 value: None,
                 skip: false,
+                locate: false,
                 reply: Some("换个说法？".into())
             }
         );

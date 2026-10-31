@@ -3,6 +3,7 @@ import type {
   ContextNote,
   Failure,
   Interpretation,
+  Location,
   Memory,
   Message,
   ModelInfo,
@@ -80,12 +81,18 @@ export class HubStore {
     question: string;
     answer: string;
     followUp: string | null;
+    canLocate: boolean;
   }): Promise<Interpretation> {
     const { interpretation } = await this.client.request(
       { type: "interpret_answer", ...input },
       "interpreted",
     );
     return interpretation;
+  }
+
+  async locate(): Promise<Location> {
+    const { location } = await this.client.request({ type: "locate" }, "located");
+    return location;
   }
 
   async completeOnboarding(): Promise<void> {

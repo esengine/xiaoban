@@ -28,13 +28,17 @@ impl RunningHub {
     }
 }
 
-pub async fn start(data_dir: PathBuf) -> anyhow::Result<RunningHub> {
+pub async fn start(
+    data_dir: PathBuf,
+    locator: Arc<dyn xiaoban_hub::Locator>,
+) -> anyhow::Result<RunningHub> {
     let locale = system_locale();
     let runtime = HubRuntime {
         locale,
         prompts: Prompts::for_locale(locale),
         connector: Arc::new(HttpConnector),
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
+        locator,
         fallback: first_configured_from_env(),
     };
     let config = HubConfig {

@@ -73,7 +73,17 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             question,
             answer,
             follow_up,
-        } => interpret_answer(state, &subject, &question, &answer, follow_up.as_deref()).await,
+            can_locate,
+        } => {
+            let question = interpret::Question {
+                subject: &subject,
+                text: &question,
+                follow_up: follow_up.as_deref(),
+                can_locate,
+            };
+            interpret_answer(state, question, &answer).await
+        }
+        Request::Locate => locate(state, local).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
@@ -156,12 +166,24 @@ async fn remember(state: &SharedState, subject: &str, value: &str) -> Handled {
 
 async fn interpret_answer(
     state: &SharedState,
-    subject: &str,
-    question: &str,
+    question: interpret::Question<'_>,
     answer: &str,
-    follow_up: Option<&str>,
 ) -> Handled {
-    let subject = trimmed(subject).ok_or_else(|| bad_request("memory subject is empty"))?;
+    if question.subject.trim().is_empty() {
+        return Err(bad_request("memory subject is empty"));
+    }
     let answer = trimmed(answer).ok_or_else(|| bad_request("answer is empty"))?;
-    Ok(interpret::answer(state, subject, question.trim(), follow_up, answer).await?)
+    Ok(interpret::answer(state, question, answer).await?)
+}
+
+async fn locate(state: &SharedState, local: bool) -> Handled {
+    if !local {
+        return Err(ProtocolError::new(
+            ErrorCode::Unauthorized,
+            "only the hub's own machine can be located",
+        ));
+    }
+    Ok(Response::Located {
+        location: state.locator.locate().await,
+    })
 }

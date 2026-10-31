@@ -10,6 +10,7 @@ export type { Failure } from "./Failure.ts";
 export type { FailureKind } from "./FailureKind.ts";
 export type { HubInfo } from "./HubInfo.ts";
 export type { Interpretation } from "./Interpretation.ts";
+export type { Location } from "./Location.ts";
 export type { Memory } from "./Memory.ts";
 export type { Message } from "./Message.ts";
 export type { ModelInfo } from "./ModelInfo.ts";

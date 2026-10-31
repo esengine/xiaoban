@@ -1,4 +1,5 @@
 mod hub;
+mod location;
 
 use tauri::{Manager, RunEvent};
 
@@ -13,7 +14,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
-            let running = tauri::async_runtime::block_on(hub::start(data_dir))?;
+            let running = tauri::async_runtime::block_on(hub::start(
+                data_dir,
+                location::system(app.handle().clone()),
+            ))?;
             app.manage(running);
             Ok(())
         })

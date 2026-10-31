@@ -34,4 +34,6 @@ export type Request =
       question: string;
       answer: string;
       followUp: string | null;
-    };
+      canLocate: boolean;
+    }
+  | { type: "locate" };

@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Xiaoban";
+"NSLocationUsageDescription" = "Used to guess which city you are in, only when you ask Xiaoban to look it up.";
+"NSLocationWhenInUseUsageDescription" = "Used to guess which city you are in, only when you ask Xiaoban to look it up.";

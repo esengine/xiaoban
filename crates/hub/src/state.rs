@@ -28,6 +28,7 @@ pub struct HubState {
     pub localizer: Localizer,
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
+    pub locator: Arc<dyn crate::location::Locator>,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,
     pub turns: Turns,

@@ -16,7 +16,8 @@
     "lint": "biome check . && node scripts/check-i18n.ts && cargo clippy --workspace --all-targets -- -D warnings",
     "format": "biome check --write . && cargo fmt --all",
     "gen:i18n": "node scripts/gen-i18n.ts",
-    "gen": "pnpm gen:protocol && pnpm gen:i18n && pnpm gen:icons",
+    "gen": "pnpm gen:protocol && pnpm gen:i18n && pnpm gen:icons && pnpm gen:desktop-plist",
+    "gen:desktop-plist": "node scripts/gen-desktop-plist.ts",
     "gen:icons": "node scripts/gen-provider-icons.ts",
     "gen:app-icons": "node scripts/gen-app-icons.ts"
   },

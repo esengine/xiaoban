@@ -33,6 +33,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "files": {
+        "Resources/zh-Hans.lproj/InfoPlist.strings": "lproj/zh-Hans.lproj/InfoPlist.strings",
+        "Resources/en.lproj/InfoPlist.strings": "lproj/en.lproj/InfoPlist.strings"
+      }
+    }
   }
 }
