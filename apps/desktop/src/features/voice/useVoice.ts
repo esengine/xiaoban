@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const BARS = 24;
+const FINAL_WAIT_MS = 3000;
 
 type StartOutcome = "listening" | "microphone_denied" | "speech_denied" | "unavailable";
 
@@ -27,8 +28,11 @@ export function useVoice(language: string, onText: (text: string) => void) {
   const [blocked, setBlocked] = useState<VoiceBlock | null>(null);
   const latest = useRef("");
   const cancelled = useRef(false);
+  const attempt = useRef(0);
+  const phase = useRef<VoiceState["phase"]>("idle");
   const deliver = useRef(onText);
   deliver.current = onText;
+  phase.current = state.phase;
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -93,10 +97,19 @@ export function useVoice(language: string, onText: (text: string) => void) {
       current.phase === "listening" ? { ...current, phase: "finishing" } : current,
     );
     void invoke("voice_stop");
-  }, []);
+    const session = ++attempt.current;
+    window.setTimeout(() => {
+      if (attempt.current !== session || phase.current !== "finishing") return;
+      settle();
+      void invoke("voice_cancel");
+    }, FINAL_WAIT_MS);
+  }, [settle]);
 
   const cancel = useCallback(() => {
     cancelled.current = true;
+    attempt.current += 1;
+    latest.current = "";
+    setState({ phase: "idle" });
     void invoke("voice_cancel");
   }, []);
 

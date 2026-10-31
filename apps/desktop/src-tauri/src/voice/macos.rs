@@ -118,6 +118,7 @@ fn begin(app: &AppHandle, language: &str) -> StartOutcome {
         return StartOutcome::Unavailable;
     };
     if !unsafe { recognizer.isAvailable() } {
+        tracing::warn!(language, "speech recognizer is not available");
         return StartOutcome::Unavailable;
     }
 
@@ -152,7 +153,8 @@ fn begin(app: &AppHandle, language: &str) -> StartOutcome {
         );
         engine.prepare();
     }
-    if unsafe { engine.startAndReturnError() }.is_err() {
+    if let Err(error) = unsafe { engine.startAndReturnError() } {
+        tracing::warn!(code = error.code(), "audio engine failed to start");
         unsafe { input.removeTapOnBus(BUS) };
         return StartOutcome::Unavailable;
     }
@@ -164,6 +166,10 @@ fn begin(app: &AppHandle, language: &str) -> StartOutcome {
                 let result = unsafe { result.as_ref() };
                 let done =
                     result.is_none_or(|result| unsafe { result.isFinal() }) || !error.is_null();
+                if !error.is_null() {
+                    let error = unsafe { &*error };
+                    tracing::warn!(code = error.code(), domain = %error.domain(), "voice recognition ended with an error");
+                }
                 if let Some(result) = result {
                     let text = unsafe { result.bestTranscription().formattedString() }.to_string();
                     let _ = app.emit(TRANSCRIPT_EVENT, Transcript { text, done });
@@ -209,11 +215,17 @@ pub async fn start(app: AppHandle, language: String) -> StartOutcome {
     if scheduled.is_err() {
         return StartOutcome::Unavailable;
     }
-    outcome.await.unwrap_or(StartOutcome::Unavailable)
+    let outcome = outcome.await.unwrap_or(StartOutcome::Unavailable);
+    tracing::info!(?outcome, "voice start");
+    outcome
 }
 
 pub fn stop(app: &AppHandle) {
     let _ = app.run_on_main_thread(|| {
+        tracing::info!(
+            active = SESSION.with_borrow(Option::is_some),
+            "voice finishing"
+        );
         SESSION.with_borrow(|session| {
             if let Some(session) = session {
                 unsafe {
@@ -229,9 +241,11 @@ pub fn stop(app: &AppHandle) {
 pub fn cancel(app: &AppHandle) {
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
-        if let Some(session) = teardown() {
+        let session = teardown();
+        tracing::info!(active = session.is_some(), "voice cancelled");
+        if let Some(session) = session {
             unsafe { session.task.cancel() };
-            let _ = handle.emit(ENDED_EVENT, ());
         }
+        let _ = handle.emit(ENDED_EVENT, ());
     });
 }
