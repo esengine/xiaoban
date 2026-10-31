@@ -324,6 +324,22 @@ quote-table = [table]
 quote-expand = Show the whole quote
 quote-collapse = Collapse the quote
 quote-gone = The original is gone
+attach-add = Add images or files
+attach-remove = Remove { $name }
+attach-too-big = Over 20MB
+attach-too-many = 9 at most
+attach-vision-deepseek = This message has images, so DeepSeek V4 Flash vision will look at it; same key, same price as V4 Flash
+attach-vision-mimo = MiMo V2.5 Pro can't see images. Use MiMo V2.5 for this message?
+attach-vision-switch = Use it for this one
+attach-vision-text-only = Send text only
+attach-drop = Drop to give { $count ->
+    [one] 1 file
+   *[other] { $count } files
+} to Xiaoban
+attach-drop-hint = Images, PDF, Word, spreadsheets and text · up to 20MB each
+attach-read-full = { $pages } pages · read
+attach-read-on-demand = { $pages } pages · read as needed
+attach-unreadable = Xiaoban can't read this kind of file
 quote-remove = Remove quote
 thread-unread = New messages
 delete-thread-title = Delete “{ $title }”?

@@ -5,6 +5,7 @@ mod island;
 mod location;
 mod operate;
 mod overlay;
+mod uploads;
 mod voice;
 
 use tauri::{Manager, RunEvent};
@@ -18,6 +19,7 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let running = tauri::async_runtime::block_on(hub::start(
@@ -41,6 +43,8 @@ pub fn run() {
             island::island_home,
             island::island_snooze,
             island::island_quit,
+            uploads::describe_files,
+            uploads::stash_file,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,

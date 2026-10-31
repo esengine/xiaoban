@@ -1,14 +1,18 @@
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote } from "@xiaoban/protocol";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { openExternal } from "../../lib/external.ts";
+import { AttachRow, useVisionChoice, VisionNotice } from "../attach/Attachments.tsx";
+import type { AttachmentsState } from "../attach/useAttachments.ts";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { useVoice, type VoiceBlock, type VoiceState } from "../voice/useVoice.ts";
 import { QuoteBlock } from "./QuoteBlock.tsx";
 
 interface Props {
   busy: boolean;
+  attachments: AttachmentsState;
   quote: Quote | null;
   onClearQuote: () => void;
   onSend: (text: string) => Promise<unknown>;
@@ -96,7 +100,7 @@ function Listening({
   );
 }
 
-export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
+export function Composer({ busy, attachments, quote, onClearQuote, onSend, onStop }: Props) {
   const { t, locale } = useI18n();
   const openMenu = useContextMenu();
   const [text, setText] = useState("");
@@ -141,12 +145,31 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
     if (quote) input.current?.focus();
   }, [quote]);
 
+  const vision = useVisionChoice();
+  const [visionAccepted, setVisionAccepted] = useState(false);
+  const files = attachments.files;
+  useEffect(() => {
+    if (files.length === 0) setVisionAccepted(false);
+  }, [files.length]);
+  const waitingVision = attachments.hasImages && vision === "ask" && !visionAccepted;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const value = text.trim();
-    if (!value || busy) return;
+    if ((!value && attachments.ready.length === 0) || busy) return;
+    if (attachments.blocked || waitingVision) return;
     setText("");
     await onSend(value);
+  };
+  const pick = async () => {
+    const chosen = await openDialog({ multiple: true, directory: false });
+    if (!chosen) return;
+    await attachments.addPaths(Array.isArray(chosen) ? chosen : [chosen]);
+  };
+  const pasteFiles = (event: React.ClipboardEvent) => {
+    const blobs = Array.from(event.clipboardData.files);
+    if (blobs.length === 0) return;
+    event.preventDefault();
+    void attachments.addBlobs(blobs);
   };
 
   const edit = (command: "cut" | "copy") => {
@@ -220,6 +243,19 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
           </button>
         </div>
       )}
+      {!active && (
+        <>
+          <AttachRow files={files} onRemove={attachments.remove} />
+          {attachments.hasImages && (
+            <VisionNotice
+              choice={vision}
+              accepted={visionAccepted}
+              onAccept={() => setVisionAccepted(true)}
+              onTextOnly={attachments.dropImages}
+            />
+          )}
+        </>
+      )}
       {active ? (
         <Listening
           state={state}
@@ -231,6 +267,17 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
         />
       ) : (
         <form className="composer__row" onSubmit={submit}>
+          <button
+            type="button"
+            className="composer__mic"
+            aria-label={t("attach-add")}
+            title={t("attach-add")}
+            onClick={() => void pick()}
+          >
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" className="mic-icon">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
           {voice.available && (
             <button
               type="button"
@@ -256,6 +303,7 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
               ref={input}
               value={text}
               onChange={(event) => setText(event.target.value)}
+              onPaste={pasteFiles}
               placeholder={t("composer-placeholder")}
               autoComplete="off"
             />
@@ -265,7 +313,11 @@ export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
               {t("composer-stop")}
             </button>
           ) : (
-            <button type="submit" className="button button--primary">
+            <button
+              type="submit"
+              className="button button--primary"
+              disabled={attachments.blocked || waitingVision}
+            >
               {t("composer-send")}
             </button>
           )}

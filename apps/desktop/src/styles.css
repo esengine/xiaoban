@@ -300,6 +300,7 @@ button {
 }
 
 .chat {
+  position: relative;
   flex: 999 1 560px;
   min-width: 0;
   display: flex;
@@ -2996,4 +2997,262 @@ button.quote-block__main {
 .workspace :is(input, textarea, [contenteditable="true"]) {
   user-select: text;
   -webkit-user-select: text;
+}
+
+.attach__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 6px 4px;
+}
+
+.attach__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.attach__thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--color-line);
+}
+
+.attach__thumb img {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.attach__file {
+  position: relative;
+  width: 200px;
+  height: 64px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.attach__item[data-problem] :is(.attach__file, .attach__thumb) {
+  box-shadow: 0 0 0 1.5px var(--color-danger);
+}
+
+.attach__problem {
+  font-size: 11px;
+  color: var(--color-danger-ink);
+}
+
+.attach__tag {
+  flex: none;
+  width: 36px;
+  height: 42px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  padding-bottom: 5px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-surface);
+  background: var(--color-faint);
+}
+
+.attach__tag[data-kind="pdf"] {
+  background: var(--color-danger);
+}
+
+.attach__tag[data-kind="doc"] {
+  background: var(--color-accent);
+}
+
+.attach__tag[data-kind="sheet"] {
+  background: var(--color-trip-green);
+}
+
+.attach__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.attach__name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attach__detail {
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.attach__remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.attach__remove svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.attach__notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--color-ink-mid);
+}
+
+.attach__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-accent);
+}
+
+.attach__ask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-attention-soft);
+  color: var(--color-attention-ink);
+  font-size: 12px;
+}
+
+.attach__ask span {
+  flex: 1;
+}
+
+.attach__ask button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.attach__ask-yes {
+  font-weight: 700;
+}
+
+.drop-zone {
+  position: absolute;
+  inset: 72px 24px 24px;
+  z-index: 50;
+  border-radius: 18px;
+  border: 2px dashed var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent-wash) 92%, transparent);
+  color: var(--color-accent-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  animation: fade-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.drop-zone svg {
+  width: 36px;
+  height: 36px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.drop-zone b {
+  font-size: 16px;
+}
+
+.drop-zone span {
+  font-size: 12px;
+  color: var(--color-ink-mid);
+}
+
+.sent-files-row {
+  list-style: none;
+  align-self: flex-end;
+  max-width: 420px;
+}
+
+.sent-files {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.sent-files__images {
+  display: grid;
+  gap: 6px;
+}
+
+.sent-files__images[data-columns="1"] {
+  grid-template-columns: 240px;
+}
+
+.sent-files__images[data-columns="2"] {
+  grid-template-columns: repeat(2, 120px);
+}
+
+.sent-files__images[data-columns="3"] {
+  grid-template-columns: repeat(3, 100px);
+}
+
+.sent-files__image {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--color-line);
+  overflow: hidden;
+}
+
+.sent-files__images[data-columns="1"] .sent-files__image {
+  aspect-ratio: auto;
+  min-height: 120px;
+}
+
+.sent-files__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attach__item,
+  .drop-zone {
+    animation: none;
+  }
 }

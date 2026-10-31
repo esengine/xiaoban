@@ -1,3 +1,5 @@
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { connectionKey, type Draft, providerKey, type Settled } from "@xiaoban/client";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
@@ -5,6 +7,8 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Message, Quote } from "@xiaoban/protocol";
 import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { DropZone, SentFiles } from "../attach/Attachments.tsx";
+import { useAttachments } from "../attach/useAttachments.ts";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
@@ -178,8 +182,23 @@ export function ChatPane(props: Props) {
 
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
 
-  const send = (text: string, sentQuote: Quote | null = null) =>
-    store.send(threadId, text, { quote: sentQuote });
+  const attachments = useAttachments();
+  const [dragging, setDragging] = useState(0);
+  const { addPaths } = attachments;
+  useEffect(() => {
+    if (!isTauri()) return;
+    const stop = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === "enter") setDragging(Math.max(1, payload.paths.length));
+      else if (payload.type === "leave") setDragging(0);
+      else if (payload.type === "drop") {
+        setDragging(0);
+        void addPaths(payload.paths);
+      }
+    });
+    return () => void stop.then((unlisten) => unlisten());
+  }, [addPaths]);
+  const send = (text: string, sentQuote: Quote | null = null, files: string[] = []) =>
+    store.send(threadId, text, { quote: sentQuote, files });
   const quoteWith = (quote: Quote | null, range: Range | null = null) => {
     highlightSource(quote ? range : null);
     onQuote(quote);
@@ -370,9 +389,20 @@ export function ChatPane(props: Props) {
         busy={Boolean(running)}
         quote={quote}
         onClearQuote={() => quoteWith(null)}
-        onSend={(text) => send(text, quote).then(() => quoteWith(null))}
+        attachments={attachments}
+        onSend={(text) =>
+          send(
+            text,
+            quote,
+            attachments.ready.map((file) => file.path),
+          ).then(() => {
+            quoteWith(null);
+            attachments.clear();
+          })
+        }
         onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
       />
+      {dragging > 0 && <DropZone count={dragging} />}
       {searchDialog && <SearchDialog threadId={threadId} onClose={() => setSearchDialog(false)} />}
     </main>
   );
@@ -390,6 +420,11 @@ function UserItem({
   const { t } = useI18n();
   return (
     <>
+      {message.files.length > 0 && (
+        <li className="sent-files-row">
+          <SentFiles files={message.files} />
+        </li>
+      )}
       <li
         className="bubble bubble--user"
         data-message-id={message.id}
