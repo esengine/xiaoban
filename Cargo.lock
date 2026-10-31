@@ -6142,6 +6142,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-speech",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",

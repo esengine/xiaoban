@@ -29,9 +29,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             hub::hub_endpoint,
             calendar::calendar_sync,
-            island::main_visible,
             island::island_resize,
-            island::island_visible,
+            island::island_drag,
             island::island_open_main,
             voice::voice_available,
             voice::voice_start,

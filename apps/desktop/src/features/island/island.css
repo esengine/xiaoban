@@ -8,14 +8,18 @@ html[data-window="island"] #root {
 .island-stage {
   position: fixed;
   inset: 0;
+  padding: 10px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  transition: opacity var(--motion-standard) var(--ease-standard);
 }
 
-.island-stage[data-hidden] {
-  opacity: 0;
+.island-slot {
+  width: 132px;
+  height: 36px;
+  border-radius: 18px;
+  border: 1.5px dashed var(--dark-text-muted);
+  opacity: 0.6;
 }
 
 .island {
@@ -27,7 +31,21 @@ html[data-window="island"] #root {
   transition:
     width var(--motion-island) var(--ease-spring),
     height var(--motion-island) var(--ease-spring),
-    border-radius var(--motion-island) var(--ease-spring);
+    border-radius var(--motion-island) var(--ease-spring),
+    opacity var(--motion-standard) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.island[data-idle] {
+  opacity: 0.55;
+}
+
+.island[data-dragging] {
+  transform: scale(1.04);
+  box-shadow:
+    0 8px 18px color-mix(in srgb, black 36%, transparent),
+    0 0 0 1px var(--dark-island-ring);
 }
 
 .island__open {
@@ -181,8 +199,7 @@ html[data-window="island"] #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .island,
-  .island-stage {
+  .island {
     transition: none;
   }
 

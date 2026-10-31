@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capabilities for the main window",
-  "windows": ["main", "island"],
+  "windows": ["main", "island", "island-slot"],
   "permissions": [
     "core:default",
     "core:window:allow-set-title",

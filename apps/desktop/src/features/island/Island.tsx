@@ -1,40 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { Draft } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { motion } from "@xiaoban/tokens";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { isBetweenSteps, stepText } from "../chat/Steps.tsx";
 
-type Mode = "hidden" | "compact" | "medium" | "done";
+type Mode = "idle" | "compact" | "medium" | "done";
 
-const SIZES: Record<Exclude<Mode, "hidden">, readonly [number, number]> = {
+const SIZES: Record<Mode, readonly [number, number]> = {
+  idle: [132, 36],
   compact: [132, 36],
   medium: [440, 48],
   done: [320, 44],
 };
-const POLL_MS = 700;
+const DRAG_THRESHOLD = 4;
 const FLASH_MS = 3_000;
 const DONE_MS = 3_000;
 const LEAVE_MS = 80;
-const FADE_MS = motion.standard;
 const HOVER_GRACE_MS = 150;
 
 interface Finished {
   threadId: string;
   steps: number;
-}
-
-function useMainVisible(): boolean {
-  const [visible, setVisible] = useState(true);
-  useEffect(() => {
-    const check = () => void invoke<boolean>("main_visible").then(setVisible);
-    check();
-    const timer = window.setInterval(check, POLL_MS);
-    return () => window.clearInterval(timer);
-  }, []);
-  return visible;
 }
 
 function latestRunning(drafts: Readonly<Record<string, Draft>>): Draft | null {
@@ -62,17 +52,17 @@ export function Island() {
   const { t } = useI18n();
   const store = useHub();
   const state = useHubState(store);
-  const mainVisible = useMainVisible();
   const running = latestRunning(state.drafts);
   const [hover, setHover] = useState(false);
   const leaveTimer = useRef<number | undefined>(undefined);
-  const enter = () => {
+  const enter = useCallback(() => {
     window.clearTimeout(leaveTimer.current);
     setHover(true);
-  };
-  const leave = () => {
+  }, []);
+  const leave = useCallback(() => {
+    window.clearTimeout(leaveTimer.current);
     leaveTimer.current = window.setTimeout(() => setHover(false), HOVER_GRACE_MS);
-  };
+  }, []);
   const [flash, setFlash] = useState(false);
   const [finished, setFinished] = useState<Finished | null>(null);
   const tracked = useRef<Draft | null>(null);
@@ -103,32 +93,28 @@ export function Island() {
       : null;
   const done = finished ?? justFinished;
 
-  const mode: Mode = mainVisible
-    ? "hidden"
-    : done
-      ? "done"
-      : running
-        ? hover || flash
-          ? "medium"
-          : "compact"
-        : "hidden";
+  const mode: Mode = done ? "done" : running ? (hover || flash ? "medium" : "compact") : "idle";
 
-  const shownSize = useRef<readonly [number, number]>(SIZES.compact);
+  const [dragging, setDragging] = useState(false);
+  const press = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   useEffect(() => {
-    if (mode === "hidden") {
-      const timer = window.setTimeout(
-        () => void invoke("island_visible", { visible: false }),
-        FADE_MS,
-      );
-      return () => window.clearTimeout(timer);
-    }
+    const stops = [
+      listen("island://dropped", () => setDragging(false)),
+      listen<boolean>("island://hover", ({ payload }) => (payload ? enter() : leave())),
+    ];
+    return () => {
+      for (const stop of stops) void stop.then((unlisten) => unlisten());
+    };
+  }, [enter, leave]);
+
+  const shownSize = useRef<readonly [number, number]>(SIZES.idle);
+  useEffect(() => {
     const next = SIZES[mode];
     const [width, height] = shownSize.current;
     void invoke("island_resize", {
       width: Math.max(width, next[0]),
       height: Math.max(height, next[1]),
     });
-    void invoke("island_visible", { visible: true });
     shownSize.current = next;
     const timer = window.setTimeout(
       () => void invoke("island_resize", { width: next[0], height: next[1] }),
@@ -149,7 +135,14 @@ export function Island() {
   const open = (threadId: string | null) => void invoke("island_open_main", { threadId });
 
   let content: ReactNode = null;
-  if (mode === "compact" && running) {
+  if (mode === "idle") {
+    content = (
+      <span className="island__row island__row--compact">
+        <Face />
+        {hover && !dragging && <span className="island__count">{t("island-open")}</span>}
+      </span>
+    );
+  } else if (mode === "compact" && running) {
     content = (
       <span className="island__row island__row--compact">
         <Face />
@@ -214,20 +207,38 @@ export function Island() {
     previousContent.current = { mode, node: content };
   });
 
-  const size = mode === "hidden" ? shownSize.current : SIZES[mode];
+  const size = SIZES[mode];
   const target = done?.threadId ?? running?.threadId ?? null;
 
   return (
-    <div className="island-stage" data-hidden={mode === "hidden" || undefined}>
+    <div className="island-stage">
       <div
         className="island"
+        data-idle={(mode === "idle" && !hover && !dragging) || undefined}
+        data-dragging={dragging || undefined}
         style={{ width: size[0], height: size[1], borderRadius: size[1] / 2 }}
       >
         <button
           type="button"
           className="island__open"
           aria-label={t("island-open")}
-          onClick={() => open(target)}
+          onPointerDown={(event) => {
+            press.current = { x: event.screenX, y: event.screenY, dragged: false };
+          }}
+          onPointerMove={(event) => {
+            const start = press.current;
+            if (!start || start.dragged || event.buttons !== 1) return;
+            const moved = Math.hypot(event.screenX - start.x, event.screenY - start.y);
+            if (moved < DRAG_THRESHOLD) return;
+            start.dragged = true;
+            setDragging(true);
+            void invoke("island_drag");
+          }}
+          onClick={() => {
+            const dragged = press.current?.dragged ?? false;
+            press.current = null;
+            if (!dragged) open(target);
+          }}
           onMouseEnter={enter}
           onMouseLeave={leave}
         />
@@ -240,6 +251,14 @@ export function Island() {
           {content}
         </span>
       </div>
+    </div>
+  );
+}
+
+export function IslandSlot() {
+  return (
+    <div className="island-stage">
+      <div className="island-slot" />
     </div>
   );
 }
