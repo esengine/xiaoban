@@ -3,10 +3,11 @@ use std::sync::{Arc, Mutex};
 
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-use xiaoban_agent::{ChatMessage, ChatRole, Transcript, TurnEvent, user_wire};
+use xiaoban_agent::{ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire};
 use xiaoban_protocol::{ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role};
 use xiaoban_store::{EntryRole, Epoch, EpochReason, StoreError, TranscriptEntry};
 
+use crate::memory;
 use crate::state::SharedState;
 
 #[derive(Debug, Default)]
@@ -128,31 +129,58 @@ fn to_chat(entry: TranscriptEntry) -> ChatMessage {
     ChatMessage::new(role, entry.content)
 }
 
+async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreError> {
+    let memories = state.store.list_memories().await?;
+    Ok(memory::snapshot(&state.localizer, &memories))
+}
+
 async fn current_epoch(
     state: &SharedState,
     thread_id: &str,
-) -> Result<(Epoch, Transcript), StoreError> {
-    let fingerprint = state.prefix.fingerprint().to_owned();
+) -> Result<(Epoch, StablePrefix, Transcript), StoreError> {
+    let base = state.base_fingerprint.clone();
+    let prefix = |epoch: &Epoch| {
+        StablePrefix::with_memory(&state.system_prompt, epoch.memory_snapshot.as_deref())
+    };
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
-        Some((epoch, entries)) if epoch.prefix_fingerprint == fingerprint => {
-            return Ok((epoch, entries.into_iter().map(to_chat).collect()));
+        Some((mut epoch, entries)) if epoch.prefix_fingerprint == base => {
+            if entries.is_empty() {
+                let snapshot = fresh_snapshot(state).await?;
+                if snapshot != epoch.memory_snapshot {
+                    state
+                        .store
+                        .set_memory_snapshot(epoch.id.clone(), snapshot.clone())
+                        .await?;
+                    epoch.memory_snapshot = snapshot;
+                }
+            }
+            let prefix = prefix(&epoch);
+            return Ok((epoch, prefix, entries.into_iter().map(to_chat).collect()));
         }
         Some((previous, entries)) => {
             tracing::info!(
                 thread = thread_id,
                 from = %previous.prefix_fingerprint,
-                to = %fingerprint,
-                "stable prefix changed; starting a new epoch"
+                to = %base,
+                "system prompt changed; starting a new epoch"
             );
             (EpochReason::PrefixChanged, entries)
         }
         None => (EpochReason::Started, Vec::new()),
     };
+    let snapshot = fresh_snapshot(state).await?;
     let epoch = state
         .store
-        .start_epoch(thread_id.to_owned(), fingerprint, reason, carried.clone())
+        .start_epoch(
+            thread_id.to_owned(),
+            base,
+            reason,
+            snapshot,
+            carried.clone(),
+        )
         .await?;
-    Ok((epoch, carried.into_iter().map(to_chat).collect()))
+    let prefix = prefix(&epoch);
+    Ok((epoch, prefix, carried.into_iter().map(to_chat).collect()))
 }
 
 async fn drive(
@@ -162,7 +190,7 @@ async fn drive(
     wire: String,
     cancel: CancellationToken,
 ) -> Result<(), Failure> {
-    let (epoch, transcript) = current_epoch(state, thread_id)
+    let (epoch, prefix, transcript) = current_epoch(state, thread_id)
         .await
         .map_err(Failure::from)?;
 
@@ -181,7 +209,9 @@ async fn drive(
         })
     };
     let agent = state.active().agent;
-    let outcome = agent.run_turn(&transcript, &wire, tx, cancel).await;
+    let outcome = agent
+        .run_turn(&prefix, &transcript, &wire, tx, cancel)
+        .await;
     let _ = forward.await;
 
     let mut appended = vec![TranscriptEntry::new(EntryRole::User, wire)];

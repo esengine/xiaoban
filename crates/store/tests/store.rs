@@ -73,6 +73,7 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
             thread.id.clone(),
             "aaaa".into(),
             EpochReason::Started,
+            None,
             Vec::new(),
         )
         .await
@@ -114,6 +115,7 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
             thread.id.clone(),
             "bbbb".into(),
             EpochReason::PrefixChanged,
+            Some("称呼：阿哲".into()),
             entries.clone(),
         )
         .await
@@ -121,6 +123,7 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
     let (latest, carried) = store.latest_epoch(thread.id).await.unwrap().unwrap();
     assert_eq!(latest.id, second.id);
     assert_eq!(latest.reason, EpochReason::PrefixChanged);
+    assert_eq!(latest.memory_snapshot.as_deref(), Some("称呼：阿哲"));
     assert_eq!(carried, entries);
 }
 
@@ -133,6 +136,7 @@ async fn usage_totals_sum_every_turn() {
             thread.id.clone(),
             "f".into(),
             EpochReason::Started,
+            None,
             Vec::new(),
         )
         .await

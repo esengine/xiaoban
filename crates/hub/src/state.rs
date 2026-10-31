@@ -1,7 +1,8 @@
 use std::sync::{Arc, RwLock};
 
 use tokio::sync::broadcast;
-use xiaoban_agent::{Agent, Connector, StablePrefix};
+use xiaoban_agent::{Agent, Connector};
+use xiaoban_i18n::Localizer;
 use xiaoban_protocol::{Event, HubInfo, ModelInfo};
 use xiaoban_store::Store;
 
@@ -22,7 +23,9 @@ pub struct HubState {
     pub info: HubInfo,
     pub port: u16,
     pub store: Store,
-    pub prefix: StablePrefix,
+    pub system_prompt: String,
+    pub base_fingerprint: String,
+    pub localizer: Localizer,
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
     pub events: broadcast::Sender<Event>,

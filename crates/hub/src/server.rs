@@ -68,12 +68,16 @@ impl Hub {
         let restored = model::restore(&store, &runtime.secrets, runtime.fallback.clone())
             .await
             .map_err(|error| HubError::Startup(error.detail))?;
-        let active = model::activate(&*runtime.connector, &runtime.prefix, restored);
+        let active = model::activate(&*runtime.connector, restored);
         let state: SharedState = Arc::new(HubState {
             info: info.clone(),
             port: addr.port(),
             store,
-            prefix: runtime.prefix,
+            base_fingerprint: xiaoban_agent::StablePrefix::new(runtime.system_prompt.clone())
+                .fingerprint()
+                .to_owned(),
+            system_prompt: runtime.system_prompt,
+            localizer: xiaoban_i18n::Localizer::new(runtime.locale),
             connector: runtime.connector,
             secrets: runtime.secrets,
             active: std::sync::RwLock::new(active),

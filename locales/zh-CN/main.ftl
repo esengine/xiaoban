@@ -2,6 +2,7 @@ app-name = 小伴
 hub-default-name = 小伴
 
 prompt-system = 你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。
+prompt-memory-heading = 关于用户，你已经记住的事（用户随时可能修改）：
 
 nav-main = 主导航
 device-desktop = 这台电脑

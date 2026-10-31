@@ -9,7 +9,7 @@ use tracing_subscriber::EnvFilter;
 use xiaoban_agent::{ConfiguredProvider, HttpConnector, ProviderPreset, first_configured_from_env};
 use xiaoban_hub::{
     Hub, HubConfig, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, default_hub_name, system_locale,
-    system_prefix,
+    system_prompt,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::ProviderId;
@@ -108,7 +108,8 @@ async fn main() -> anyhow::Result<()> {
         .as_deref()
         .map_or_else(system_locale, Locale::negotiate);
     let runtime = HubRuntime {
-        prefix: system_prefix(locale),
+        locale,
+        system_prompt: system_prompt(locale),
         connector: Arc::new(HttpConnector),
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         fallback: configured(&args)?,

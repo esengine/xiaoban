@@ -13,6 +13,13 @@ pub struct StablePrefix {
 }
 
 impl StablePrefix {
+    pub fn with_memory(system: &str, memory: Option<&str>) -> Self {
+        match memory {
+            Some(memory) if !memory.trim().is_empty() => Self::new(format!("{system}\n\n{memory}")),
+            _ => Self::new(system),
+        }
+    }
+
     pub fn new(system: impl Into<String>) -> Self {
         let messages: Arc<[ChatMessage]> = Arc::from([ChatMessage::new(ChatRole::System, system)]);
         let canonical = serde_json::to_vec(&*messages).unwrap_or_default();
@@ -128,6 +135,15 @@ mod tests {
             StablePrefix::new("b").fingerprint()
         );
         assert_eq!(StablePrefix::new("a").fingerprint().len(), 16);
+        assert_eq!(StablePrefix::with_memory("a", None), StablePrefix::new("a"));
+        assert_eq!(
+            StablePrefix::with_memory("a", Some(" ")),
+            StablePrefix::new("a")
+        );
+        assert_ne!(
+            StablePrefix::with_memory("a", Some("m")).fingerprint(),
+            StablePrefix::new("a").fingerprint()
+        );
     }
 
     #[test]

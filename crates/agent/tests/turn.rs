@@ -11,7 +11,13 @@ use xiaoban_protocol::ContextNote;
 async fn turn(agent: &Agent, transcript: &mut Transcript, wire: &str) -> String {
     let (tx, _rx) = mpsc::channel(64);
     let outcome = agent
-        .run_turn(transcript, wire, tx, CancellationToken::new())
+        .run_turn(
+            &StablePrefix::new("system"),
+            transcript,
+            wire,
+            tx,
+            CancellationToken::new(),
+        )
         .await
         .unwrap();
     transcript.push(ChatMessage::new(ChatRole::User, wire));
@@ -21,13 +27,11 @@ async fn turn(agent: &Agent, transcript: &mut Transcript, wire: &str) -> String 
 
 #[tokio::test]
 async fn streams_deltas_and_collects_text() {
-    let agent = Agent::new(
-        ScriptedProvider::new(["7:40", " 出门"]),
-        StablePrefix::new("system"),
-    );
+    let agent = Agent::new(ScriptedProvider::new(["7:40", " 出门"]));
     let (tx, mut rx) = mpsc::channel(16);
     let outcome = agent
         .run_turn(
+            &StablePrefix::new("system"),
             &Transcript::default(),
             "明天几点出门",
             tx,
@@ -54,7 +58,7 @@ async fn streams_deltas_and_collects_text() {
 #[tokio::test]
 async fn every_request_extends_the_previous_one_byte_for_byte() {
     let provider = RecordingProvider::new(ScriptedProvider::new(["好的"]));
-    let agent = Agent::new(provider.clone(), StablePrefix::new("system"));
+    let agent = Agent::new(provider.clone());
     let mut transcript = Transcript::default();
     let context = [ContextNote {
         label: "页面".into(),
@@ -83,7 +87,7 @@ async fn every_request_extends_the_previous_one_byte_for_byte() {
 #[tokio::test]
 async fn cancellation_stops_the_turn() {
     let provider = ScriptedProvider::new(["a", "b", "c"]).with_delay(Duration::from_millis(200));
-    let agent = Agent::new(provider, StablePrefix::new("system"));
+    let agent = Agent::new(provider);
     let (tx, _rx) = mpsc::channel(16);
     let cancel = CancellationToken::new();
     let trigger = cancel.clone();
@@ -92,7 +96,13 @@ async fn cancellation_stops_the_turn() {
         trigger.cancel();
     });
     let result = agent
-        .run_turn(&Transcript::default(), "hi", tx, cancel)
+        .run_turn(
+            &StablePrefix::new("system"),
+            &Transcript::default(),
+            "hi",
+            tx,
+            cancel,
+        )
         .await;
     assert!(matches!(result, Err(AgentError::Cancelled)));
 }

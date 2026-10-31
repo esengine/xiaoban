@@ -8,9 +8,10 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use xiaoban_agent::{
     AgentError, ConfiguredProvider, Connector, ModelProvider, OpenAiConfig, ProviderPreset,
-    RecordingProvider, ScriptedProvider, StablePrefix, prefix_reuse,
+    RecordingProvider, ScriptedProvider, prefix_reuse,
 };
 use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, SecretStore};
+use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
     AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
     FailureKind, MemoryTopic, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role,
@@ -127,12 +128,13 @@ fn deepseek(key: &str) -> ConfiguredProvider {
 
 fn runtime_with(
     provider: impl ModelProvider,
-    prefix: StablePrefix,
+    system_prompt: &str,
     fallback: Option<ConfiguredProvider>,
     secrets: Arc<dyn SecretStore>,
 ) -> HubRuntime {
     HubRuntime {
-        prefix,
+        locale: Locale::ZhCn,
+        system_prompt: system_prompt.into(),
         connector: Arc::new(FixedConnector(Arc::new(provider))),
         secrets,
         fallback,
@@ -142,7 +144,7 @@ fn runtime_with(
 fn runtime(provider: impl ModelProvider) -> HubRuntime {
     runtime_with(
         provider,
-        StablePrefix::new("system"),
+        "system",
         Some(deepseek(VALID_KEY)),
         Arc::new(MemorySecrets::default()),
     )
@@ -401,7 +403,7 @@ async fn changing_the_stable_prefix_starts_a_new_epoch_that_keeps_history() {
     let provider = RecordingProvider::new(ScriptedProvider::new(["带"]));
     let upgraded = runtime_with(
         provider.clone(),
-        StablePrefix::new("新版提示词"),
+        "新版提示词",
         Some(deepseek(VALID_KEY)),
         Arc::new(MemorySecrets::default()),
     );
@@ -453,7 +455,7 @@ async fn onboarding_configures_a_provider_and_hot_swaps_the_model() {
     };
     let fresh = runtime_with(
         ScriptedProvider::new(["你好"]),
-        StablePrefix::new("system"),
+        "system",
         None,
         Arc::clone(&secrets),
     );
@@ -590,7 +592,7 @@ async fn custom_relays_are_validated_saved_and_restored() {
     };
     let fresh = runtime_with(
         ScriptedProvider::new(["好"]),
-        StablePrefix::new("system"),
+        "system",
         None,
         Arc::clone(&secrets),
     );
@@ -728,5 +730,46 @@ async fn the_desktop_hears_when_a_phone_pairs() {
             break;
         }
     }
+    hub.shutdown().await;
+}
+
+async fn remember(client: &mut TestClient, topic: MemoryTopic, value: &str) {
+    client
+        .request(Request::Remember {
+            topic,
+            value: value.into(),
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn memories_enter_new_threads_without_breaking_running_ones() {
+    let provider = RecordingProvider::new(ScriptedProvider::new(["好"]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    remember(&mut client, MemoryTopic::PreferredName, "阿哲").await;
+
+    let first = new_thread(&mut client).await;
+    converse(&mut client, &first, "早", Vec::new()).await;
+
+    remember(&mut client, MemoryTopic::Household, "老婆和儿子").await;
+    converse(&mut client, &first, "今天干嘛", Vec::new()).await;
+
+    let second = new_thread(&mut client).await;
+    converse(&mut client, &second, "在吗", Vec::new()).await;
+
+    let requests = provider.requests();
+    let system = |index: usize| requests[index].messages[0].content.clone();
+    assert!(system(0).starts_with("system\n\n"));
+    assert!(system(0).contains("阿哲"));
+    assert!(!system(0).contains("老婆和儿子"));
+
+    assert!(prefix_reuse(&requests[0], &requests[1]).is_intact());
+    assert_eq!(system(1), system(0));
+
+    assert!(system(2).contains("阿哲"));
+    assert!(system(2).contains("老婆和儿子"));
     hub.shutdown().await;
 }

@@ -23,32 +23,26 @@ pub struct TurnOutcome {
 #[derive(Clone)]
 pub struct Agent {
     provider: Arc<dyn ModelProvider>,
-    prefix: StablePrefix,
 }
 
 impl std::fmt::Debug for Agent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Agent")
-            .field("prefix", &self.prefix.fingerprint())
-            .finish_non_exhaustive()
+        f.debug_struct("Agent").finish_non_exhaustive()
     }
 }
 
 impl Agent {
-    pub fn new(provider: impl ModelProvider, prefix: StablePrefix) -> Self {
-        Self::from_shared(Arc::new(provider), prefix)
+    pub fn new(provider: impl ModelProvider) -> Self {
+        Self::from_shared(Arc::new(provider))
     }
 
-    pub fn from_shared(provider: Arc<dyn ModelProvider>, prefix: StablePrefix) -> Self {
-        Self { provider, prefix }
-    }
-
-    pub fn prefix(&self) -> &StablePrefix {
-        &self.prefix
+    pub fn from_shared(provider: Arc<dyn ModelProvider>) -> Self {
+        Self { provider }
     }
 
     pub async fn run_turn(
         &self,
+        prefix: &StablePrefix,
         transcript: &Transcript,
         user_wire: &str,
         events: mpsc::Sender<TurnEvent>,
@@ -57,7 +51,7 @@ impl Agent {
         let _ = events.send(TurnEvent::Thinking).await;
         let mut stream = self
             .provider
-            .stream(assemble(&self.prefix, transcript, user_wire));
+            .stream(assemble(prefix, transcript, user_wire));
         let mut outcome = TurnOutcome {
             text: String::new(),
             usage: Usage::default(),

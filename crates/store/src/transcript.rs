@@ -73,6 +73,7 @@ pub struct Epoch {
     pub prefix_fingerprint: String,
     pub reason: EpochReason,
     pub started_at: i64,
+    pub memory_snapshot: Option<String>,
 }
 
 fn append(tx: &Transaction<'_>, epoch_id: &str, entries: &[TranscriptEntry]) -> Result<()> {
@@ -98,7 +99,7 @@ impl Store {
         self.with(move |conn| {
             let raw = conn
                 .query_row(
-                    "SELECT id, thread_id, prefix_fingerprint, reason, started_at
+                    "SELECT id, thread_id, prefix_fingerprint, reason, started_at, memory_snapshot
                      FROM transcript_epochs WHERE thread_id = ?1
                      ORDER BY started_at DESC, rowid DESC LIMIT 1",
                     [&thread_id],
@@ -109,11 +110,14 @@ impl Store {
                             row.get::<_, String>(2)?,
                             row.get::<_, String>(3)?,
                             row.get::<_, i64>(4)?,
+                            row.get::<_, Option<String>>(5)?,
                         ))
                     },
                 )
                 .optional()?;
-            let Some((id, thread_id, prefix_fingerprint, reason, started_at)) = raw else {
+            let Some((id, thread_id, prefix_fingerprint, reason, started_at, memory_snapshot)) =
+                raw
+            else {
                 return Ok(None);
             };
             let epoch = Epoch {
@@ -122,6 +126,7 @@ impl Store {
                 prefix_fingerprint,
                 reason: EpochReason::parse(&reason)?,
                 started_at,
+                memory_snapshot,
             };
             let mut stmt = conn.prepare(
                 "SELECT role, content FROM transcript_entries WHERE epoch_id = ?1 ORDER BY seq",
@@ -148,6 +153,7 @@ impl Store {
         thread_id: String,
         prefix_fingerprint: String,
         reason: EpochReason,
+        memory_snapshot: Option<String>,
         carried: Vec<TranscriptEntry>,
     ) -> Result<Epoch> {
         self.with(move |conn| {
@@ -157,22 +163,40 @@ impl Store {
                 prefix_fingerprint,
                 reason,
                 started_at: now_ms(),
+                memory_snapshot,
             };
             let tx = conn.transaction()?;
             tx.execute(
-                "INSERT INTO transcript_epochs (id, thread_id, prefix_fingerprint, reason, started_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO transcript_epochs
+                 (id, thread_id, prefix_fingerprint, reason, started_at, memory_snapshot)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     epoch.id,
                     epoch.thread_id,
                     epoch.prefix_fingerprint,
                     epoch.reason.as_str(),
-                    epoch.started_at
+                    epoch.started_at,
+                    epoch.memory_snapshot
                 ],
             )?;
             append(&tx, &epoch.id, &carried)?;
             tx.commit()?;
             Ok(epoch)
+        })
+        .await
+    }
+
+    pub async fn set_memory_snapshot(
+        &self,
+        epoch_id: String,
+        snapshot: Option<String>,
+    ) -> Result<()> {
+        self.with(move |conn| {
+            conn.execute(
+                "UPDATE transcript_epochs SET memory_snapshot = ?2 WHERE id = ?1",
+                params![epoch_id, snapshot],
+            )?;
+            Ok(())
         })
         .await
     }

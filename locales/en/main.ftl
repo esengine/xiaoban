@@ -2,6 +2,7 @@ app-name = Xiaoban
 hub-default-name = Xiaoban
 
 prompt-system = You are Xiaoban, a friendly companion who helps the user with everyday life. Keep answers short and concrete, and reply in English.
+prompt-memory-heading = What you already remember about the user (they may change it at any time):
 
 nav-main = Main navigation
 device-desktop = This computer

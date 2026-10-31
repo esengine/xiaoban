@@ -33,6 +33,7 @@ xiaoban-protocol.workspace = true
 xiaoban-store.workspace = true
 
 [dev-dependencies]
+xiaoban-i18n.workspace = true
 tokio-tungstenite.workspace = true
 
 [lints]

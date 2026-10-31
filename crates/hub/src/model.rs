@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use xiaoban_agent::{
-    Agent, ConfiguredProvider, Connector, PRESETS, ProviderPreset, StablePrefix,
-    UnconfiguredProvider,
+    Agent, ConfiguredProvider, Connector, PRESETS, ProviderPreset, UnconfiguredProvider,
 };
 use xiaoban_protocol::{ErrorCode, ProtocolError, ProviderId, ProviderOption, Response};
 use xiaoban_store::Store;
@@ -45,18 +44,14 @@ async fn load_secret(
         .map_err(|error| internal(&error))
 }
 
-pub fn activate(
-    connector: &dyn Connector,
-    prefix: &StablePrefix,
-    configured: Option<ConfiguredProvider>,
-) -> Active {
+pub fn activate(connector: &dyn Connector, configured: Option<ConfiguredProvider>) -> Active {
     match configured {
         Some(configured) => Active {
-            agent: Agent::from_shared(connector.provider(configured.config), prefix.clone()),
+            agent: Agent::from_shared(connector.provider(configured.config)),
             model: Some(configured.info),
         },
         None => Active {
-            agent: Agent::new(UnconfiguredProvider, prefix.clone()),
+            agent: Agent::new(UnconfiguredProvider),
             model: None,
         },
     }
@@ -195,7 +190,7 @@ pub async fn configure(
 
     persist(state, &configured).await?;
     let info = configured.info.clone();
-    state.activate(activate(&*state.connector, &state.prefix, Some(configured)));
+    state.activate(activate(&*state.connector, Some(configured)));
     tracing::info!(provider = info.provider.as_str(), model = %info.model, "model provider configured");
     Ok(Response::ProviderConfigured {
         model: Some(info),

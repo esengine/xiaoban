@@ -71,6 +71,9 @@ CREATE TABLE memories (
     updated_at INTEGER NOT NULL
 );
 ",
+    r"
+ALTER TABLE transcript_epochs ADD COLUMN memory_snapshot TEXT;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {
