@@ -13,7 +13,11 @@
       }
     },
     "android": {
-      "package": "app.xiaoban.mobile"
+      "package": "app.xiaoban.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#3451D1"
+      }
     },
     "plugins": ["expo-router", "expo-secure-store", "expo-status-bar", "expo-localization"],
     "experiments": {
@@ -22,6 +26,7 @@
     "locales": {
       "zh-Hans": "../../locales/native/zh-Hans.json",
       "en": "../../locales/native/en.json"
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
