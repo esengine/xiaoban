@@ -465,7 +465,7 @@ export function MemorySky({
             camera.current = {
               ...camera.current,
               yaw: start.yaw - dx * 0.006,
-              pitch: Math.max(-1.2, Math.min(1.2, start.pitch + dy * 0.004)),
+              pitch: Math.max(-1.2, Math.min(1.2, start.pitch - dy * 0.004)),
             };
             lastInput.current = performance.now();
             return;
