@@ -51,7 +51,6 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
         ? Math.max(EDGE, menu.y - box.height)
         : menu.y;
     setPosition({ left, top });
-    list.current?.focus();
   }, [menu]);
 
   useEffect(() => {
@@ -78,7 +77,8 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
     entry.onSelect();
   };
 
-  const onKeyDown = (event: React.KeyboardEvent) => {
+  const keys = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  keys.current = (event: KeyboardEvent) => {
     const at = items.indexOf(active);
     if (event.key === "Escape") onClose();
     else if (event.key === "ArrowDown") setActive(items[(at + 1) % items.length] ?? -1);
@@ -87,16 +87,21 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
     else if (event.key === "Enter") choose(active);
     else return;
     event.preventDefault();
+    event.stopPropagation();
   };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => keys.current(event);
+    window.addEventListener("keydown", listener, true);
+    return () => window.removeEventListener("keydown", listener, true);
+  }, []);
 
   return (
     <div
       ref={list}
       role="menu"
-      tabIndex={-1}
       className="context-menu"
       style={position}
-      onKeyDown={onKeyDown}
+      onPointerDown={(event) => event.preventDefault()}
     >
       {menu.entries.map((entry, index) =>
         entry === "separator" ? (
