@@ -4307,3 +4307,122 @@ button.sent-files__image {
     animation: none;
   }
 }
+
+.composer__box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.composer__box:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 0.5px var(--color-accent);
+}
+
+.composer__box .attach__row {
+  padding: 4px 2px 0;
+}
+
+.composer__line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+}
+
+.composer__line .composer__field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.composer__line .composer__field input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-ink);
+  outline: none;
+}
+
+.composer__icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-ink-mid);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.composer__icon:hover {
+  background: var(--color-ground);
+}
+
+.composer__icon:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.composer__icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.composer__send {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  animation: fade-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.composer__send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.composer__send svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.composer__box .composer__stop {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: 16px;
+}

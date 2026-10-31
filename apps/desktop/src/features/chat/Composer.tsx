@@ -259,19 +259,6 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
           </button>
         </div>
       )}
-      {!active && (
-        <>
-          <AttachRow files={files} onRemove={attachments.remove} />
-          {attachments.hasImages && (
-            <VisionNotice
-              choice={vision}
-              accepted={visionAccepted}
-              onAccept={() => setVisionAccepted(true)}
-              onTextOnly={attachments.dropImages}
-            />
-          )}
-        </>
-      )}
       {active ? (
         <Listening
           state={state}
@@ -282,67 +269,80 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
           }}
         />
       ) : (
-        <form className="composer__row" onSubmit={submit}>
-          <button
-            type="button"
-            className="composer__mic"
-            aria-label={t("attach-add")}
-            title={t("attach-add")}
-            onClick={() => void pick()}
-          >
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" className="mic-icon">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-          {voice.available && (
-            <button
-              type="button"
-              className="composer__mic"
-              aria-label={t("voice-start", { shortcut: t("voice-shortcut") })}
-              title={t("voice-start", { shortcut: t("voice-shortcut") })}
-              disabled={state.phase === "starting" || voice.blocked !== null}
-              onClick={() => void start()}
-            >
-              <MicIcon size={22} />
-            </button>
+        <form className="composer__box" onSubmit={submit}>
+          {quote && (
+            <QuoteBlock key={quote.text} quote={quote} tone="light" onRemove={onClearQuote} />
           )}
-          <label
-            className="composer__field"
-            data-quoted={quote ? true : undefined}
-            onContextMenu={inputMenu}
-          >
-            {quote && (
-              <QuoteBlock key={quote.text} quote={quote} tone="light" onRemove={onClearQuote} />
-            )}
-            <span className="visually-hidden">{t("composer-label")}</span>
-            <input
-              ref={input}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              onPaste={pasteFiles}
-              placeholder={t("composer-placeholder")}
-              autoComplete="off"
+          <AttachRow files={files} onRemove={attachments.remove} />
+          {attachments.hasImages && (
+            <VisionNotice
+              choice={vision}
+              accepted={visionAccepted}
+              onAccept={() => setVisionAccepted(true)}
+              onTextOnly={attachments.dropImages}
             />
-          </label>
-          {busy ? (
+          )}
+          <div className="composer__line">
             <button
               type="button"
-              className="composer__stop"
-              aria-label={t("composer-stop")}
-              title={t("composer-stop")}
-              onClick={() => void onStop()}
+              className="composer__icon"
+              aria-label={t("attach-add")}
+              title={t("attach-add")}
+              onClick={() => void pick()}
             >
-              <span aria-hidden="true" />
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
             </button>
-          ) : (
-            <button
-              type="submit"
-              className="button button--primary"
-              disabled={attachments.blocked || waitingVision}
-            >
-              {t("composer-send")}
-            </button>
-          )}
+            <label className="composer__field" onContextMenu={inputMenu}>
+              <span className="visually-hidden">{t("composer-label")}</span>
+              <input
+                ref={input}
+                value={text}
+                onChange={(event) => setText(event.target.value)}
+                onPaste={pasteFiles}
+                placeholder={busy ? t("composer-placeholder-busy") : t("composer-placeholder")}
+                autoComplete="off"
+              />
+            </label>
+            {voice.available && (
+              <button
+                type="button"
+                className="composer__icon"
+                aria-label={t("voice-start", { shortcut: t("voice-shortcut") })}
+                title={t("voice-start", { shortcut: t("voice-shortcut") })}
+                disabled={state.phase === "starting" || voice.blocked !== null}
+                onClick={() => void start()}
+              >
+                <MicIcon size={20} />
+              </button>
+            )}
+            {busy ? (
+              <button
+                type="button"
+                className="composer__stop"
+                aria-label={t("composer-stop")}
+                title={t("composer-stop")}
+                onClick={() => void onStop()}
+              >
+                <span aria-hidden="true" />
+              </button>
+            ) : (
+              (text.trim() || attachments.ready.length > 0) && (
+                <button
+                  type="submit"
+                  className="composer__send"
+                  aria-label={t("composer-send")}
+                  title={t("composer-send")}
+                  disabled={attachments.blocked || waitingVision}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 19V5M6 11l6-6 6 6" />
+                  </svg>
+                </button>
+              )
+            )}
+          </div>
         </form>
       )}
     </div>

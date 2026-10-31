@@ -125,6 +125,7 @@ composer-placeholder = Tell Xiaoban what you need
 composer-send = Send
 composer-queued = Next up
 composer-cancel-words = never mind|cancel|stop|forget it
+composer-placeholder-busy = Enter queues it next · say "never mind" to stop
 composer-stop = Stop
 
 reasoning-thinking = Thinking for { $seconds }s
