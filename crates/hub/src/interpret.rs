@@ -91,7 +91,11 @@ pub async fn answer(
             } => {
                 let memory = state
                     .store
-                    .remember(subject, value, xiaoban_protocol::MemoryCategory::Other)
+                    .remember(xiaoban_store::NewMemory::simple(
+                        subject,
+                        value,
+                        xiaoban_protocol::MemoryCategory::Other,
+                    ))
                     .await?;
                 state.publish(Event::MemorySaved {
                     memory: memory.clone(),

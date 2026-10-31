@@ -6,7 +6,8 @@ use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ToolCall, ToolRunner, ToolSpec};
 use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
-use xiaoban_protocol::{Attachment, Event, Location, MemoryCategory, ServiceId};
+use xiaoban_protocol::{Attachment, Event, Location, MemoryCategory, MemoryKind, ServiceId};
+use xiaoban_store::NewMemory;
 
 use crate::services::ServiceError;
 use crate::state::SharedState;
@@ -114,6 +115,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let mut specs = base_specs(localizer);
     specs.extend(crate::operate_tools::specs(localizer));
     specs.extend(crate::file_tools::specs(localizer));
+    specs.push(crate::file_tools::recall_spec(localizer));
     specs
 }
 
@@ -130,8 +132,35 @@ fn remember_spec(l: &Localizer) -> ToolSpec {
                     "enum": MemoryCategory::ALL.map(MemoryCategory::as_str),
                     "description": l.text(keys::TOOL_REMEMBER_CATEGORY),
                 },
+                "galaxy": text(l, keys::TOOL_REMEMBER_GALAXY),
+                "kind": {
+                    "type": "string",
+                    "enum": MemoryKind::ALL.map(MemoryKind::as_str),
+                    "description": l.text(keys::TOOL_REMEMBER_KIND),
+                },
+                "importance": {
+                    "type": "integer",
+                    "enum": [1, 2, 3],
+                    "description": l.text(keys::TOOL_REMEMBER_IMPORTANCE),
+                },
+                "aliases": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": l.text(keys::TOOL_REMEMBER_ALIASES),
+                },
+                "pinned": { "type": "boolean", "description": l.text(keys::TOOL_REMEMBER_PINNED) },
+                "expires": text(l, keys::TOOL_REMEMBER_EXPIRES),
+                "replaces": text(l, keys::TOOL_REMEMBER_REPLACES),
             }),
-            &["subject", "value", "category"],
+            &[
+                "subject",
+                "value",
+                "category",
+                "galaxy",
+                "kind",
+                "importance",
+                "aliases",
+            ],
         ),
     )
 }
@@ -239,6 +268,41 @@ struct RememberArgs {
     value: String,
     #[serde(default)]
     category: Option<String>,
+    #[serde(default)]
+    galaxy: Option<String>,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    importance: Option<u8>,
+    #[serde(default)]
+    aliases: Vec<String>,
+    #[serde(default)]
+    pinned: Option<bool>,
+    #[serde(default)]
+    expires: Option<String>,
+    #[serde(default)]
+    replaces: Option<String>,
+}
+
+const MAX_ALIASES: usize = 100;
+
+fn end_of_day(date: &str) -> Option<i64> {
+    let day: jiff::civil::Date = date.trim().parse().ok()?;
+    let zoned = day
+        .at(23, 59, 59, 0)
+        .to_zoned(jiff::tz::TimeZone::system())
+        .ok()?;
+    Some(zoned.timestamp().as_millisecond())
+}
+
+fn clean_aliases(aliases: Vec<String>) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    aliases
+        .into_iter()
+        .map(|alias| alias.trim().to_owned())
+        .filter(|alias| !alias.is_empty() && seen.insert(alias.to_lowercase()))
+        .take(MAX_ALIASES)
+        .collect()
 }
 
 #[derive(Deserialize)]
@@ -361,8 +425,19 @@ impl<'a> HubTools<'a> {
         if subject.is_empty() || value.is_empty() {
             return error("subject and value must not be empty");
         }
-        let category = MemoryCategory::parse(args.category.as_deref().unwrap_or_default());
-        match self.state.store.remember(subject, value, category).await {
+        let memory = NewMemory {
+            subject,
+            value,
+            category: MemoryCategory::parse(args.category.as_deref().unwrap_or_default()),
+            galaxy: args.galaxy,
+            kind: MemoryKind::parse(args.kind.as_deref().unwrap_or_default()),
+            importance: args.importance.unwrap_or(2),
+            pinned: args.pinned.unwrap_or(false),
+            aliases: clean_aliases(args.aliases),
+            expires_at: args.expires.as_deref().and_then(end_of_day),
+            replaces: args.replaces.filter(|old| !old.trim().is_empty()),
+        };
+        match self.state.store.remember(memory).await {
             Ok(memory) => {
                 self.state.publish(Event::MemorySaved { memory });
                 json!({ "saved": true }).to_string()
@@ -554,6 +629,7 @@ impl ToolRunner for HubTools<'_> {
                 crate::operate_tools::DO_STEPS => self.do_steps(arguments).await,
                 crate::file_tools::FILE_SEARCH => self.file_search(arguments).await,
                 crate::file_tools::FILE_READ => self.file_read(arguments).await,
+                crate::file_tools::RECALL => self.recall(arguments).await,
                 crate::operate_tools::CONFIRM => self.confirm(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,

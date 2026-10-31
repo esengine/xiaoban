@@ -1,5 +1,5 @@
 use xiaoban_protocol::{MemoryCategory, Platform, Quote, Role, Usage};
-use xiaoban_store::{EpochReason, NewMessage, Store};
+use xiaoban_store::{EpochReason, NewMemory, NewMessage, Store};
 
 #[tokio::test]
 async fn threads_and_messages_round_trip() {
@@ -170,15 +170,19 @@ async fn usage_totals_sum_every_turn() {
 async fn remembering_a_topic_again_replaces_the_value() {
     let store = Store::open_in_memory().unwrap();
     let first = store
-        .remember("称呼".into(), "阿哲".into(), MemoryCategory::Other)
+        .remember(NewMemory::simple("称呼", "阿哲", MemoryCategory::Other))
         .await
         .unwrap();
     store
-        .remember("家里".into(), "老婆和儿子".into(), MemoryCategory::Family)
+        .remember(NewMemory::simple(
+            "家里",
+            "老婆和儿子",
+            MemoryCategory::Family,
+        ))
         .await
         .unwrap();
     let updated = store
-        .remember("称呼".into(), "哲哥".into(), MemoryCategory::Other)
+        .remember(NewMemory::simple("称呼", "哲哥", MemoryCategory::Other))
         .await
         .unwrap();
     assert_eq!(updated.id, first.id);

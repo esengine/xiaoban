@@ -18,6 +18,7 @@ use rusqlite::Connection;
 pub use clock::now_ms;
 pub use devices::StoredDevice;
 pub use error::StoreError;
+pub use memories::NewMemory;
 pub use messages::NewMessage;
 pub use transcript::{Epoch, EpochReason};
 pub use usage::UsageTotals;

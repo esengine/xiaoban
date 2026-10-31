@@ -195,12 +195,17 @@ pub async fn start(
     let (turn_id, cancel) = claim(state, &thread_id)?;
 
     let (file_notes, images) = attachments(state, &files);
+    let remembered = recalled(state, &text).await;
     let wire = user_wire(
         &text,
         &notes(
             state,
             quote.as_ref().map(|quote| quote.text.as_str()),
-            file_notes.into_iter().chain(context).collect(),
+            remembered
+                .into_iter()
+                .chain(file_notes)
+                .chain(context)
+                .collect(),
         ),
     );
     let accepted = async {
@@ -259,6 +264,8 @@ pub async fn retry(
         .cloned()
         .ok_or_else(|| ProtocolError::new(ErrorCode::BadRequest, "nothing to answer yet"))?;
     let (file_notes, images) = attachments(state, &asked.files);
+    let remembered = recalled(state, &asked.text).await;
+    let file_notes: Vec<ContextNote> = remembered.into_iter().chain(file_notes).collect();
     let job = match messages.last() {
         Some(last) if last.role == Role::Assistant => Job {
             wire: state.localizer.text(keys::TURN_REGENERATE),
@@ -317,7 +324,34 @@ fn parse_transcript(entries: &[String]) -> Transcript {
 
 async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreError> {
     let memories = state.store.list_memories().await?;
-    Ok(memory::snapshot(&state.localizer, &memories))
+    let galaxies = state.store.list_galaxies().await?;
+    Ok(memory::snapshot(
+        &state.localizer,
+        &memories,
+        &galaxies,
+        xiaoban_store::now_ms(),
+    ))
+}
+
+async fn recalled(state: &SharedState, text: &str) -> Option<ContextNote> {
+    let memories = state.store.list_memories().await.ok()?;
+    let galaxies = state.store.list_galaxies().await.ok()?;
+    let links = state.store.memory_links().await.unwrap_or_default();
+    let recall = memory::Recall {
+        memories: &memories,
+        galaxies: &galaxies,
+        links: &links,
+        now: xiaoban_store::now_ms(),
+    };
+    let found = recall.find(text, memory::RECALL_BUDGET, true);
+    (!found.is_empty()).then(|| ContextNote {
+        label: state.localizer.text(keys::MEMORY_RECALL_LABEL),
+        body: found
+            .into_iter()
+            .map(memory::line)
+            .collect::<Vec<_>>()
+            .join("\n"),
+    })
 }
 
 pub async fn begin_epoch(

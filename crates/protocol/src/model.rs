@@ -226,12 +226,69 @@ pub struct Memory {
     #[serde(default)]
     pub category: MemoryCategory,
     #[serde(default)]
+    pub galaxy: Option<String>,
+    #[serde(default)]
+    pub kind: MemoryKind,
+    #[serde(default = "default_importance")]
+    pub importance: u8,
+    #[serde(default)]
+    pub pinned: bool,
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub expires_at: Option<i64>,
+    #[serde(default)]
     pub uses: u32,
     #[serde(default)]
     #[ts(type = "number | null")]
     pub last_used_at: Option<i64>,
     #[ts(type = "number")]
     pub updated_at: i64,
+}
+
+const fn default_importance() -> u8 {
+    2
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryKind {
+    #[default]
+    Fact,
+    Preference,
+    Constraint,
+    Plan,
+}
+
+impl MemoryKind {
+    pub const ALL: [Self; 4] = [Self::Fact, Self::Preference, Self::Constraint, Self::Plan];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Fact => "fact",
+            Self::Preference => "preference",
+            Self::Constraint => "constraint",
+            Self::Plan => "plan",
+        }
+    }
+
+    pub fn parse(text: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|kind| kind.as_str() == text)
+            .unwrap_or_default()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryGalaxy {
+    pub id: String,
+    pub cluster: MemoryCategory,
+    pub name: String,
+    pub aliases: Vec<String>,
+    pub summary: String,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]

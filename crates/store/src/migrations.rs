@@ -116,6 +116,36 @@ ALTER TABLE memories ADD COLUMN category TEXT NOT NULL DEFAULT 'other';
 ALTER TABLE memories ADD COLUMN uses INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE memories ADD COLUMN last_used_at INTEGER;
 ",
+    r"
+CREATE TABLE memory_galaxies (
+    id TEXT PRIMARY KEY,
+    cluster TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
+    aliases TEXT NOT NULL DEFAULT '[]',
+    summary TEXT NOT NULL DEFAULT '',
+    dirty INTEGER NOT NULL DEFAULT 1,
+    updated_at INTEGER NOT NULL
+);
+ALTER TABLE memories ADD COLUMN galaxy_id TEXT REFERENCES memory_galaxies(id) ON DELETE SET NULL;
+ALTER TABLE memories ADD COLUMN kind TEXT NOT NULL DEFAULT 'fact';
+ALTER TABLE memories ADD COLUMN importance INTEGER NOT NULL DEFAULT 2;
+ALTER TABLE memories ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE memories ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE memories ADD COLUMN expires_at INTEGER;
+ALTER TABLE memories ADD COLUMN superseded_by TEXT;
+CREATE TABLE memory_links (
+    a TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+    b TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+    weight REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (a, b)
+) WITHOUT ROWID;
+CREATE TABLE memory_usage (
+    created_at INTEGER NOT NULL,
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    cached_tokens INTEGER NOT NULL
+);
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

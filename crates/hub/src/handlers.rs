@@ -218,7 +218,11 @@ async fn remember(state: &SharedState, subject: &str, value: &str) -> Handled {
     let value = trimmed(value).ok_or_else(|| bad_request("memory is empty"))?;
     let memory = state
         .store
-        .remember(subject, value, xiaoban_protocol::MemoryCategory::Other)
+        .remember(xiaoban_store::NewMemory::simple(
+            subject,
+            value,
+            xiaoban_protocol::MemoryCategory::Other,
+        ))
         .await?;
     state.publish(Event::MemorySaved {
         memory: memory.clone(),

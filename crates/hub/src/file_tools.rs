@@ -112,3 +112,68 @@ impl HubTools<'_> {
         }
     }
 }
+
+pub const RECALL: &str = "recall";
+
+pub fn recall_spec(l: &Localizer) -> ToolSpec {
+    ToolSpec {
+        name: RECALL.to_owned(),
+        description: l.text(keys::TOOL_RECALL_DESCRIPTION),
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "galaxy": text(l, keys::TOOL_RECALL_GALAXY),
+                "query": text(l, keys::TOOL_RECALL_QUERY),
+            },
+            "additionalProperties": false,
+        }),
+    }
+}
+
+#[derive(Deserialize)]
+struct RecallArgs {
+    #[serde(default)]
+    galaxy: Option<String>,
+    #[serde(default)]
+    query: Option<String>,
+}
+
+impl HubTools<'_> {
+    pub(crate) async fn recall(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<RecallArgs>(arguments) else {
+            return error("arguments must be {galaxy?, query?}");
+        };
+        let (Ok(memories), Ok(galaxies)) = (
+            self.state.store.list_memories().await,
+            self.state.store.list_galaxies().await,
+        ) else {
+            return error("memories are unavailable right now");
+        };
+        let links = self.state.store.memory_links().await.unwrap_or_default();
+        let recall = crate::memory::Recall {
+            memories: &memories,
+            galaxies: &galaxies,
+            links: &links,
+            now: xiaoban_store::now_ms(),
+        };
+        let found = match (args.galaxy.as_deref(), args.query.as_deref()) {
+            (Some(galaxy), _) if !galaxy.trim().is_empty() => recall.galaxy(galaxy),
+            (_, Some(query)) if !query.trim().is_empty() => {
+                recall.find(query, crate::memory::SEARCH_BUDGET, false)
+            }
+            _ => return error("give a galaxy name or a query"),
+        };
+        json!({
+            "memories": found
+                .iter()
+                .map(|memory| json!({
+                    "subject": memory.subject,
+                    "value": memory.value,
+                    "galaxy": memory.galaxy,
+                    "kind": memory.kind.as_str(),
+                }))
+                .collect::<Vec<_>>(),
+        })
+        .to_string()
+    }
+}
