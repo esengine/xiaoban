@@ -2,6 +2,7 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { dismiss, dismissOnCancel } from "../../lib/dialog.ts";
 import { openExternal } from "../../lib/external.ts";
 import { CheckIcon, GlobeIcon, OutIcon } from "./icons.tsx";
 
@@ -161,12 +162,17 @@ export function SearchDialog({ threadId, onClose }: { threadId: string; onClose:
     dialog.current?.showModal();
   }, []);
   return (
-    <dialog ref={dialog} className="dialog dialog--service" onClose={onClose}>
+    <dialog
+      ref={dialog}
+      onCancel={dismissOnCancel}
+      className="dialog dialog--service"
+      onClose={onClose}
+    >
       <SearchCard
         threadId={threadId}
         answered={false}
-        onDone={() => dialog.current?.close()}
-        onSkip={() => dialog.current?.close()}
+        onDone={() => dismiss(dialog.current)}
+        onSkip={() => dismiss(dialog.current)}
       />
     </dialog>
   );

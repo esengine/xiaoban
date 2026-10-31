@@ -1,5 +1,6 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useRef } from "react";
+import { dismiss, dismissOnCancel } from "../../lib/dialog.ts";
 
 interface Props {
   title: string;
@@ -18,6 +19,7 @@ export function ConfirmDialog({ title, body, confirm, onConfirm, onClose }: Prop
   return (
     <dialog
       ref={dialog}
+      onCancel={dismissOnCancel}
       className="dialog dialog--confirm"
       aria-labelledby="confirm-title"
       onClose={onClose}
@@ -27,7 +29,7 @@ export function ConfirmDialog({ title, body, confirm, onConfirm, onClose }: Prop
       </h2>
       <p className="dialog__body">{body}</p>
       <div className="dialog__actions">
-        <button type="button" className="dialog__secondary" onClick={() => dialog.current?.close()}>
+        <button type="button" className="dialog__secondary" onClick={() => dismiss(dialog.current)}>
           {t("dialog-cancel")}
         </button>
         <button
@@ -35,7 +37,7 @@ export function ConfirmDialog({ title, body, confirm, onConfirm, onClose }: Prop
           className="dialog__danger"
           onClick={() => {
             onConfirm();
-            dialog.current?.close();
+            dismiss(dialog.current);
           }}
         >
           {confirm}
