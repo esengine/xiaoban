@@ -1451,3 +1451,50 @@ async fn locate_tool_reports_the_current_city() {
     assert!(tool.content.contains("北京市") && tool.content.contains("朝阳区"));
     hub.shutdown().await;
 }
+
+#[tokio::test]
+async fn place_details_update_one_stop_in_a_new_version() {
+    let detail = serde_json::json!({
+        "day": 1,
+        "stop": "中国茶叶博物馆",
+        "detail": { "why": "室内，下雨也能去", "suits": ["推车好走"], "tickets": "免费" }
+    });
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![save_trip_call()],
+        vec![ModelChunk::Text("排好了".into())],
+        vec![tool_call(
+            "save_place_detail",
+            &serde_json::json!({ "day": 1, "stop": "不存在", "detail": { "why": "x" } }),
+        )],
+        vec![tool_call("save_place_detail", &detail)],
+        vec![ModelChunk::Text("详情已更新".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "去杭州玩一天", Vec::new()).await;
+    converse(&mut client, &thread, "查一下茶叶博物馆的详情", Vec::new()).await;
+
+    let saved = latest_message_with(&mut client, &thread, |attachment| {
+        matches!(attachment, Attachment::Trip { version: 2, .. })
+    })
+    .await;
+    let trip = trip_of(&mut client, &saved).await;
+    let stops = &trip.days[0].stops;
+    assert_eq!(
+        stops[1].detail.as_ref().map(|detail| detail.why.as_str()),
+        Some("室内，下雨也能去")
+    );
+    assert_eq!(
+        stops[0].detail.as_ref().map(|detail| detail.why.as_str()),
+        Some("看西湖全景")
+    );
+    assert_eq!(stops[0].next.map(|leg| leg.minutes), Some(20));
+
+    let missing = &provider.requests()[3];
+    let answer = missing.messages.last().unwrap();
+    assert!(answer.content.contains("no stop named 不存在"));
+    hub.shutdown().await;
+}

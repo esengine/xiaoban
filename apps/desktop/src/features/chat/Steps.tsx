@@ -9,6 +9,10 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   read_page: { detail: "step-read_page", plain: "step-read_page-plain" },
   weather: { detail: "step-weather", plain: "step-weather-plain" },
   remember: { detail: "step-remember", plain: "step-remember-plain" },
+  save_place_detail: {
+    detail: "step-save_place_detail",
+    plain: "step-save_place_detail-plain",
+  },
 };
 
 const PLAIN: Record<string, PlainMessageKey> = {

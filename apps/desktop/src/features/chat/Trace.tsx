@@ -11,6 +11,7 @@ const TOOL_NAMES: Record<string, PlainMessageKey> = {
   web_search: "tool-name-search",
   read_page: "tool-name-page",
   save_trip: "tool-name-trip",
+  save_place_detail: "tool-name-detail",
   locate: "tool-name-locate",
 };
 

@@ -9,7 +9,7 @@ use xiaoban_protocol::{Attachment, Event, Location, ServiceId};
 
 use crate::services::ServiceError;
 use crate::state::SharedState;
-use crate::trip::{self, TripDraft};
+use crate::trip::{self, DetailRequest, TripDraft};
 use crate::weather::{MAX_DAYS, WeatherError};
 
 pub const REMEMBER: &str = "remember";
@@ -18,6 +18,7 @@ pub const READ_PAGE: &str = "read_page";
 pub const LOCATE: &str = "locate";
 pub const WEB_SEARCH: &str = "web_search";
 pub const SAVE_TRIP: &str = "save_trip";
+pub const SAVE_PLACE_DETAIL: &str = "save_place_detail";
 const DEFAULT_DAYS: u8 = 7;
 
 fn text(localizer: &Localizer, key: MessageKey) -> Value {
@@ -46,7 +47,7 @@ fn spec(name: &str, description: String, parameters: Value) -> ToolSpec {
     }
 }
 
-fn trip_day(l: &Localizer) -> Value {
+fn detail_schema(l: &Localizer) -> Value {
     let link = object(
         &json!({
             "title": text(l, keys::TOOL_SAVE_TRIP_SOURCE_TITLE),
@@ -55,7 +56,7 @@ fn trip_day(l: &Localizer) -> Value {
         }),
         &["title", "url"],
     );
-    let detail = object(
+    object(
         &json!({
             "why": text(l, keys::TOOL_SAVE_TRIP_DETAIL_WHY),
             "suits": { "type": "array", "items": { "type": "string" }, "description": l.text(keys::TOOL_SAVE_TRIP_DETAIL_SUITS) },
@@ -71,7 +72,11 @@ fn trip_day(l: &Localizer) -> Value {
             },
         }),
         &["why"],
-    );
+    )
+}
+
+fn trip_day(l: &Localizer) -> Value {
+    let detail = detail_schema(l);
     let stop = object(
         &json!({
             "name": text(l, keys::TOOL_SAVE_TRIP_STOP_NAME),
@@ -152,6 +157,18 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
             object(
                 &json!({ "url": text(l, keys::TOOL_READ_PAGE_URL) }),
                 &["url"],
+            ),
+        ),
+        spec(
+            SAVE_PLACE_DETAIL,
+            l.text(keys::TOOL_SAVE_PLACE_DETAIL_DESCRIPTION),
+            object(
+                &json!({
+                    "day": { "type": "integer", "minimum": 1, "description": l.text(keys::TOOL_SAVE_PLACE_DETAIL_DAY) },
+                    "stop": text(l, keys::TOOL_SAVE_PLACE_DETAIL_STOP),
+                    "detail": detail_schema(l),
+                }),
+                &["day", "stop", "detail"],
             ),
         ),
         spec(
@@ -378,6 +395,33 @@ impl<'a> HubTools<'a> {
     }
 }
 
+impl HubTools<'_> {
+    async fn save_place_detail(&self, arguments: &str) -> String {
+        let request = match serde_json::from_str::<DetailRequest>(arguments) {
+            Ok(request) => request,
+            Err(failure) => {
+                tracing::warn!(%failure, "save_place_detail arguments rejected");
+                return error(&format!("invalid detail: {failure}"));
+            }
+        };
+        let verified = matches!(self.key(ServiceId::WebSearch).await, Key::Ready(_));
+        match trip::save_detail(self.state, self.thread_id, request, verified).await {
+            Ok((trip, report)) => {
+                *self.attachment.lock().unwrap() = Some(Attachment::Trip {
+                    trip_id: trip.id.clone(),
+                    version: trip.version,
+                });
+                report.to_string()
+            }
+            Err(trip::DetailError::Store(failure)) => {
+                tracing::error!(%failure, "failed to save place detail");
+                error("could not save the detail")
+            }
+            Err(failure) => error(&failure.to_string()),
+        }
+    }
+}
+
 impl ToolRunner for HubTools<'_> {
     fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String> {
         Box::pin(async move {
@@ -389,6 +433,7 @@ impl ToolRunner for HubTools<'_> {
                 LOCATE => self.locate().await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
+                SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,
                 other => error(&format!("unknown tool {other}")),
             }
         })

@@ -52,7 +52,7 @@ struct ReviewDraft {
 }
 
 #[derive(Debug, Deserialize)]
-struct DetailDraft {
+pub struct DetailDraft {
     why: String,
     suits: Option<Vec<String>>,
     duration: Option<String>,
@@ -254,7 +254,7 @@ pub async fn save(
         "version": trip.version,
         "verified": trip.verified,
         "forecast": forecast,
-        "display": "the app shows this trip as a card under your reply; keep the reply short and do not list the itinerary again",
+        "display": "the app shows this trip as a card under your reply; reply in one or two sentences and do not list the itinerary again",
     });
     Ok((trip, report))
 }
@@ -278,4 +278,58 @@ mod tests {
         assert_eq!(minutes(leg.minutes), 15);
         assert_eq!(minutes(f64::NAN), 1);
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DetailRequest {
+    day: usize,
+    stop: String,
+    detail: DetailDraft,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DetailError {
+    #[error("there is no trip in this conversation yet")]
+    NoTrip,
+    #[error("no stop named {0} on that day")]
+    NoStop(String),
+    #[error(transparent)]
+    Store(#[from] StoreError),
+}
+
+fn same_place(a: &str, b: &str) -> bool {
+    let a = a.trim();
+    let b = b.trim();
+    !a.is_empty() && (a == b || a.contains(b) || b.contains(a))
+}
+
+pub async fn save_detail(
+    state: &SharedState,
+    thread_id: &str,
+    request: DetailRequest,
+    verified: bool,
+) -> Result<(Trip, Value), DetailError> {
+    let mut trip = state
+        .store
+        .latest_trip_in_thread(thread_id.to_owned())
+        .await?
+        .ok_or(DetailError::NoTrip)?;
+    let wanted = request.day.checked_sub(1);
+    let stop = trip
+        .days
+        .iter_mut()
+        .enumerate()
+        .filter(|(index, _)| wanted.is_none_or(|day| day == *index))
+        .flat_map(|(_, day)| day.stops.iter_mut())
+        .find(|stop| same_place(&stop.name, &request.stop))
+        .ok_or_else(|| DetailError::NoStop(request.stop.clone()))?;
+    stop.detail = place_detail(request.detail, verified);
+    let id = trip.id.clone();
+    let saved = state.store.save_trip(Some(id), trip).await?;
+    let report = json!({
+        "saved": true,
+        "version": saved.version,
+        "display": "the app now shows these details in the trip; reply with one short sentence and do not repeat the details",
+    });
+    Ok((saved, report))
 }

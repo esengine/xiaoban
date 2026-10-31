@@ -4,7 +4,7 @@ use xiaoban_protocol::StepResult;
 
 #[cfg(test)]
 use crate::tools::LOCATE;
-use crate::tools::{READ_PAGE, REMEMBER, SAVE_TRIP, WEATHER, WEB_SEARCH};
+use crate::tools::{READ_PAGE, REMEMBER, SAVE_PLACE_DETAIL, SAVE_TRIP, WEATHER, WEB_SEARCH};
 
 const MAX_SOURCES: usize = 3;
 const MAX_DETAIL: usize = 60;
@@ -33,6 +33,7 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         WEATHER => text(&args, "place"),
         REMEMBER => text(&args, "subject"),
         SAVE_TRIP => text(&args, "title"),
+        SAVE_PLACE_DETAIL => text(&args, "stop"),
         _ => None,
     }
 }
@@ -68,7 +69,7 @@ pub fn result(call: &ToolCall, output: &str) -> StepResult {
         READ_PAGE => StepResult::Page {
             title: text(&output, "title").unwrap_or_default(),
         },
-        SAVE_TRIP => output
+        SAVE_TRIP | SAVE_PLACE_DETAIL => output
             .get("version")
             .and_then(Value::as_u64)
             .and_then(|version| u32::try_from(version).ok())
