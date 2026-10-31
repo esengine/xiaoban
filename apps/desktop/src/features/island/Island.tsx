@@ -23,6 +23,107 @@ const SIZES: Record<Mode, readonly [number, number]> = {
 const CARD_RADIUS = 30;
 const LARGE_STEPS = 4;
 const THINK_SETTLE_MS = 600;
+const MENU_WIDTH = 220;
+const MENU_GAP = 8;
+const MENU_ROW = 32;
+const MENU_RULE = 9;
+const MENU_PAD = 8;
+const MENU_CLOSE_MS = 80;
+
+interface IslandMenuItem {
+  label: string;
+  shortcut?: string;
+  danger?: boolean;
+  disabled?: boolean;
+  run?: () => void;
+}
+
+type IslandMenuEntry = IslandMenuItem | "separator";
+
+function menuHeight(entries: IslandMenuEntry[]): number {
+  return (
+    MENU_PAD +
+    entries.reduce((sum, entry) => sum + (entry === "separator" ? MENU_RULE : MENU_ROW), 0)
+  );
+}
+
+function IslandMenu({
+  entries,
+  closing,
+  onClose,
+}: {
+  entries: IslandMenuEntry[];
+  closing: boolean;
+  onClose: () => void;
+}) {
+  const [active, setActive] = useState(-1);
+  const box = useRef<HTMLDivElement>(null);
+  const usable = entries.flatMap((entry, index) =>
+    entry !== "separator" && !entry.disabled ? [index] : [],
+  );
+  const choose = (index: number) => {
+    const entry = entries[index];
+    if (!entry || entry === "separator" || entry.disabled) return;
+    onClose();
+    entry.run?.();
+  };
+  const keys = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  keys.current = (event) => {
+    const at = usable.indexOf(active);
+    if (event.key === "Escape") onClose();
+    else if (event.key === "ArrowDown") setActive(usable[(at + 1) % usable.length] ?? -1);
+    else if (event.key === "ArrowUp")
+      setActive(usable[(at - 1 + usable.length) % usable.length] ?? -1);
+    else if (event.key === "Enter") choose(active);
+    else return;
+    event.preventDefault();
+  };
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => keys.current(event);
+    const outside = (event: PointerEvent) => {
+      if (!box.current?.contains(event.target as Node)) onClose();
+    };
+    window.addEventListener("keydown", key, true);
+    window.addEventListener("pointerdown", outside, true);
+    window.addEventListener("blur", onClose);
+    return () => {
+      window.removeEventListener("keydown", key, true);
+      window.removeEventListener("pointerdown", outside, true);
+      window.removeEventListener("blur", onClose);
+    };
+  }, [onClose]);
+  return (
+    <div
+      ref={box}
+      role="menu"
+      className="island-menu"
+      data-closing={closing || undefined}
+      onPointerDown={(event) => event.preventDefault()}
+    >
+      {entries.map((entry, index) =>
+        entry === "separator" ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: separators have no identity
+          <hr key={`rule-${index}`} className="island-menu__rule" />
+        ) : (
+          <button
+            key={entry.label}
+            type="button"
+            role="menuitem"
+            className="island-menu__item"
+            data-active={index === active || undefined}
+            data-danger={entry.danger || undefined}
+            disabled={entry.disabled}
+            onPointerEnter={() => setActive(index)}
+            onClick={() => choose(index)}
+          >
+            <span>{entry.label}</span>
+            {entry.shortcut && <span className="island-menu__key">{entry.shortcut}</span>}
+          </button>
+        ),
+      )}
+    </div>
+  );
+}
 const APP_TOOLS = new Set(["open_app", "look_at_app"]);
 const CONFIRM_SHORT = 112;
 const DRAG_THRESHOLD = 4;
@@ -86,6 +187,11 @@ export function Island() {
     leaveTimer.current = window.setTimeout(() => setHover(false), HOVER_GRACE_MS);
   }, []);
   const [flash, setFlash] = useState(false);
+  const [menu, setMenu] = useState<{ closing: boolean; moved: boolean } | null>(null);
+  const closeMenu = useCallback(() => {
+    setMenu((open) => (open && !open.closing ? { ...open, closing: true } : open));
+    window.setTimeout(() => setMenu(null), MENU_CLOSE_MS);
+  }, []);
   const [expanded, setExpanded] = useState(false);
   const [note, setNote] = useState("");
   const [finished, setFinished] = useState<Finished | null>(null);
@@ -143,16 +249,88 @@ export function Island() {
             : "compact"
         : "idle";
   const paused = running?.paused ?? false;
+  const wakeKey = `${confirm?.id ?? ""}|${done ? "done" : ""}`;
+  useEffect(() => {
+    if (wakeKey !== "|") void invoke("island_snooze", { snoozed: false });
+  }, [wakeKey]);
+  useEffect(() => {
+    const block = (event: MouseEvent) => {
+      event.preventDefault();
+      if (!(event.target as Element | null)?.closest(".island")) return;
+      void invoke<boolean>("island_moved").then((moved) => setMenu({ closing: false, moved }));
+    };
+    document.addEventListener("contextmenu", block);
+    return () => document.removeEventListener("contextmenu", block);
+  }, []);
   const thinking = useSettled(
     running ? running.steps.length === 0 || isBetweenSteps(running.steps) : false,
     THINK_SETTLE_MS,
   );
   const operating = running ? isOperating(running) : false;
 
-  const targetSize: readonly [number, number] =
+  const islandSize: readonly [number, number] =
     mode === "confirm" && confirm?.kind.kind !== "action"
       ? [SIZES.confirm[0], CONFIRM_SHORT]
       : SIZES[mode];
+  const operatingNow = running ? isOperating(running) : false;
+  const menuEntries: IslandMenuEntry[] = running
+    ? [
+        { label: t("island-menu-expand"), run: () => setExpanded(true) },
+        {
+          label: t("island-open-main"),
+          shortcut: "\u23181",
+          run: () => void invoke("island_open_main", { threadId: running.threadId }),
+        },
+        "separator",
+        ...(operatingNow
+          ? [
+              {
+                label: running.paused ? t("island-resume") : t("island-pause"),
+                run: () =>
+                  void (running.paused
+                    ? store.resume(running.turnId)
+                    : store.pause(running.turnId)),
+              },
+            ]
+          : []),
+        { label: t("island-stop"), danger: true, run: () => void store.cancel(running.turnId) },
+        "separator",
+        ...(menu?.moved
+          ? [{ label: t("island-menu-home"), run: () => void invoke("island_home") }]
+          : []),
+        {
+          label: t("island-menu-quit"),
+          shortcut: "\u2318Q",
+          danger: true,
+          run: () => void invoke("island_quit"),
+        },
+      ]
+    : [
+        {
+          label: t("island-open"),
+          shortcut: "\u23181",
+          run: () => void invoke("island_open_main", { threadId: null }),
+        },
+        "separator",
+        ...(menu?.moved
+          ? [{ label: t("island-menu-home"), run: () => void invoke("island_home") }]
+          : []),
+        {
+          label: t("island-menu-snooze"),
+          run: () => void invoke("island_snooze", { snoozed: true }),
+        },
+        "separator",
+        { label: t("island-menu-settings"), shortcut: "\u2318,", disabled: true },
+        {
+          label: t("island-menu-quit"),
+          shortcut: "\u2318Q",
+          danger: true,
+          run: () => void invoke("island_quit"),
+        },
+      ];
+  const targetSize: readonly [number, number] = menu
+    ? [Math.max(islandSize[0], MENU_WIDTH), islandSize[1] + MENU_GAP + menuHeight(menuEntries)]
+    : islandSize;
   const [dragging, setDragging] = useState(false);
   const press = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   useEffect(() => {
@@ -375,7 +553,7 @@ export function Island() {
     previousContent.current = { mode, node: content };
   });
 
-  const size = targetSize;
+  const size = islandSize;
   const radius = mode === "confirm" || mode === "large" ? CARD_RADIUS : size[1] / 2;
   const target = confirm?.threadId ?? done?.threadId ?? running?.threadId ?? null;
 
@@ -424,6 +602,7 @@ export function Island() {
           {content}
         </span>
       </div>
+      {menu && <IslandMenu entries={menuEntries} closing={menu.closing} onClose={closeMenu} />}
     </div>
   );
 }

@@ -25,6 +25,7 @@ interface OpenMenu {
   x: number;
   y: number;
   entries: MenuEntry[];
+  closing?: boolean;
 }
 
 type Open = (event: ReactMouseEvent, entries: MenuEntry[]) => void;
@@ -32,10 +33,11 @@ type Open = (event: ReactMouseEvent, entries: MenuEntry[]) => void;
 const MenuContext = createContext<Open | null>(null);
 
 const EDGE = 8;
+const CLOSE_MS = 80;
 
 function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
   const list = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: menu.x, top: menu.y });
+  const [position, setPosition] = useState({ left: menu.x, top: menu.y, origin: "0 0" });
   const [active, setActive] = useState(-1);
   const items = menu.entries.flatMap((entry, index) =>
     entry !== "separator" && !entry.disabled ? [index] : [],
@@ -44,13 +46,11 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
   useLayoutEffect(() => {
     const box = list.current?.getBoundingClientRect();
     if (!box) return;
-    const left =
-      menu.x + box.width + EDGE > window.innerWidth ? Math.max(EDGE, menu.x - box.width) : menu.x;
-    const top =
-      menu.y + box.height + EDGE > window.innerHeight
-        ? Math.max(EDGE, menu.y - box.height)
-        : menu.y;
-    setPosition({ left, top });
+    const flipX = menu.x + box.width + EDGE > window.innerWidth;
+    const flipY = menu.y + box.height + EDGE > window.innerHeight;
+    const left = flipX ? Math.max(EDGE, menu.x - box.width) : menu.x;
+    const top = flipY ? Math.max(EDGE, menu.y - box.height) : menu.y;
+    setPosition({ left, top, origin: `${flipX ? "100%" : "0"} ${flipY ? "100%" : "0"}` });
   }, [menu]);
 
   useEffect(() => {
@@ -100,7 +100,8 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
       ref={list}
       role="menu"
       className="context-menu"
-      style={position}
+      data-closing={menu.closing || undefined}
+      style={{ left: position.left, top: position.top, transformOrigin: position.origin }}
       onPointerDown={(event) => event.preventDefault()}
     >
       {menu.entries.map((entry, index) =>
@@ -128,7 +129,10 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
 
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<OpenMenu | null>(null);
-  const close = useCallback(() => setMenu(null), []);
+  const close = useCallback(() => {
+    setMenu((open) => (open && !open.closing ? { ...open, closing: true } : open));
+    window.setTimeout(() => setMenu((open) => (open?.closing ? null : open)), CLOSE_MS);
+  }, []);
   const open = useCallback<Open>((event, entries) => {
     event.preventDefault();
     event.stopPropagation();

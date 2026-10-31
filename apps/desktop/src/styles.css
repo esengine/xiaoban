@@ -1287,7 +1287,25 @@ button {
     0 12px 32px color-mix(in srgb, var(--color-ink) 18%, transparent),
     0 0 0 1px color-mix(in srgb, var(--color-ink) 8%, transparent);
   outline: none;
-  animation: fade-in var(--motion-fast) var(--ease-standard) both;
+  animation: context-menu-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.context-menu[data-closing] {
+  pointer-events: none;
+  animation: context-menu-out 80ms linear both;
+}
+
+@keyframes context-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes context-menu-out {
+  to {
+    opacity: 0;
+  }
 }
 
 .context-menu__item {

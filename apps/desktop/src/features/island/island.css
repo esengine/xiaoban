@@ -10,8 +10,82 @@ html[data-window="island"] #root {
   inset: 0;
   padding: 16px;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+
+.island-menu {
+  flex: none;
+  width: 220px;
+  padding: 4px 0;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: var(--dark-surface);
+  box-shadow: 0 0 0 1px var(--dark-island-ring);
+  transform-origin: 50% 0;
+  animation: island-menu-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.island-menu[data-closing] {
+  animation: island-menu-out 80ms linear both;
+}
+
+@keyframes island-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes island-menu-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.island-menu__item {
+  width: calc(100% - 8px);
+  height: 32px;
+  margin: 0 4px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dark-text);
+  font: inherit;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.island-menu__item[data-active] {
+  background: var(--dark-line);
+}
+
+.island-menu__item[data-danger] {
+  color: var(--color-attention);
+}
+
+.island-menu__item:disabled {
+  color: var(--dark-line-strong);
+}
+
+.island-menu__key {
+  font-size: 12px;
+  color: var(--dark-text-muted);
+}
+
+.island-menu__rule {
+  height: 1px;
+  margin: 4px 8px;
+  border: 0;
+  background: var(--dark-island-ring);
 }
 
 .island-slot {
@@ -465,6 +539,8 @@ html[data-window="island"] #root {
     animation: fade-in var(--motion-fast) linear both;
   }
 
+  .island-menu,
+  .island-menu[data-closing],
   .island__eyes,
   .island__steps ul,
   .island__now,

@@ -22,6 +22,9 @@ const MARGIN: f64 = 16.0;
 const SNAP_DISTANCE: f64 = 40.0;
 const SETTLE: Duration = Duration::from_millis(500);
 const IDLE: (f64, f64) = (132.0, 36.0);
+const HOMING_FRAMES: u32 = 20;
+const HOMING_FRAME: Duration = Duration::from_millis(16);
+const HOME_TOLERANCE: f64 = 1.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 struct Anchor {
@@ -34,6 +37,7 @@ pub struct Island {
     anchor: Mutex<Option<Anchor>>,
     size: Mutex<(f64, f64)>,
     dragging: AtomicBool,
+    snoozed: AtomicBool,
     moves: AtomicU64,
     file: PathBuf,
 }
@@ -80,6 +84,7 @@ impl Island {
             anchor: Mutex::new(anchor),
             size: Mutex::new(IDLE),
             dragging: AtomicBool::new(false),
+            snoozed: AtomicBool::new(false),
             moves: AtomicU64::new(0),
             file,
         }
@@ -207,7 +212,8 @@ fn watch(app: &AppHandle) {
             let Some(window) = app.get_webview_window(LABEL) else {
                 return;
             };
-            let wanted = !main_in_front(&app);
+            let wanted =
+                !main_in_front(&app) && !app.state::<Island>().snoozed.load(Ordering::SeqCst);
             if wanted != shown {
                 shown = wanted;
                 let _ = if wanted { window.show() } else { window.hide() };
@@ -339,4 +345,70 @@ pub fn island_open_main(app: AppHandle, thread_id: Option<String>) {
     if let Some(thread_id) = thread_id {
         let _ = app.emit_to(MAIN, OPEN_THREAD_EVENT, thread_id);
     }
+}
+
+fn spring(progress: f64) -> f64 {
+    let back = 1.56_f64;
+    let shifted = progress - 1.0;
+    1.0 + (back + 1.0) * shifted.powi(3) + back * shifted.powi(2)
+}
+
+fn home_of(window: &WebviewWindow) -> Option<Anchor> {
+    monitor(window).map(|monitor| home(&monitor))
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn island_moved(app: AppHandle, island: tauri::State<'_, Island>) -> bool {
+    let Some(window) = app.get_webview_window(LABEL) else {
+        return false;
+    };
+    let current = island.anchor(&window);
+    home_of(&window).is_some_and(|home| {
+        (home.center_x - current.center_x).hypot(home.top - current.top) > HOME_TOLERANCE
+    })
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn island_home(app: AppHandle, island: tauri::State<'_, Island>) {
+    let Some(window) = app.get_webview_window(LABEL) else {
+        return;
+    };
+    let Some(target) = home_of(&window) else {
+        return;
+    };
+    let start = island.anchor(&window);
+    island.save(target);
+    tauri::async_runtime::spawn(async move {
+        for frame in 1..=HOMING_FRAMES {
+            let progress = spring(f64::from(frame) / f64::from(HOMING_FRAMES));
+            let step = Anchor {
+                center_x: (target.center_x - start.center_x).mul_add(progress, start.center_x),
+                top: (target.top - start.top).mul_add(progress, start.top),
+            };
+            let island = app.state::<Island>();
+            *island.anchor.lock().unwrap() = Some(step);
+            let _ = island.place(&window);
+            tokio::time::sleep(HOMING_FRAME).await;
+        }
+        let island = app.state::<Island>();
+        *island.anchor.lock().unwrap() = Some(target);
+        let _ = island.place(&window);
+    });
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn island_snooze(app: AppHandle, island: tauri::State<'_, Island>, snoozed: bool) {
+    island.snoozed.store(snoozed, Ordering::SeqCst);
+    if snoozed && let Some(window) = app.get_webview_window(LABEL) {
+        let _ = window.hide();
+    }
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn island_quit(app: AppHandle) {
+    app.exit(0);
 }
