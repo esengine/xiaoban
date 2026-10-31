@@ -43,6 +43,21 @@ interface Props {
   onOpenTrip: (tripId: string, version: number | null) => void;
 }
 
+interface Queued {
+  id: number;
+  threadId: string;
+  text: string;
+  quote: Quote | null;
+  files: string[];
+}
+
+let counter = 0;
+
+function isCancel(text: string, words: string): boolean {
+  const cleaned = text.trim().replace(/[\s\p{P}]+$/u, "");
+  return words.split("|").some((word) => word && cleaned.toLowerCase() === word.toLowerCase());
+}
+
 interface Regenerating {
   root: string;
   turnId: string | null;
@@ -128,6 +143,17 @@ export function ChatPane(props: Props) {
   const thread = state.threads.find((candidate) => candidate.id === threadId);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
   const running = drafts.find((draft) => !draft.failure);
+  const [queued, setQueued] = useState<Queued[]>([]);
+  const waitingHere = queued.filter((item) => item.threadId === threadId);
+  const nextQueued = waitingHere[0];
+  useEffect(() => {
+    if (running || !nextQueued) return;
+    setQueued((list) => list.filter((item) => item.id !== nextQueued.id));
+    void store.send(nextQueued.threadId, nextQueued.text, {
+      quote: nextQueued.quote,
+      files: nextQueued.files,
+    });
+  }, [running, nextQueued, store]);
   const end = useRef<HTMLLIElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const flown = useRef(new Set<string>());
@@ -362,6 +388,12 @@ export function ChatPane(props: Props) {
         {trailing.map((draft) => (
           <DraftItem key={draft.turnId} draft={draft} onRetry={() => retry(draft.turnId)} />
         ))}
+        {waitingHere.map((item) => (
+          <li key={item.id} className="bubble bubble--user bubble--queued">
+            <InlineText text={item.text} />
+            <span className="bubble__queued">{t("composer-queued")}</span>
+          </li>
+        ))}
         {state.confirms
           .filter((confirm) => confirm.threadId === threadId && confirm.kind.kind !== "permissions")
           .map((confirm) => (
@@ -390,16 +422,21 @@ export function ChatPane(props: Props) {
         quote={quote}
         onClearQuote={() => quoteWith(null)}
         attachments={attachments}
-        onSend={(text) =>
-          send(
-            text,
-            quote,
-            attachments.ready.map((file) => file.path),
-          ).then(() => {
-            quoteWith(null);
-            attachments.clear();
-          })
-        }
+        onSend={async (text) => {
+          const files = attachments.ready.map((file) => file.path);
+          if (running) {
+            if (isCancel(text, t("composer-cancel-words"))) {
+              await store.cancel(running.turnId);
+              return;
+            }
+            counter += 1;
+            setQueued((list) => [...list, { id: counter, threadId, text, quote, files }]);
+          } else {
+            await send(text, quote, files);
+          }
+          quoteWith(null);
+          attachments.clear();
+        }}
         onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
       />
       {dragging > 0 && <DropZone count={dragging} />}

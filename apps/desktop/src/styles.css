@@ -3943,3 +3943,14 @@ button.sent-files__image {
   white-space: pre-wrap;
   animation: fade-in var(--motion-standard) var(--ease-standard) both;
 }
+
+.bubble--queued {
+  opacity: 0.75;
+}
+
+.bubble__queued {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--color-surface) 75%, transparent);
+}

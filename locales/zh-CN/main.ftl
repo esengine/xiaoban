@@ -123,6 +123,8 @@ thread-untitled = 新的对话
 composer-label = 对小伴说
 composer-placeholder = 想让小伴做什么，直接说
 composer-send = 发送
+composer-queued = 稍后处理
+composer-cancel-words = 算了|不用了|取消|别做了|停下|停
 composer-stop = 停
 
 reasoning-thinking = 想了 { $seconds } 秒

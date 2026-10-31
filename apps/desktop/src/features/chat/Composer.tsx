@@ -155,7 +155,7 @@ export function Composer({ busy, attachments, quote, onClearQuote, onSend, onSto
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const value = text.trim();
-    if ((!value && attachments.ready.length === 0) || busy) return;
+    if (!value && attachments.ready.length === 0) return;
     if (attachments.blocked || waitingVision) return;
     setText("");
     await onSend(value);

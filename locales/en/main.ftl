@@ -123,6 +123,8 @@ thread-untitled = New conversation
 composer-label = Message Xiaoban
 composer-placeholder = Tell Xiaoban what you need
 composer-send = Send
+composer-queued = Next up
+composer-cancel-words = never mind|cancel|stop|forget it
 composer-stop = Stop
 
 reasoning-thinking = Thinking for { $seconds }s
