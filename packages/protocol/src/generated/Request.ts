@@ -5,6 +5,7 @@ import type { ContextNote } from "./ContextNote.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
+import type { ThinkingEffort } from "./ThinkingEffort.ts";
 
 export type Request =
   | { type: "list_threads" }
@@ -68,4 +69,5 @@ export type Request =
   | { type: "pin_memory"; memoryId: string; pinned: boolean }
   | { type: "tidy_memories" }
   | { type: "file_data"; fileId: string }
-  | { type: "file_path"; fileId: string; name: string };
+  | { type: "file_path"; fileId: string; name: string }
+  | { type: "set_thinking"; threadId: string; effort: ThinkingEffort };

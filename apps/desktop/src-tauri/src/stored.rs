@@ -56,7 +56,11 @@ fn copy_to_clipboard(file: &std::path::Path) -> Result<(), String> {
     use std::os::windows::process::CommandExt;
     const NO_WINDOW: u32 = 0x0800_0000;
     let status = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", "Set-Clipboard -LiteralPath $args[0]"])
+        .args([
+            "-NoProfile",
+            "-Command",
+            "Set-Clipboard -LiteralPath $args[0]",
+        ])
         .arg(file)
         .creation_flags(NO_WINDOW)
         .status()
@@ -77,7 +81,12 @@ fn copy_to_clipboard(_file: &std::path::Path) -> Result<(), String> {
 pub async fn file_save_as(app: AppHandle, path: String, name: String) -> Result<bool, String> {
     let file = existing(&path)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let Some(target) = app.dialog().file().set_file_name(&name).blocking_save_file() else {
+        let Some(target) = app
+            .dialog()
+            .file()
+            .set_file_name(&name)
+            .blocking_save_file()
+        else {
             return Ok(false);
         };
         let target = target.into_path().map_err(|error| error.to_string())?;

@@ -1,4 +1,5 @@
 import type {
+  Archived,
   ConfirmRequest,
   Device,
   Event,
@@ -58,7 +59,7 @@ export interface HubState {
   status: ConnectionStatus;
   hub: HubInfo | null;
   usedMemories: string[];
-  archivedBefore: Record<string, number>;
+  archived: Record<string, Archived>;
   olderMessages: Record<string, boolean>;
   galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
@@ -80,7 +81,7 @@ export const initialHubState: HubState = {
   status: "idle",
   hub: null,
   usedMemories: [],
-  archivedBefore: {},
+  archived: {},
   olderMessages: {},
   galaxies: [],
   model: null,
@@ -143,7 +144,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "thread_archived":
       return {
         ...state,
-        archivedBefore: { ...state.archivedBefore, [event.threadId]: event.before },
+        archived: { ...state.archived, [event.threadId]: event.archived },
       };
     case "agent_progress": {
       const draft = state.drafts[event.turnId];

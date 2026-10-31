@@ -173,6 +173,7 @@ fn runtime_with(
         web: Arc::new(FakeWeb),
         fallback,
         auto_titles: false,
+        auto_thinking: false,
     }
 }
 
@@ -2003,7 +2004,7 @@ async fn messages_come_in_pages_from_the_newest() {
     for text in ["a", "b", "c"] {
         converse(&mut client, &thread, text, Vec::new()).await;
     }
-    let Response::Messages { messages, more } = client
+    let Response::Messages { messages, more, .. } = client
         .request(Request::ListMessages {
             thread_id: thread.clone(),
             before: None,
@@ -2019,6 +2020,7 @@ async fn messages_come_in_pages_from_the_newest() {
     let Response::Messages {
         messages: older,
         more,
+        ..
     } = client
         .request(Request::ListMessages {
             thread_id: thread,

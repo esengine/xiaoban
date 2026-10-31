@@ -1,5 +1,5 @@
 use xiaoban_protocol::{
-    AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Quote, Request, Response,
+    Archived, AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Quote, Request, Response,
 };
 
 use crate::state::SharedState;
@@ -35,12 +35,17 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 Some(limit) => {
                     state
                         .store
-                        .page_messages(thread_id, before, limit.clamp(1, MAX_PAGE))
+                        .page_messages(thread_id.clone(), before, limit.clamp(1, MAX_PAGE))
                         .await?
                 }
-                None => (state.store.list_messages(thread_id).await?, false),
+                None => (state.store.list_messages(thread_id.clone()).await?, false),
             };
-            Ok(Response::Messages { messages, more })
+            let archived = archived_range(state, &thread_id).await;
+            Ok(Response::Messages {
+                messages,
+                more,
+                archived,
+            })
         }
         Request::SendMessage {
             thread_id,
@@ -123,6 +128,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         Request::Locate => locate(state, local).await,
         Request::FileData { file_id } => file_data(state, &file_id),
         Request::FilePath { file_id, name } => file_path(state, local, &file_id, &name),
+        Request::SetThinking { thread_id, effort } => {
+            let thread = state.store.set_thread_thinking(thread_id, effort).await?;
+            state.publish(Event::ThreadUpdated { thread });
+            Ok(Response::Ack)
+        }
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
         | Request::OperateStatus
@@ -203,6 +213,16 @@ fn file_data(state: &SharedState, file_id: &str) -> Handled {
         .data_url_by_id(file_id)
         .map(|url| Response::FileData { url })
         .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such image"))
+}
+
+async fn archived_range(state: &SharedState, thread_id: &str) -> Option<Archived> {
+    let before = crate::archive::boundary(state, thread_id).await?;
+    let count = state
+        .store
+        .count_messages_before(thread_id.to_owned(), before)
+        .await
+        .ok()?;
+    (count > 0).then_some(Archived { before, count })
 }
 
 fn file_path(state: &SharedState, local: bool, file_id: &str, name: &str) -> Handled {

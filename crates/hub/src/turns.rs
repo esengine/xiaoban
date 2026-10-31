@@ -578,6 +578,43 @@ async fn mark_used(state: &SharedState, turn_id: &str, answer: &str) {
     }
 }
 
+fn forward_events(
+    state: &SharedState,
+    turn_id: &str,
+    mut rx: mpsc::Receiver<TurnEvent>,
+) -> tokio::task::JoinHandle<crate::thinking::Recorder> {
+    let state = Arc::clone(state);
+    let turn_id = turn_id.to_owned();
+    tokio::spawn(async move {
+        let mut recorder = crate::thinking::Recorder::default();
+        while let Some(event) = rx.recv().await {
+            let turn_id = turn_id.clone();
+            if let TurnEvent::ReasoningDelta(delta) = &event {
+                recorder.reasoning(delta);
+            } else {
+                recorder.other();
+            }
+            state.publish(match event {
+                TurnEvent::Thinking => Event::Thinking { turn_id },
+                TurnEvent::TextDelta(delta) => Event::TextDelta { turn_id, delta },
+                TurnEvent::ReasoningDelta(delta) => Event::ReasoningDelta { turn_id, delta },
+                TurnEvent::ToolUsed(call) => Event::ToolUsed {
+                    turn_id,
+                    detail: crate::steps::detail(&call),
+                    tool: call.function.name,
+                    call_id: call.id,
+                },
+                TurnEvent::ToolFinished { call, result } => Event::ToolFinished {
+                    turn_id,
+                    result: crate::steps::result(&call, &result),
+                    call_id: call.id,
+                },
+            });
+        }
+        recorder
+    })
+}
+
 async fn drive(
     state: &SharedState,
     thread_id: &str,
@@ -595,33 +632,10 @@ async fn drive(
         .await
         .map_err(Failure::from)?;
 
-    let (tx, mut rx) = mpsc::channel(64);
-    let forward = {
-        let state = Arc::clone(state);
-        let turn_id = turn_id.to_owned();
-        tokio::spawn(async move {
-            while let Some(event) = rx.recv().await {
-                let turn_id = turn_id.clone();
-                state.publish(match event {
-                    TurnEvent::Thinking => Event::Thinking { turn_id },
-                    TurnEvent::TextDelta(delta) => Event::TextDelta { turn_id, delta },
-                    TurnEvent::ReasoningDelta(delta) => Event::ReasoningDelta { turn_id, delta },
-                    TurnEvent::ToolUsed(call) => Event::ToolUsed {
-                        turn_id,
-                        detail: crate::steps::detail(&call),
-                        tool: call.function.name,
-                        call_id: call.id,
-                    },
-                    TurnEvent::ToolFinished { call, result } => Event::ToolFinished {
-                        turn_id,
-                        result: crate::steps::result(&call, &result),
-                        call_id: call.id,
-                    },
-                });
-            }
-        })
-    };
-    let agent = state.active().agent;
+    let effort = crate::thinking::choose(state, thread_id, &wire).await;
+    let (tx, rx) = mpsc::channel(64);
+    let forward = forward_events(state, turn_id, rx);
+    let agent = crate::thinking::agent_for(&state.active().agent, effort);
     let tools = HubTools::new(state, thread_id, turn_id, cancel.clone());
     let outcome = agent
         .run_turn_with(
@@ -634,7 +648,10 @@ async fn drive(
             cancel,
         )
         .await;
-    let _ = forward.await;
+    let thinking = forward
+        .await
+        .ok()
+        .and_then(|recorder| recorder.finish(effort));
 
     let appended = match &outcome {
         Ok(outcome) => std::iter::once(to_wire(&ChatMessage::new(ChatRole::User, wire)))
@@ -669,7 +686,8 @@ async fn drive(
             thread_id.to_owned(),
             NewMessage::assistant(outcome.text)
                 .replacing(replaces)
-                .attaching(tools.attachment()),
+                .attaching(tools.attachment())
+                .thinking(thinking),
         )
         .await
         .map_err(Failure::from)?;

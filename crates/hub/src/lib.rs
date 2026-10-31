@@ -29,6 +29,7 @@ mod session;
 mod state;
 mod steps;
 mod subthreads;
+mod thinking;
 mod thread_tools;
 mod tidy;
 mod tools;

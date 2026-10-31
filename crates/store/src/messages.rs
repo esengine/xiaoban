@@ -1,5 +1,5 @@
 use rusqlite::{Row, params};
-use xiaoban_protocol::{Attachment, FileInfo, Message, Quote, Role};
+use xiaoban_protocol::{Attachment, FileInfo, Message, Quote, Role, Thinking};
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
@@ -11,6 +11,7 @@ pub struct NewMessage {
     pub files: Vec<FileInfo>,
     pub replaces: Option<String>,
     pub attachment: Option<Attachment>,
+    pub thinking: Option<Thinking>,
 }
 
 fn read_quote(raw: Option<String>) -> Option<Quote> {
@@ -35,7 +36,14 @@ impl NewMessage {
             files: Vec::new(),
             replaces: None,
             attachment: None,
+            thinking: None,
         }
+    }
+
+    #[must_use]
+    pub fn thinking(mut self, thinking: Option<Thinking>) -> Self {
+        self.thinking = thinking;
+        self
     }
 
     #[must_use]
@@ -87,6 +95,9 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<(Message, String)> {
             attachment: row
                 .get::<_, Option<String>>(7)?
                 .and_then(|json| serde_json::from_str(&json).ok()),
+            thinking: row
+                .get::<_, Option<String>>(9)?
+                .and_then(|json| serde_json::from_str(&json).ok()),
         },
         row.get(2)?,
     ))
@@ -113,8 +124,15 @@ impl Store {
                 files: new.files,
                 replaces: new.replaces,
                 attachment: new.attachment,
+                thinking: new.thinking,
                 created_at: now_ms(),
             };
+            let thinking = message
+                .thinking
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()
+                .map_err(|_| StoreError::Corrupt("messages.thinking"))?;
             let quote = message
                 .quote
                 .as_ref()
@@ -132,8 +150,8 @@ impl Store {
                 .transpose()
                 .map_err(|_| StoreError::Corrupt("messages.attachment"))?;
             conn.execute(
-                "INSERT INTO messages (id, thread_id, role, text, created_at, quote, replaces, attachment, files)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                "INSERT INTO messages (id, thread_id, role, text, created_at, quote, replaces, attachment, files, thinking)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     message.id,
                     message.thread_id,
@@ -143,7 +161,8 @@ impl Store {
                     quote,
                     message.replaces,
                     attachment,
-                    files
+                    files,
+                    thinking
                 ],
             )?;
             Ok(message)
@@ -159,7 +178,7 @@ impl Store {
     ) -> Result<(Vec<Message>, bool)> {
         self.with(move |conn| {
             let mut stmt = conn.prepare(
-                "SELECT id, thread_id, role, text, created_at, quote, replaces, attachment, files
+                "SELECT id, thread_id, role, text, created_at, quote, replaces, attachment, files, thinking
                  FROM messages WHERE thread_id = ?1 AND created_at < ?2
                  ORDER BY created_at DESC, rowid DESC LIMIT ?3",
             )?;
@@ -172,6 +191,18 @@ impl Store {
             page.truncate(limit as usize);
             page.reverse();
             Ok((page, more))
+        })
+        .await
+    }
+
+    pub async fn count_messages_before(&self, thread_id: String, before: i64) -> Result<u32> {
+        self.with(move |conn| {
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM messages WHERE thread_id = ?1 AND created_at < ?2",
+                params![thread_id, before],
+                |row| row.get(0),
+            )?;
+            Ok(u32::try_from(count).unwrap_or(u32::MAX))
         })
         .await
     }
@@ -197,7 +228,7 @@ impl Store {
     pub async fn list_messages(&self, thread_id: String) -> Result<Vec<Message>> {
         self.with(move |conn| {
             let mut stmt = conn.prepare(
-                "SELECT id, thread_id, role, text, created_at, quote, replaces, attachment, files
+                "SELECT id, thread_id, role, text, created_at, quote, replaces, attachment, files, thinking
                  FROM messages WHERE thread_id = ?1 ORDER BY created_at, rowid",
             )?;
             let rows = stmt.query_map([thread_id], from_row)?;

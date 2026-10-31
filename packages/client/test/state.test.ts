@@ -7,6 +7,7 @@ const thread: Thread = {
   title: "出门",
   parentId: null,
   lastMessage: null,
+  thinking: "auto",
   createdAt: 1,
   updatedAt: 1,
 };
@@ -18,6 +19,7 @@ const reply: Message = {
   quote: null,
   files: [],
   replaces: null,
+  thinking: null,
   attachment: null,
   createdAt: 3,
 };

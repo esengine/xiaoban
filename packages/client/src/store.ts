@@ -17,6 +17,7 @@ import type {
   Quote,
   Response,
   ServiceStatus,
+  ThinkingEffort,
   Thread,
   Trip,
   TripCalendar,
@@ -170,15 +171,19 @@ export class HubStore {
   }
 
   async loadMessages(threadId: string): Promise<Message[]> {
-    const { messages, more } = await this.client.request(
+    const { messages, more, archived } = await this.client.request(
       { type: "list_messages", threadId, before: null, limit: PAGE },
       "messages",
     );
-    this.#update((state) => ({
-      ...state,
-      messages: { ...state.messages, [threadId]: messages },
-      olderMessages: { ...state.olderMessages, [threadId]: more },
-    }));
+    this.#update((state) => {
+      const { [threadId]: _, ...others } = state.archived;
+      return {
+        ...state,
+        messages: { ...state.messages, [threadId]: messages },
+        olderMessages: { ...state.olderMessages, [threadId]: more },
+        archived: archived ? { ...others, [threadId]: archived } : others,
+      };
+    });
     return messages;
   }
 
@@ -235,6 +240,10 @@ export class HubStore {
   async retry(threadId: string): Promise<string> {
     const { turnId } = await this.client.request({ type: "retry_turn", threadId }, "turn_accepted");
     return turnId;
+  }
+
+  async setThinking(threadId: string, effort: ThinkingEffort): Promise<void> {
+    await this.client.request({ type: "set_thinking", threadId, effort }, "ack");
   }
 
   async renameThread(threadId: string, title: string): Promise<Thread> {

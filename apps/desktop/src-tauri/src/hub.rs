@@ -47,6 +47,7 @@ pub async fn start(
         web: Arc::new(DeepseekWeb::new()),
         fallback: first_configured_from_env(),
         auto_titles: true,
+        auto_thinking: true,
     };
     let config = HubConfig {
         data_dir: Some(data_dir),

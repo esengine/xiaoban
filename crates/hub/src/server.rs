@@ -92,6 +92,7 @@ impl Hub {
             )),
             web: runtime.web,
             auto_titles: runtime.auto_titles,
+            auto_thinking: runtime.auto_thinking,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),

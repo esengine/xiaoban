@@ -149,6 +149,10 @@ CREATE TABLE memory_usage (
     r"
 ALTER TABLE threads ADD COLUMN parent_id TEXT REFERENCES threads(id) ON DELETE CASCADE;
 ",
+    r"
+ALTER TABLE threads ADD COLUMN thinking TEXT NOT NULL DEFAULT 'auto';
+ALTER TABLE messages ADD COLUMN thinking TEXT;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

@@ -1,12 +1,12 @@
 use rusqlite::{Connection, OptionalExtension, Row, params};
-use xiaoban_protocol::Thread;
+use xiaoban_protocol::{ThinkingEffort, Thread};
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
 const SELECT: &str = "SELECT id, title, created_at, updated_at,
     (SELECT text FROM messages WHERE messages.thread_id = threads.id
      ORDER BY created_at DESC, rowid DESC LIMIT 1),
-    parent_id
+    parent_id, thinking
     FROM threads";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
@@ -17,6 +17,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
         updated_at: row.get(3)?,
         last_message: row.get(4)?,
         parent_id: row.get(5)?,
+        thinking: ThinkingEffort::parse(&row.get::<_, String>(6)?).unwrap_or_default(),
     })
 }
 
@@ -43,6 +44,7 @@ impl Store {
                 title,
                 parent_id,
                 last_message: None,
+                thinking: ThinkingEffort::Auto,
                 created_at: now,
                 updated_at: now,
             };
@@ -79,6 +81,17 @@ impl Store {
             conn.execute(
                 "UPDATE threads SET title = ?2 WHERE id = ?1",
                 params![id, title],
+            )?;
+            by_id(conn, &id)
+        })
+        .await
+    }
+
+    pub async fn set_thread_thinking(&self, id: String, effort: ThinkingEffort) -> Result<Thread> {
+        self.with(move |conn| {
+            conn.execute(
+                "UPDATE threads SET thinking = ?2 WHERE id = ?1",
+                params![id, effort.as_str()],
             )?;
             by_id(conn, &id)
         })

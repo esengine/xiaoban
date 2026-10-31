@@ -38,6 +38,7 @@ pub struct HubState {
     pub pauses: crate::pauses::Pauses,
     pub files: crate::files::Files,
     pub auto_titles: bool,
+    pub auto_thinking: bool,
     pub web: Arc<dyn crate::services::Web>,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,

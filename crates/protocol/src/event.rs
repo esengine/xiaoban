@@ -89,8 +89,7 @@ pub enum Event {
     },
     ThreadArchived {
         thread_id: String,
-        #[ts(type = "number")]
-        before: i64,
+        archived: crate::Archived,
     },
     TurnBackgrounded {
         turn_id: String,

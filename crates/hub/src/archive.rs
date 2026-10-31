@@ -172,9 +172,13 @@ pub async fn archive(
     let _ = store
         .set_setting_owned(format!("{PEAK_KEY}{thread_id}"), "0".to_owned())
         .await;
+    let count = store
+        .count_messages_before(thread_id.to_owned(), before)
+        .await
+        .unwrap_or(0);
     state.publish(Event::ThreadArchived {
         thread_id: thread_id.to_owned(),
-        before,
+        archived: xiaoban_protocol::Archived { before, count },
     });
     tracing::info!(thread = thread_id, "archived the earlier conversation");
     let mut carried = vec![ChatMessage::new(

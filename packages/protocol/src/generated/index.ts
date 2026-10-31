@@ -1,3 +1,4 @@
+export type { Archived } from "./Archived.ts";
 export type { Attachment } from "./Attachment.ts";
 export type { AutonomyLevel } from "./AutonomyLevel.ts";
 export type { CalendarEvent } from "./CalendarEvent.ts";
@@ -46,6 +47,8 @@ export type { ServiceStatus } from "./ServiceStatus.ts";
 export type { Sky } from "./Sky.ts";
 export type { SourceLink } from "./SourceLink.ts";
 export type { StepResult } from "./StepResult.ts";
+export type { Thinking } from "./Thinking.ts";
+export type { ThinkingEffort } from "./ThinkingEffort.ts";
 export type { Thread } from "./Thread.ts";
 export type { TravelMode } from "./TravelMode.ts";
 export type { Trip } from "./Trip.ts";

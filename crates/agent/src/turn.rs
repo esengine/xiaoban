@@ -61,6 +61,7 @@ impl ToolRunner for NoTools {
 pub struct Agent {
     provider: Arc<dyn ModelProvider>,
     thinking: Option<bool>,
+    effort: Option<String>,
 }
 
 impl std::fmt::Debug for Agent {
@@ -121,6 +122,7 @@ impl Agent {
         Self {
             provider,
             thinking: None,
+            effort: None,
         }
     }
 
@@ -129,6 +131,16 @@ impl Agent {
         Self {
             provider: Arc::clone(&self.provider),
             thinking: Some(false),
+            effort: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_effort(&self, effort: &str) -> Self {
+        Self {
+            provider: Arc::clone(&self.provider),
+            thinking: Some(effort != "none"),
+            effort: (effort != "none").then(|| effort.to_owned()),
         }
     }
 
@@ -249,6 +261,7 @@ impl Agent {
         let mut request = assemble_with(prefix, transcript, tail);
         request.model = model.map(str::to_owned);
         request.thinking = self.thinking;
+        request.effort.clone_from(&self.effort);
         let mut stream = self.provider.stream(request);
         let mut step = Step::default();
         loop {

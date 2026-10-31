@@ -4,7 +4,7 @@ import { connectionKey, type Draft, providerKey, type Settled } from "@xiaoban/c
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { FileInfo, Message, Quote } from "@xiaoban/protocol";
+import type { FileInfo, Message, Quote, Thinking } from "@xiaoban/protocol";
 import {
   type MouseEvent,
   type ReactNode,
@@ -35,6 +35,7 @@ import {
 } from "./QuoteBlock.tsx";
 import { RichText } from "./RichText.tsx";
 import { SubthreadCards } from "./SubthreadCards.tsx";
+import { ThinkingMenu } from "./ThinkingMenu.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
 import { type Row, toRows } from "./versions.ts";
 
@@ -122,6 +123,34 @@ function Versions({
   );
 }
 
+function rowTime(row: Row): number {
+  return row.kind === "user" ? row.message.createdAt : (row.versions[0]?.createdAt ?? 0);
+}
+
+function ThoughtToggle({ thinking }: { thinking: Thinking }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="reply-meta__thought"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        {thinking.effort
+          ? t("reply-thought-effort", {
+              seconds: thinking.seconds,
+              effort: t(`thinking-${thinking.effort}`),
+            })
+          : t("reply-thought", { seconds: thinking.seconds })}
+        {open ? " ⌃" : " ⌄"}
+      </button>
+      {open && <span className="reply-meta__reasoning">{thinking.text}</span>}
+    </>
+  );
+}
+
 function ReplyFooter({
   message,
   settled,
@@ -144,6 +173,7 @@ function ReplyFooter({
           ? t("reply-meta", { time, seconds: (settled.durationMs / 1000).toFixed(1) })
           : t("reply-time", { time })}
       </span>
+      {message.thinking && <ThoughtToggle thinking={message.thinking} />}
       {versions && <Versions {...versions} />}
     </span>
   );
@@ -216,11 +246,16 @@ export function ChatPane(props: Props) {
 
   const anchor = useRef<{ height: number; top: number } | null>(null);
   const loadingOlder = useRef(false);
+  const [showLoading, setShowLoading] = useState(false);
   const hasOlder = state.olderMessages[threadId] ?? false;
-  const onScroll = () => {
+  const archived = state.archived[threadId];
+  const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
+  const folded = Boolean(archived) && !unfolded[threadId];
+  const loadOlder = () => {
     const node = list.current;
-    if (!node || !hasOlder || loadingOlder.current || node.scrollTop > OLDER_THRESHOLD) return;
+    if (!node || !hasOlder || loadingOlder.current) return;
     loadingOlder.current = true;
+    setShowLoading(true);
     anchor.current = { height: node.scrollHeight, top: node.scrollTop };
     void store
       .loadOlderMessages(threadId)
@@ -229,7 +264,18 @@ export function ChatPane(props: Props) {
       })
       .finally(() => {
         loadingOlder.current = false;
+        setShowLoading(false);
       });
+  };
+  const unfold = (open: boolean) => {
+    setUnfolded((current) => ({ ...current, [threadId]: open }));
+    if (open && !rows.some((row) => archived && rowTime(row) < archived.before)) loadOlder();
+  };
+  const onScroll = () => {
+    const node = list.current;
+    if (!node || node.scrollTop > OLDER_THRESHOLD) return;
+    if (folded) unfold(true);
+    else loadOlder();
   };
   const firstMessage = messages[0]?.id;
   useLayoutEffect(() => {
@@ -415,7 +461,8 @@ export function ChatPane(props: Props) {
     const message = row.versions[index] ?? row.versions[0];
     if (!message) return null;
     const settled = state.settled[message.id];
-    const footer = settled !== undefined || row === lastAnswer || count > 1;
+    const footer =
+      settled !== undefined || row === lastAnswer || count > 1 || Boolean(message.thinking);
     return (
       <AnswerItem
         key={row.root}
@@ -443,7 +490,16 @@ export function ChatPane(props: Props) {
         <PanelToggle side="list" open={props.listOpen} onToggle={props.onToggleList} />
         <div className="chat__heading">
           <h1 className="chat__title">{title}</h1>
-          <p className="chat__subtitle">{subtitle}</p>
+          <p className="chat__subtitle">
+            {state.status === "open" ? (
+              <>
+                {primary && t("chat-subtitle-lead")}
+                <ThinkingMenu threadId={threadId} model={model} />
+              </>
+            ) : (
+              subtitle
+            )}
+          </p>
         </div>
         <PanelToggle
           side="workspace"
@@ -452,7 +508,36 @@ export function ChatPane(props: Props) {
         />
       </header>
       <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>
-        {rows.map(renderRow)}
+        {showLoading && (
+          <li className="older-loading" aria-live="polite">
+            <span className="older-loading__dot" aria-hidden="true" />
+            {t("archive-loading")}
+          </li>
+        )}
+        {archived && folded && (
+          <li className="archive-divider">
+            <span>{t("archive-folded", { count: archived.count })}</span>
+            <button type="button" onClick={() => unfold(true)}>
+              {t("archive-expand")}
+            </button>
+          </li>
+        )}
+        {archived && !folded && (
+          <li className="archived-block">
+            <ol className="archived-block__list">
+              {rows.filter((row) => rowTime(row) < archived.before).map(renderRow)}
+            </ol>
+          </li>
+        )}
+        {archived && !folded && (
+          <li className="archive-divider">
+            <span>{t("archive-above")}</span>
+            <button type="button" onClick={() => unfold(false)}>
+              {t("archive-collapse")}
+            </button>
+          </li>
+        )}
+        {rows.filter((row) => !archived || rowTime(row) >= archived.before).map(renderRow)}
         {trailing.map((draft) => (
           <DraftItem
             key={draft.turnId}

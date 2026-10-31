@@ -122,6 +122,7 @@ pub fn assemble_with(
         tools: prefix.tools().to_vec(),
         model: None,
         thinking: None,
+        effort: None,
     }
 }
 

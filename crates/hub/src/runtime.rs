@@ -26,4 +26,5 @@ pub struct HubRuntime {
     pub web: Arc<dyn Web>,
     pub fallback: Option<ConfiguredProvider>,
     pub auto_titles: bool,
+    pub auto_thinking: bool,
 }

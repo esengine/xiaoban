@@ -120,6 +120,7 @@ async fn main() -> anyhow::Result<()> {
         web: Arc::new(DeepseekWeb::new()),
         fallback: configured(&args)?,
         auto_titles: true,
+        auto_thinking: true,
     };
 
     let hub = Hub::start(

@@ -139,6 +139,10 @@ pub enum Request {
         file_id: String,
         name: String,
     },
+    SetThinking {
+        thread_id: String,
+        effort: crate::ThinkingEffort,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -174,6 +178,8 @@ pub enum Response {
         messages: Vec<Message>,
         #[serde(default)]
         more: bool,
+        #[serde(default)]
+        archived: Option<crate::Archived>,
     },
     TurnAccepted {
         turn_id: String,

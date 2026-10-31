@@ -3,6 +3,7 @@ import type { Attachment } from "./Attachment.ts";
 import type { FileInfo } from "./FileInfo.ts";
 import type { Quote } from "./Quote.ts";
 import type { Role } from "./Role.ts";
+import type { Thinking } from "./Thinking.ts";
 
 export type Message = {
   id: string;
@@ -13,5 +14,6 @@ export type Message = {
   files: Array<FileInfo>;
   replaces: string | null;
   attachment: Attachment | null;
+  thinking: Thinking | null;
   createdAt: number;
 };

@@ -9,10 +9,57 @@ pub struct Thread {
     #[serde(default)]
     pub parent_id: Option<String>,
     pub last_message: Option<String>,
+    #[serde(default)]
+    pub thinking: ThinkingEffort,
     #[ts(type = "number")]
     pub created_at: i64,
     #[ts(type = "number")]
     pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ThinkingEffort {
+    #[default]
+    Auto,
+    None,
+    Low,
+    High,
+    Max,
+}
+
+impl ThinkingEffort {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::None => "none",
+            Self::Low => "low",
+            Self::High => "high",
+            Self::Max => "max",
+        }
+    }
+
+    pub fn parse(raw: &str) -> Option<Self> {
+        [Self::Auto, Self::None, Self::Low, Self::High, Self::Max]
+            .into_iter()
+            .find(|effort| effort.as_str() == raw.trim())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Thinking {
+    pub text: String,
+    pub seconds: u32,
+    pub effort: Option<ThinkingEffort>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Archived {
+    #[ts(type = "number")]
+    pub before: i64,
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -79,6 +126,8 @@ pub struct Message {
     pub files: Vec<FileInfo>,
     pub replaces: Option<String>,
     pub attachment: Option<crate::Attachment>,
+    #[serde(default)]
+    pub thinking: Option<Thinking>,
     #[ts(type = "number")]
     pub created_at: i64,
 }
