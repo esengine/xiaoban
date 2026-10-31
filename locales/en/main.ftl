@@ -411,3 +411,6 @@ trip-card-meta = { $range } · { $party }
 trip-unverified-lead = { $text } ·{ " " }
 trip-toast-calendar-handed = Sent { $count } events to your calendar app. Click “Add” there
 trip-toast-calendar-retry = Didn’t open? Try again
+place-looking = Xiaoban is looking…
+trip-context-label = Trip the user is viewing
+trip-context-body = “{ $title }”, version { $version }. To change the trip or fill in place details, look things up online first, then call save_trip with update set to true and the complete new trip; keep everything the user did not mention unchanged.

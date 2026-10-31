@@ -22,6 +22,8 @@ export function PlaceDetail({
   at,
   color,
   readOnly,
+  busy,
+  looking,
   onClose,
   onOpen,
   onAsk,
@@ -30,9 +32,11 @@ export function PlaceDetail({
   at: StopRef;
   color: string;
   readOnly: boolean;
+  busy: boolean;
+  looking: boolean;
   onClose: () => void;
   onOpen: (url: string) => void;
-  onAsk: (text: string) => void;
+  onAsk: (text: string, stay: boolean) => void;
 }) {
   const { t } = useI18n();
   const panel = useRef<HTMLElement>(null);
@@ -48,7 +52,6 @@ export function PlaceDetail({
   const detail = stop.detail;
   const dayNumber = at.day + 1;
   const checkedAt = detail?.checkedAt ?? null;
-  const ask = (text: string) => onAsk(text);
 
   return (
     <aside
@@ -197,14 +200,22 @@ export function PlaceDetail({
         ) : (
           <div className="place-detail__empty">
             {t("place-empty")}
-            {!readOnly && (
-              <button
-                type="button"
-                className="button button--line"
-                onClick={() => ask(t("place-ask-message", { name: stop.name }))}
-              >
-                {t("place-ask")}
+            {looking ? (
+              <button type="button" className="button button--line" disabled>
+                <span className="spinner" aria-hidden="true" />
+                {t("place-looking")}
               </button>
+            ) : (
+              !readOnly && (
+                <button
+                  type="button"
+                  className="button button--line"
+                  disabled={busy}
+                  onClick={() => onAsk(t("place-ask-message", { name: stop.name }), true)}
+                >
+                  {t("place-ask")}
+                </button>
+              )
             )}
           </div>
         )}
@@ -214,14 +225,20 @@ export function PlaceDetail({
           <button
             type="button"
             className="button button--line"
-            onClick={() => ask(t("place-replace-message", { day: dayNumber, name: stop.name }))}
+            disabled={busy}
+            onClick={() =>
+              onAsk(t("place-replace-message", { day: dayNumber, name: stop.name }), false)
+            }
           >
             {t("place-replace")}
           </button>
           <button
             type="button"
             className="button button--line"
-            onClick={() => ask(t("place-remove-message", { day: dayNumber, name: stop.name }))}
+            disabled={busy}
+            onClick={() =>
+              onAsk(t("place-remove-message", { day: dayNumber, name: stop.name }), false)
+            }
           >
             {t("place-remove")}
           </button>

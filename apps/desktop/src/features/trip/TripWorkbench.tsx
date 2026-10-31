@@ -47,6 +47,7 @@ export function TripWorkbench(props: Props) {
   const { toast, show } = useToast();
   const [selected, setSelected] = useState<StopRef | null>(null);
   const [draft, setDraft] = useState("");
+  const [asking, setAsking] = useState<string | null>(null);
 
   if (!trip) {
     return (
@@ -63,7 +64,14 @@ export function TripWorkbench(props: Props) {
   };
   const say = (text: string) => {
     if (!text.trim() || busy) return;
-    void store.send(props.threadId, text.trim());
+    void store.send(props.threadId, text.trim(), {
+      context: [
+        {
+          label: t("trip-context-label"),
+          body: t("trip-context-body", { title: trip.title, version: trip.version }),
+        },
+      ],
+    });
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -204,12 +212,15 @@ export function TripWorkbench(props: Props) {
             trip={trip}
             at={selected}
             color={dayColor(selected.day)}
-            readOnly={old || busy}
+            readOnly={old}
+            busy={busy}
+            looking={busy && asking === `${selected.day}-${selected.index}`}
             onClose={() => setSelected(null)}
             onOpen={open}
-            onAsk={(text) => {
+            onAsk={(text, stay) => {
               say(text);
-              setSelected(null);
+              if (stay) setAsking(`${selected.day}-${selected.index}`);
+              else setSelected(null);
             }}
           />
         </>

@@ -408,3 +408,6 @@ trip-card-meta = { $range } · { $party }
 trip-unverified-lead = { $text } ·{ " " }
 trip-toast-calendar-handed = 已交给日历 · { $count } 个日程，在日历里点「添加」
 trip-toast-calendar-retry = 没打开？再试一次
+place-looking = 小伴在查…
+trip-context-label = 用户正在看的行程
+trip-context-body = 「{ $title }」第 { $version } 版。要改行程或补地点详情时，先联网查清楚，再调用 save_trip（update 设为 true）保存完整的新行程；用户没提到的内容保持不变。
