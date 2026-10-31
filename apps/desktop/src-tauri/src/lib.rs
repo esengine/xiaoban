@@ -3,6 +3,7 @@ mod calendar;
 mod hub;
 mod island;
 mod location;
+mod operate;
 mod voice;
 
 use tauri::{Manager, RunEvent};

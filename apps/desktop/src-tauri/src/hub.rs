@@ -42,7 +42,7 @@ pub async fn start(
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),
         apps: Arc::new(crate::apps::system()),
-        operator: Arc::new(xiaoban_hub::NoOperator),
+        operator: crate::operate::system(),
         web: Arc::new(DeepseekWeb::new()),
         fallback: first_configured_from_env(),
     };
