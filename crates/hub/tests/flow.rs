@@ -1188,7 +1188,20 @@ fn save_trip_call() -> ModelChunk {
                 "date": "2026-11-01",
                 "change": "下雨，下午改成室内",
                 "stops": [
-                    { "name": "断桥", "time": "09:00", "note": "人少", "next": { "mode": "taxi", "minutes": 20 } },
+                    {
+                        "name": "断桥", "time": "09:00", "note": "人少",
+                        "next": { "mode": "taxi", "minutes": 20 },
+                        "detail": {
+                            "why": "看西湖全景",
+                            "suits": ["推车好走", " "],
+                            "tickets": "免费",
+                            "tickets_source": { "title": "官网", "url": "https://example.com" },
+                            "reviews": [
+                                { "text": "早上很美", "source": { "title": "马蜂窝", "url": "https://example.com/a" } },
+                                { "text": "坏链接", "source": { "title": "x", "url": "javascript:alert(1)" } }
+                            ]
+                        }
+                    },
                     { "name": "中国茶叶博物馆", "time": "15:00", "note": "室内", "next": { "mode": "walk", "minutes": 5 } }
                 ]
             }]
@@ -1297,6 +1310,11 @@ async fn deepseek_users_search_with_their_model_key_and_routes_replace_estimates
         })
     );
     assert_eq!(day.stops[1].next, None);
+    let detail = day.stops[0].detail.as_ref().unwrap();
+    assert_eq!(detail.suits, ["推车好走"]);
+    assert_eq!(detail.reviews.len(), 1);
+    assert!(detail.checked_at.is_some());
+    assert_eq!(day.stops[1].detail, None);
 
     let Response::Services { services } = client.request(Request::Services).await else {
         panic!("expected services");
@@ -1393,6 +1411,12 @@ async fn declining_search_saves_the_trip_unverified() {
             .stops
             .iter()
             .all(|stop| stop.location.is_none())
+    );
+    let detail = trip.days[0].stops[0].detail.as_ref().unwrap();
+    assert_eq!(detail.reviews.len(), 0);
+    assert_eq!(
+        (detail.tickets_source.as_ref(), detail.checked_at),
+        (None, None)
     );
     hub.shutdown().await;
 }

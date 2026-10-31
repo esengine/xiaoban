@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
-use xiaoban_protocol::{DayWeather, TravelMode, Trip, TripDay, TripLeg, TripStop};
+use xiaoban_protocol::{
+    DayWeather, PlaceDetail, Review, SourceLink, TravelMode, Trip, TripDay, TripLeg, TripStop,
+};
 use xiaoban_store::StoreError;
 
 use crate::state::SharedState;
@@ -34,6 +36,81 @@ struct StopDraft {
     time: String,
     note: String,
     next: Option<LegDraft>,
+    detail: Option<DetailDraft>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SourceDraft {
+    title: String,
+    url: String,
+    date: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReviewDraft {
+    text: String,
+    source: SourceDraft,
+}
+
+#[derive(Debug, Deserialize)]
+struct DetailDraft {
+    why: String,
+    #[serde(default)]
+    suits: Vec<String>,
+    duration: Option<String>,
+    quiet: Option<String>,
+    tickets: Option<String>,
+    tickets_source: Option<SourceDraft>,
+    #[serde(default)]
+    reviews: Vec<ReviewDraft>,
+}
+
+fn source(draft: SourceDraft) -> Option<SourceLink> {
+    let url = draft.url.trim().to_owned();
+    (url.starts_with("http://") || url.starts_with("https://")).then(|| SourceLink {
+        title: draft.title.trim().to_owned(),
+        url,
+        date: filled(draft.date),
+    })
+}
+
+fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
+    let why = draft.why.trim().to_owned();
+    if why.is_empty() {
+        return None;
+    }
+    let reviews = if verified {
+        draft
+            .reviews
+            .into_iter()
+            .filter_map(|review| {
+                let text = review.text.trim().to_owned();
+                Some(Review {
+                    source: source(review.source)?,
+                    text,
+                })
+                .filter(|review| !review.text.is_empty())
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let tickets_source = draft.tickets_source.and_then(source).filter(|_| verified);
+    Some(PlaceDetail {
+        why,
+        suits: draft
+            .suits
+            .into_iter()
+            .map(|suit| suit.trim().to_owned())
+            .filter(|suit| !suit.is_empty())
+            .collect(),
+        duration: filled(draft.duration),
+        quiet: filled(draft.quiet),
+        tickets: filled(draft.tickets),
+        checked_at: tickets_source.is_some().then(xiaoban_store::now_ms),
+        tickets_source,
+        reviews,
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,6 +190,9 @@ pub async fn save(
                     minutes: leg.minutes.max(1),
                     estimated: true,
                 }),
+                detail: stop
+                    .detail
+                    .and_then(|detail| place_detail(detail, verified)),
             })
             .collect();
         route_stops(state, &city, &mut stops).await;

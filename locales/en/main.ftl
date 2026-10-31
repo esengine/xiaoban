@@ -36,6 +36,16 @@ tool-save-trip-stop-time = Arrival time, such as "09:00"
 tool-save-trip-stop-note = One short note, such as "quiet in the morning, easy with a stroller"
 tool-save-trip-next-mode = How to get to the next stop: walk, taxi or transit
 tool-save-trip-next-minutes = Roughly how many minutes to the next stop, from your own estimate
+tool-save-trip-detail-why = Why it is worth going, two or three concrete highlights (best spot, best time, seasonal sights)
+tool-save-trip-detail-suits = Two to four short tags on who it suits, such as "stroller friendly" or "no climbing"
+tool-save-trip-detail-duration = How long to stay, such as "1.5–2 hours"
+tool-save-trip-detail-quiet = When it is quiet, such as "weekdays before 10am"
+tool-save-trip-detail-tickets = Tickets and opening hours in a line or two; only what you found online
+tool-save-trip-detail-reviews = Up to three real quotes from travel notes or reviews, each with its source; leave out without web search
+tool-save-trip-review-text = The quote, kept short
+tool-save-trip-source-title = Source name, such as the official site or a travel site
+tool-save-trip-source-url = Source page link
+tool-save-trip-source-date = When the source was published, such as "2026-09"
 
 nav-main = Main navigation
 device-desktop = This computer

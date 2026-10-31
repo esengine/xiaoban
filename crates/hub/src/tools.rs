@@ -40,8 +40,32 @@ fn spec(name: &str, description: String, parameters: Value) -> ToolSpec {
     }
 }
 
-pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
-    let l = localizer;
+fn trip_day(l: &Localizer) -> Value {
+    let link = object(
+        &json!({
+            "title": text(l, keys::TOOL_SAVE_TRIP_SOURCE_TITLE),
+            "url": text(l, keys::TOOL_SAVE_TRIP_SOURCE_URL),
+            "date": text(l, keys::TOOL_SAVE_TRIP_SOURCE_DATE),
+        }),
+        &["title", "url"],
+    );
+    let detail = object(
+        &json!({
+            "why": text(l, keys::TOOL_SAVE_TRIP_DETAIL_WHY),
+            "suits": { "type": "array", "items": { "type": "string" }, "description": l.text(keys::TOOL_SAVE_TRIP_DETAIL_SUITS) },
+            "duration": text(l, keys::TOOL_SAVE_TRIP_DETAIL_DURATION),
+            "quiet": text(l, keys::TOOL_SAVE_TRIP_DETAIL_QUIET),
+            "tickets": text(l, keys::TOOL_SAVE_TRIP_DETAIL_TICKETS),
+            "tickets_source": link,
+            "reviews": {
+                "type": "array",
+                "maxItems": 3,
+                "description": l.text(keys::TOOL_SAVE_TRIP_DETAIL_REVIEWS),
+                "items": object(&json!({ "text": text(l, keys::TOOL_SAVE_TRIP_REVIEW_TEXT), "source": link }), &["text", "source"]),
+            },
+        }),
+        &["why"],
+    );
     let stop = object(
         &json!({
             "name": text(l, keys::TOOL_SAVE_TRIP_STOP_NAME),
@@ -58,17 +82,23 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
                 }),
                 &["mode", "minutes"],
             ),
+            "detail": detail,
         }),
         &["name", "time", "note"],
     );
-    let day = object(
+    object(
         &json!({
             "date": text(l, keys::TOOL_SAVE_TRIP_DAY_DATE),
             "change": text(l, keys::TOOL_SAVE_TRIP_DAY_CHANGE),
             "stops": { "type": "array", "items": stop, "minItems": 1 },
         }),
         &["date", "stops"],
-    );
+    )
+}
+
+pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
+    let l = localizer;
+    let day = trip_day(l);
     vec![
         spec(
             REMEMBER,

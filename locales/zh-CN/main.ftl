@@ -36,6 +36,16 @@ tool-save-trip-stop-time = 到达时间，比如“09:00”
 tool-save-trip-stop-note = 一句备注，比如“早上人少，推车好走”
 tool-save-trip-next-mode = 去下一站怎么走：walk 步行、taxi 打车、transit 公交地铁
 tool-save-trip-next-minutes = 去下一站大约要几分钟，按你的经验估
+tool-save-trip-detail-why = 为什么值得去，两三句具体的亮点（最佳位置、最佳时间、季节看点）
+tool-save-trip-detail-suits = 适合谁的短标签，2 到 4 个，比如“推车好走”“不用爬山”
+tool-save-trip-detail-duration = 建议玩多久，比如“1.5–2 小时”
+tool-save-trip-detail-quiet = 什么时候人少，比如“工作日、10 点前”
+tool-save-trip-detail-tickets = 门票和开放时间，一两行；只写联网查到的
+tool-save-trip-detail-reviews = 从游记、点评里摘的真实评价，最多 3 条，必须带来源；没联网就不填
+tool-save-trip-review-text = 评价原话，简短
+tool-save-trip-source-title = 来源名称，比如“杭州西湖风景名胜区官网”“马蜂窝”
+tool-save-trip-source-url = 来源网页链接
+tool-save-trip-source-date = 来源发布时间，比如“2026-09”
 
 nav-main = 主导航
 device-desktop = 这台电脑

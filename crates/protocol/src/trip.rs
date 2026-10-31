@@ -60,6 +60,36 @@ pub struct TripStop {
     pub note: String,
     pub location: Option<Coord>,
     pub next: Option<TripLeg>,
+    pub detail: Option<PlaceDetail>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceLink {
+    pub title: String,
+    pub url: String,
+    pub date: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Review {
+    pub text: String,
+    pub source: SourceLink,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaceDetail {
+    pub why: String,
+    pub suits: Vec<String>,
+    pub duration: Option<String>,
+    pub quiet: Option<String>,
+    pub tickets: Option<String>,
+    pub tickets_source: Option<SourceLink>,
+    pub reviews: Vec<Review>,
+    #[ts(type = "number | null")]
+    pub checked_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
