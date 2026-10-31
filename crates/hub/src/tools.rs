@@ -117,6 +117,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs.extend(crate::operate_tools::specs(localizer));
     specs.extend(crate::file_tools::specs(localizer));
     specs.push(crate::file_tools::recall_spec(localizer));
+    specs.extend(crate::file_tools::history_specs(localizer));
     specs
 }
 
@@ -672,6 +673,8 @@ impl ToolRunner for HubTools<'_> {
                 crate::file_tools::FILE_SEARCH => self.file_search(arguments).await,
                 crate::file_tools::FILE_READ => self.file_read(arguments).await,
                 crate::file_tools::RECALL => self.recall(arguments).await,
+                crate::file_tools::HISTORY_SEARCH => self.history_search(arguments).await,
+                crate::file_tools::HISTORY_READ => self.history_read(arguments).await,
                 crate::operate_tools::CONFIRM => self.confirm(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,

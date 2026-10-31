@@ -177,3 +177,111 @@ impl HubTools<'_> {
         .to_string()
     }
 }
+
+pub const HISTORY_SEARCH: &str = "history_search";
+pub const HISTORY_READ: &str = "history_read";
+
+pub fn history_specs(l: &Localizer) -> Vec<ToolSpec> {
+    vec![
+        ToolSpec {
+            name: HISTORY_SEARCH.to_owned(),
+            description: l.text(keys::TOOL_HISTORY_SEARCH_DESCRIPTION),
+            parameters: json!({
+                "type": "object",
+                "properties": { "query": text(l, keys::TOOL_HISTORY_QUERY) },
+                "required": ["query"],
+                "additionalProperties": false,
+            }),
+        },
+        ToolSpec {
+            name: HISTORY_READ.to_owned(),
+            description: l.text(keys::TOOL_HISTORY_READ_DESCRIPTION),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "at": { "type": "integer", "minimum": 0, "description": l.text(keys::TOOL_HISTORY_AT) },
+                },
+                "required": ["at"],
+                "additionalProperties": false,
+            }),
+        },
+    ]
+}
+
+#[derive(Deserialize)]
+struct HistorySearchArgs {
+    query: String,
+}
+
+#[derive(Deserialize)]
+struct HistoryReadArgs {
+    at: usize,
+}
+
+fn role_name(message: &xiaoban_protocol::Message) -> &'static str {
+    if message.role == xiaoban_protocol::Role::User {
+        "user"
+    } else {
+        "assistant"
+    }
+}
+
+impl HubTools<'_> {
+    pub(crate) async fn history_search(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<HistorySearchArgs>(arguments) else {
+            return error("arguments must be {query}");
+        };
+        let old = crate::archive::archived(self.state, self.thread_id).await;
+        if old.is_empty() {
+            return error("nothing in this conversation has been archived yet");
+        }
+        let wanted = crate::archive::wanted(&args.query);
+        let mut hits: Vec<(usize, usize)> = old
+            .iter()
+            .enumerate()
+            .map(|(index, message)| (index, crate::archive::score(&message.text, &wanted)))
+            .filter(|(_, score)| *score > 0)
+            .collect();
+        hits.sort_by(|a, b| b.1.cmp(&a.1).then(b.0.cmp(&a.0)));
+        json!({
+            "hits": hits
+                .into_iter()
+                .take(crate::archive::SEARCH_HITS)
+                .map(|(index, _)| {
+                    let message = &old[index];
+                    json!({
+                        "at": index,
+                        "role": role_name(message),
+                        "time": message.created_at,
+                        "snippet": crate::archive::snippet(&message.text),
+                    })
+                })
+                .collect::<Vec<_>>(),
+        })
+        .to_string()
+    }
+
+    pub(crate) async fn history_read(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<HistoryReadArgs>(arguments) else {
+            return error("arguments must be {at}");
+        };
+        let old = crate::archive::archived(self.state, self.thread_id).await;
+        if args.at >= old.len() {
+            return error("no archived message at that position");
+        }
+        let start = args.at.saturating_sub(2);
+        let mut text = String::new();
+        let mut last = start;
+        for (index, message) in old.iter().enumerate().skip(start) {
+            let line = format!("[{index} {}] {}\n", role_name(message), message.text);
+            if text.chars().count() + line.chars().count() > crate::archive::READ_CHARS
+                && !text.is_empty()
+            {
+                break;
+            }
+            text.push_str(&line);
+            last = index;
+        }
+        json!({ "text": text, "last": last, "more": last + 1 < old.len() }).to_string()
+    }
+}

@@ -79,6 +79,11 @@ pub enum Event {
         confirm_id: String,
         choice: ConfirmChoice,
     },
+    ThreadArchived {
+        thread_id: String,
+        #[ts(type = "number")]
+        before: i64,
+    },
     TurnBackgrounded {
         turn_id: String,
     },
@@ -114,6 +119,7 @@ impl Event {
             | Self::TurnPaused { .. }
             | Self::TurnBackgrounded { .. } => None,
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
+            Self::ThreadArchived { thread_id, .. } => Some(thread_id),
         }
     }
 }

@@ -31,6 +31,7 @@ pub enum TurnEvent {
 pub struct TurnOutcome {
     pub text: String,
     pub usage: Usage,
+    pub peak_input: u32,
     pub messages: Vec<ChatMessage>,
 }
 
@@ -166,9 +167,11 @@ impl Agent {
         let _ = events.send(TurnEvent::Thinking).await;
         let mut tail = vec![first];
         let mut usage = Usage::default();
+        let mut peak_input = 0;
 
         let mut seen: HashMap<(String, String), (String, u32)> = HashMap::new();
         loop {
+            let before = usage.input_tokens;
             let step = self
                 .stream_step(
                     prefix,
@@ -180,6 +183,7 @@ impl Agent {
                     &mut usage,
                 )
                 .await?;
+            peak_input = peak_input.max(usage.input_tokens.saturating_sub(before));
             let (message, calls) = step.into_message();
             let text = message.content.clone();
             tail.push(message);
@@ -188,6 +192,7 @@ impl Agent {
                 return Ok(TurnOutcome {
                     text,
                     usage,
+                    peak_input,
                     messages: tail.split_off(1),
                 });
             }

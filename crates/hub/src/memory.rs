@@ -27,7 +27,7 @@ fn stopwords() -> &'static HashSet<&'static str> {
     })
 }
 
-fn terms(text: &str) -> Vec<String> {
+pub(crate) fn terms(text: &str) -> Vec<String> {
     let stop = stopwords();
     let lower = text.to_lowercase();
     let mut terms: Vec<String> = lower

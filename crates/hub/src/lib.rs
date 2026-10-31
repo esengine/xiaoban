@@ -1,4 +1,5 @@
 mod apps;
+mod archive;
 mod auth;
 mod calendar;
 mod config;

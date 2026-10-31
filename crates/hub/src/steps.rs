@@ -30,7 +30,10 @@ pub fn site(url: &str) -> Option<String> {
 pub fn detail(call: &ToolCall) -> Option<String> {
     let args = arguments(call);
     match call.function.name.as_str() {
-        WEB_SEARCH | FIND_APPS | crate::file_tools::FILE_SEARCH => text(&args, "query"),
+        WEB_SEARCH
+        | FIND_APPS
+        | crate::file_tools::FILE_SEARCH
+        | crate::file_tools::HISTORY_SEARCH => text(&args, "query"),
         crate::file_tools::RECALL => text(&args, "galaxy").or_else(|| text(&args, "query")),
         READ_PAGE => text(&args, "url").and_then(|url| site(&url)),
         WEATHER => text(&args, "place"),

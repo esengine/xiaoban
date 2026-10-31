@@ -220,6 +220,7 @@ pub async fn start(
 
     let (file_notes, images) = attachments(state, &files);
     let remembered = recalled(state, &text).await;
+    let history = crate::archive::recalled(state, &thread_id, &text).await;
     let wire = user_wire(
         &text,
         &notes(
@@ -227,6 +228,7 @@ pub async fn start(
             quote.as_ref().map(|quote| quote.text.as_str()),
             remembered
                 .into_iter()
+                .chain(history)
                 .chain(file_notes)
                 .chain(context)
                 .collect(),
@@ -414,8 +416,17 @@ async fn current_epoch(
                     epoch.memory_snapshot = snapshot;
                 }
             }
+            let transcript = parse_transcript(&entries);
+            if crate::archive::due(state, thread_id).await
+                && let Some(carried) = crate::archive::archive(state, thread_id, &transcript).await
+            {
+                let epoch =
+                    begin_epoch(state, thread_id, EpochReason::Compacted, carried.clone()).await?;
+                let prefix = state.prefix(epoch.memory_snapshot.as_deref());
+                return Ok((epoch, prefix, carried.into_iter().collect()));
+            }
             let prefix = state.prefix(epoch.memory_snapshot.as_deref());
-            return Ok((epoch, prefix, parse_transcript(&entries)));
+            return Ok((epoch, prefix, transcript));
         }
         Some((previous, entries)) => {
             tracing::info!(
@@ -536,6 +547,7 @@ async fn drive(
         .await
         .map_err(Failure::from)?;
     mark_used(state, turn_id, &outcome.text).await;
+    crate::archive::remember_peak(state, thread_id, outcome.peak_input).await;
     let message = state
         .store
         .append_message(
