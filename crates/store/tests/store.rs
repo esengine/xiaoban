@@ -1,5 +1,5 @@
-use xiaoban_protocol::{Platform, Role};
-use xiaoban_store::Store;
+use xiaoban_protocol::{Platform, Role, Usage};
+use xiaoban_store::{EntryRole, EpochReason, Store, TranscriptEntry};
 
 #[tokio::test]
 async fn threads_and_messages_round_trip() {
@@ -54,4 +54,112 @@ async fn settings_upsert() {
     store.set_setting("hub_id", "a".into()).await.unwrap();
     store.set_setting("hub_id", "b".into()).await.unwrap();
     assert_eq!(store.setting("hub_id").await.unwrap().as_deref(), Some("b"));
+}
+
+#[tokio::test]
+async fn transcript_is_append_only_and_carried_across_epochs() {
+    let store = Store::open_in_memory().unwrap();
+    let thread = store.create_thread("出门".into()).await.unwrap();
+    assert!(
+        store
+            .latest_epoch(thread.id.clone())
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    let first = store
+        .start_epoch(
+            thread.id.clone(),
+            "aaaa".into(),
+            EpochReason::Started,
+            Vec::new(),
+        )
+        .await
+        .unwrap();
+    store
+        .append_transcript(
+            first.id.clone(),
+            vec![
+                TranscriptEntry::new(EntryRole::User, "明天几点出门"),
+                TranscriptEntry::new(EntryRole::Assistant, "7:40"),
+            ],
+        )
+        .await
+        .unwrap();
+    store
+        .append_transcript(
+            first.id.clone(),
+            vec![TranscriptEntry::new(EntryRole::User, "带伞吗")],
+        )
+        .await
+        .unwrap();
+
+    let (epoch, entries) = store
+        .latest_epoch(thread.id.clone())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(epoch, first);
+    assert_eq!(
+        entries
+            .iter()
+            .map(|e| e.content.as_str())
+            .collect::<Vec<_>>(),
+        ["明天几点出门", "7:40", "带伞吗"]
+    );
+
+    let second = store
+        .start_epoch(
+            thread.id.clone(),
+            "bbbb".into(),
+            EpochReason::PrefixChanged,
+            entries.clone(),
+        )
+        .await
+        .unwrap();
+    let (latest, carried) = store.latest_epoch(thread.id).await.unwrap().unwrap();
+    assert_eq!(latest.id, second.id);
+    assert_eq!(latest.reason, EpochReason::PrefixChanged);
+    assert_eq!(carried, entries);
+}
+
+#[tokio::test]
+async fn usage_totals_sum_every_turn() {
+    let store = Store::open_in_memory().unwrap();
+    let thread = store.create_thread("t".into()).await.unwrap();
+    let epoch = store
+        .start_epoch(
+            thread.id.clone(),
+            "f".into(),
+            EpochReason::Started,
+            Vec::new(),
+        )
+        .await
+        .unwrap();
+    for (turn, cached) in [("u1", 0), ("u2", 90)] {
+        store
+            .record_turn_usage(
+                turn.into(),
+                thread.id.clone(),
+                epoch.id.clone(),
+                Usage {
+                    input_tokens: 100,
+                    output_tokens: 10,
+                    cached_tokens: cached,
+                },
+            )
+            .await
+            .unwrap();
+    }
+    let totals = store.usage_totals().await.unwrap();
+    assert_eq!(totals.turns, 2);
+    assert_eq!(
+        totals.usage,
+        Usage {
+            input_tokens: 200,
+            output_tokens: 20,
+            cached_tokens: 90
+        }
+    );
 }

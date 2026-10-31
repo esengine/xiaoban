@@ -2,5 +2,6 @@
 import type { Device } from "./Device";
 import type { Message } from "./Message";
 import type { Thread } from "./Thread";
+import type { Usage } from "./Usage";
 
-export type Response = { "type": "ack" } | { "type": "threads", threads: Array<Thread>, } | { "type": "thread", thread: Thread, } | { "type": "messages", messages: Array<Message>, } | { "type": "turn_accepted", turnId: string, message: Message, } | { "type": "pairing_code", code: string, expiresAt: number, } | { "type": "devices", devices: Array<Device>, };
+export type Response = { "type": "ack" } | { "type": "threads", threads: Array<Thread>, } | { "type": "thread", thread: Thread, } | { "type": "messages", messages: Array<Message>, } | { "type": "turn_accepted", turnId: string, message: Message, } | { "type": "pairing_code", code: string, expiresAt: number, } | { "type": "devices", devices: Array<Device>, } | { "type": "usage", usage: Usage, turns: number, };

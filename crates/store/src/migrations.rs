@@ -2,7 +2,8 @@ use rusqlite::Connection;
 
 use crate::Result;
 
-const MIGRATIONS: &[&str] = &[r"
+const MIGRATIONS: &[&str] = &[
+    r"
 CREATE TABLE threads (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -33,7 +34,36 @@ CREATE TABLE settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-"];
+",
+    r"
+CREATE TABLE transcript_epochs (
+    id TEXT PRIMARY KEY,
+    thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    prefix_fingerprint TEXT NOT NULL,
+    reason TEXT NOT NULL CHECK (reason IN ('started', 'prefix_changed', 'compacted')),
+    started_at INTEGER NOT NULL
+);
+CREATE INDEX epochs_by_thread ON transcript_epochs(thread_id, started_at);
+
+CREATE TABLE transcript_entries (
+    epoch_id TEXT NOT NULL REFERENCES transcript_epochs(id) ON DELETE CASCADE,
+    seq INTEGER NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    PRIMARY KEY (epoch_id, seq)
+) WITHOUT ROWID;
+
+CREATE TABLE turn_usage (
+    turn_id TEXT PRIMARY KEY,
+    thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    epoch_id TEXT NOT NULL REFERENCES transcript_epochs(id) ON DELETE CASCADE,
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    cached_tokens INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+);
+",
+];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {
     let current: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;

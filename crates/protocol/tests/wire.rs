@@ -7,6 +7,7 @@ fn client_frames_use_tagged_camel_case_json() {
         body: Request::SendMessage {
             thread_id: "t1".into(),
             text: "你好".into(),
+            context: Vec::new(),
         },
     };
     let json = serde_json::to_value(&frame).unwrap();
@@ -15,7 +16,7 @@ fn client_frames_use_tagged_camel_case_json() {
         serde_json::json!({
             "type": "request",
             "id": 7,
-            "body": { "type": "send_message", "threadId": "t1", "text": "你好" }
+            "body": { "type": "send_message", "threadId": "t1", "text": "你好", "context": [] }
         })
     );
 }
@@ -49,4 +50,22 @@ fn server_error_without_request_id_serializes_null() {
     let json = serde_json::to_value(&frame).unwrap();
     assert_eq!(json["id"], serde_json::Value::Null);
     assert_eq!(json["error"]["code"], "unauthorized");
+}
+
+#[test]
+fn send_message_context_defaults_to_empty() {
+    let frame: ClientFrame = serde_json::from_value(serde_json::json!({
+        "type": "request",
+        "id": 1,
+        "body": { "type": "send_message", "threadId": "t1", "text": "hi" }
+    }))
+    .unwrap();
+    let ClientFrame::Request {
+        body: Request::SendMessage { context, .. },
+        ..
+    } = frame
+    else {
+        panic!("unexpected frame");
+    };
+    assert_eq!(context, Vec::new());
 }

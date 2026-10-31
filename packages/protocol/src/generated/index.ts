@@ -1,4 +1,5 @@
 export type { ClientFrame } from "./ClientFrame.ts";
+export type { ContextNote } from "./ContextNote.ts";
 export type { Credential } from "./Credential.ts";
 export type { Device } from "./Device.ts";
 export type { DeviceHello } from "./DeviceHello.ts";

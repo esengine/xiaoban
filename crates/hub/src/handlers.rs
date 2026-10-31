@@ -24,7 +24,11 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
         Request::ListMessages { thread_id } => Response::Messages {
             messages: state.store.list_messages(thread_id).await?,
         },
-        Request::SendMessage { thread_id, text } => {
+        Request::SendMessage {
+            thread_id,
+            text,
+            context,
+        } => {
             let text = text.trim().to_owned();
             if text.is_empty() {
                 return Err(ProtocolError::new(
@@ -32,7 +36,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
                     "message is empty",
                 ));
             }
-            let (turn_id, message) = turns::start(state, thread_id, text).await?;
+            let (turn_id, message) = turns::start(state, thread_id, text, context).await?;
             Response::TurnAccepted { turn_id, message }
         }
         Request::CancelTurn { turn_id } => {
@@ -54,6 +58,13 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
         Request::RevokeDevice { device_id } => {
             state.store.revoke_device(device_id).await?;
             Response::Ack
+        }
+        Request::UsageSummary => {
+            let totals = state.store.usage_totals().await?;
+            Response::Usage {
+                usage: totals.usage,
+                turns: totals.turns,
+            }
         }
     })
 }

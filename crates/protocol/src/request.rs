@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Device, Message, Thread};
+use crate::{ContextNote, Device, Message, Thread, Usage};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -12,13 +12,27 @@ use crate::{Device, Message, Thread};
 #[ts(export)]
 pub enum Request {
     ListThreads,
-    CreateThread { title: Option<String> },
-    ListMessages { thread_id: String },
-    SendMessage { thread_id: String, text: String },
-    CancelTurn { turn_id: String },
+    CreateThread {
+        title: Option<String>,
+    },
+    ListMessages {
+        thread_id: String,
+    },
+    SendMessage {
+        thread_id: String,
+        text: String,
+        #[serde(default)]
+        context: Vec<ContextNote>,
+    },
+    CancelTurn {
+        turn_id: String,
+    },
     CreatePairingCode,
     ListDevices,
-    RevokeDevice { device_id: String },
+    RevokeDevice {
+        device_id: String,
+    },
+    UsageSummary,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -50,5 +64,9 @@ pub enum Response {
     },
     Devices {
         devices: Vec<Device>,
+    },
+    Usage {
+        usage: Usage,
+        turns: u32,
     },
 }

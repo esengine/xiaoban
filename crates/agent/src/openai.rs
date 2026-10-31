@@ -59,6 +59,24 @@ struct WireUsage {
     completion_tokens: u32,
     #[serde(default)]
     prompt_cache_hit_tokens: u32,
+    #[serde(default)]
+    prompt_tokens_details: Option<PromptDetails>,
+}
+
+#[derive(Deserialize)]
+struct PromptDetails {
+    #[serde(default)]
+    cached_tokens: u32,
+}
+
+impl WireUsage {
+    fn cached(&self) -> u32 {
+        let detailed = self
+            .prompt_tokens_details
+            .as_ref()
+            .map_or(0, |details| details.cached_tokens);
+        self.prompt_cache_hit_tokens.max(detailed)
+    }
 }
 
 fn decode(data: &str) -> Result<Vec<ModelChunk>, AgentError> {
@@ -77,7 +95,7 @@ fn decode(data: &str) -> Result<Vec<ModelChunk>, AgentError> {
         ModelChunk::Usage(Usage {
             input_tokens: usage.prompt_tokens,
             output_tokens: usage.completion_tokens,
-            cached_tokens: usage.prompt_cache_hit_tokens,
+            cached_tokens: usage.cached(),
         })
     });
     Ok(text.chain(usage).collect())
@@ -143,5 +161,18 @@ mod tests {
             })]
         );
         assert_eq!(decode("[DONE]").unwrap(), Vec::new());
+
+        let chunks = decode(
+            r#"{"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":1,"prompt_tokens_details":{"cached_tokens":6}}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            chunks,
+            vec![ModelChunk::Usage(Usage {
+                input_tokens: 10,
+                output_tokens: 1,
+                cached_tokens: 6
+            })]
+        );
     }
 }

@@ -1,4 +1,4 @@
-import type { Message, Thread } from "@xiaoban/protocol";
+import type { ContextNote, Message, Thread, Usage } from "@xiaoban/protocol";
 import type { HubClient } from "./client.ts";
 import { applyEvent, type HubState, initialHubState } from "./state.ts";
 
@@ -44,12 +44,17 @@ export class HubStore {
     return messages;
   }
 
-  async send(threadId: string, text: string): Promise<string> {
+  async send(threadId: string, text: string, context: ContextNote[] = []): Promise<string> {
     const { turnId } = await this.client.request(
-      { type: "send_message", threadId, text },
+      { type: "send_message", threadId, text, context },
       "turn_accepted",
     );
     return turnId;
+  }
+
+  async usage(): Promise<{ usage: Usage; turns: number }> {
+    const { usage, turns } = await this.client.request({ type: "usage_summary" }, "usage");
+    return { usage, turns };
   }
 
   async cancel(turnId: string): Promise<void> {

@@ -23,3 +23,13 @@ impl From<StoreError> for xiaoban_protocol::ProtocolError {
         }
     }
 }
+
+impl From<StoreError> for xiaoban_protocol::Failure {
+    fn from(error: StoreError) -> Self {
+        Self {
+            kind: xiaoban_protocol::FailureKind::Internal,
+            message: error.to_string(),
+            retryable: false,
+        }
+    }
+}

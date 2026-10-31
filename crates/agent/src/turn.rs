@@ -3,12 +3,10 @@ use std::sync::Arc;
 use futures_util::StreamExt;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-use xiaoban_protocol::{Message, Role, Usage};
+use xiaoban_protocol::Usage;
 
-use crate::{AgentError, ChatMessage, ChatRequest, ChatRole, ModelChunk, ModelProvider};
-
-const SYSTEM_PROMPT: &str =
-    "你是小伴，一个像朋友一样陪用户处理日常生活的助手。回答简洁、具体，用中文。";
+use crate::prompt::{StablePrefix, Transcript, assemble};
+use crate::{AgentError, ModelChunk, ModelProvider};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TurnEvent {
@@ -25,42 +23,44 @@ pub struct TurnOutcome {
 #[derive(Clone)]
 pub struct Agent {
     provider: Arc<dyn ModelProvider>,
+    prefix: StablePrefix,
 }
 
 impl std::fmt::Debug for Agent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Agent").finish_non_exhaustive()
+        f.debug_struct("Agent")
+            .field("prefix", &self.prefix.fingerprint())
+            .finish_non_exhaustive()
     }
 }
 
 impl Agent {
     pub fn new(provider: impl ModelProvider) -> Self {
+        Self::with_prefix(provider, StablePrefix::default())
+    }
+
+    pub fn with_prefix(provider: impl ModelProvider, prefix: StablePrefix) -> Self {
         Self {
             provider: Arc::new(provider),
+            prefix,
         }
     }
 
-    fn request(history: &[Message]) -> ChatRequest {
-        let messages = std::iter::once(ChatMessage::new(ChatRole::System, SYSTEM_PROMPT))
-            .chain(history.iter().map(|message| {
-                let role = match message.role {
-                    Role::User => ChatRole::User,
-                    Role::Assistant => ChatRole::Assistant,
-                };
-                ChatMessage::new(role, message.text.clone())
-            }))
-            .collect();
-        ChatRequest { messages }
+    pub fn prefix(&self) -> &StablePrefix {
+        &self.prefix
     }
 
     pub async fn run_turn(
         &self,
-        history: &[Message],
+        transcript: &Transcript,
+        user_wire: &str,
         events: mpsc::Sender<TurnEvent>,
         cancel: CancellationToken,
     ) -> Result<TurnOutcome, AgentError> {
         let _ = events.send(TurnEvent::Thinking).await;
-        let mut stream = self.provider.stream(Self::request(history));
+        let mut stream = self
+            .provider
+            .stream(assemble(&self.prefix, transcript, user_wire));
         let mut outcome = TurnOutcome {
             text: String::new(),
             usage: Usage::default(),
