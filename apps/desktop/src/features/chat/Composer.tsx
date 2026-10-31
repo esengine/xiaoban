@@ -2,10 +2,13 @@ import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { openExternal } from "../../lib/external.ts";
+import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { useVoice, type VoiceBlock, type VoiceState } from "../voice/useVoice.ts";
 
 interface Props {
   busy: boolean;
+  quote: string | null;
+  onClearQuote: () => void;
   onSend: (text: string) => Promise<unknown>;
   onStop: () => Promise<unknown>;
 }
@@ -87,8 +90,9 @@ function Listening({
   );
 }
 
-export function Composer({ busy, onSend, onStop }: Props) {
+export function Composer({ busy, quote, onClearQuote, onSend, onStop }: Props) {
   const { t, locale } = useI18n();
+  const openMenu = useContextMenu();
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const holding = useRef(false);
@@ -127,12 +131,58 @@ export function Composer({ busy, onSend, onStop }: Props) {
     };
   }, [voice.available, state.phase, active, start, finish, cancel]);
 
+  useEffect(() => {
+    if (quote) input.current?.focus();
+  }, [quote]);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const value = text.trim();
-    if (!value) return;
+    if (!value || busy) return;
     setText("");
     await onSend(value);
+  };
+
+  const edit = (command: "cut" | "copy") => {
+    input.current?.focus();
+    document.execCommand(command);
+  };
+  const paste = async () => {
+    const field = input.current;
+    if (!field) return;
+    const pasted = await navigator.clipboard.readText();
+    const start = field.selectionStart ?? text.length;
+    const end = field.selectionEnd ?? text.length;
+    setText(text.slice(0, start) + pasted + text.slice(end));
+    requestAnimationFrame(() => {
+      field.focus();
+      field.setSelectionRange(start + pasted.length, start + pasted.length);
+    });
+  };
+  const inputMenu = (event: React.MouseEvent) => {
+    const field = input.current;
+    const selected = field ? (field.selectionEnd ?? 0) > (field.selectionStart ?? 0) : false;
+    openMenu(event, [
+      { label: t("menu-cut"), shortcut: "⌘X", disabled: !selected, onSelect: () => edit("cut") },
+      { label: t("menu-copy"), shortcut: "⌘C", disabled: !selected, onSelect: () => edit("copy") },
+      { label: t("menu-paste"), shortcut: "⌘V", onSelect: () => void paste() },
+      {
+        label: t("menu-select-all"),
+        shortcut: "⌘A",
+        disabled: !text,
+        onSelect: () => {
+          field?.focus();
+          field?.select();
+        },
+      },
+      "separator",
+      {
+        label: t("menu-voice"),
+        shortcut: t("voice-shortcut"),
+        disabled: !voice.available || state.phase !== "idle",
+        onSelect: () => void start(),
+      },
+    ]);
   };
 
   const block = voice.blocked ? BLOCKS[voice.blocked] : null;
@@ -164,6 +214,22 @@ export function Composer({ busy, onSend, onStop }: Props) {
           </button>
         </div>
       )}
+      {quote && !active && (
+        <div className="quote-chip">
+          <span className="quote-chip__label">{t("quote-label")}</span>
+          <span className="quote-chip__text">{quote}</span>
+          <button
+            type="button"
+            className="voice-alert__close"
+            aria-label={t("quote-remove")}
+            onClick={onClearQuote}
+          >
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+      )}
       {active ? (
         <Listening
           state={state}
@@ -187,7 +253,7 @@ export function Composer({ busy, onSend, onStop }: Props) {
               <MicIcon size={22} />
             </button>
           )}
-          <label className="composer__field">
+          <label className="composer__field" onContextMenu={inputMenu}>
             <span className="visually-hidden">{t("composer-label")}</span>
             <input
               ref={input}
@@ -202,7 +268,7 @@ export function Composer({ busy, onSend, onStop }: Props) {
               {t("composer-stop")}
             </button>
           ) : (
-            <button type="submit" className="button button--primary" disabled={!text.trim()}>
+            <button type="submit" className="button button--primary">
               {t("composer-send")}
             </button>
           )}

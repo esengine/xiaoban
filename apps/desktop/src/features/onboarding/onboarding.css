@@ -939,11 +939,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mascot,
-  .mascot .mascot-face__eyes,
   .step__body,
   .custom-panel,
-  .meet-line,
+  .meet-line {
+    animation: fade-in var(--motion-fast) linear both;
+  }
+
+  .mascot,
+  .mascot .mascot-face__eyes,
   .meet-dots span,
   .phone-step__status::before {
     animation: none;

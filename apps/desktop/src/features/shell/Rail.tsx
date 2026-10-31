@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { MascotFace } from "../onboarding/Mascot.tsx";
 
 interface Destination {
+  id: string;
   label: PlainMessageKey;
   icon: ReactNode;
   ready: boolean;
@@ -11,11 +12,13 @@ interface Destination {
 
 const DESTINATIONS: readonly Destination[] = [
   {
+    id: "chat",
     label: "nav-chat",
     ready: true,
     icon: <path d="M4 5h16v11H9l-5 4z" strokeLinejoin="round" />,
   },
   {
+    id: "daily",
     label: "nav-daily",
     ready: false,
     icon: (
@@ -26,6 +29,7 @@ const DESTINATIONS: readonly Destination[] = [
     ),
   },
   {
+    id: "skills",
     label: "nav-skills",
     ready: false,
     icon: (
@@ -38,6 +42,7 @@ const DESTINATIONS: readonly Destination[] = [
     ),
   },
   {
+    id: "me",
     label: "nav-me",
     ready: false,
     icon: (
@@ -61,6 +66,7 @@ export function Rail() {
           key={destination.label}
           type="button"
           className="rail__item"
+          data-nav={destination.id}
           aria-label={t(destination.label)}
           aria-current={position === 0 ? "page" : undefined}
           disabled={!destination.ready}

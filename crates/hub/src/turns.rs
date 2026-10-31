@@ -3,7 +3,10 @@ use std::sync::{Arc, Mutex};
 
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-use xiaoban_agent::{ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire};
+use xiaoban_agent::{
+    AgentError, ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire,
+};
+use xiaoban_i18n::keys;
 use xiaoban_protocol::{ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role};
 use xiaoban_store::{Epoch, EpochReason, StoreError};
 
@@ -56,6 +59,34 @@ impl Turns {
     }
 }
 
+fn claim(
+    state: &SharedState,
+    thread_id: &str,
+) -> Result<(String, CancellationToken), ProtocolError> {
+    let turn_id = uuid::Uuid::now_v7().to_string();
+    let cancel = state.turns.claim(thread_id, &turn_id).ok_or_else(|| {
+        ProtocolError::new(
+            ErrorCode::Busy,
+            "a reply is still in progress in this thread",
+        )
+    })?;
+    Ok((turn_id, cancel))
+}
+
+fn launch(
+    state: &SharedState,
+    thread_id: String,
+    turn_id: String,
+    wire: String,
+    cancel: CancellationToken,
+) {
+    state.publish(Event::TurnStarted {
+        thread_id: thread_id.clone(),
+        turn_id: turn_id.clone(),
+    });
+    tokio::spawn(run(Arc::clone(state), thread_id, turn_id, wire, cancel));
+}
+
 pub async fn start(
     state: &SharedState,
     thread_id: String,
@@ -63,13 +94,7 @@ pub async fn start(
     context: Vec<ContextNote>,
 ) -> Result<(String, Message), ProtocolError> {
     state.store.thread(thread_id.clone()).await?;
-    let turn_id = uuid::Uuid::now_v7().to_string();
-    let cancel = state.turns.claim(&thread_id, &turn_id).ok_or_else(|| {
-        ProtocolError::new(
-            ErrorCode::Busy,
-            "a reply is still in progress in this thread",
-        )
-    })?;
+    let (turn_id, cancel) = claim(state, &thread_id)?;
 
     let wire = user_wire(&text, &context);
     let accepted = async {
@@ -93,19 +118,30 @@ pub async fn start(
         message: message.clone(),
     });
     state.publish(Event::ThreadUpdated { thread });
-    state.publish(Event::TurnStarted {
-        thread_id: thread_id.clone(),
-        turn_id: turn_id.clone(),
-    });
-
-    tokio::spawn(run(
-        Arc::clone(state),
-        thread_id,
-        turn_id.clone(),
-        wire,
-        cancel,
-    ));
+    launch(state, thread_id, turn_id.clone(), wire, cancel);
     Ok((turn_id, message))
+}
+
+pub async fn retry(
+    state: &SharedState,
+    thread_id: String,
+) -> Result<(String, Message), ProtocolError> {
+    let messages = state.store.list_messages(thread_id.clone()).await?;
+    let asked = messages
+        .iter()
+        .rev()
+        .find(|message| message.role == Role::User)
+        .cloned()
+        .ok_or_else(|| ProtocolError::new(ErrorCode::BadRequest, "nothing to answer yet"))?;
+    let unanswered = messages.last().is_some_and(|last| last.role == Role::User);
+    let wire = if unanswered {
+        asked.text.clone()
+    } else {
+        state.localizer.text(keys::TURN_REGENERATE)
+    };
+    let (turn_id, cancel) = claim(state, &thread_id)?;
+    launch(state, thread_id, turn_id.clone(), wire, cancel);
+    Ok((turn_id, asked))
 }
 
 async fn run(
@@ -232,15 +268,20 @@ async fn drive(
         .await;
     let _ = forward.await;
 
-    let mut appended = vec![to_wire(&ChatMessage::new(ChatRole::User, wire))];
-    if let Ok(outcome) = &outcome {
-        appended.extend(outcome.messages.iter().map(to_wire));
+    let appended = match &outcome {
+        Ok(outcome) => std::iter::once(to_wire(&ChatMessage::new(ChatRole::User, wire)))
+            .chain(outcome.messages.iter().map(to_wire))
+            .collect(),
+        Err(AgentError::Cancelled) => vec![to_wire(&ChatMessage::new(ChatRole::User, wire))],
+        Err(_) => Vec::new(),
+    };
+    if !appended.is_empty() {
+        state
+            .store
+            .append_transcript(epoch.id.clone(), appended)
+            .await
+            .map_err(Failure::from)?;
     }
-    state
-        .store
-        .append_transcript(epoch.id.clone(), appended)
-        .await
-        .map_err(Failure::from)?;
     let outcome = outcome.map_err(|error| error.to_failure())?;
 
     state

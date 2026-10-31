@@ -31,6 +31,12 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             context,
         } => send(state, thread_id, &text, context).await,
         Request::CancelTurn { turn_id } => cancel(state, &turn_id),
+        Request::RetryTurn { thread_id } => {
+            let (turn_id, message) = turns::retry(state, thread_id).await?;
+            Ok(Response::TurnAccepted { turn_id, message })
+        }
+        Request::RenameThread { thread_id, title } => rename_thread(state, thread_id, &title).await,
+        Request::DeleteThread { thread_id } => delete_thread(state, thread_id).await,
         Request::CreatePairingCode => Ok(pairing_code(state)),
         Request::ListDevices => Ok(Response::Devices {
             devices: state.store.list_devices().await?,
@@ -108,6 +114,25 @@ async fn send(
     let text = trimmed(text).ok_or_else(|| bad_request("message is empty"))?;
     let (turn_id, message) = turns::start(state, thread_id, text, context).await?;
     Ok(Response::TurnAccepted { turn_id, message })
+}
+
+async fn rename_thread(state: &SharedState, thread_id: String, title: &str) -> Handled {
+    let title = trimmed(title).ok_or_else(|| bad_request("title is empty"))?;
+    let thread = state.store.rename_thread(thread_id, title).await?;
+    state.publish(Event::ThreadUpdated {
+        thread: thread.clone(),
+    });
+    Ok(Response::Thread { thread })
+}
+
+async fn delete_thread(state: &SharedState, thread_id: String) -> Handled {
+    let primary = preferences::load(state).await?.primary_thread_id;
+    if primary.as_deref() == Some(thread_id.as_str()) {
+        return Err(bad_request("the main conversation cannot be deleted"));
+    }
+    state.store.delete_thread(thread_id.clone()).await?;
+    state.publish(Event::ThreadDeleted { thread_id });
+    Ok(Response::Ack)
 }
 
 fn cancel(state: &SharedState, turn_id: &str) -> Handled {

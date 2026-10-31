@@ -9,6 +9,9 @@ export type Request =
   | { type: "list_messages"; threadId: string }
   | { type: "send_message"; threadId: string; text: string; context: Array<ContextNote> }
   | { type: "cancel_turn"; turnId: string }
+  | { type: "retry_turn"; threadId: string }
+  | { type: "rename_thread"; threadId: string; title: string }
+  | { type: "delete_thread"; threadId: string }
   | { type: "create_pairing_code" }
   | { type: "list_devices" }
   | { type: "revoke_device"; deviceId: string }

@@ -62,6 +62,28 @@ impl Store {
         self.with(move |conn| by_id(conn, &id)).await
     }
 
+    pub async fn rename_thread(&self, id: String, title: String) -> Result<Thread> {
+        self.with(move |conn| {
+            conn.execute(
+                "UPDATE threads SET title = ?2 WHERE id = ?1",
+                params![id, title],
+            )?;
+            by_id(conn, &id)
+        })
+        .await
+    }
+
+    pub async fn delete_thread(&self, id: String) -> Result<()> {
+        self.with(move |conn| {
+            let removed = conn.execute("DELETE FROM threads WHERE id = ?1", [&id])?;
+            if removed == 0 {
+                return Err(StoreError::NotFound("thread"));
+            }
+            Ok(())
+        })
+        .await
+    }
+
     pub async fn touch_thread(&self, id: String) -> Result<Thread> {
         self.with(move |conn| {
             conn.execute(

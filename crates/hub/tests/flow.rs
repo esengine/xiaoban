@@ -16,8 +16,8 @@ use xiaoban_hub::{
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
     AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
-    FailureKind, Interpretation, Location, PROTOCOL_VERSION, Platform, ProviderId, Request,
-    Response, Role, ServerFrame,
+    FailureKind, Interpretation, Location, PROTOCOL_VERSION, Platform, ProtocolError, ProviderId,
+    Request, Response, Role, ServerFrame,
 };
 
 struct TestClient {
@@ -63,18 +63,22 @@ impl TestClient {
     }
 
     async fn request(&mut self, body: Request) -> Response {
+        self.try_request(body)
+            .await
+            .unwrap_or_else(|error| panic!("request failed: {error:?}"))
+    }
+
+    async fn try_request(&mut self, body: Request) -> Result<Response, ProtocolError> {
         self.next_id += 1;
         let id = self.next_id;
         self.send(&ClientFrame::Request { id, body }).await;
         loop {
             match self.recv().await {
-                ServerFrame::Response { id: got, body } if got == id => return body,
+                ServerFrame::Response { id: got, body } if got == id => return Ok(body),
                 ServerFrame::Error {
                     id: Some(got),
                     error,
-                } if got == id => {
-                    panic!("request failed: {error:?}")
-                }
+                } if got == id => return Err(error),
                 _ => {}
             }
         }
@@ -890,5 +894,148 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
     assert_eq!(requests[0].tools, Vec::new());
     assert!(requests[0].messages[1].content.contains("叫我阿哲就行"));
     assert_eq!(requests[0].messages[0], requests[1].messages[0]);
+    hub.shutdown().await;
+}
+
+struct FlakyProvider {
+    calls: std::sync::Mutex<usize>,
+    then: RecordingProvider,
+}
+
+impl ModelProvider for FlakyProvider {
+    fn stream(&self, request: xiaoban_agent::ChatRequest) -> xiaoban_agent::ModelStream {
+        let mut calls = self.calls.lock().unwrap();
+        *calls += 1;
+        if *calls == 1 {
+            return futures_util::stream::once(async { Err(AgentError::Stream("offline".into())) })
+                .boxed();
+        }
+        self.then.stream(request)
+    }
+}
+
+async fn finish_turn(client: &mut TestClient, turn_id: &str) -> Result<String, String> {
+    loop {
+        match client.next_event().await {
+            Event::TurnCompleted {
+                turn_id: id,
+                message,
+                ..
+            } if id == turn_id => return Ok(message.text),
+            Event::TurnFailed {
+                turn_id: id,
+                failure,
+            } if id == turn_id => return Err(format!("{failure:?}")),
+            _ => {}
+        }
+    }
+}
+
+#[tokio::test]
+async fn failed_turns_can_be_retried_and_answers_regenerated() {
+    let recorded = RecordingProvider::new(ScriptedProvider::new(["好"]));
+    let provider = FlakyProvider {
+        calls: std::sync::Mutex::new(0),
+        then: recorded.clone(),
+    };
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+
+    let Response::TurnAccepted { turn_id, .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "明天几点出门".into(),
+            context: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    assert!(finish_turn(&mut client, &turn_id).await.is_err());
+
+    let Response::TurnAccepted { turn_id, message } = client
+        .request(Request::RetryTurn {
+            thread_id: thread.clone(),
+        })
+        .await
+    else {
+        panic!("expected retry");
+    };
+    assert_eq!(message.text, "明天几点出门");
+    assert_eq!(finish_turn(&mut client, &turn_id).await.unwrap(), "好");
+    let contents: Vec<_> = recorded.requests()[0]
+        .messages
+        .iter()
+        .map(|m| m.content.clone())
+        .collect();
+    assert_eq!(contents, ["system", "明天几点出门"]);
+
+    let Response::TurnAccepted { turn_id, .. } = client
+        .request(Request::RetryTurn {
+            thread_id: thread.clone(),
+        })
+        .await
+    else {
+        panic!("expected regenerate");
+    };
+    finish_turn(&mut client, &turn_id).await.unwrap();
+    let requests = recorded.requests();
+    assert!(prefix_reuse(&requests[0], &requests[1]).is_intact());
+    assert_eq!(requests[1].messages.len(), 4);
+
+    let Response::Messages { messages } = client
+        .request(Request::ListMessages {
+            thread_id: thread.clone(),
+        })
+        .await
+    else {
+        panic!("expected messages");
+    };
+    assert_eq!(messages.len(), 3);
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn threads_can_be_renamed_and_deleted_but_not_the_main_one() {
+    let hub = start_hub(&["好"]).await;
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::Thread { thread: renamed } = client
+        .request(Request::RenameThread {
+            thread_id: thread.clone(),
+            title: " 周末去哪 ".into(),
+        })
+        .await
+    else {
+        panic!("expected thread");
+    };
+    assert_eq!(renamed.title.as_deref(), Some("周末去哪"));
+
+    client.request(Request::CompleteOnboarding).await;
+    let Response::Preferences { preferences } = client.request(Request::Preferences).await else {
+        panic!("expected preferences");
+    };
+    let primary = preferences.primary_thread_id.unwrap();
+    assert!(
+        client
+            .try_request(Request::DeleteThread { thread_id: primary })
+            .await
+            .is_err()
+    );
+    let Response::Ack = client
+        .request(Request::DeleteThread {
+            thread_id: thread.clone(),
+        })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    let Response::Threads { threads } = client.request(Request::ListThreads).await else {
+        panic!("expected threads");
+    };
+    assert!(threads.iter().all(|t| t.id != thread));
     hub.shutdown().await;
 }

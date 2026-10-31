@@ -13,6 +13,9 @@ pub enum Event {
     ThreadUpdated {
         thread: Thread,
     },
+    ThreadDeleted {
+        thread_id: String,
+    },
     MessageCreated {
         message: Message,
     },
@@ -58,7 +61,9 @@ impl Event {
             Self::MessageCreated { message } | Self::TurnCompleted { message, .. } => {
                 Some(&message.thread_id)
             }
-            Self::TurnStarted { thread_id, .. } => Some(thread_id),
+            Self::TurnStarted { thread_id, .. } | Self::ThreadDeleted { thread_id } => {
+                Some(thread_id)
+            }
             Self::Thinking { .. }
             | Self::TextDelta { .. }
             | Self::TurnFailed { .. }

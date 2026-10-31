@@ -29,6 +29,16 @@ pub enum Request {
     CancelTurn {
         turn_id: String,
     },
+    RetryTurn {
+        thread_id: String,
+    },
+    RenameThread {
+        thread_id: String,
+        title: String,
+    },
+    DeleteThread {
+        thread_id: String,
+    },
     CreatePairingCode,
     ListDevices,
     RevokeDevice {

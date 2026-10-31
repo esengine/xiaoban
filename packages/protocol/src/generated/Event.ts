@@ -9,6 +9,7 @@ import type { Usage } from "./Usage.ts";
 
 export type Event =
   | { type: "thread_updated"; thread: Thread }
+  | { type: "thread_deleted"; threadId: string }
   | { type: "message_created"; message: Message }
   | { type: "turn_started"; threadId: string; turnId: string }
   | { type: "thinking"; turnId: string }

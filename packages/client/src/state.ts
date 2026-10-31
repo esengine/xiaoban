@@ -11,12 +11,21 @@ import type {
 } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
 
-export interface Draft {
+export interface TurnTrace {
+  tools: string[];
+  memories: Memory[];
+}
+
+export interface Draft extends TurnTrace {
   turnId: string;
   threadId: string;
   text: string;
   startedAt: number;
   failure: Failure | null;
+}
+
+export interface Settled extends TurnTrace {
+  durationMs: number;
 }
 
 export interface HubState {
@@ -30,6 +39,7 @@ export interface HubState {
   devices: Device[];
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
+  settled: Readonly<Record<string, Settled>>;
 }
 
 export const initialHubState: HubState = {
@@ -43,6 +53,7 @@ export const initialHubState: HubState = {
   devices: [],
   messages: {},
   drafts: {},
+  settled: {},
 };
 
 const byRecent = (a: Thread, b: Thread) => b.updatedAt - a.updatedAt;
@@ -72,10 +83,29 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
   switch (event.type) {
     case "thread_updated":
       return { ...state, threads: upsertThread(state.threads, event.thread) };
-    case "memory_saved":
-      return { ...state, memories: upsertMemory(state.memories, event.memory) };
-    case "tool_used":
-      return state;
+    case "memory_saved": {
+      const running = Object.values(state.drafts)
+        .filter((draft) => !draft.failure)
+        .sort((a, b) => b.startedAt - a.startedAt)[0];
+      return {
+        ...state,
+        memories: upsertMemory(state.memories, event.memory),
+        drafts: running
+          ? {
+              ...state.drafts,
+              [running.turnId]: { ...running, memories: [...running.memories, event.memory] },
+            }
+          : state.drafts,
+      };
+    }
+    case "thread_deleted": {
+      const { [event.threadId]: _gone, ...messages } = state.messages;
+      return {
+        ...state,
+        threads: state.threads.filter((thread) => thread.id !== event.threadId),
+        messages,
+      };
+    }
     case "message_created":
       return { ...state, messages: appendMessage(state, event.message) };
     case "turn_started":
@@ -89,9 +119,22 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
             text: "",
             startedAt: now,
             failure: null,
+            tools: [],
+            memories: [],
           },
         },
       };
+    case "tool_used": {
+      const draft = state.drafts[event.turnId];
+      if (!draft) return state;
+      return {
+        ...state,
+        drafts: {
+          ...state.drafts,
+          [event.turnId]: { ...draft, tools: [...draft.tools, event.tool] },
+        },
+      };
+    }
     case "thinking":
       return state;
     case "text_delta": {
@@ -102,12 +145,24 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         drafts: { ...state.drafts, [event.turnId]: { ...draft, text: draft.text + event.delta } },
       };
     }
-    case "turn_completed":
+    case "turn_completed": {
+      const draft = state.drafts[event.turnId];
       return {
         ...state,
         messages: appendMessage(state, event.message),
         drafts: withoutDraft(state.drafts, event.turnId),
+        settled: draft
+          ? {
+              ...state.settled,
+              [event.message.id]: {
+                durationMs: Math.max(0, now - draft.startedAt),
+                tools: draft.tools,
+                memories: draft.memories,
+              },
+            }
+          : state.settled,
       };
+    }
     case "device_paired":
       return {
         ...state,

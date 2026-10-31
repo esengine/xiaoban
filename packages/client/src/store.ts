@@ -160,6 +160,30 @@ export class HubStore {
     return turnId;
   }
 
+  async retry(threadId: string): Promise<string> {
+    const { turnId } = await this.client.request({ type: "retry_turn", threadId }, "turn_accepted");
+    return turnId;
+  }
+
+  async renameThread(threadId: string, title: string): Promise<Thread> {
+    const { thread } = await this.client.request(
+      { type: "rename_thread", threadId, title },
+      "thread",
+    );
+    return thread;
+  }
+
+  async deleteThread(threadId: string): Promise<void> {
+    await this.client.request({ type: "delete_thread", threadId }, "ack");
+  }
+
+  dropDraft(turnId: string): void {
+    this.#update((state) => {
+      const { [turnId]: _dropped, ...drafts } = state.drafts;
+      return { ...state, drafts };
+    });
+  }
+
   async usage(): Promise<{ usage: Usage; turns: number }> {
     const { usage, turns } = await this.client.request({ type: "usage_summary" }, "usage");
     return { usage, turns };
