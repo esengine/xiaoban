@@ -120,6 +120,7 @@ pub fn assemble_with(
     ChatRequest {
         messages,
         tools: prefix.tools().to_vec(),
+        model: None,
     }
 }
 

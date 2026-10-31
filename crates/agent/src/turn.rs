@@ -127,14 +127,45 @@ impl Agent {
         events: mpsc::Sender<TurnEvent>,
         cancel: CancellationToken,
     ) -> Result<TurnOutcome, AgentError> {
+        self.run_turn_with(
+            prefix,
+            transcript,
+            ChatMessage::new(ChatRole::User, user_wire),
+            None,
+            tools,
+            events,
+            cancel,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn run_turn_with(
+        &self,
+        prefix: &StablePrefix,
+        transcript: &Transcript,
+        first: ChatMessage,
+        model: Option<String>,
+        tools: &dyn ToolRunner,
+        events: mpsc::Sender<TurnEvent>,
+        cancel: CancellationToken,
+    ) -> Result<TurnOutcome, AgentError> {
         let _ = events.send(TurnEvent::Thinking).await;
-        let mut tail = vec![ChatMessage::new(ChatRole::User, user_wire)];
+        let mut tail = vec![first];
         let mut usage = Usage::default();
 
         let mut seen: HashMap<(String, String), (String, u32)> = HashMap::new();
         loop {
             let step = self
-                .stream_step(prefix, transcript, &tail, &events, &cancel, &mut usage)
+                .stream_step(
+                    prefix,
+                    transcript,
+                    &tail,
+                    model.as_deref(),
+                    &events,
+                    &cancel,
+                    &mut usage,
+                )
                 .await?;
             let (message, calls) = step.into_message();
             let text = message.content.clone();
@@ -186,18 +217,20 @@ impl Agent {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn stream_step(
         &self,
         prefix: &StablePrefix,
         transcript: &Transcript,
         tail: &[ChatMessage],
+        model: Option<&str>,
         events: &mpsc::Sender<TurnEvent>,
         cancel: &CancellationToken,
         usage: &mut Usage,
     ) -> Result<Step, AgentError> {
-        let mut stream = self
-            .provider
-            .stream(assemble_with(prefix, transcript, tail));
+        let mut request = assemble_with(prefix, transcript, tail);
+        request.model = model.map(str::to_owned);
+        let mut stream = self.provider.stream(request);
         let mut step = Step::default();
         loop {
             let chunk = tokio::select! {

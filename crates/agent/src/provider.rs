@@ -53,6 +53,8 @@ pub struct ChatMessage {
     pub tool_calls: Vec<ToolCall>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_call_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<String>,
 }
 
 impl ChatMessage {
@@ -62,7 +64,32 @@ impl ChatMessage {
             content: content.into(),
             tool_calls: Vec::new(),
             tool_call_id: None,
+            images: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn with_images(mut self, images: Vec<String>) -> Self {
+        self.images = images;
+        self
+    }
+
+    pub fn wire(&self) -> Value {
+        let mut value = serde_json::to_value(self).unwrap_or(Value::Null);
+        if self.images.is_empty() {
+            return value;
+        }
+        let mut parts = vec![serde_json::json!({ "type": "text", "text": self.content })];
+        parts.extend(
+            self.images
+                .iter()
+                .map(|url| serde_json::json!({ "type": "image_url", "image_url": { "url": url } })),
+        );
+        if let Some(object) = value.as_object_mut() {
+            object.remove("images");
+            object.insert("content".into(), Value::Array(parts));
+        }
+        value
     }
 
     pub fn assistant_calls(content: impl Into<String>, tool_calls: Vec<ToolCall>) -> Self {
@@ -104,6 +131,7 @@ impl ToolSpec {
 pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
     pub tools: Vec<ToolSpec>,
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,6 +155,18 @@ pub trait ModelProvider: Send + Sync + 'static {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn images_become_content_parts_on_the_wire() {
+        let message = ChatMessage::new(ChatRole::User, "哪个好看")
+            .with_images(vec!["data:image/png;base64,AAA".into()]);
+        let wire = message.wire();
+        assert_eq!(wire["content"][0]["text"], "哪个好看");
+        assert_eq!(wire["content"][1]["image_url"]["url"], "data:image/png;base64,AAA");
+        assert!(wire.get("images").is_none());
+        let plain = ChatMessage::new(ChatRole::User, "你好").wire();
+        assert_eq!(plain["content"], "你好");
+    }
 
     #[test]
     fn plain_messages_serialize_without_tool_fields() {

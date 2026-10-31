@@ -4,7 +4,9 @@ use serde::Deserialize;
 use serde_json::json;
 use xiaoban_protocol::Usage;
 
-use crate::{AgentError, ChatRequest, ModelChunk, ModelProvider, ModelStream, ToolSpec};
+use crate::{
+    AgentError, ChatMessage, ChatRequest, ModelChunk, ModelProvider, ModelStream, ToolSpec,
+};
 
 #[derive(Debug, Clone)]
 pub struct OpenAiConfig {
@@ -217,8 +219,8 @@ fn decode(data: &str) -> Result<Vec<ModelChunk>, AgentError> {
 impl ModelProvider for OpenAiCompatible {
     fn stream(&self, request: ChatRequest) -> ModelStream {
         let mut body = json!({
-            "model": self.config.model,
-            "messages": request.messages,
+            "model": request.model.as_deref().unwrap_or(&self.config.model),
+            "messages": request.messages.iter().map(ChatMessage::wire).collect::<Vec<_>>(),
             "stream": true,
             "stream_options": { "include_usage": true },
         });
