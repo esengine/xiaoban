@@ -24,6 +24,5 @@ export type { Response } from "./Response.ts";
 export type { Role } from "./Role.ts";
 export type { ServerFrame } from "./ServerFrame.ts";
 export type { Thread } from "./Thread.ts";
-export type { ThreadKind } from "./ThreadKind.ts";
 export type { Usage } from "./Usage.ts";
 export { PROTOCOL_VERSION } from "./version.ts";

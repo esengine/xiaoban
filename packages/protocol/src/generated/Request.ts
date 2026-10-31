@@ -28,4 +28,4 @@ export type Request =
   | { type: "remember"; subject: string; value: string }
   | { type: "list_memories" }
   | { type: "complete_onboarding" }
-  | { type: "start_onboarding" };
+  | { type: "interpret_answer"; subject: string; question: string; answer: string };

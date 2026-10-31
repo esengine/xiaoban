@@ -68,7 +68,6 @@ function withoutDraft(drafts: HubState["drafts"], turnId: string): HubState["dra
 export function applyEvent(state: HubState, event: Event, now = Date.now()): HubState {
   switch (event.type) {
     case "thread_updated":
-      if (event.thread.kind !== "chat") return state;
       return { ...state, threads: upsertThread(state.threads, event.thread) };
     case "memory_saved":
       return { ...state, memories: upsertMemory(state.memories, event.memory) };

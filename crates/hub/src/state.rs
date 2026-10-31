@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use tokio::sync::broadcast;
 use xiaoban_agent::{Agent, Connector, StablePrefix, ToolSpec};
 use xiaoban_i18n::Localizer;
-use xiaoban_protocol::{Event, HubInfo, ModelInfo, ThreadKind};
+use xiaoban_protocol::{Event, HubInfo, ModelInfo};
 use xiaoban_store::Store;
 
 use crate::auth::Pairing;
@@ -35,12 +35,12 @@ pub struct HubState {
 }
 
 impl HubState {
-    pub fn prefix(&self, kind: ThreadKind, memory: Option<&str>) -> StablePrefix {
-        StablePrefix::compose(self.prompts.for_kind(kind), memory, self.tools.clone())
+    pub fn prefix(&self, memory: Option<&str>) -> StablePrefix {
+        StablePrefix::compose(&self.prompts.chat, memory, self.tools.clone())
     }
 
-    pub fn base_fingerprint(&self, kind: ThreadKind) -> String {
-        self.prefix(kind, None).fingerprint().to_owned()
+    pub fn base_fingerprint(&self) -> String {
+        self.prefix(None).fingerprint().to_owned()
     }
 
     pub fn publish(&self, event: Event) {

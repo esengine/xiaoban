@@ -3,6 +3,7 @@ mod config;
 mod discovery;
 mod error;
 mod handlers;
+mod interpret;
 mod memory;
 mod model;
 mod network;

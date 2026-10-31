@@ -1,13 +1,9 @@
 use xiaoban_protocol::{
-    AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Request, Response, Role, ThreadKind,
+    AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Request, Response,
 };
 
-use xiaoban_agent::{ChatMessage, ChatRole};
-use xiaoban_i18n::keys;
-use xiaoban_store::EpochReason;
-
 use crate::state::SharedState;
-use crate::{model, preferences, turns};
+use crate::{interpret, model, preferences, turns};
 
 type Handled = Result<Response, ProtocolError>;
 
@@ -72,7 +68,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         Request::ListMemories => Ok(Response::Memories {
             memories: state.store.list_memories().await?,
         }),
-        Request::StartOnboarding => start_onboarding(state).await,
+        Request::InterpretAnswer {
+            subject,
+            question,
+            answer,
+        } => interpret_answer(state, &subject, &question, &answer).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
@@ -81,9 +81,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
 }
 
 async fn create_thread(state: &SharedState, title: Option<&str>) -> Handled {
-    let thread = state
-        .store
-        .create_thread(ThreadKind::Chat, title.and_then(trimmed)).await?;
+    let thread = state.store.create_thread(title.and_then(trimmed)).await?;
     state.publish(Event::ThreadUpdated {
         thread: thread.clone(),
     });
@@ -155,26 +153,13 @@ async fn remember(state: &SharedState, subject: &str, value: &str) -> Handled {
     Ok(Response::Memory { memory })
 }
 
-async fn start_onboarding(state: &SharedState) -> Handled {
-    if let Some(thread) = state.store.thread_of_kind(ThreadKind::Onboarding).await? {
-        return Ok(Response::Thread { thread });
-    }
-    let opening = state.localizer.text(keys::ONBOARDING_CHAT_OPENING);
-    let thread = state
-        .store
-        .create_thread(ThreadKind::Onboarding, None)
-        .await?;
-    state
-        .store
-        .append_message(thread.id.clone(), Role::Assistant, opening.clone())
-        .await?;
-    turns::begin_epoch(
-        state,
-        &thread.id,
-        ThreadKind::Onboarding,
-        EpochReason::Started,
-        vec![ChatMessage::new(ChatRole::Assistant, opening)],
-    )
-    .await?;
-    Ok(Response::Thread { thread })
+async fn interpret_answer(
+    state: &SharedState,
+    subject: &str,
+    question: &str,
+    answer: &str,
+) -> Handled {
+    let subject = trimmed(subject).ok_or_else(|| bad_request("memory subject is empty"))?;
+    let answer = trimmed(answer).ok_or_else(|| bad_request("answer is empty"))?;
+    Ok(interpret::answer(state, subject, question.trim(), answer).await?)
 }

@@ -4,9 +4,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire};
-use xiaoban_protocol::{
-    ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role, ThreadKind,
-};
+use xiaoban_protocol::{ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role};
 use xiaoban_store::{Epoch, EpochReason, StoreError};
 
 use crate::memory;
@@ -64,7 +62,7 @@ pub async fn start(
     text: String,
     context: Vec<ContextNote>,
 ) -> Result<(String, Message), ProtocolError> {
-    let kind = state.store.thread(thread_id.clone()).await?.kind;
+    state.store.thread(thread_id.clone()).await?;
     let turn_id = uuid::Uuid::now_v7().to_string();
     let cancel = state.turns.claim(&thread_id, &turn_id).ok_or_else(|| {
         ProtocolError::new(
@@ -103,7 +101,6 @@ pub async fn start(
     tokio::spawn(run(
         Arc::clone(state),
         thread_id,
-        kind,
         turn_id.clone(),
         wire,
         cancel,
@@ -114,12 +111,11 @@ pub async fn start(
 async fn run(
     state: SharedState,
     thread_id: String,
-    kind: ThreadKind,
     turn_id: String,
     wire: String,
     cancel: CancellationToken,
 ) {
-    let result = drive(&state, &thread_id, kind, &turn_id, wire, cancel).await;
+    let result = drive(&state, &thread_id, &turn_id, wire, cancel).await;
     state.turns.release(&turn_id);
     if let Err(failure) = result {
         state.publish(Event::TurnFailed { turn_id, failure });
@@ -148,10 +144,9 @@ async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreErro
     Ok(memory::snapshot(&state.localizer, &memories))
 }
 
-pub async fn begin_epoch(
+async fn begin_epoch(
     state: &SharedState,
     thread_id: &str,
-    kind: ThreadKind,
     reason: EpochReason,
     carried: Vec<ChatMessage>,
 ) -> Result<Epoch, StoreError> {
@@ -160,7 +155,7 @@ pub async fn begin_epoch(
         .store
         .start_epoch(
             thread_id.to_owned(),
-            state.base_fingerprint(kind),
+            state.base_fingerprint(),
             reason,
             snapshot,
             carried.iter().map(to_wire).collect(),
@@ -171,9 +166,8 @@ pub async fn begin_epoch(
 async fn current_epoch(
     state: &SharedState,
     thread_id: &str,
-    kind: ThreadKind,
 ) -> Result<(Epoch, StablePrefix, Transcript), StoreError> {
-    let base = state.base_fingerprint(kind);
+    let base = state.base_fingerprint();
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
         Some((mut epoch, entries)) if epoch.prefix_fingerprint == base => {
             if entries.is_empty() {
@@ -186,7 +180,7 @@ async fn current_epoch(
                     epoch.memory_snapshot = snapshot;
                 }
             }
-            let prefix = state.prefix(kind, epoch.memory_snapshot.as_deref());
+            let prefix = state.prefix(epoch.memory_snapshot.as_deref());
             return Ok((epoch, prefix, parse_transcript(&entries)));
         }
         Some((previous, entries)) => {
@@ -201,20 +195,19 @@ async fn current_epoch(
         None => (EpochReason::Started, Transcript::default()),
     };
     let carried: Vec<ChatMessage> = carried.entries().to_vec();
-    let epoch = begin_epoch(state, thread_id, kind, reason, carried.clone()).await?;
-    let prefix = state.prefix(kind, epoch.memory_snapshot.as_deref());
+    let epoch = begin_epoch(state, thread_id, reason, carried.clone()).await?;
+    let prefix = state.prefix(epoch.memory_snapshot.as_deref());
     Ok((epoch, prefix, carried.into_iter().collect()))
 }
 
 async fn drive(
     state: &SharedState,
     thread_id: &str,
-    kind: ThreadKind,
     turn_id: &str,
     wire: String,
     cancel: CancellationToken,
 ) -> Result<(), Failure> {
-    let (epoch, prefix, transcript) = current_epoch(state, thread_id, kind)
+    let (epoch, prefix, transcript) = current_epoch(state, thread_id)
         .await
         .map_err(Failure::from)?;
 
@@ -235,14 +228,7 @@ async fn drive(
     };
     let agent = state.active().agent;
     let outcome = agent
-        .run_turn(
-            &prefix,
-            &transcript,
-            &wire,
-            &HubTools { state },
-            tx,
-            cancel,
-        )
+        .run_turn(&prefix, &transcript, &wire, &HubTools { state }, tx, cancel)
         .await;
     let _ = forward.await;
 

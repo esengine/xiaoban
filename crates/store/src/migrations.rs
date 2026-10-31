@@ -76,7 +76,6 @@ ALTER TABLE transcript_epochs ADD COLUMN memory_snapshot TEXT;
 ",
     r"
 ALTER TABLE memories RENAME COLUMN topic TO subject;
-ALTER TABLE threads ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat';
 
 CREATE TABLE transcript_messages (
     epoch_id TEXT NOT NULL REFERENCES transcript_epochs(id) ON DELETE CASCADE,
@@ -140,11 +139,5 @@ mod tests {
                 r#"{"role":"assistant","content":"7:40"}"#
             ]
         );
-        let kind: String = conn
-            .query_row("SELECT kind FROM threads WHERE id = 't'", [], |row| {
-                row.get(0)
-            })
-            .unwrap();
-        assert_eq!(kind, "chat");
     }
 }

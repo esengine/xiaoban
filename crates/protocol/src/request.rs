@@ -54,7 +54,11 @@ pub enum Request {
     },
     ListMemories,
     CompleteOnboarding,
-    StartOnboarding,
+    InterpretAnswer {
+        subject: String,
+        question: String,
+        answer: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -110,5 +114,10 @@ pub enum Response {
     },
     Memories {
         memories: Vec<Memory>,
+    },
+    Interpreted {
+        memory: Option<Memory>,
+        reply: Option<String>,
+        failure: Option<Failure>,
     },
 }

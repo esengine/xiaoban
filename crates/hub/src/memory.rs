@@ -30,7 +30,11 @@ mod tests {
             value: value.into(),
             updated_at: 0,
         };
-        let snapshot = snapshot(&localizer, &[memory("name", "Zhe"), memory("kids", "one son")]).unwrap();
+        let snapshot = snapshot(
+            &localizer,
+            &[memory("name", "Zhe"), memory("kids", "one son")],
+        )
+        .unwrap();
         assert!(snapshot.ends_with("- name: Zhe\n- kids: one son"));
         assert_eq!(super::snapshot(&localizer, &[]), None);
     }

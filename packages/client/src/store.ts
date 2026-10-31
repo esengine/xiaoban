@@ -74,10 +74,16 @@ export class HubStore {
     return memories;
   }
 
-  async startOnboarding(): Promise<Thread> {
-    const { thread } = await this.client.request({ type: "start_onboarding" }, "thread");
-    await this.loadMessages(thread.id);
-    return thread;
+  async interpretAnswer(input: {
+    subject: string;
+    question: string;
+    answer: string;
+  }): Promise<{ memory: Memory | null; reply: string | null }> {
+    const { memory, reply } = await this.client.request(
+      { type: "interpret_answer", ...input },
+      "interpreted",
+    );
+    return { memory, reply };
   }
 
   async completeOnboarding(): Promise<void> {

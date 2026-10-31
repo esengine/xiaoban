@@ -7,8 +7,8 @@ use tauri::async_runtime::Mutex;
 
 use xiaoban_agent::{HttpConnector, first_configured_from_env};
 use xiaoban_hub::{
-    Hub, HubConfig, HubHandle, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, default_hub_name,
-    Prompts, system_locale,
+    Hub, HubConfig, HubHandle, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, Prompts,
+    default_hub_name, system_locale,
 };
 
 const LAN_BIND: SocketAddr =

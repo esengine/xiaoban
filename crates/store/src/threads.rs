@@ -1,18 +1,16 @@
 use rusqlite::{Connection, OptionalExtension, Row, params};
-use xiaoban_protocol::{Thread, ThreadKind};
+use xiaoban_protocol::Thread;
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
-const SELECT: &str = "SELECT id, kind, title, created_at, updated_at FROM threads";
+const SELECT: &str = "SELECT id, title, created_at, updated_at FROM threads";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
-    let kind: String = row.get(1)?;
     Ok(Thread {
         id: row.get(0)?,
-        kind: ThreadKind::parse(&kind).unwrap_or_default(),
-        title: row.get(2)?,
-        created_at: row.get(3)?,
-        updated_at: row.get(4)?,
+        title: row.get(1)?,
+        created_at: row.get(2)?,
+        updated_at: row.get(3)?,
     })
 }
 
@@ -23,22 +21,19 @@ fn by_id(conn: &Connection, id: &str) -> Result<Thread> {
 }
 
 impl Store {
-    pub async fn create_thread(&self, kind: ThreadKind, title: Option<String>) -> Result<Thread> {
+    pub async fn create_thread(&self, title: Option<String>) -> Result<Thread> {
         self.with(move |conn| {
             let now = now_ms();
             let thread = Thread {
                 id: new_id(),
-                kind,
                 title,
                 created_at: now,
                 updated_at: now,
             };
             conn.execute(
-                "INSERT INTO threads (id, kind, title, created_at, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO threads (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
                 params![
                     thread.id,
-                    thread.kind.as_str(),
                     thread.title,
                     thread.created_at,
                     thread.updated_at
@@ -51,24 +46,9 @@ impl Store {
 
     pub async fn list_threads(&self) -> Result<Vec<Thread>> {
         self.with(|conn| {
-            let mut stmt = conn.prepare(&format!(
-                "{SELECT} WHERE kind = 'chat' ORDER BY updated_at DESC"
-            ))?;
+            let mut stmt = conn.prepare(&format!("{SELECT} ORDER BY updated_at DESC"))?;
             let rows = stmt.query_map([], from_row)?;
             Ok(rows.collect::<rusqlite::Result<_>>()?)
-        })
-        .await
-    }
-
-    pub async fn thread_of_kind(&self, kind: ThreadKind) -> Result<Option<Thread>> {
-        self.with(move |conn| {
-            Ok(conn
-                .query_row(
-                    &format!("{SELECT} WHERE kind = ?1 ORDER BY created_at LIMIT 1"),
-                    [kind.as_str()],
-                    from_row,
-                )
-                .optional()?)
         })
         .await
     }

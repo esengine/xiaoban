@@ -29,4 +29,5 @@ export type Response =
   | { type: "provider_configured"; model: ModelInfo | null; failure: Failure | null }
   | { type: "preferences"; preferences: Preferences }
   | { type: "memory"; memory: Memory }
-  | { type: "memories"; memories: Array<Memory> };
+  | { type: "memories"; memories: Array<Memory> }
+  | { type: "interpreted"; memory: Memory | null; reply: string | null; failure: Failure | null };
