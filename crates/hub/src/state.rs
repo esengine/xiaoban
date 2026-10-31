@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::sync::broadcast;
 use xiaoban_agent::Agent;
-use xiaoban_protocol::{Event, HubInfo};
+use xiaoban_protocol::{Event, HubInfo, ModelInfo};
 use xiaoban_store::Store;
 
 use crate::auth::Pairing;
@@ -15,6 +15,7 @@ pub struct HubState {
     pub info: HubInfo,
     pub store: Store,
     pub agent: Agent,
+    pub model: Option<ModelInfo>,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,
     pub turns: Turns,

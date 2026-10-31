@@ -56,6 +56,9 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
             state.store.revoke_device(device_id).await?;
             Response::Ack
         }
+        Request::ModelStatus => Response::ModelStatus {
+            model: state.model.clone(),
+        },
         Request::UsageSummary => {
             let totals = state.store.usage_totals().await?;
             Response::Usage {

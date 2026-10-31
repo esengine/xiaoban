@@ -68,6 +68,7 @@ impl Hub {
             info: info.clone(),
             store,
             agent,
+            model: config.model.clone(),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),
             turns: crate::turns::Turns::default(),

@@ -50,3 +50,8 @@ pair-address-placeholder = 电脑地址，比如 192.168.1.8
 pair-code-placeholder = 6 位配对码
 pair-submit = 连接
 pair-submitting = 连接中…
+
+provider-deepseek = DeepSeek
+provider-mimo = 小米 MiMo
+model-not-connected = 还没有连接模型
+model-current = 当前模型

@@ -23,22 +23,22 @@ impl RunningHub {
     }
 }
 
-fn agent(prefix: xiaoban_agent::StablePrefix) -> Agent {
-    match first_configured_from_env() {
-        Some((_, config)) => Agent::new(OpenAiCompatible::new(config), prefix),
-        None => Agent::new(UnconfiguredProvider, prefix),
-    }
-}
-
 pub async fn start(data_dir: PathBuf) -> anyhow::Result<RunningHub> {
     let locale = system_locale();
+    let configured = first_configured_from_env();
+    let prefix = system_prefix(locale);
+    let agent = match &configured {
+        Some(configured) => Agent::new(OpenAiCompatible::new(configured.config.clone()), prefix),
+        None => Agent::new(UnconfiguredProvider, prefix),
+    };
     let config = HubConfig {
         data_dir: Some(data_dir),
         bind: LAN_BIND,
         name: default_hub_name(locale),
         advertise: true,
+        model: configured.map(|configured| configured.info),
     };
-    let handle = Hub::start(config, agent(system_prefix(locale))).await?;
+    let handle = Hub::start(config, agent).await?;
     Ok(RunningHub {
         endpoint: handle.ws_url(),
         handle: Mutex::new(Some(handle)),

@@ -5,10 +5,12 @@ use anyhow::Context as _;
 use clap::Parser;
 use tracing_subscriber::EnvFilter;
 use xiaoban_agent::{
-    Agent, OpenAiCompatible, ProviderPreset, UnconfiguredProvider, first_configured_from_env,
+    Agent, ConfiguredProvider, OpenAiCompatible, PRESETS, ProviderPreset, UnconfiguredProvider,
+    first_configured_from_env,
 };
 use xiaoban_hub::{Hub, HubConfig, default_hub_name, system_locale, system_prefix};
 use xiaoban_i18n::Locale;
+use xiaoban_protocol::ProviderId;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -40,29 +42,37 @@ struct Args {
     no_advertise: bool,
 }
 
-fn agent(args: &Args, locale: Locale) -> anyhow::Result<Agent> {
-    let prefix = system_prefix(locale);
+fn configured(args: &Args) -> anyhow::Result<Option<ConfiguredProvider>> {
     let configured = match &args.provider {
         Some(id) => {
-            let preset =
-                ProviderPreset::parse(id).with_context(|| format!("unknown provider {id}"))?;
+            let id = ProviderId::parse(id).with_context(|| format!("unknown provider {id}"))?;
+            let preset = ProviderPreset::of(id);
             let config = preset
                 .from_env()
-                .with_context(|| format!("{} is not set", preset.key_env()))?;
-            Some((preset, config))
+                .with_context(|| format!("{} is not set", preset.key_env))?;
+            Some(ConfiguredProvider::new(preset, config))
         }
         None => first_configured_from_env(),
     };
-    let Some((preset, mut config)) = configured else {
-        let names: Vec<_> = ProviderPreset::ALL.iter().map(|p| p.key_env()).collect();
+    Ok(match (configured, &args.model) {
+        (Some(configured), Some(model)) => Some(configured.with_model(model.clone())),
+        (configured, _) => configured,
+    })
+}
+
+fn agent(configured: Option<&ConfiguredProvider>, locale: Locale) -> Agent {
+    let prefix = system_prefix(locale);
+    let Some(configured) = configured else {
+        let names: Vec<_> = PRESETS.iter().map(|preset| preset.key_env).collect();
         tracing::warn!(expected = ?names, "no provider API key found; replies will fail until one is set");
-        return Ok(Agent::new(UnconfiguredProvider, prefix));
+        return Agent::new(UnconfiguredProvider, prefix);
     };
-    if let Some(model) = &args.model {
-        config.model.clone_from(model);
-    }
-    tracing::info!(provider = preset.id(), model = %config.model, "model provider configured");
-    Ok(Agent::new(OpenAiCompatible::new(config), prefix))
+    tracing::info!(
+        provider = configured.info.provider.as_str(),
+        model = %configured.info.model,
+        "model provider configured"
+    );
+    Agent::new(OpenAiCompatible::new(configured.config.clone()), prefix)
 }
 
 #[tokio::main]
@@ -75,7 +85,8 @@ async fn main() -> anyhow::Result<()> {
         .locale
         .as_deref()
         .map_or_else(system_locale, Locale::negotiate);
-    let agent = agent(&args, locale)?;
+    let configured = configured(&args)?;
+    let agent = agent(configured.as_ref(), locale);
 
     let hub = Hub::start(
         HubConfig {
@@ -83,6 +94,7 @@ async fn main() -> anyhow::Result<()> {
             bind: args.bind,
             name: args.name.unwrap_or_else(|| default_hub_name(locale)),
             advertise: !args.no_advertise,
+            model: configured.map(|configured| configured.info),
         },
         agent,
     )

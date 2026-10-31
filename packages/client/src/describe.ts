@@ -1,5 +1,5 @@
 import type { PlainMessageKey } from "@xiaoban/i18n";
-import type { ErrorCode, FailureKind } from "@xiaoban/protocol";
+import type { ErrorCode, FailureKind, ProviderId } from "@xiaoban/protocol";
 import { type ConnectionStatus, HubRequestError } from "./client.ts";
 
 const FAILURE_KEYS = {
@@ -27,6 +27,15 @@ const CONNECTION_KEYS = {
   reconnecting: "connection-reconnecting",
   closed: "connection-closed",
 } as const satisfies Record<ConnectionStatus, PlainMessageKey>;
+
+const PROVIDER_KEYS = {
+  deepseek: "provider-deepseek",
+  mimo: "provider-mimo",
+} as const satisfies Record<ProviderId, PlainMessageKey>;
+
+export function providerKey(id: ProviderId): PlainMessageKey {
+  return PROVIDER_KEYS[id];
+}
 
 export function failureKey(kind: FailureKind): PlainMessageKey {
   return FAILURE_KEYS[kind];

@@ -83,6 +83,42 @@ button {
   color: var(--color-attention-ink);
 }
 
+.model-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 var(--space-lg) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-ground);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.model-badge--missing {
+  background: var(--color-attention-soft);
+  color: var(--color-attention-ink);
+}
+
+.model-badge__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.model-badge__name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.model-badge__model {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .threads__list {
   list-style: none;
   margin: 0;

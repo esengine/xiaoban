@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{ContextNote, Device, Message, Thread, Usage};
+use crate::{ContextNote, Device, Message, ModelInfo, Thread, Usage};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -33,6 +33,7 @@ pub enum Request {
         device_id: String,
     },
     UsageSummary,
+    ModelStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -68,5 +69,8 @@ pub enum Response {
     Usage {
         usage: Usage,
         turns: u32,
+    },
+    ModelStatus {
+        model: Option<ModelInfo>,
     },
 }

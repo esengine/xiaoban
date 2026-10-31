@@ -50,3 +50,8 @@ pair-address-placeholder = Computer address, e.g. 192.168.1.8
 pair-code-placeholder = 6-digit pairing code
 pair-submit = Connect
 pair-submitting = Connecting…
+
+provider-deepseek = DeepSeek
+provider-mimo = Xiaomi MiMo
+model-not-connected = No model connected
+model-current = Current model

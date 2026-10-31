@@ -1,16 +1,18 @@
 import { type ConnectionStatus, connectionKey } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { Thread } from "@xiaoban/protocol";
+import type { ModelInfo, Thread } from "@xiaoban/protocol";
+import { ModelBadge } from "../model/ModelBadge.tsx";
 
 interface Props {
   threads: Thread[];
   activeId: string | null;
   status: ConnectionStatus;
+  model: ModelInfo | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
 }
 
-export function ThreadList({ threads, activeId, status, onSelect, onCreate }: Props) {
+export function ThreadList({ threads, activeId, status, model, onSelect, onCreate }: Props) {
   const { t } = useI18n();
   return (
     <aside className="threads">
@@ -28,6 +30,7 @@ export function ThreadList({ threads, activeId, status, onSelect, onCreate }: Pr
         </button>
       </header>
       <p className={`threads__status threads__status--${status}`}>{t(connectionKey(status))}</p>
+      <ModelBadge model={model} />
       <ul className="threads__list">
         {threads.map((thread) => (
           <li key={thread.id}>

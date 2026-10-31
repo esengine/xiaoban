@@ -1,6 +1,7 @@
 import type { ClientFrame, ServerFrame } from "@xiaoban/protocol";
 import { describe, expect, it } from "vitest";
 import { HubClient, HubRequestError } from "../src/client.ts";
+import { HubStore } from "../src/store.ts";
 
 class FakeSocket extends EventTarget {
   readonly sent: ClientFrame[] = [];
@@ -95,5 +96,18 @@ describe("HubClient", () => {
       }),
     );
     expect(received).toEqual(["thinking"]);
+  });
+});
+
+describe("HubStore", () => {
+  it("does not leak rejections when closed during the initial refresh", async () => {
+    const { client } = connectedClient((frame) =>
+      frame.type === "hello" ? [{ type: "welcome", protocol: 1, hub, deviceToken: null }] : [],
+    );
+    const store = new HubStore(client);
+    await client.connect();
+    client.close();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.getSnapshot().status).toBe("closed");
   });
 });

@@ -69,3 +69,11 @@ fn send_message_context_defaults_to_empty() {
     };
     assert_eq!(context, Vec::new());
 }
+
+#[test]
+fn provider_ids_round_trip_through_strings_and_json() {
+    for id in xiaoban_protocol::ProviderId::ALL {
+        assert_eq!(xiaoban_protocol::ProviderId::parse(id.as_str()), Some(id));
+        assert_eq!(serde_json::to_value(id).unwrap(), id.as_str());
+    }
+}

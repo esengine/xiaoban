@@ -5,6 +5,7 @@ import type { Thread } from "@xiaoban/protocol";
 import { color, space } from "@xiaoban/tokens";
 import { Redirect, router } from "expo-router";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ModelBadge } from "../src/components/ModelBadge.tsx";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
 import { shared } from "../src/theme.ts";
 
@@ -17,7 +18,7 @@ export default function HomeScreen() {
 
 function ThreadList({ store }: { store: HubStore }) {
   const { t } = useI18n();
-  const { threads, status } = useHubState(store);
+  const { threads, status, model } = useHubState(store);
 
   const create = async () => {
     const thread = await store.createThread();
@@ -27,6 +28,7 @@ function ThreadList({ store }: { store: HubStore }) {
   return (
     <View style={shared.screen}>
       {status !== "open" && <Text style={styles.status}>{t("connection-waiting-for-hub")}</Text>}
+      {status === "open" && <ModelBadge model={model} />}
       <FlatList<Thread>
         data={threads}
         keyExtractor={(thread) => thread.id}

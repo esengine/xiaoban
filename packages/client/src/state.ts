@@ -1,4 +1,4 @@
-import type { Event, Failure, HubInfo, Message, Thread } from "@xiaoban/protocol";
+import type { Event, Failure, HubInfo, Message, ModelInfo, Thread } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
 
 export interface Draft {
@@ -12,6 +12,7 @@ export interface Draft {
 export interface HubState {
   status: ConnectionStatus;
   hub: HubInfo | null;
+  model: ModelInfo | null;
   threads: Thread[];
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
@@ -20,6 +21,7 @@ export interface HubState {
 export const initialHubState: HubState = {
   status: "idle",
   hub: null,
+  model: null,
   threads: [],
   messages: {},
   drafts: {},

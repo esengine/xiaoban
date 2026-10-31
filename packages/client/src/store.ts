@@ -13,7 +13,7 @@ export class HubStore {
     client.onStatus((status) => this.#update((state) => ({ ...state, status })));
     client.onWelcome(({ hub }) => {
       this.#update((state) => ({ ...state, hub }));
-      void this.refreshThreads();
+      this.#refreshInBackground();
     });
   }
 
@@ -28,6 +28,11 @@ export class HubStore {
     const { threads } = await this.client.request({ type: "list_threads" }, "threads");
     this.#update((state) => ({ ...state, threads }));
     return threads;
+  }
+
+  async refreshModel(): Promise<void> {
+    const { model } = await this.client.request({ type: "model_status" }, "model_status");
+    this.#update((state) => ({ ...state, model }));
   }
 
   async createThread(title?: string): Promise<Thread> {
@@ -59,6 +64,10 @@ export class HubStore {
 
   async cancel(turnId: string): Promise<void> {
     await this.client.request({ type: "cancel_turn", turnId }, "ack");
+  }
+
+  #refreshInBackground(): void {
+    Promise.all([this.refreshThreads(), this.refreshModel()]).catch(() => undefined);
   }
 
   #update(next: (state: HubState) => HubState): void {

@@ -8,7 +8,7 @@ import { useHub } from "./hub.tsx";
 export function App() {
   const { t } = useI18n();
   const store = useHub();
-  const { threads, status } = useHubState(store);
+  const { threads, status, model } = useHubState(store);
   const [selected, setSelected] = useState<string | null>(null);
   const activeId = selected ?? threads[0]?.id ?? null;
 
@@ -30,6 +30,7 @@ export function App() {
         threads={threads}
         activeId={activeId}
         status={status}
+        model={model}
         onSelect={setSelected}
         onCreate={startThread}
       />

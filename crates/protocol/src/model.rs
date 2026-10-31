@@ -42,6 +42,37 @@ pub struct Usage {
     pub cached_tokens: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum ProviderId {
+    Deepseek,
+    Mimo,
+}
+
+impl ProviderId {
+    pub const ALL: [Self; 2] = [Self::Deepseek, Self::Mimo];
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Deepseek => "deepseek",
+            Self::Mimo => "mimo",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|id| id.as_str() == value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModelInfo {
+    pub provider: ProviderId,
+    pub model: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

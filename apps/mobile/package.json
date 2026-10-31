@@ -13,6 +13,7 @@
     "@xiaoban/client": "workspace:*",
     "@xiaoban/i18n": "workspace:*",
     "@xiaoban/protocol": "workspace:*",
+    "@xiaoban/provider-icons": "workspace:*",
     "@xiaoban/tokens": "workspace:*",
     "expo": "^58.0.21",
     "expo-constants": "~58.0.14",
@@ -26,7 +27,8 @@
     "react-dom": "catalog:",
     "react-native": "0.88.1",
     "react-native-safe-area-context": "~5.10.1",
-    "react-native-screens": "~4.30.1"
+    "react-native-screens": "~4.30.1",
+    "react-native-svg": "15.16.0"
   },
   "devDependencies": {
     "@types/react": "catalog:",
