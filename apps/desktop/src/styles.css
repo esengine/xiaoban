@@ -3503,8 +3503,31 @@ button.sent-files__image {
 }
 
 .rich__image-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 12px;
   color: var(--color-faint);
+}
+
+.rich .rich__image-link {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rich__image-copy {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .rich__image-failed {

@@ -37,6 +37,7 @@ function ReplyImage({ src, alt }: { src: string; alt: string }) {
   const { t } = useI18n();
   const show = useImageViewer();
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
+  const [copied, setCopied] = useState(false);
   if (!src.startsWith("https://")) return <span>{alt}</span>;
   let site = "";
   try {
@@ -93,7 +94,30 @@ function ReplyImage({ src, alt }: { src: string; alt: string }) {
         />
       </button>
       <span className="rich__image-caption">
-        {alt ? t("rich-image-caption", { alt, site }) : t("rich-image-site", { site })}
+        {alt && <span>{alt}</span>}
+        <a
+          className="rich__image-link"
+          href={src}
+          title={src}
+          onClick={(event) => {
+            event.preventDefault();
+            void openExternal(src);
+          }}
+        >
+          {src}
+        </a>
+        <button
+          type="button"
+          className="rich__image-copy"
+          onClick={() => {
+            void navigator.clipboard.writeText(src).then(() => {
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        >
+          {copied ? t("rich-copied") : t("rich-image-copy-link")}
+        </button>
       </span>
     </span>
   );
