@@ -39,6 +39,7 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         OPEN_APP | crate::operate_tools::LOOK_AT_APP => text(&args, "name"),
         crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
         crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
+        crate::operate_tools::DO_STEPS => text(&args, "summary"),
         _ => None,
     }
 }

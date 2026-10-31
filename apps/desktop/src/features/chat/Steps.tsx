@@ -15,6 +15,7 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   click: { detail: "step-click", plain: "step-click-plain" },
   type_text: { detail: "step-type_text", plain: "step-type_text-plain" },
   press_keys: { detail: "step-press_keys", plain: "step-press_keys-plain" },
+  do_steps: { detail: "step-do_steps", plain: "step-do_steps-plain" },
   confirm: { detail: "step-confirm", plain: "step-confirm-plain" },
   save_place_detail: {
     detail: "step-save_place_detail",

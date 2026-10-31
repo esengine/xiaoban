@@ -34,7 +34,7 @@ pub use apps::{AppEntry, Apps, NoApps};
 pub use config::HubConfig;
 pub use error::HubError;
 pub use location::{FixedLocator, Locator, NoLocator};
-pub use operate::{MAX_ELEMENTS, NoOperator, Operator, Snapshot, UiAction, UiElement};
+pub use operate::{ActFailure, MAX_ELEMENTS, NoOperator, Operator, Snapshot, UiAction, UiElement};
 pub use prompts::Prompts;
 pub use router::{NoRouter, Router};
 pub use runtime::HubRuntime;

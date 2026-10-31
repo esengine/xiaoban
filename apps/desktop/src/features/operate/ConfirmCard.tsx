@@ -24,6 +24,18 @@ export function useConfirmText(confirm: ConfirmRequest) {
       ] satisfies Choice[],
     };
   }
+  if (kind.kind === "borrow_mouse") {
+    return {
+      title: t("confirm-mouse-title", { app: kind.app }),
+      hint: t("confirm-mouse-hint"),
+      detail: null,
+      choices: [
+        { choice: "no", label: t("confirm-mouse-no") },
+        { choice: "once", label: t("confirm-mouse-once") },
+        { choice: "always", label: t("confirm-mouse-always"), primary: true },
+      ] satisfies Choice[],
+    };
+  }
   if (kind.kind === "action") {
     return {
       title: kind.title,

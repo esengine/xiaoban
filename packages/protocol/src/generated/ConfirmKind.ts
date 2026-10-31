@@ -2,5 +2,6 @@
 
 export type ConfirmKind =
   | { kind: "allow_app"; app: string }
+  | { kind: "borrow_mouse"; app: string }
   | { kind: "action"; title: string; detail: string }
   | { kind: "permissions" };

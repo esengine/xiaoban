@@ -31,6 +31,24 @@ pub enum UiAction {
     SetText(String),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ActFailure {
+    NeedsMouse,
+    Failed(String),
+}
+
+impl From<String> for ActFailure {
+    fn from(message: String) -> Self {
+        Self::Failed(message)
+    }
+}
+
+impl From<&str> for ActFailure {
+    fn from(message: &str) -> Self {
+        Self::Failed(message.to_owned())
+    }
+}
+
 pub trait Operator: Debug + Send + Sync + 'static {
     fn permissions(&self) -> OperatePermissions;
     fn snapshot(&self, app_id: String) -> BoxFuture<'static, Result<Snapshot, String>>;
@@ -39,8 +57,10 @@ pub trait Operator: Debug + Send + Sync + 'static {
         app_id: String,
         index: u32,
         action: UiAction,
-    ) -> BoxFuture<'static, Result<(), String>>;
+        allow_mouse: bool,
+    ) -> BoxFuture<'static, Result<(), ActFailure>>;
     fn keys(&self, app_id: String, combo: String) -> BoxFuture<'static, Result<(), String>>;
+    fn type_into(&self, app_id: String, text: String) -> BoxFuture<'static, Result<(), String>>;
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -55,11 +75,21 @@ impl Operator for NoOperator {
         Box::pin(async { Err("this hub cannot operate apps".to_owned()) })
     }
 
-    fn act(&self, _: String, _: u32, _: UiAction) -> BoxFuture<'static, Result<(), String>> {
-        Box::pin(async { Err("this hub cannot operate apps".to_owned()) })
+    fn act(
+        &self,
+        _: String,
+        _: u32,
+        _: UiAction,
+        _: bool,
+    ) -> BoxFuture<'static, Result<(), ActFailure>> {
+        Box::pin(async { Err("this hub cannot operate apps".into()) })
     }
 
     fn keys(&self, _: String, _: String) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async { Err("this hub cannot operate apps".to_owned()) })
+    }
+
+    fn type_into(&self, _: String, _: String) -> BoxFuture<'static, Result<(), String>> {
         Box::pin(async { Err("this hub cannot operate apps".to_owned()) })
     }
 }

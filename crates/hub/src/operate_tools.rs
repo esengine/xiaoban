@@ -5,7 +5,7 @@ use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
 use xiaoban_protocol::{ConfirmChoice, ConfirmKind, ErrorCode, ProtocolError, Request, Response};
 
 use crate::apps::AppEntry;
-use crate::operate::UiAction;
+use crate::operate::{ActFailure, UiAction};
 use crate::state::SharedState;
 use crate::tools::HubTools;
 use crate::{confirms, pauses};
@@ -15,7 +15,11 @@ pub const CLICK: &str = "click";
 pub const TYPE_TEXT: &str = "type_text";
 pub const PRESS_KEYS: &str = "press_keys";
 pub const CONFIRM: &str = "confirm";
+pub const DO_STEPS: &str = "do_steps";
 const ALLOWED_KEY: &str = "operate.allowed";
+const MOUSE_KEY: &str = "operate.mouse";
+const MAX_STEPS: usize = 30;
+const SETTLE: std::time::Duration = std::time::Duration::from_millis(300);
 
 fn text(l: &Localizer, key: MessageKey) -> Value {
     json!({ "type": "string", "description": l.text(key) })
@@ -71,6 +75,33 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
             &["app", "keys"],
         ),
         spec(
+            DO_STEPS,
+            l.text(keys::TOOL_DO_STEPS_DESCRIPTION),
+            &json!({
+                "app": app,
+                "summary": text(l, keys::TOOL_DO_STEPS_SUMMARY),
+                "steps": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": MAX_STEPS,
+                    "description": l.text(keys::TOOL_DO_STEPS_STEPS),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "do": { "type": "string", "enum": ["click", "type", "keys", "text"] },
+                            "element": element(l),
+                            "label": text(l, keys::TOOL_OPERATE_LABEL),
+                            "text": text(l, keys::TOOL_TYPE_TEXT_TEXT),
+                            "keys": text(l, keys::TOOL_PRESS_KEYS_KEYS),
+                        },
+                        "required": ["do"],
+                        "additionalProperties": false,
+                    },
+                },
+            }),
+            &["app", "summary", "steps"],
+        ),
+        spec(
             CONFIRM,
             l.text(keys::TOOL_CONFIRM_DESCRIPTION),
             &json!({
@@ -105,15 +136,34 @@ struct KeyArgs {
 }
 
 #[derive(Deserialize)]
+struct StepsArgs {
+    app: String,
+    steps: Vec<Step>,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "do", rename_all = "lowercase")]
+enum Step {
+    Click { element: u32 },
+    Type { element: u32, text: String },
+    Keys { keys: String },
+    Text { text: String },
+}
+
+#[derive(Deserialize)]
 struct ConfirmArgs {
     title: String,
     detail: String,
 }
 
 async fn allowed(state: &SharedState) -> Vec<String> {
+    remembered(state, ALLOWED_KEY).await
+}
+
+async fn remembered(state: &SharedState, key: &'static str) -> Vec<String> {
     state
         .store
-        .setting(ALLOWED_KEY)
+        .setting(key)
         .await
         .ok()
         .flatten()
@@ -122,12 +172,16 @@ async fn allowed(state: &SharedState) -> Vec<String> {
 }
 
 async fn allow_always(state: &SharedState, app_id: &str) {
-    let mut apps = allowed(state).await;
+    remember(state, ALLOWED_KEY, app_id).await;
+}
+
+async fn remember(state: &SharedState, key: &'static str, app_id: &str) {
+    let mut apps = remembered(state, key).await;
     if !apps.iter().any(|known| known == app_id) {
         apps.push(app_id.to_owned());
     }
     if let Ok(json) = serde_json::to_string(&apps)
-        && let Err(failure) = state.store.set_setting(ALLOWED_KEY, json).await
+        && let Err(failure) = state.store.set_setting(key, json).await
     {
         tracing::error!(%failure, "could not remember the allowed app");
     }
@@ -200,25 +254,107 @@ impl HubTools<'_> {
         }
     }
 
+    async fn mouse_allowed(&self, app_id: &str) -> bool {
+        self.mouse_once
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|known| known == app_id)
+            || remembered(self.state, MOUSE_KEY)
+                .await
+                .iter()
+                .any(|known| known == app_id)
+    }
+
+    async fn act(&self, app: &AppEntry, index: u32, action: UiAction) -> Result<(), String> {
+        let allow = self.mouse_allowed(&app.id).await;
+        let first = self
+            .state
+            .operator
+            .act(app.id.clone(), index, action.clone(), allow)
+            .await;
+        match first {
+            Ok(()) => return Ok(()),
+            Err(ActFailure::Failed(failure)) => return Err(failure),
+            Err(ActFailure::NeedsMouse) => {}
+        }
+        match self
+            .ask(ConfirmKind::BorrowMouse {
+                app: app.name.clone(),
+            })
+            .await
+        {
+            ConfirmChoice::Always => remember(self.state, MOUSE_KEY, &app.id).await,
+            ConfirmChoice::Once | ConfirmChoice::Yes => {
+                self.mouse_once.lock().unwrap().push(app.id.clone());
+            }
+            ConfirmChoice::Edit | ConfirmChoice::No => {
+                return Err(
+                    "this app only reacts to the real mouse and the user chose to do this step themselves; tell them exactly what to click and stop"
+                        .to_owned(),
+                );
+            }
+        }
+        self.before_acting().await;
+        self.state
+            .operator
+            .act(app.id.clone(), index, action, true)
+            .await
+            .map_err(|failure| match failure {
+                ActFailure::Failed(failure) => failure,
+                ActFailure::NeedsMouse => "the app did not react to the mouse either".to_owned(),
+            })
+    }
+
+    async fn screen(&self, app_id: &str) -> Value {
+        tokio::time::sleep(SETTLE).await;
+        match self.state.operator.snapshot(app_id.to_owned()).await {
+            Ok(snapshot) => serde_json::to_value(&snapshot).unwrap_or(Value::Null),
+            Err(failure) => json!({ "error": failure }),
+        }
+    }
+
+    async fn step(&self, app: &AppEntry, step: Step) -> Result<(), String> {
+        self.before_acting().await;
+        if self.cancel.is_cancelled() {
+            return Err("stopped by the user".to_owned());
+        }
+        match step {
+            Step::Click { element } => self.act(app, element, UiAction::Press).await,
+            Step::Type { element, text } => self.act(app, element, UiAction::SetText(text)).await,
+            Step::Keys { keys } => self.state.operator.keys(app.id.clone(), keys).await,
+            Step::Text { text } => self.state.operator.type_into(app.id.clone(), text).await,
+        }
+    }
+
+    async fn after(&self, app: &AppEntry, result: Result<(), String>) -> String {
+        let screen = self.screen(&app.id).await;
+        match result {
+            Ok(()) => json!({ "done": true, "screen": screen }).to_string(),
+            Err(failure) => json!({ "error": failure, "screen": screen }).to_string(),
+        }
+    }
+
     pub(crate) async fn element_action(&self, arguments: &str, typing: bool) -> String {
         let Ok(args) = serde_json::from_str::<ElementArgs>(arguments) else {
             return error("arguments must be {app, element, label}");
         };
-        let action = match (typing, args.text) {
-            (false, _) => UiAction::Press,
-            (true, Some(text)) => UiAction::SetText(text),
+        let step = match (typing, args.text) {
+            (false, _) => Step::Click {
+                element: args.element,
+            },
+            (true, Some(text)) => Step::Type {
+                element: args.element,
+                text,
+            },
             (true, None) => return error("type_text needs text"),
         };
         let app = match self.ensure(&args.app).await {
             Ok(app) => app,
             Err(failure) => return failure,
         };
-        self.before_acting().await;
-        let result = self.state.operator.act(app.id, args.element, action).await;
-        match result {
-            Ok(()) => json!({ "done": true, "hint": "the screen may have changed; look again before relying on element numbers" }).to_string(),
-            Err(failure) => error(&failure),
-        }
+        let result = self.step(&app, step).await;
+        self.after(&app, result).await
     }
 
     pub(crate) async fn press_keys(&self, arguments: &str) -> String {
@@ -229,12 +365,38 @@ impl HubTools<'_> {
             Ok(app) => app,
             Err(failure) => return failure,
         };
-        self.before_acting().await;
-        let result = self.state.operator.keys(app.id, args.keys).await;
-        match result {
-            Ok(()) => json!({ "done": true }).to_string(),
-            Err(failure) => error(&failure),
+        let result = self.step(&app, Step::Keys { keys: args.keys }).await;
+        self.after(&app, result).await
+    }
+
+    pub(crate) async fn do_steps(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<StepsArgs>(arguments) else {
+            return error(
+                "arguments must be {app, summary, steps: [{do, element?, text?, keys?}]}",
+            );
+        };
+        if args.steps.is_empty() || args.steps.len() > MAX_STEPS {
+            return error("give between 1 and 30 steps");
         }
+        let app = match self.ensure(&args.app).await {
+            Ok(app) => app,
+            Err(failure) => return failure,
+        };
+        let total = args.steps.len();
+        for (index, step) in args.steps.into_iter().enumerate() {
+            if let Err(failure) = self.step(&app, step).await {
+                let screen = self.screen(&app.id).await;
+                return json!({
+                    "error": failure,
+                    "finished_steps": index,
+                    "failed_step": index,
+                    "screen": screen,
+                })
+                .to_string();
+            }
+        }
+        let screen = self.screen(&app.id).await;
+        json!({ "done": true, "finished_steps": total, "screen": screen }).to_string()
     }
 
     pub(crate) async fn confirm(&self, arguments: &str) -> String {

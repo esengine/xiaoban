@@ -267,6 +267,7 @@ pub struct HubTools<'a> {
     pub(crate) turn_id: &'a str,
     pub(crate) cancel: CancellationToken,
     pub(crate) allowed_once: Mutex<Vec<String>>,
+    pub(crate) mouse_once: Mutex<Vec<String>>,
     attachment: Mutex<Option<Attachment>>,
 }
 
@@ -283,6 +284,7 @@ impl<'a> HubTools<'a> {
             turn_id,
             cancel,
             allowed_once: Mutex::new(Vec::new()),
+            mouse_once: Mutex::new(Vec::new()),
             attachment: Mutex::new(None),
         }
     }
@@ -517,6 +519,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::operate_tools::CLICK
                 | crate::operate_tools::TYPE_TEXT
                 | crate::operate_tools::PRESS_KEYS
+                | crate::operate_tools::DO_STEPS
                 | crate::operate_tools::CONFIRM
         )
     }
@@ -535,6 +538,7 @@ impl ToolRunner for HubTools<'_> {
                 crate::operate_tools::CLICK => self.element_action(arguments, false).await,
                 crate::operate_tools::TYPE_TEXT => self.element_action(arguments, true).await,
                 crate::operate_tools::PRESS_KEYS => self.press_keys(arguments).await,
+                crate::operate_tools::DO_STEPS => self.do_steps(arguments).await,
                 crate::operate_tools::CONFIRM => self.confirm(arguments).await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,

@@ -14,6 +14,7 @@ interface Pointer {
   label: string;
   typing: boolean;
   real: boolean;
+  visible: boolean;
 }
 
 export function OperateOverlay() {
@@ -41,7 +42,7 @@ export function OperateOverlay() {
     let seq = 0;
     const stop = listen<Pointer>("operate://pointer", ({ payload }) => {
       seq += 1;
-      setPointer({ ...payload, seq });
+      setPointer(payload.visible ? { ...payload, seq } : null);
     });
     return () => void stop.then((unlisten) => unlisten());
   }, []);

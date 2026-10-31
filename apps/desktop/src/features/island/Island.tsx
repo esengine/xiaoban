@@ -119,10 +119,18 @@ export function Island() {
 
   const confirm = state.confirms[0] ?? null;
   const runningTurn = running?.turnId;
+  const [background, setBackground] = useState(false);
   useEffect(() => {
     if (!runningTurn) setExpanded(false);
     setNote("");
+    setBackground(false);
   }, [runningTurn]);
+  useEffect(() => {
+    const stop = listen<{ visible: boolean }>("operate://pointer", ({ payload }) =>
+      setBackground(!payload.visible),
+    );
+    return () => void stop.then((unlisten) => unlisten());
+  }, []);
   const mode: Mode = confirm
     ? "confirm"
     : done
@@ -198,6 +206,7 @@ export function Island() {
     if (draft.paused) return t("island-paused");
     const app = draft.steps.findLast((step) => APP_TOOLS.has(step.tool) && step.detail)?.detail;
     const n = Math.max(draft.steps.length, 1);
+    if (app && background) return t("island-title-app-background", { app, n });
     return app
       ? t("island-title-app", { app, n })
       : t("island-title", { title: threadTitle(draft.threadId), n });

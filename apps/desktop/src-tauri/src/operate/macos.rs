@@ -16,7 +16,7 @@ use objc2_foundation::NSString;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
-use xiaoban_hub::{MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement};
+use xiaoban_hub::{ActFailure, MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement};
 use xiaoban_protocol::OperatePermissions;
 
 const MAX_DEPTH: usize = 40;
@@ -48,6 +48,7 @@ struct Pointer {
     label: String,
     typing: bool,
     real: bool,
+    visible: bool,
 }
 
 impl MacOperator {
@@ -372,7 +373,45 @@ fn took(element: &AXUIElement, value: &str) -> bool {
     wanted.is_empty() || text(element, "AXValue").is_some_and(|now| now == wanted)
 }
 
-fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(), String> {
+fn on_top(pid: i32, at: CGPoint) -> bool {
+    let system = unsafe { AXUIElement::new_system_wide() };
+    let mut hit: *const AXUIElement = std::ptr::null();
+    #[allow(clippy::cast_possible_truncation)]
+    let found = unsafe {
+        system.copy_element_at_position(at.x as f32, at.y as f32, NonNull::from(&mut hit))
+    };
+    let Some(hit) = NonNull::new(hit.cast_mut()) else {
+        return false;
+    };
+    let hit = unsafe { CFRetained::from_raw(hit) };
+    let mut owner: i32 = 0;
+    found == AXError::Success
+        && unsafe { hit.pid(NonNull::from(&mut owner)) } == AXError::Success
+        && owner == pid
+}
+
+fn type_into(bundle: &str, text: &str) -> Result<(), String> {
+    let pid = launch(bundle)?.processIdentifier();
+    for unit in text.encode_utf16() {
+        for down in [true, false] {
+            let event =
+                CGEvent::new_keyboard_event(None, 0, down).ok_or("could not create a key event")?;
+            CGEvent::set_flags(Some(&event), CGEventFlags::empty());
+            unsafe { CGEvent::keyboard_set_unicode_string(Some(&event), 1, &raw const unit) };
+            CGEvent::post_to_pid(pid, Some(&event));
+            std::thread::sleep(KEY_GAP);
+        }
+    }
+    Ok(())
+}
+
+fn act(
+    worker: &Worker,
+    bundle: &str,
+    index: u32,
+    action: &UiAction,
+    allow_mouse: bool,
+) -> Result<(), ActFailure> {
     let (element, label) = worker
         .elements
         .get(bundle)
@@ -380,7 +419,13 @@ fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(
         .ok_or("no element with that number; call look_at_app again")?;
     let bounds = frame(element);
     let typing = matches!(action, UiAction::SetText(_));
+    let pid = running(bundle).map(|app| app.processIdentifier());
+    let center = bounds.map(|(origin, size)| CGPoint {
+        x: origin.x + size.width / 2.0,
+        y: origin.y + size.height / 2.0,
+    });
     let show = |real: bool| {
+        let visible = real || matches!((pid, center), (Some(pid), Some(at)) if on_top(pid, at));
         if let Some((origin, size)) = bounds {
             let _ = worker.app.emit(
                 crate::overlay::POINTER_EVENT,
@@ -392,12 +437,13 @@ fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(
                     label: label.clone(),
                     typing,
                     real,
+                    visible,
                 },
             );
         }
+        visible
     };
-    show(false);
-    if bounds.is_some() {
+    if show(false) {
         std::thread::sleep(POINTER_TRAVEL);
     }
     let direct = match action {
@@ -422,18 +468,17 @@ fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(
     if direct {
         return Ok(());
     }
-    let (origin, size) =
-        bounds.ok_or("the app refused the action and the element has no position to click")?;
-    let center = CGPoint {
-        x: origin.x + size.width / 2.0,
-        y: origin.y + size.height / 2.0,
-    };
+    let center =
+        center.ok_or("the app refused the action and the element has no position to click")?;
+    if !allow_mouse {
+        return Err(ActFailure::NeedsMouse);
+    }
     show(true);
     let text = match action {
         UiAction::SetText(value) => Some(value.as_str()),
         UiAction::Press => None,
     };
-    by_hand(bundle, center, text)
+    Ok(by_hand(bundle, center, text)?)
 }
 
 fn key_code(name: &str) -> Option<u16> {
@@ -505,8 +550,22 @@ impl Operator for MacOperator {
         app_id: String,
         index: u32,
         action: UiAction,
-    ) -> BoxFuture<'static, Result<(), String>> {
-        self.run(move |worker| act(worker, &app_id, index, &action))
+        allow_mouse: bool,
+    ) -> BoxFuture<'static, Result<(), ActFailure>> {
+        let (reply, answer) = oneshot::channel();
+        let sent = self.jobs.send(Box::new(move |worker| {
+            let _ = reply.send(act(worker, &app_id, index, &action, allow_mouse));
+        }));
+        Box::pin(async move {
+            sent.map_err(|_| ActFailure::from("the operate thread stopped"))?;
+            answer
+                .await
+                .unwrap_or_else(|_| Err(ActFailure::from("the operate thread stopped")))
+        })
+    }
+
+    fn type_into(&self, app_id: String, text: String) -> BoxFuture<'static, Result<(), String>> {
+        self.run(move |_| type_into(&app_id, &text))
     }
 
     fn keys(&self, app_id: String, combo: String) -> BoxFuture<'static, Result<(), String>> {

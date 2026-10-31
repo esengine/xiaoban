@@ -11,8 +11,8 @@ use xiaoban_agent::{
     ProviderPreset, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
 use xiaoban_hub::{
-    AppEntry, Apps, Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig, HubHandle,
-    HubRuntime, MemorySecrets, NoRouter, Operator, Page, Prompts, Router, SecretStore,
+    ActFailure, AppEntry, Apps, Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig,
+    HubHandle, HubRuntime, MemorySecrets, NoRouter, Operator, Page, Prompts, Router, SecretStore,
     ServiceError, Snapshot, UiAction, UiElement, Web,
 };
 use xiaoban_i18n::Locale;
@@ -1570,6 +1570,7 @@ async fn apps_are_found_by_name_and_only_listed_ids_open() {
 #[derive(Debug)]
 struct FakeOperator {
     control: std::sync::atomic::AtomicBool,
+    stubborn: std::sync::atomic::AtomicBool,
     actions: std::sync::Mutex<Vec<String>>,
 }
 
@@ -1577,6 +1578,7 @@ impl Default for FakeOperator {
     fn default() -> Self {
         Self {
             control: std::sync::atomic::AtomicBool::new(true),
+            stubborn: std::sync::atomic::AtomicBool::new(false),
             actions: std::sync::Mutex::default(),
         }
     }
@@ -1612,11 +1614,27 @@ impl Operator for FakeOperator {
         app_id: String,
         index: u32,
         action: UiAction,
-    ) -> BoxFuture<'static, Result<(), String>> {
+        allow_mouse: bool,
+    ) -> BoxFuture<'static, Result<(), ActFailure>> {
+        let stubborn = self.stubborn.load(std::sync::atomic::Ordering::SeqCst);
         self.actions
             .lock()
             .unwrap()
-            .push(format!("{action:?} {index} {app_id}"));
+            .push(format!("{action:?} {index} {app_id} mouse={allow_mouse}"));
+        Box::pin(async move {
+            if stubborn && !allow_mouse {
+                Err(ActFailure::NeedsMouse)
+            } else {
+                Ok(())
+            }
+        })
+    }
+
+    fn type_into(&self, app_id: String, text: String) -> BoxFuture<'static, Result<(), String>> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("text {text} {app_id}"));
         Box::pin(async { Ok(()) })
     }
 
@@ -1765,7 +1783,11 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
     assert_eq!(answers.len(), 0);
     assert_eq!(
         *operator.actions.lock().unwrap(),
-        ["look com.apple.Keynote", "Press 0 com.apple.Keynote"]
+        [
+            "look com.apple.Keynote",
+            "Press 0 com.apple.Keynote mouse=false",
+            "look com.apple.Keynote"
+        ]
     );
     let last = provider
         .requests()
@@ -1777,5 +1799,73 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
         .content
         .clone();
     assert!(last.contains("no: do not do it"));
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
+    let operator = Arc::new(FakeOperator::default());
+    operator
+        .stubborn
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "do_steps",
+            &serde_json::json!({
+                "app": "com.apple.Keynote",
+                "summary": "输入 12+34=",
+                "steps": [
+                    { "do": "click", "element": 0, "label": "AC" },
+                    { "do": "text", "text": "12+34=" },
+                ],
+            }),
+        )],
+        vec![ModelChunk::Text("46".into())],
+    ]));
+    let mut runtime = runtime(provider.clone());
+    runtime.operator = operator.clone();
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "算 12+34".into(),
+            context: Vec::new(),
+            quote: None,
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let mut answers: Vec<Answer> = vec![
+        (
+            |kind| matches!(kind, ConfirmKind::AllowApp { .. }),
+            ConfirmChoice::Once,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::BorrowMouse { app } if app == "Keynote 讲演"),
+            ConfirmChoice::Once,
+        ),
+    ];
+    answer_confirms(&mut client, &thread, &mut answers, 1).await;
+    assert_eq!(answers.len(), 0);
+    assert_eq!(
+        *operator.actions.lock().unwrap(),
+        [
+            "Press 0 com.apple.Keynote mouse=false",
+            "Press 0 com.apple.Keynote mouse=true",
+            "text 12+34= com.apple.Keynote",
+            "look com.apple.Keynote"
+        ]
+    );
+    let result = provider.requests()[1]
+        .messages
+        .last()
+        .unwrap()
+        .content
+        .clone();
+    assert!(result.contains("\"finished_steps\":2"));
+    assert!(result.contains("导出 PDF"));
     hub.shutdown().await;
 }
