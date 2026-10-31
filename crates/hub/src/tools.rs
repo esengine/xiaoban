@@ -15,6 +15,7 @@ use crate::trip::{self, DetailRequest, TripDraft};
 use crate::weather::{MAX_DAYS, WeatherError};
 
 pub const REMEMBER: &str = "remember";
+pub const FORGET: &str = "forget";
 pub const WEATHER: &str = "weather";
 pub const READ_PAGE: &str = "read_page";
 pub const LOCATE: &str = "locate";
@@ -165,11 +166,23 @@ fn remember_spec(l: &Localizer) -> ToolSpec {
     )
 }
 
+fn forget_spec(l: &Localizer) -> ToolSpec {
+    spec(
+        FORGET,
+        l.text(keys::TOOL_FORGET_DESCRIPTION),
+        object(
+            &json!({ "subject": text(l, keys::TOOL_FORGET_SUBJECT) }),
+            &["subject"],
+        ),
+    )
+}
+
 fn base_specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let l = localizer;
     let day = trip_day(l);
     vec![
         remember_spec(l),
+        forget_spec(l),
         spec(
             WEATHER,
             l.text(keys::TOOL_WEATHER_DESCRIPTION),
@@ -282,6 +295,11 @@ struct RememberArgs {
     expires: Option<String>,
     #[serde(default)]
     replaces: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ForgetArgs {
+    subject: String,
 }
 
 const MAX_ALIASES: usize = 100;
@@ -449,6 +467,28 @@ impl<'a> HubTools<'a> {
         }
     }
 
+    async fn forget(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<ForgetArgs>(arguments) else {
+            return error("arguments must be {subject}");
+        };
+        match self
+            .state
+            .store
+            .forget_memory(args.subject.trim().to_owned())
+            .await
+        {
+            Ok(Some(memory_id)) => {
+                self.state.publish(Event::MemoryForgotten { memory_id });
+                json!({ "forgotten": true }).to_string()
+            }
+            Ok(None) => error("no memory with that subject"),
+            Err(failure) => {
+                tracing::error!(%failure, "failed to forget memory");
+                error("could not forget")
+            }
+        }
+    }
+
     async fn weather(&self, arguments: &str) -> String {
         let Ok(args) = serde_json::from_str::<WeatherArgs>(arguments) else {
             return error("arguments must be {place, days?}");
@@ -599,6 +639,7 @@ impl ToolRunner for HubTools<'_> {
         !matches!(
             name,
             REMEMBER
+                | FORGET
                 | LOCATE
                 | OPEN_APP
                 | SAVE_TRIP
@@ -617,6 +658,7 @@ impl ToolRunner for HubTools<'_> {
             let arguments = call.function.arguments.as_str();
             match call.function.name.as_str() {
                 REMEMBER => self.remember(arguments).await,
+                FORGET => self.forget(arguments).await,
                 WEATHER => self.weather(arguments).await,
                 READ_PAGE => self.read_page(arguments).await,
                 LOCATE => self.locate().await,

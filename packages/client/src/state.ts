@@ -139,6 +139,11 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "thread_updated":
       return { ...state, threads: upsertThread(state.threads, event.thread) };
+    case "memory_forgotten":
+      return {
+        ...state,
+        memories: state.memories.filter((memory) => memory.id !== event.memoryId),
+      };
     case "memories_used":
       return {
         ...state,

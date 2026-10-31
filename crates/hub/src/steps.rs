@@ -34,7 +34,7 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::file_tools::RECALL => text(&args, "galaxy").or_else(|| text(&args, "query")),
         READ_PAGE => text(&args, "url").and_then(|url| site(&url)),
         WEATHER => text(&args, "place"),
-        REMEMBER => text(&args, "subject"),
+        REMEMBER | crate::tools::FORGET => text(&args, "subject"),
         SAVE_TRIP | crate::operate_tools::CONFIRM => text(&args, "title"),
         SAVE_PLACE_DETAIL => text(&args, "stop"),
         OPEN_APP | crate::operate_tools::LOOK_AT_APP => text(&args, "name"),

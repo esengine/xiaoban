@@ -261,6 +261,26 @@ impl Store {
         .await
     }
 
+    pub async fn forget_memory(&self, subject: String) -> Result<Option<String>> {
+        self.with(move |conn| {
+            let id: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM memories WHERE subject = ?1 AND superseded_by IS NULL",
+                    [&subject],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            if let Some(id) = &id {
+                conn.execute(
+                    "DELETE FROM memories WHERE id = ?1 OR superseded_by = ?1",
+                    [id],
+                )?;
+            }
+            Ok(id)
+        })
+        .await
+    }
+
     pub async fn set_memory_pinned(&self, id: String, pinned: bool) -> Result<Option<Memory>> {
         self.with(move |conn| {
             conn.execute(
