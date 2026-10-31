@@ -72,7 +72,7 @@ fn source(draft: SourceDraft) -> Option<SourceLink> {
 }
 
 fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
-    let why = draft.why.trim().to_owned();
+    let why = unmarked(&draft.why);
     if why.is_empty() {
         return None;
     }
@@ -82,7 +82,7 @@ fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
             .unwrap_or_default()
             .into_iter()
             .filter_map(|review| {
-                let text = review.text.trim().to_owned();
+                let text = unmarked(&review.text);
                 Some(Review {
                     source: source(review.source)?,
                     text,
@@ -100,7 +100,7 @@ fn place_detail(draft: DetailDraft, verified: bool) -> Option<PlaceDetail> {
             .suits
             .unwrap_or_default()
             .into_iter()
-            .map(|suit| suit.trim().to_owned())
+            .map(|suit| unmarked(&suit))
             .filter(|suit| !suit.is_empty())
             .collect(),
         duration: filled(draft.duration),
@@ -127,8 +127,20 @@ fn minutes(value: f64) -> u32 {
     }
 }
 
+fn unmarked(text: &str) -> String {
+    let mut out = text.replace("**", "").replace("__", "").replace('`', "");
+    for heading in ["### ", "## ", "# "] {
+        out = out
+            .lines()
+            .map(|line| line.trim_start().strip_prefix(heading).unwrap_or(line))
+            .collect::<Vec<_>>()
+            .join("\n");
+    }
+    out.trim().to_owned()
+}
+
 fn filled(text: Option<String>) -> Option<String> {
-    text.map(|text| text.trim().to_owned())
+    text.map(|text| unmarked(&text))
         .filter(|text| !text.is_empty())
 }
 
@@ -262,6 +274,15 @@ pub async fn save(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn markdown_marks_are_removed() {
+        assert_eq!(
+            unmarked("  **海狮表演免费**，`10:00` 开始 "),
+            "海狮表演免费，10:00 开始"
+        );
+        assert_eq!(unmarked("## 亮点\n湖景"), "亮点\n湖景");
+    }
 
     #[test]
     fn drafts_accept_nulls_and_fractional_minutes() {
