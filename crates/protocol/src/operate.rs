@@ -5,7 +5,6 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 pub struct OperatePermissions {
     pub control: bool,
-    pub capture: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

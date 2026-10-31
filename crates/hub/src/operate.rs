@@ -48,10 +48,7 @@ pub struct NoOperator;
 
 impl Operator for NoOperator {
     fn permissions(&self) -> OperatePermissions {
-        OperatePermissions {
-            control: false,
-            capture: false,
-        }
+        OperatePermissions { control: false }
     }
 
     fn snapshot(&self, _: String) -> BoxFuture<'static, Result<Snapshot, String>> {
