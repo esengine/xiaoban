@@ -24,6 +24,7 @@ fluent-syntax = "0.12"
 futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
 hex = "0.4"
 if-addrs = "0.15"
+jiff = "0.2"
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service"] }
 mdns-sd = "0.21"
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls"] }

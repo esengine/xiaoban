@@ -80,6 +80,7 @@ impl Hub {
             connector: runtime.connector,
             secrets: runtime.secrets,
             locator: runtime.locator,
+            weather: runtime.weather,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),

@@ -16,8 +16,10 @@ clap.workspace = true
 futures-util.workspace = true
 hex.workspace = true
 if-addrs.workspace = true
+jiff.workspace = true
 keyring.workspace = true
 mdns-sd.workspace = true
+reqwest = { workspace = true, features = ["query"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

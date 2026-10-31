@@ -17,6 +17,7 @@ mod session;
 mod state;
 mod tools;
 mod turns;
+mod weather;
 
 pub use config::HubConfig;
 pub use error::HubError;
@@ -25,6 +26,7 @@ pub use prompts::Prompts;
 pub use runtime::HubRuntime;
 pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};
 pub use server::{Hub, HubHandle};
+pub use weather::{Day, FixedWeather, Forecast, Now, OpenMeteo, Weather, WeatherError};
 
 use xiaoban_i18n::{Locale, Localizer, keys};
 

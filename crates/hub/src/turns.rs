@@ -92,26 +92,31 @@ struct Job {
     replaces: Option<String>,
 }
 
+fn notes(state: &SharedState, quote: Option<&str>, context: Vec<ContextNote>) -> Vec<ContextNote> {
+    let quote = quote.map(|quote| ContextNote {
+        label: state.localizer.text(keys::QUOTE_CONTEXT_LABEL),
+        body: quote.to_owned(),
+    });
+    let now = ContextNote {
+        label: state.localizer.text(keys::NOW_CONTEXT_LABEL),
+        body: jiff::Zoned::now()
+            .strftime("%Y-%m-%d %A %H:%M %Q")
+            .to_string(),
+    };
+    quote.into_iter().chain(context).chain([now]).collect()
+}
+
 pub async fn start(
     state: &SharedState,
     thread_id: String,
     text: String,
-    mut context: Vec<ContextNote>,
+    context: Vec<ContextNote>,
     quote: Option<String>,
 ) -> Result<(String, Message), ProtocolError> {
     state.store.thread(thread_id.clone()).await?;
     let (turn_id, cancel) = claim(state, &thread_id)?;
 
-    if let Some(quote) = &quote {
-        context.insert(
-            0,
-            ContextNote {
-                label: state.localizer.text(keys::QUOTE_CONTEXT_LABEL),
-                body: quote.clone(),
-            },
-        );
-    }
-    let wire = user_wire(&text, &context);
+    let wire = user_wire(&text, &notes(state, quote.as_deref(), context));
     let accepted = async {
         let message = state
             .store
@@ -158,7 +163,10 @@ pub async fn retry(
             replaces: Some(last.replaces.clone().unwrap_or_else(|| last.id.clone())),
         },
         _ => Job {
-            wire: asked.text.clone(),
+            wire: user_wire(
+                &asked.text,
+                &notes(state, asked.quote.as_deref(), Vec::new()),
+            ),
             replaces: None,
         },
     };

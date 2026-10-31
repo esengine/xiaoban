@@ -11,7 +11,8 @@ use xiaoban_agent::{
     ProviderPreset, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
 use xiaoban_hub::{
-    FixedLocator, Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, Prompts, SecretStore,
+    Day, FixedLocator, FixedWeather, Forecast, Hub, HubConfig, HubHandle, HubRuntime,
+    MemorySecrets, Prompts, SecretStore,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
@@ -149,6 +150,19 @@ fn runtime_with(
         locator: Arc::new(FixedLocator(Location::Found {
             city: "北京市".into(),
             district: Some("朝阳区".into()),
+        })),
+        weather: Arc::new(FixedWeather(Forecast {
+            place: "杭州".into(),
+            region: "中国 浙江".into(),
+            timezone: "Asia/Shanghai".into(),
+            now: None,
+            days: vec![Day {
+                date: "2026-11-01".into(),
+                condition: "light rain",
+                high: 29.3,
+                low: 16.2,
+                rain_chance: Some(98),
+            }],
         })),
         fallback,
     }
@@ -434,7 +448,10 @@ async fn changing_the_stable_prefix_starts_a_new_epoch_that_keeps_history() {
         .iter()
         .map(|m| m.content.as_str())
         .collect();
-    assert_eq!(contents, ["新版提示词", "明天几点出门", "7:40", "要带伞吗"]);
+    assert_eq!(contents[0], "新版提示词");
+    assert!(contents[1].starts_with("明天几点出门\n\n<context>"));
+    assert_eq!(contents[2], "7:40");
+    assert!(contents[3].starts_with("要带伞吗\n\n<context>"));
     hub.shutdown().await;
     let _ = std::fs::remove_dir_all(dir);
 }
@@ -977,7 +994,9 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
         .iter()
         .map(|m| m.content.clone())
         .collect();
-    assert_eq!(contents, ["system", "明天几点出门"]);
+    assert_eq!(contents[0], "system");
+    assert!(contents[1].starts_with("明天几点出门\n\n<context>"));
+    assert_eq!(contents.len(), 2);
 
     let Response::TurnAccepted { turn_id, .. } = client
         .request(Request::RetryTurn {

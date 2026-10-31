@@ -6,6 +6,7 @@ use xiaoban_i18n::Locale;
 use crate::location::Locator;
 use crate::prompts::Prompts;
 use crate::secrets::SecretStore;
+use crate::weather::Weather;
 
 #[derive(Debug, Clone)]
 pub struct HubRuntime {
@@ -14,5 +15,6 @@ pub struct HubRuntime {
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
     pub locator: Arc<dyn Locator>,
+    pub weather: Arc<dyn Weather>,
     pub fallback: Option<ConfiguredProvider>,
 }

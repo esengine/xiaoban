@@ -6,10 +6,12 @@ import { useState } from "react";
 
 const TOOL_NAMES: Record<string, PlainMessageKey> = {
   remember: "tool-name-remember",
+  weather: "tool-name-weather",
 };
 
 const TOOL_PROGRESS: Record<string, PlainMessageKey> = {
   remember: "tool-progress-remember",
+  weather: "tool-progress-weather",
 };
 
 export function useToolName() {
