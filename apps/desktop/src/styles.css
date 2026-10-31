@@ -3277,11 +3277,11 @@ button.quote-block__main {
 .memory-graph__sky {
   position: relative;
   border-radius: 16px;
-  overflow: hidden;
   background: radial-gradient(120% 90% at 50% 40%, var(--dark-raised), var(--dark-island));
 }
 
 .memory-graph__sky svg {
+  border-radius: 16px;
   display: block;
   width: 100%;
   height: auto;
@@ -3352,7 +3352,9 @@ button.quote-block__main {
 .memory-graph__tip {
   position: absolute;
   z-index: 2;
-  width: 170px;
+  width: 200px;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
   padding: 8px 10px;
   border-radius: 10px;
   background: var(--color-surface);

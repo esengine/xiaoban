@@ -184,7 +184,7 @@ export function MemoryGraph({ memories, used }: { memories: Memory[]; used: stri
           <div
             className="memory-graph__tip"
             style={{
-              left: `${(Math.min(hovered.x, WIDTH - 90) / WIDTH) * 100}%`,
+              left: `min(${(hovered.x / WIDTH) * 100}%, calc(100% - 200px))`,
               top: `${((hovered.y + 10) / HEIGHT) * 100}%`,
             }}
           >
