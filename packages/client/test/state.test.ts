@@ -2,7 +2,7 @@ import type { Message, Thread } from "@xiaoban/protocol";
 import { describe, expect, it } from "vitest";
 import { applyEvent, initialHubState } from "../src/state.ts";
 
-const thread: Thread = { id: "t1", title: "出门", createdAt: 1, updatedAt: 1 };
+const thread: Thread = { id: "t1", title: "出门", lastMessage: null, createdAt: 1, updatedAt: 1 };
 const reply: Message = {
   id: "m2",
   threadId: "t1",

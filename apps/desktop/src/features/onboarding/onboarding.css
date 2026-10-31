@@ -23,22 +23,13 @@
   animation: bob 3.2s ease-in-out infinite;
 }
 
-.mascot svg {
+.mascot .mascot-face {
   width: 38px;
   height: 38px;
-  fill: none;
-  stroke: var(--dark-text);
-  stroke-width: 1.6;
-  stroke-linecap: round;
 }
 
-.mascot__eyes {
-  transform-origin: 12px 11px;
+.mascot .mascot-face__eyes {
   animation: blink 4s infinite;
-}
-
-.mascot__eyes circle {
-  fill: var(--dark-text);
 }
 
 .onboarding__hello {
@@ -778,6 +769,7 @@
 }
 
 .phone-step {
+  display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 40px;
@@ -948,7 +940,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mascot,
-  .mascot__eyes,
+  .mascot .mascot-face__eyes,
   .step__body,
   .custom-panel,
   .meet-line,

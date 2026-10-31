@@ -1,4 +1,5 @@
 import type {
+  Device,
   Event,
   Failure,
   HubInfo,
@@ -26,6 +27,7 @@ export interface HubState {
   preferences: Preferences | null;
   threads: Thread[];
   memories: Memory[];
+  devices: Device[];
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
 }
@@ -38,6 +40,7 @@ export const initialHubState: HubState = {
   preferences: null,
   threads: [],
   memories: [],
+  devices: [],
   messages: {},
   drafts: {},
 };
@@ -106,7 +109,10 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         drafts: withoutDraft(state.drafts, event.turnId),
       };
     case "device_paired":
-      return state;
+      return {
+        ...state,
+        devices: [...state.devices.filter((device) => device.id !== event.device.id), event.device],
+      };
     case "model_changed":
       return { ...state, model: event.model, modelLoaded: true };
     case "turn_failed": {

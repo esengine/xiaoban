@@ -1,6 +1,7 @@
 import type {
   AutonomyLevel,
   ContextNote,
+  Device,
   Failure,
   Interpretation,
   Location,
@@ -70,6 +71,12 @@ export class HubStore {
     return memory;
   }
 
+  async refreshDevices(): Promise<Device[]> {
+    const { devices } = await this.client.request({ type: "list_devices" }, "devices");
+    this.#update((state) => ({ ...state, devices }));
+    return devices;
+  }
+
   async refreshMemories(): Promise<Memory[]> {
     const { memories } = await this.client.request({ type: "list_memories" }, "memories");
     this.#update((state) => ({ ...state, memories }));
@@ -97,11 +104,7 @@ export class HubStore {
 
   async completeOnboarding(): Promise<void> {
     await this.client.request({ type: "complete_onboarding" }, "ack");
-    this.#update((state) =>
-      state.preferences
-        ? { ...state, preferences: { ...state.preferences, onboarded: true } }
-        : state,
-    );
+    await Promise.all([this.refreshPreferences(), this.refreshThreads()]);
   }
 
   async createPairingCode(): Promise<Extract<Response, { type: "pairing_code" }>> {
@@ -167,9 +170,13 @@ export class HubStore {
   }
 
   #refreshInBackground(): void {
-    Promise.all([this.refreshThreads(), this.refreshModel(), this.refreshPreferences()]).catch(
-      () => undefined,
-    );
+    Promise.all([
+      this.refreshThreads(),
+      this.refreshModel(),
+      this.refreshPreferences(),
+      this.refreshMemories(),
+      this.refreshDevices(),
+    ]).catch(() => undefined);
   }
 
   #update(next: (state: HubState) => HubState): void {

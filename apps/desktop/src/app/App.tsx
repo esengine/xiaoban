@@ -1,17 +1,18 @@
 import { useHubState } from "@xiaoban/client/react";
-import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
+import { Rail } from "../features/shell/Rail.tsx";
+import { Workspace } from "../features/workspace/Workspace.tsx";
 import { useHub } from "./hub.tsx";
 
 export function App() {
-  const { t } = useI18n();
   const store = useHub();
   const { threads, status, model, modelLoaded, preferences } = useHubState(store);
   const [selected, setSelected] = useState<string | null>(null);
-  const activeId = selected ?? threads[0]?.id ?? null;
+  const primaryId = preferences?.primaryThreadId ?? null;
+  const activeId = selected ?? primaryId ?? threads[0]?.id ?? null;
 
   useEffect(() => {
     if (activeId && status === "open") void store.loadMessages(activeId);
@@ -22,34 +23,21 @@ export function App() {
     return <Onboarding startAt={model ? 1 : 0} onFinish={() => setSelected(null)} />;
   }
 
-  const startThread = async () => {
-    const thread = await store.createThread();
-    setSelected(thread.id);
-  };
-
   return (
     <div className="shell">
-      <nav className="rail" aria-label={t("nav-main")}>
-        <div className="rail__logo" />
-      </nav>
+      <Rail />
       <ThreadList
         threads={threads}
+        primaryId={primaryId}
         activeId={activeId}
-        status={status}
-        model={model}
         onSelect={setSelected}
-        onCreate={startThread}
       />
       {activeId ? (
-        <ChatPane threadId={activeId} />
+        <ChatPane threadId={activeId} primary={activeId === primaryId} />
       ) : (
-        <main className="empty">
-          <p>{t("thread-empty")}</p>
-          <button type="button" className="button button--primary" onClick={startThread}>
-            {t("thread-start")}
-          </button>
-        </main>
+        <main className="chat" aria-busy="true" />
       )}
+      <Workspace />
     </div>
   );
 }

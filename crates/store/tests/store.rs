@@ -18,7 +18,10 @@ async fn threads_and_messages_round_trip() {
     assert_eq!(messages.len(), 2);
     assert_eq!(messages[0].role, Role::User);
     assert_eq!(messages[1].text, "11 月 6 日");
-    assert_eq!(store.list_threads().await.unwrap(), vec![thread]);
+    let listed = store.list_threads().await.unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].id, thread.id);
+    assert_eq!(listed[0].last_message.as_deref(), Some("11 月 6 日"));
 }
 
 #[tokio::test]

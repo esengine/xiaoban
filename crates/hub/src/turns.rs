@@ -144,7 +144,7 @@ async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreErro
     Ok(memory::snapshot(&state.localizer, &memories))
 }
 
-async fn begin_epoch(
+pub async fn begin_epoch(
     state: &SharedState,
     thread_id: &str,
     reason: EpochReason,

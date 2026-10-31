@@ -6,6 +6,7 @@ use ts_rs::TS;
 pub struct Thread {
     pub id: String,
     pub title: Option<String>,
+    pub last_message: Option<String>,
     #[ts(type = "number")]
     pub created_at: i64,
     #[ts(type = "number")]
@@ -176,11 +177,12 @@ pub struct Memory {
     pub updated_at: i64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Preferences {
     pub autonomy: AutonomyLevel,
     pub onboarded: bool,
+    pub primary_thread_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

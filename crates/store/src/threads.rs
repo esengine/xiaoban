@@ -3,7 +3,10 @@ use xiaoban_protocol::Thread;
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
-const SELECT: &str = "SELECT id, title, created_at, updated_at FROM threads";
+const SELECT: &str = "SELECT id, title, created_at, updated_at,
+    (SELECT text FROM messages WHERE messages.thread_id = threads.id
+     ORDER BY created_at DESC, rowid DESC LIMIT 1)
+    FROM threads";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
     Ok(Thread {
@@ -11,6 +14,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
         title: row.get(1)?,
         created_at: row.get(2)?,
         updated_at: row.get(3)?,
+        last_message: row.get(4)?,
     })
 }
 
@@ -27,17 +31,13 @@ impl Store {
             let thread = Thread {
                 id: new_id(),
                 title,
+                last_message: None,
                 created_at: now,
                 updated_at: now,
             };
             conn.execute(
                 "INSERT INTO threads (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
-                params![
-                    thread.id,
-                    thread.title,
-                    thread.created_at,
-                    thread.updated_at
-                ],
+                params![thread.id, thread.title, thread.created_at, thread.updated_at],
             )?;
             Ok(thread)
         })

@@ -718,6 +718,24 @@ async fn onboarding_steps_persist_preferences_and_memories() {
     };
     assert_eq!(preferences.autonomy, AutonomyLevel::Cautious);
     assert!(preferences.onboarded);
+    let primary = preferences.primary_thread_id.expect("onboarding creates the main thread");
+    let Response::Messages { messages } = client
+        .request(Request::ListMessages {
+            thread_id: primary.clone(),
+        })
+        .await
+    else {
+        panic!("expected messages");
+    };
+    assert_eq!(messages.len(), 2);
+    assert!(messages[0].text.starts_with("哲哥"));
+    client.request(Request::CompleteOnboarding).await;
+    let Response::Threads { threads } = client.request(Request::ListThreads).await else {
+        panic!("expected threads");
+    };
+    assert_eq!(threads.len(), 1);
+    assert_eq!(threads[0].id, primary);
+    assert_eq!(threads[0].last_message.as_deref(), Some(messages[1].text.as_str()));
     hub.shutdown().await;
 }
 
