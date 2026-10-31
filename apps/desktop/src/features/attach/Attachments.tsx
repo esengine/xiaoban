@@ -1,9 +1,11 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { FileInfo } from "@xiaoban/protocol";
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
-import { useImageViewer } from "../viewer/ImageViewer.tsx";
+import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
+import { bytesOf, toPng, useImageViewer } from "../viewer/ImageViewer.tsx";
 import type { Attached } from "./useAttachments.ts";
 
 type Kind = "pdf" | "doc" | "sheet" | "text" | "file";
@@ -42,11 +44,119 @@ function Remove({ onClick, label }: { onClick: () => void; label: string }) {
   );
 }
 
-function FileCard({ name, meta, onRemove }: { name: string; meta: string; onRemove?: () => void }) {
+const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const shortcut = (mac: string, other: string) => (MAC ? mac : other);
+
+type Locate = () => Promise<string>;
+
+function act(locate: Locate, command: string, extra: Record<string, unknown> = {}) {
+  if (!isTauri()) return;
+  void locate()
+    .then((path) => invoke(command, { path, ...extra }))
+    .catch(() => undefined);
+}
+
+function useFileMenu() {
   const { t } = useI18n();
+  const openMenu = useContextMenu();
+  const reveal = (locate: Locate): MenuEntry => ({
+    label: MAC ? t("file-menu-reveal-mac") : t("file-menu-reveal-windows"),
+    shortcut: shortcut("⌘⇧R", "Ctrl+Shift+R"),
+    hotkey: { key: "r", command: true, shift: true },
+    onSelect: () => act(locate, "file_reveal"),
+  });
+  const forFile = (
+    event: MouseEvent,
+    name: string,
+    locate: Locate,
+    lookAgain: (() => void) | undefined,
+  ) => {
+    const entries: MenuEntry[] = [
+      {
+        label: t("file-menu-open"),
+        shortcut: "↩",
+        onSelect: () => act(locate, "file_open"),
+      },
+      reveal(locate),
+      {
+        label: t("file-menu-copy"),
+        shortcut: shortcut("⌘C", "Ctrl+C"),
+        hotkey: { key: "c", command: true },
+        onSelect: () => act(locate, "file_copy"),
+      },
+      {
+        label: t("file-menu-save-as"),
+        shortcut: shortcut("⌘S", "Ctrl+S"),
+        hotkey: { key: "s", command: true },
+        onSelect: () => act(locate, "file_save_as", { name }),
+      },
+    ];
+    if (lookAgain) {
+      entries.push("separator", { label: t("file-menu-look-again"), onSelect: lookAgain });
+    }
+    openMenu(event, entries);
+  };
+  const forImage = (
+    event: MouseEvent,
+    name: string,
+    src: () => Promise<string>,
+    locate: Locate,
+    zoom: () => void,
+  ) => {
+    openMenu(event, [
+      {
+        label: t("image-menu-zoom"),
+        shortcut: t("menu-key-space"),
+        hotkey: { key: " " },
+        onSelect: zoom,
+      },
+      {
+        label: MAC ? t("image-menu-preview-mac") : t("image-menu-preview-windows"),
+        onSelect: () => act(locate, "file_open"),
+      },
+      reveal(locate),
+      {
+        label: t("image-menu-copy"),
+        shortcut: shortcut("⌘C", "Ctrl+C"),
+        hotkey: { key: "c", command: true },
+        onSelect: () =>
+          void src()
+            .then(bytesOf)
+            .then(({ blob }) => (blob.type === "image/png" ? blob : toPng(blob)))
+            .then((png) => navigator.clipboard.write([new ClipboardItem({ "image/png": png })]))
+            .catch(() => undefined),
+      },
+      {
+        label: t("image-menu-download"),
+        onSelect: () =>
+          void src()
+            .then(bytesOf)
+            .then(({ bytes }) => isTauri() && invoke("save_image", { name, bytes }))
+            .catch(() => undefined),
+      },
+    ]);
+  };
+  return { forFile, forImage };
+}
+
+function FileCard({
+  name,
+  meta,
+  onRemove,
+  locate,
+  onLookAgain,
+}: {
+  name: string;
+  meta: string;
+  onRemove?: () => void;
+  locate?: Locate;
+  onLookAgain?: (() => void) | undefined;
+}) {
+  const { t } = useI18n();
+  const menu = useFileMenu();
   const { kind, tag } = kindOf(name);
-  return (
-    <span className="attach__file">
+  const body = (
+    <>
       <span className="attach__tag" data-kind={kind}>
         {tag}
       </span>
@@ -54,6 +164,24 @@ function FileCard({ name, meta, onRemove }: { name: string; meta: string; onRemo
         <span className="attach__name">{name}</span>
         <span className="attach__detail">{meta}</span>
       </span>
+    </>
+  );
+  return (
+    <span className="attach__card">
+      {locate ? (
+        <button
+          type="button"
+          className="attach__file attach__file--open"
+          aria-label={t("file-open-label", { name })}
+          onClick={() => act(locate, "file_open")}
+          onContextMenu={(event) => menu.forFile(event, name, locate, onLookAgain)}
+        >
+          {body}
+          <span className="attach__open">{t("file-open-hint")}</span>
+        </button>
+      ) : (
+        <span className="attach__file">{body}</span>
+      )}
       {onRemove && <Remove onClick={onRemove} label={t("attach-remove", { name })} />}
     </span>
   );
@@ -68,7 +196,16 @@ export function AttachRow({
 }) {
   const { t } = useI18n();
   const show = useImageViewer();
+  const menu = useFileMenu();
   if (files.length === 0) return null;
+  const zoom = (file: Attached, target: Element) => {
+    const images = files.filter((item) => item.image && item.preview);
+    show(
+      images.map((item) => ({ src: item.preview ?? "", name: item.name })),
+      images.indexOf(file),
+      target,
+    );
+  };
   return (
     <div className="attach__row">
       {files.map((file) => {
@@ -86,12 +223,15 @@ export function AttachRow({
                   type="button"
                   className="attach__zoom"
                   aria-label={t("viewer-open", { name: file.name })}
-                  onClick={(event) => {
-                    const images = files.filter((item) => item.image && item.preview);
-                    show(
-                      images.map((item) => ({ src: item.preview ?? "", name: item.name })),
-                      images.indexOf(file),
-                      event.currentTarget,
+                  onClick={(event) => zoom(file, event.currentTarget)}
+                  onContextMenu={(event) => {
+                    const target = event.currentTarget;
+                    menu.forImage(
+                      event,
+                      file.name,
+                      async () => file.preview ?? "",
+                      async () => file.path,
+                      () => zoom(file, target),
                     );
                   }}
                 >
@@ -107,6 +247,7 @@ export function AttachRow({
                 name={file.name}
                 meta={size(file.size)}
                 onRemove={() => onRemove(file.key)}
+                locate={async () => file.path}
               />
             )}
             {problem && <span className="attach__problem">{problem}</span>}
@@ -189,6 +330,7 @@ function loadImage(store: ReturnType<typeof useHub>, file: FileInfo): Promise<st
 function SentImage({ file, onOpen }: { file: FileInfo; onOpen: (target: Element) => void }) {
   const { t } = useI18n();
   const store = useHub();
+  const menu = useFileMenu();
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -205,13 +347,29 @@ function SentImage({ file, onOpen }: { file: FileInfo; onOpen: (target: Element)
       className="sent-files__image"
       aria-label={t("viewer-open", { name: file.name })}
       onClick={(event) => onOpen(event.currentTarget)}
+      onContextMenu={(event) => {
+        const target = event.currentTarget;
+        menu.forImage(
+          event,
+          file.name,
+          () => loadImage(store, file),
+          () => store.filePath(file.id, file.name),
+          () => onOpen(target),
+        );
+      }}
     >
       {url && <img src={url} alt={file.name} />}
     </button>
   );
 }
 
-export function SentFiles({ files }: { files: FileInfo[] }) {
+export function SentFiles({
+  files,
+  onLookAgain,
+}: {
+  files: FileInfo[];
+  onLookAgain?: ((file: FileInfo, path: string) => void) | undefined;
+}) {
   const { t } = useI18n();
   const store = useHub();
   const show = useImageViewer();
@@ -250,7 +408,20 @@ export function SentFiles({ files }: { files: FileInfo[] }) {
         </div>
       )}
       {documents.map((file) => (
-        <FileCard key={file.id} name={file.name} meta={meta(file)} />
+        <FileCard
+          key={file.id}
+          name={file.name}
+          meta={meta(file)}
+          locate={() => store.filePath(file.id, file.name)}
+          onLookAgain={
+            onLookAgain &&
+            (() =>
+              void store
+                .filePath(file.id, file.name)
+                .then((path) => onLookAgain(file, path))
+                .catch(() => undefined))
+          }
+        />
       ))}
     </div>
   );

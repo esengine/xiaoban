@@ -5,6 +5,7 @@ mod island;
 mod location;
 mod operate;
 mod overlay;
+mod stored;
 mod uploads;
 mod voice;
 
@@ -47,6 +48,10 @@ pub fn run() {
             uploads::stash_file,
             uploads::save_image,
             uploads::preview_image,
+            stored::file_open,
+            stored::file_reveal,
+            stored::file_copy,
+            stored::file_save_as,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,

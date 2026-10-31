@@ -4,7 +4,7 @@ import { connectionKey, type Draft, providerKey, type Settled } from "@xiaoban/c
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { Message, Quote } from "@xiaoban/protocol";
+import type { FileInfo, Message, Quote } from "@xiaoban/protocol";
 import {
   type MouseEvent,
   type ReactNode,
@@ -392,6 +392,11 @@ export function ChatPane(props: Props) {
           message={message}
           delivered={message.id === delivered}
           onContextMenu={(event) => menuFor(event, message, null)}
+          onLookAgain={
+            running
+              ? undefined
+              : (file, path) => void send(t("file-look-again", { name: file.name }), null, [path])
+          }
         />
       );
     }
@@ -521,10 +526,12 @@ function UserItem({
   message,
   delivered,
   onContextMenu,
+  onLookAgain,
 }: {
   message: Message;
   delivered: boolean;
   onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
+  onLookAgain: ((file: FileInfo, path: string) => void) | undefined;
 }) {
   const { t } = useI18n();
   const store = useHub();
@@ -542,7 +549,7 @@ function UserItem({
     <>
       {message.files.length > 0 && (
         <li className="sent-files-row">
-          <SentFiles files={message.files} />
+          <SentFiles files={message.files} onLookAgain={onLookAgain} />
         </li>
       )}
       <li

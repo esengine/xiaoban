@@ -332,6 +332,11 @@ export class HubStore {
     return url;
   }
 
+  async filePath(fileId: string, name: string): Promise<string> {
+    const { path } = await this.client.request({ type: "file_path", fileId, name }, "file_path");
+    return path;
+  }
+
   async cancel(turnId: string): Promise<void> {
     await this.client.request({ type: "cancel_turn", turnId }, "ack");
   }

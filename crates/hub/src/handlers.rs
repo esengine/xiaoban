@@ -122,6 +122,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         }
         Request::Locate => locate(state, local).await,
         Request::FileData { file_id } => file_data(state, &file_id),
+        Request::FilePath { file_id, name } => file_path(state, local, &file_id, &name),
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
         | Request::OperateStatus
@@ -202,6 +203,22 @@ fn file_data(state: &SharedState, file_id: &str) -> Handled {
         .data_url_by_id(file_id)
         .map(|url| Response::FileData { url })
         .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such image"))
+}
+
+fn file_path(state: &SharedState, local: bool, file_id: &str, name: &str) -> Handled {
+    if !local {
+        return Err(ProtocolError::new(
+            ErrorCode::Unauthorized,
+            "only the hub's own machine can open stored files",
+        ));
+    }
+    state
+        .files
+        .named(file_id, name)
+        .map(|path| Response::FilePath {
+            path: path.to_string_lossy().into_owned(),
+        })
+        .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such file"))
 }
 
 async fn send(

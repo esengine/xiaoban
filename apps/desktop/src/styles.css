@@ -3204,8 +3204,12 @@ button.quote-block__main {
   object-fit: cover;
 }
 
-.attach__file {
+.attach__card {
   position: relative;
+  display: inline-flex;
+}
+
+.attach__file {
   width: 200px;
   height: 64px;
   box-sizing: border-box;
@@ -3216,6 +3220,35 @@ button.quote-block__main {
   align-items: center;
   gap: 10px;
   padding: 0 12px;
+}
+
+.attach__file--open {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.attach__file--open:hover,
+.attach__file--open:focus-visible {
+  background: var(--color-ground);
+  border-color: var(--color-line-strong);
+}
+
+.attach__open {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: var(--color-accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.attach__file--open:is(:hover, :focus-visible) .attach__open {
+  opacity: 1;
 }
 
 .attach__item[data-problem] :is(.attach__file, .attach__thumb) {

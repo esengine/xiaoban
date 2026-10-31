@@ -11,9 +11,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+export interface Hotkey {
+  key: string;
+  command?: boolean;
+  shift?: boolean;
+}
+
 export interface MenuItem {
   label: string;
   shortcut?: string | undefined;
+  hotkey?: Hotkey;
   danger?: boolean;
   disabled?: boolean;
   onSelect: () => void;
@@ -85,7 +92,18 @@ function Menu({ menu, onClose }: { menu: OpenMenu; onClose: () => void }) {
     else if (event.key === "ArrowUp")
       setActive(items[(at - 1 + items.length) % items.length] ?? -1);
     else if (event.key === "Enter") choose(active);
-    else return;
+    else {
+      const hit = menu.entries.findIndex(
+        (entry) =>
+          entry !== "separator" &&
+          entry.hotkey !== undefined &&
+          entry.hotkey.key === event.key.toLowerCase() &&
+          Boolean(entry.hotkey.command) === (event.metaKey || event.ctrlKey) &&
+          Boolean(entry.hotkey.shift) === event.shiftKey,
+      );
+      if (hit < 0) return;
+      choose(hit);
+    }
     event.preventDefault();
     event.stopPropagation();
   };

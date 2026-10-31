@@ -67,4 +67,5 @@ export type Request =
   | { type: "list_galaxies" }
   | { type: "pin_memory"; memoryId: string; pinned: boolean }
   | { type: "tidy_memories" }
-  | { type: "file_data"; fileId: string };
+  | { type: "file_data"; fileId: string }
+  | { type: "file_path"; fileId: string; name: string };

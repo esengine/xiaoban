@@ -135,6 +135,10 @@ pub enum Request {
     FileData {
         file_id: String,
     },
+    FilePath {
+        file_id: String,
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -147,6 +151,9 @@ pub enum Response {
     Ack,
     FileData {
         url: String,
+    },
+    FilePath {
+        path: String,
     },
     Galaxies {
         galaxies: Vec<crate::MemoryGalaxy>,

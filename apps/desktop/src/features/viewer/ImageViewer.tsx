@@ -34,7 +34,7 @@ const MAX_SCALE = 8;
 const CLOSE_MS = 200;
 const TOAST_MS = 1_600;
 
-async function bytesOf(src: string): Promise<{ bytes: number[]; blob: Blob }> {
+export async function bytesOf(src: string): Promise<{ bytes: number[]; blob: Blob }> {
   const blob = await (await fetch(src)).blob();
   return { blob, bytes: Array.from(new Uint8Array(await blob.arrayBuffer())) };
 }
@@ -327,7 +327,7 @@ function fitOf(node: HTMLImageElement | null): number {
   return Math.min(1, node.offsetWidth / node.naturalWidth, node.offsetHeight / node.naturalHeight);
 }
 
-async function toPng(blob: Blob): Promise<Blob> {
+export async function toPng(blob: Blob): Promise<Blob> {
   const bitmap = await createImageBitmap(blob);
   const canvas = document.createElement("canvas");
   canvas.width = bitmap.width;

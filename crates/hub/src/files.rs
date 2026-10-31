@@ -14,6 +14,7 @@ const OUTLINE_LINES: usize = 30;
 const OUTLINE_LINE_CHARS: usize = 60;
 pub const READ_CHARS: usize = 8_000;
 const SNIPPET_CHARS: usize = 300;
+const NAMED: &str = "named";
 const MAX_HITS: usize = 5;
 
 const IMAGES: &[(&str, &str)] = &[
@@ -234,6 +235,44 @@ impl Files {
             .flatten()
     }
 
+    fn stored(&self, id: &str) -> Option<PathBuf> {
+        if !valid_id(id) {
+            return None;
+        }
+        let prefix = format!("{id}.");
+        std::fs::read_dir(&self.dir)
+            .ok()?
+            .flatten()
+            .find(|entry| {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                name.starts_with(&prefix) && !name.ends_with(".pages.json")
+            })
+            .map(|entry| entry.path())
+    }
+
+    pub fn named(&self, id: &str, name: &str) -> Option<PathBuf> {
+        let stored = self.stored(id)?;
+        let plain = Path::new(name)
+            .file_name()
+            .map(|name| name.to_string_lossy().replace(['/', '\\', ':'], "_"))
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or_else(|| {
+                stored
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            });
+        let folder = self.dir.join(NAMED).join(id);
+        let path = folder.join(plain);
+        if !path.exists() {
+            std::fs::create_dir_all(&folder).ok()?;
+            if std::fs::hard_link(&stored, &path).is_err() {
+                std::fs::copy(&stored, &path).ok()?;
+            }
+        }
+        Some(path)
+    }
+
     pub fn data_url_by_id(&self, id: &str) -> Option<String> {
         if !valid_id(id) {
             return None;
@@ -374,5 +413,11 @@ mod tests {
                 .unwrap()
                 .starts_with("data:image/png;base64,")
         );
+        let named = files.named(&ingested.id, "../瓷砖.png").unwrap();
+        assert!(named.ends_with(format!("named/{}/瓷砖.png", ingested.id)));
+        assert_eq!(std::fs::read(&named).unwrap(), [137, 80, 78, 71]);
+        assert_eq!(files.named(&ingested.id, "瓷砖.png").unwrap(), named);
+        assert!(files.named("../etc", "passwd").is_none());
+        assert!(files.data_url_by_id(&ingested.id).is_some());
     }
 }
