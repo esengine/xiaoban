@@ -2,7 +2,9 @@ use serde_json::Value;
 use xiaoban_agent::ToolCall;
 use xiaoban_protocol::StepResult;
 
-use crate::tools::{LOCATE, READ_PAGE, REMEMBER, SAVE_TRIP, WEATHER, WEB_SEARCH};
+#[cfg(test)]
+use crate::tools::LOCATE;
+use crate::tools::{READ_PAGE, REMEMBER, SAVE_TRIP, WEATHER, WEB_SEARCH};
 
 const MAX_SOURCES: usize = 3;
 const MAX_DETAIL: usize = 60;
@@ -31,7 +33,6 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         WEATHER => text(&args, "place"),
         REMEMBER => text(&args, "subject"),
         SAVE_TRIP => text(&args, "title"),
-        LOCATE => None,
         _ => None,
     }
 }

@@ -198,7 +198,7 @@ async fn tool_calls_run_and_the_conversation_continues_append_only() {
 
 #[derive(Default)]
 struct CountingTools {
-    runs: std::sync::Mutex<u32>,
+    runs: Mutex<u32>,
 }
 
 impl ToolRunner for CountingTools {
