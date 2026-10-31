@@ -11,14 +11,14 @@ use xiaoban_agent::{
     ProviderPreset, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
 use xiaoban_hub::{
-    Day, FixedLocator, FixedWeather, Forecast, Hub, HubConfig, HubHandle, HubRuntime,
-    MemorySecrets, Prompts, SecretStore,
+    Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig, HubHandle, HubRuntime, Maps,
+    MemorySecrets, Prompts, Search, SecretStore, ServiceError, Travel,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
-    AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
-    FailureKind, Interpretation, Location, PROTOCOL_VERSION, Platform, ProtocolError, ProviderId,
-    Request, Response, Role, ServerFrame,
+    Attachment, AutonomyLevel, ClientFrame, ContextNote, Coord, Credential, DeviceHello, ErrorCode,
+    Event, FailureKind, Interpretation, Location, PROTOCOL_VERSION, Place, Platform, ProtocolError,
+    ProviderId, Request, Response, Role, ServerFrame, ServiceId, Sky,
 };
 
 struct TestClient {
@@ -158,12 +158,15 @@ fn runtime_with(
             now: None,
             days: vec![Day {
                 date: "2026-11-01".into(),
+                sky: Sky::Rain,
                 condition: "light rain",
                 high: 29.3,
                 low: 16.2,
                 rain_chance: Some(98),
             }],
         })),
+        maps: Arc::new(FakeMaps),
+        search: Arc::new(FakeSearch),
         fallback,
     }
 }
@@ -1090,5 +1093,330 @@ async fn threads_can_be_renamed_and_deleted_but_not_the_main_one() {
         panic!("expected threads");
     };
     assert!(threads.iter().all(|t| t.id != thread));
+    hub.shutdown().await;
+}
+
+const GOOD_SERVICE_KEY: &str = "good-key";
+
+fn check(key: &str) -> Result<(), ServiceError> {
+    if key == GOOD_SERVICE_KEY {
+        Ok(())
+    } else {
+        Err(ServiceError::InvalidKey)
+    }
+}
+
+#[derive(Debug)]
+struct FakeMaps;
+
+impl Maps for FakeMaps {
+    fn verify(&self, key: String) -> BoxFuture<'static, Result<(), ServiceError>> {
+        Box::pin(async move { check(&key) })
+    }
+
+    fn find(
+        &self,
+        key: String,
+        query: String,
+        _: Option<String>,
+    ) -> BoxFuture<'static, Result<Vec<Place>, ServiceError>> {
+        Box::pin(async move {
+            check(&key)?;
+            let offset = f64::from(u32::try_from(query.chars().count()).unwrap()) / 100.0;
+            Ok(vec![Place {
+                name: query,
+                address: "西湖区".into(),
+                location: Coord {
+                    lng: 120.1 + offset,
+                    lat: 30.2 + offset,
+                },
+                kind: "公园".into(),
+                distance: None,
+            }])
+        })
+    }
+
+    fn nearby_food(
+        &self,
+        key: String,
+        at: Coord,
+    ) -> BoxFuture<'static, Result<Vec<Place>, ServiceError>> {
+        Box::pin(async move {
+            check(&key)?;
+            Ok(vec![Place {
+                name: "知味观".into(),
+                address: "湖滨".into(),
+                location: at,
+                kind: "中餐厅".into(),
+                distance: Some(320),
+            }])
+        })
+    }
+
+    fn travel(
+        &self,
+        key: String,
+        _: Coord,
+        _: Coord,
+    ) -> BoxFuture<'static, Result<Travel, ServiceError>> {
+        Box::pin(async move {
+            check(&key)?;
+            Ok(Travel::Walk { minutes: 15 })
+        })
+    }
+
+    fn image(
+        &self,
+        key: String,
+        _: Coord,
+        _: u8,
+        _: u32,
+        _: u32,
+    ) -> BoxFuture<'static, Result<Arc<[u8]>, ServiceError>> {
+        Box::pin(async move {
+            check(&key)?;
+            Ok(Arc::from(&b"png"[..]))
+        })
+    }
+}
+
+#[derive(Debug)]
+struct FakeSearch;
+
+impl Search for FakeSearch {
+    fn search(&self, key: String, _: String) -> BoxFuture<'static, Result<Vec<Hit>, ServiceError>> {
+        Box::pin(async move {
+            check(&key)?;
+            Ok(Vec::new())
+        })
+    }
+}
+
+fn save_trip_call() -> ModelChunk {
+    ModelChunk::ToolCallDelta {
+        index: 0,
+        id: Some("trip".into()),
+        name: Some("save_trip".into()),
+        arguments: serde_json::json!({
+            "title": "杭州 · 1 天",
+            "city": "杭州",
+            "party": "2 大 1 小",
+            "days": [{
+                "date": "2026-11-01",
+                "change": "下雨，下午改成室内",
+                "stops": [
+                    { "name": "断桥", "time": "09:00", "note": "人少" },
+                    { "name": "中国茶叶博物馆", "time": "15:00", "note": "室内" }
+                ]
+            }]
+        })
+        .to_string(),
+    }
+}
+
+async fn latest_trip_message(client: &mut TestClient, thread: &str) -> xiaoban_protocol::Message {
+    for _ in 0..100 {
+        let Response::Messages { messages } = client
+            .request(Request::ListMessages {
+                thread_id: thread.into(),
+            })
+            .await
+        else {
+            panic!("expected messages");
+        };
+        if let Some(message) = messages
+            .into_iter()
+            .rev()
+            .find(|message| matches!(message.attachment, Some(Attachment::Trip { .. })))
+        {
+            return message;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("no trip was saved");
+}
+
+async fn finish_message(client: &mut TestClient, turn_id: &str) -> xiaoban_protocol::Message {
+    loop {
+        match client.next_event().await {
+            Event::TurnCompleted {
+                turn_id: id,
+                message,
+                ..
+            } if id == turn_id => return message,
+            Event::TurnFailed {
+                turn_id: id,
+                failure,
+            } if id == turn_id => panic!("{failure:?}"),
+            _ => {}
+        }
+    }
+}
+
+async fn connect_amap(client: &mut TestClient, thread: &str) {
+    let Response::ServiceConfigured { connected, .. } = client
+        .request(Request::ConfigureService {
+            service: ServiceId::Amap,
+            api_key: "wrong".into(),
+            resume_thread_id: Some(thread.into()),
+        })
+        .await
+    else {
+        panic!("expected configure result");
+    };
+    assert!(!connected);
+
+    let Response::ServiceConfigured {
+        connected,
+        services,
+    } = client
+        .request(Request::ConfigureService {
+            service: ServiceId::Amap,
+            api_key: GOOD_SERVICE_KEY.into(),
+            resume_thread_id: Some(thread.into()),
+        })
+        .await
+    else {
+        panic!("expected configure result");
+    };
+    assert!(connected);
+    assert!(
+        services
+            .iter()
+            .any(|status| status.service == ServiceId::Amap && status.connected)
+    );
+}
+
+#[tokio::test]
+async fn trips_ask_for_a_map_key_then_resume_and_save_located_stops() {
+    let provider = ScriptedProvider::sequence([
+        vec![save_trip_call()],
+        vec![ModelChunk::Text("要先接上地图".into())],
+        vec![save_trip_call()],
+        vec![ModelChunk::Text("排好了".into())],
+    ]);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+
+    let Response::TurnAccepted { turn_id, .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "去杭州玩一天".into(),
+            context: Vec::new(),
+            quote: None,
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let asked = finish_message(&mut client, &turn_id).await;
+    assert_eq!(
+        asked.attachment,
+        Some(Attachment::ServiceNeeded {
+            service: ServiceId::Amap
+        })
+    );
+
+    connect_amap(&mut client, &thread).await;
+    let saved = latest_trip_message(&mut client, &thread).await;
+    let Some(Attachment::Trip { trip_id, version }) = saved.attachment else {
+        panic!("expected a trip card, got {:?}", saved.attachment);
+    };
+    assert_eq!(version, 1);
+
+    let Response::Trip { trip, latest } = client
+        .request(Request::GetTrip {
+            trip_id: trip_id.clone(),
+            version: None,
+        })
+        .await
+    else {
+        panic!("expected trip");
+    };
+    assert_eq!(latest, 1);
+    assert!(trip.verified);
+    let day = &trip.days[0];
+    assert_eq!(day.change.as_deref(), Some("下雨，下午改成室内"));
+    assert_eq!(
+        day.weather.as_ref().map(|weather| weather.sky),
+        Some(Sky::Rain)
+    );
+    assert!(day.stops.iter().all(|stop| stop.location.is_some()));
+    assert_eq!(day.stops[0].hop.as_deref(), Some("步行 15 分钟"));
+    assert_eq!(day.stops[1].hop, None);
+
+    let Response::Map { map } = client
+        .request(Request::TripMap {
+            trip_id,
+            version: None,
+            day: Some(0),
+            width: 900,
+            height: 900,
+        })
+        .await
+    else {
+        panic!("expected map");
+    };
+    assert!(map.image.starts_with("data:image/png;base64,"));
+
+    let Response::Places { places } = client
+        .request(Request::NearbyFood {
+            location: day.stops[0].location.unwrap(),
+        })
+        .await
+    else {
+        panic!("expected places");
+    };
+    assert_eq!(places[0].name, "知味观");
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn declining_a_service_lets_the_trip_be_saved_unverified() {
+    let provider = ScriptedProvider::sequence([
+        vec![save_trip_call()],
+        vec![ModelChunk::Text("要先接上地图".into())],
+        vec![save_trip_call()],
+        vec![ModelChunk::Text("按我知道的排了".into())],
+    ]);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "去杭州玩一天", Vec::new()).await;
+
+    let Response::Ack = client
+        .request(Request::DeclineService {
+            service: ServiceId::Amap,
+            thread_id: thread.clone(),
+        })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    let saved = latest_trip_message(&mut client, &thread).await;
+    let Some(Attachment::Trip { trip_id, .. }) = saved.attachment else {
+        panic!("expected a trip card");
+    };
+    let Response::Trip { trip, .. } = client
+        .request(Request::GetTrip {
+            trip_id,
+            version: None,
+        })
+        .await
+    else {
+        panic!("expected trip");
+    };
+    assert!(!trip.verified);
+    assert!(
+        trip.days[0]
+            .stops
+            .iter()
+            .all(|stop| stop.location.is_none())
+    );
     hub.shutdown().await;
 }

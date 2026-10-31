@@ -7,6 +7,7 @@ mod migrations;
 mod settings;
 mod threads;
 mod transcript;
+mod trips;
 mod usage;
 
 use std::path::Path;

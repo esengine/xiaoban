@@ -30,6 +30,8 @@ pub struct HubState {
     pub secrets: Arc<dyn SecretStore>,
     pub locator: Arc<dyn crate::location::Locator>,
     pub weather: Arc<dyn crate::weather::Weather>,
+    pub maps: Arc<dyn crate::amap::Maps>,
+    pub search: Arc<dyn crate::services::Search>,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,
     pub turns: Turns,

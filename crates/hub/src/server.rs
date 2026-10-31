@@ -81,6 +81,8 @@ impl Hub {
             secrets: runtime.secrets,
             locator: runtime.locator,
             weather: runtime.weather,
+            maps: runtime.maps,
+            search: runtime.search,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,
             pairing: crate::auth::Pairing::default(),

@@ -146,6 +146,16 @@ pub async fn start(
     Ok((turn_id, message))
 }
 
+pub fn resume(state: &SharedState, thread_id: String, wire: &str) -> Result<String, ProtocolError> {
+    let (turn_id, cancel) = claim(state, &thread_id)?;
+    let job = Job {
+        wire: user_wire(wire, &notes(state, None, Vec::new())),
+        replaces: None,
+    };
+    launch(state, thread_id, turn_id.clone(), job, cancel);
+    Ok(turn_id)
+}
+
 pub async fn retry(
     state: &SharedState,
     thread_id: String,
@@ -295,8 +305,9 @@ async fn drive(
         })
     };
     let agent = state.active().agent;
+    let tools = HubTools::new(state, thread_id);
     let outcome = agent
-        .run_turn(&prefix, &transcript, &wire, &HubTools { state }, tx, cancel)
+        .run_turn(&prefix, &transcript, &wire, &tools, tx, cancel)
         .await;
     let _ = forward.await;
 
@@ -330,7 +341,9 @@ async fn drive(
         .store
         .append_message(
             thread_id.to_owned(),
-            NewMessage::assistant(outcome.text).replacing(replaces),
+            NewMessage::assistant(outcome.text)
+                .replacing(replaces)
+                .attaching(tools.attachment()),
         )
         .await
         .map_err(Failure::from)?;

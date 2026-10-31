@@ -16,6 +16,7 @@ xiaoban-hub = { path = "crates/hub" }
 xiaoban-i18n = { path = "crates/i18n" }
 
 anyhow = "1"
+base64 = "0.22"
 axum = { version = "0.8", features = ["ws"] }
 clap = { version = "4", features = ["derive", "env"] }
 eventsource-stream = "0.2"

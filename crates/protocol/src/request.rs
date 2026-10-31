@@ -5,6 +5,7 @@ use crate::{
     AutonomyLevel, ContextNote, Device, Failure, Location, Memory, Message, ModelInfo, Preferences,
     ProviderId, ProviderOption, Thread, Usage,
 };
+use crate::{Coord, MapView, Place, ServiceId, ServiceStatus, Trip};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(
@@ -73,6 +74,30 @@ pub enum Request {
         follow_up: Option<String>,
         can_locate: bool,
     },
+    Services,
+    ConfigureService {
+        service: ServiceId,
+        api_key: String,
+        resume_thread_id: Option<String>,
+    },
+    DeclineService {
+        service: ServiceId,
+        thread_id: String,
+    },
+    GetTrip {
+        trip_id: String,
+        version: Option<u32>,
+    },
+    TripMap {
+        trip_id: String,
+        version: Option<u32>,
+        day: Option<u32>,
+        width: u32,
+        height: u32,
+    },
+    NearbyFood {
+        location: Coord,
+    },
     Locate,
 }
 
@@ -135,6 +160,23 @@ pub enum Response {
     },
     Located {
         location: Location,
+    },
+    Services {
+        services: Vec<ServiceStatus>,
+    },
+    ServiceConfigured {
+        connected: bool,
+        services: Vec<ServiceStatus>,
+    },
+    Trip {
+        trip: Trip,
+        latest: u32,
+    },
+    Map {
+        map: MapView,
+    },
+    Places {
+        places: Vec<Place>,
     },
 }
 

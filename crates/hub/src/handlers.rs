@@ -3,6 +3,7 @@ use xiaoban_protocol::{
 };
 
 use crate::state::SharedState;
+use crate::trip_requests;
 use crate::{interpret, model, preferences, turns};
 
 type Handled = Result<Response, ProtocolError>;
@@ -91,6 +92,12 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             interpret_answer(state, question, &answer).await
         }
         Request::Locate => locate(state, local).await,
+        request @ (Request::Services
+        | Request::ConfigureService { .. }
+        | Request::DeclineService { .. }
+        | Request::GetTrip { .. }
+        | Request::TripMap { .. }
+        | Request::NearbyFood { .. }) => trip_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

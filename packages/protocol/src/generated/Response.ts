@@ -3,12 +3,16 @@ import type { Device } from "./Device.ts";
 import type { Failure } from "./Failure.ts";
 import type { Interpretation } from "./Interpretation.ts";
 import type { Location } from "./Location.ts";
+import type { MapView } from "./MapView.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
+import type { Place } from "./Place.ts";
 import type { Preferences } from "./Preferences.ts";
 import type { ProviderOption } from "./ProviderOption.ts";
+import type { ServiceStatus } from "./ServiceStatus.ts";
 import type { Thread } from "./Thread.ts";
+import type { Trip } from "./Trip.ts";
 import type { Usage } from "./Usage.ts";
 
 export type Response =
@@ -33,4 +37,9 @@ export type Response =
   | { type: "memory"; memory: Memory }
   | { type: "memories"; memories: Array<Memory> }
   | { type: "interpreted"; interpretation: Interpretation }
-  | { type: "located"; location: Location };
+  | { type: "located"; location: Location }
+  | { type: "services"; services: Array<ServiceStatus> }
+  | { type: "service_configured"; connected: boolean; services: Array<ServiceStatus> }
+  | { type: "trip"; trip: Trip; latest: number }
+  | { type: "map"; map: MapView }
+  | { type: "places"; places: Array<Place> };

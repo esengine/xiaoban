@@ -4,6 +4,7 @@ use std::time::Duration;
 use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use xiaoban_i18n::Locale;
+use xiaoban_protocol::Sky;
 
 pub const MAX_DAYS: u8 = 16;
 const GEOCODING_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
@@ -29,6 +30,8 @@ pub struct Now {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Day {
     pub date: String,
+    #[serde(skip)]
+    pub sky: Sky,
     pub condition: &'static str,
     pub high: f64,
     pub low: f64,
@@ -188,9 +191,11 @@ impl OpenMeteo {
             .into_iter()
             .enumerate()
             .filter_map(|(index, date)| {
+                let code = *daily.weather_code.get(index)?;
                 Some(Day {
                     date,
-                    condition: condition(*daily.weather_code.get(index)?),
+                    sky: sky(code),
+                    condition: condition(code),
                     high: *daily.temperature_2m_max.get(index)?,
                     low: *daily.temperature_2m_min.get(index)?,
                     rain_chance: daily
@@ -234,6 +239,17 @@ impl OpenMeteo {
             tracing::warn!(%error, url, "weather response unreadable");
             WeatherError::Unavailable
         })
+    }
+}
+
+fn sky(code: u8) -> Sky {
+    match code {
+        0 | 1 => Sky::Clear,
+        45 | 48 => Sky::Fog,
+        51..=67 | 80..=82 => Sky::Rain,
+        71..=77 | 85 | 86 => Sky::Snow,
+        95..=99 => Sky::Storm,
+        _ => Sky::Cloudy,
     }
 }
 

@@ -91,6 +91,23 @@ DROP TABLE transcript_entries;
 ALTER TABLE messages ADD COLUMN quote TEXT;
 ALTER TABLE messages ADD COLUMN replaces TEXT REFERENCES messages(id) ON DELETE SET NULL;
 ",
+    r"
+ALTER TABLE messages ADD COLUMN attachment TEXT;
+CREATE TABLE trips (
+    id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    data TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (id, version)
+) WITHOUT ROWID;
+CREATE INDEX trips_thread ON trips(thread_id);
+CREATE TABLE declined_services (
+    thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    service TEXT NOT NULL,
+    PRIMARY KEY (thread_id, service)
+) WITHOUT ROWID;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

@@ -1,5 +1,5 @@
 use rusqlite::{Row, params};
-use xiaoban_protocol::{Message, Role};
+use xiaoban_protocol::{Attachment, Message, Role};
 
 use crate::{Result, Store, StoreError, new_id, now_ms};
 
@@ -9,6 +9,7 @@ pub struct NewMessage {
     pub text: String,
     pub quote: Option<String>,
     pub replaces: Option<String>,
+    pub attachment: Option<Attachment>,
 }
 
 impl NewMessage {
@@ -26,12 +27,19 @@ impl NewMessage {
             text: text.into(),
             quote: None,
             replaces: None,
+            attachment: None,
         }
     }
 
     #[must_use]
     pub fn quoting(mut self, quote: Option<String>) -> Self {
         self.quote = quote;
+        self
+    }
+
+    #[must_use]
+    pub fn attaching(mut self, attachment: Option<Attachment>) -> Self {
+        self.attachment = attachment;
         self
     }
 
@@ -59,6 +67,9 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<(Message, String)> {
             created_at: row.get(4)?,
             quote: row.get(5)?,
             replaces: row.get(6)?,
+            attachment: row
+                .get::<_, Option<String>>(7)?
+                .and_then(|json| serde_json::from_str(&json).ok()),
         },
         row.get(2)?,
     ))
@@ -83,11 +94,18 @@ impl Store {
                 text: new.text,
                 quote: new.quote,
                 replaces: new.replaces,
+                attachment: new.attachment,
                 created_at: now_ms(),
             };
+            let attachment = message
+                .attachment
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()
+                .map_err(|_| StoreError::Corrupt("messages.attachment"))?;
             conn.execute(
-                "INSERT INTO messages (id, thread_id, role, text, created_at, quote, replaces)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO messages (id, thread_id, role, text, created_at, quote, replaces, attachment)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     message.id,
                     message.thread_id,
@@ -95,7 +113,8 @@ impl Store {
                     message.text,
                     message.created_at,
                     message.quote,
-                    message.replaces
+                    message.replaces,
+                    attachment
                 ],
             )?;
             Ok(message)
@@ -106,7 +125,7 @@ impl Store {
     pub async fn list_messages(&self, thread_id: String) -> Result<Vec<Message>> {
         self.with(move |conn| {
             let mut stmt = conn.prepare(
-                "SELECT id, thread_id, role, text, created_at, quote, replaces
+                "SELECT id, thread_id, role, text, created_at, quote, replaces, attachment
                  FROM messages WHERE thread_id = ?1 ORDER BY created_at, rowid",
             )?;
             let rows = stmt.query_map([thread_id], from_row)?;

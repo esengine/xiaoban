@@ -10,6 +10,7 @@ const reply: Message = {
   text: "7:40 出门",
   quote: null,
   replaces: null,
+  attachment: null,
   createdAt: 3,
 };
 
