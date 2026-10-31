@@ -94,7 +94,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         Request::Locate => locate(state, local).await,
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
-        | Request::OperateStatus) => crate::operate_tools::handle(state, request),
+        | Request::OperateStatus
+        | Request::PauseTurn { .. }
+        | Request::ResumeTurn { .. }) => crate::operate_tools::handle(state, request),
         request @ (Request::Services
         | Request::ConfigureService { .. }
         | Request::DeclineService { .. }

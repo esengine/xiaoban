@@ -13,6 +13,7 @@ mod model;
 mod network;
 mod operate;
 mod operate_tools;
+mod pauses;
 mod preferences;
 mod prompts;
 mod router;

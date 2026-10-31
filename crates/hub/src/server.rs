@@ -85,6 +85,7 @@ impl Hub {
             apps: runtime.apps,
             operator: runtime.operator,
             confirms: crate::confirms::Confirms::default(),
+            pauses: crate::pauses::Pauses::default(),
             web: runtime.web,
             active: std::sync::RwLock::new(active),
             events: broadcast::channel(1024).0,

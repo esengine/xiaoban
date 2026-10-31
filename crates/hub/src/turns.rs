@@ -194,6 +194,7 @@ async fn run(
 ) {
     let result = drive(&state, &thread_id, &turn_id, job, cancel).await;
     state.turns.release(&turn_id);
+    state.pauses.forget(&turn_id);
     if let Err(failure) = result {
         state.publish(Event::TurnFailed { turn_id, failure });
     }

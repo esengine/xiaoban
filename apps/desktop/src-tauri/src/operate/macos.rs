@@ -4,12 +4,10 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use futures_util::future::BoxFuture;
-use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication};
+use objc2_app_kit::NSRunningApplication;
 use objc2_application_services::{AXError, AXIsProcessTrusted, AXUIElement};
 use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType};
-use objc2_core_graphics::{
-    CGEvent, CGEventFlags, CGEventTapLocation, CGPreflightScreenCaptureAccess,
-};
+use objc2_core_graphics::{CGEvent, CGEventFlags, CGPreflightScreenCaptureAccess};
 use objc2_foundation::NSString;
 use tokio::sync::oneshot;
 use xiaoban_hub::{MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement};
@@ -213,12 +211,6 @@ fn launch(bundle: &str) -> Result<objc2::rc::Retained<NSRunningApplication>, Str
     Err("the app did not start in time".to_owned())
 }
 
-fn activate(app: &NSRunningApplication) {
-    #[allow(deprecated)]
-    app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
-    std::thread::sleep(Duration::from_millis(150));
-}
-
 fn snapshot(worker: &mut Worker, bundle: &str) -> Result<Snapshot, String> {
     let app = launch(bundle)?;
     let root = unsafe { AXUIElement::new_application(app.processIdentifier()) };
@@ -259,9 +251,6 @@ fn act(worker: &Worker, bundle: &str, index: u32, action: &UiAction) -> Result<(
         .get(bundle)
         .and_then(|elements| elements.get(index as usize))
         .ok_or("no element with that number; call look_at_app again")?;
-    if let Some(app) = running(bundle) {
-        activate(&app);
-    }
     let error = match action {
         UiAction::Press => unsafe { element.perform_action(&CFString::from_static_str("AXPress")) },
         UiAction::SetText(value) => unsafe {
@@ -327,13 +316,12 @@ fn press(bundle: &str, combo: &str) -> Result<(), String> {
         }
     }
     let key = key.ok_or("no key in the combination")?;
-    let app = launch(bundle)?;
-    activate(&app);
+    let pid = launch(bundle)?.processIdentifier();
     for down in [true, false] {
         let event =
             CGEvent::new_keyboard_event(None, key, down).ok_or("could not create a key event")?;
         CGEvent::set_flags(Some(&event), flags);
-        CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&event));
+        CGEvent::post_to_pid(pid, Some(&event));
         std::thread::sleep(KEY_GAP);
     }
     Ok(())

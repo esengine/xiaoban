@@ -5,10 +5,10 @@ use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
 use xiaoban_protocol::{ConfirmChoice, ConfirmKind, ErrorCode, ProtocolError, Request, Response};
 
 use crate::apps::AppEntry;
-use crate::confirms;
 use crate::operate::UiAction;
 use crate::state::SharedState;
 use crate::tools::HubTools;
+use crate::{confirms, pauses};
 
 pub const LOOK_AT_APP: &str = "look_at_app";
 pub const CLICK: &str = "click";
@@ -138,6 +138,10 @@ impl HubTools<'_> {
         confirms::ask(self.state, self.turn_id, self.thread_id, kind, &self.cancel).await
     }
 
+    async fn before_acting(&self) {
+        pauses::wait_while_paused(self.state, self.turn_id, &self.cancel).await;
+    }
+
     async fn ensure(&self, app_id: &str) -> Result<AppEntry, String> {
         let apps = self.state.apps.list().await;
         let app = apps
@@ -185,7 +189,9 @@ impl HubTools<'_> {
             Ok(app) => app,
             Err(failure) => return failure,
         };
-        match self.state.operator.snapshot(app.id).await {
+        self.before_acting().await;
+        let result = self.state.operator.snapshot(app.id).await;
+        match result {
             Ok(snapshot) => serde_json::to_string(&snapshot).unwrap_or_default(),
             Err(failure) => error(&failure),
         }
@@ -204,7 +210,9 @@ impl HubTools<'_> {
             Ok(app) => app,
             Err(failure) => return failure,
         };
-        match self.state.operator.act(app.id, args.element, action).await {
+        self.before_acting().await;
+        let result = self.state.operator.act(app.id, args.element, action).await;
+        match result {
             Ok(()) => json!({ "done": true, "hint": "the screen may have changed; look again before relying on element numbers" }).to_string(),
             Err(failure) => error(&failure),
         }
@@ -218,7 +226,9 @@ impl HubTools<'_> {
             Ok(app) => app,
             Err(failure) => return failure,
         };
-        match self.state.operator.keys(app.id, args.keys).await {
+        self.before_acting().await;
+        let result = self.state.operator.keys(app.id, args.keys).await;
+        match result {
             Ok(()) => json!({ "done": true }).to_string(),
             Err(failure) => error(&failure),
         }
@@ -261,6 +271,14 @@ pub fn handle(state: &SharedState, request: Request) -> Result<Response, Protoco
         Request::OperateStatus => Ok(Response::OperateStatus {
             permissions: state.operator.permissions(),
         }),
+        Request::PauseTurn { turn_id } => {
+            pauses::set(state, &turn_id, true, false);
+            Ok(Response::Ack)
+        }
+        Request::ResumeTurn { turn_id } => {
+            pauses::set(state, &turn_id, false, false);
+            Ok(Response::Ack)
+        }
         _ => Err(ProtocolError::new(
             ErrorCode::BadRequest,
             "not an operate request",
