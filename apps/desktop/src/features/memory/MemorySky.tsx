@@ -259,7 +259,7 @@ export function MemorySky({
           );
           if (!at) continue;
           const size = puff.size * at.scale;
-          context.globalAlpha = (near ? 0.05 : 0.09) * Math.min(1, at.scale * 3);
+          context.globalAlpha = (near ? 0.025 : 0.045) * Math.min(1, at.scale * 3);
           context.drawImage(sprite(tint), at.x - size, at.y - size, size * 2, size * 2);
         }
       }
@@ -294,9 +294,9 @@ export function MemorySky({
         const strength =
           (searching ? (hit ? 1 : 0.12) : inside ? (planet.dim ? 0.5 : 1) : 0.18) *
           Math.min(1, at.scale * 2.6);
-        const glow = radius * (planet.memory.pinned || usedSet.has(planet.memory.id) ? 10 : 7);
+        const glow = radius * (planet.memory.pinned || usedSet.has(planet.memory.id) ? 5 : 3.5);
         context.globalCompositeOperation = "lighter";
-        context.globalAlpha = strength;
+        context.globalAlpha = strength * 0.45;
         context.drawImage(
           sprite(colors[planet.cluster] ?? color.memoryOther),
           at.x - glow,
@@ -305,7 +305,7 @@ export function MemorySky({
           glow * 2,
         );
         context.globalCompositeOperation = "source-over";
-        context.globalAlpha = Math.min(1, strength * 1.1);
+        context.globalAlpha = strength * 0.8;
         context.fillStyle = dark.text;
         context.beginPath();
         context.arc(at.x, at.y, Math.max(0.8, radius * 0.45), 0, Math.PI * 2);
