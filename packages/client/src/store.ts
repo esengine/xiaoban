@@ -3,7 +3,6 @@ import type {
   ContextNote,
   Failure,
   Memory,
-  MemoryTopic,
   Message,
   ModelInfo,
   Preferences,
@@ -64,9 +63,21 @@ export class HubStore {
     );
   }
 
-  async remember(topic: MemoryTopic, value: string): Promise<Memory> {
-    const { memory } = await this.client.request({ type: "remember", topic, value }, "memory");
+  async remember(subject: string, value: string): Promise<Memory> {
+    const { memory } = await this.client.request({ type: "remember", subject, value }, "memory");
     return memory;
+  }
+
+  async refreshMemories(): Promise<Memory[]> {
+    const { memories } = await this.client.request({ type: "list_memories" }, "memories");
+    this.#update((state) => ({ ...state, memories }));
+    return memories;
+  }
+
+  async startOnboarding(): Promise<Thread> {
+    const { thread } = await this.client.request({ type: "start_onboarding" }, "thread");
+    await this.loadMessages(thread.id);
+    return thread;
   }
 
   async completeOnboarding(): Promise<void> {

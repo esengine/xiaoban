@@ -1,6 +1,10 @@
 use xiaoban_protocol::{
-    AutonomyLevel, ContextNote, ErrorCode, Event, MemoryTopic, ProtocolError, Request, Response,
+    AutonomyLevel, ContextNote, ErrorCode, Event, ProtocolError, Request, Response, Role, ThreadKind,
 };
+
+use xiaoban_agent::{ChatMessage, ChatRole};
+use xiaoban_i18n::keys;
+use xiaoban_store::EpochReason;
 
 use crate::state::SharedState;
 use crate::{model, preferences, turns};
@@ -64,10 +68,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             preferences: preferences::load(state).await?,
         }),
         Request::SetAutonomy { level } => set_autonomy(state, level).await,
-        Request::Remember { topic, value } => remember(state, topic, &value).await,
+        Request::Remember { subject, value } => remember(state, &subject, &value).await,
         Request::ListMemories => Ok(Response::Memories {
             memories: state.store.list_memories().await?,
         }),
+        Request::StartOnboarding => start_onboarding(state).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
@@ -76,7 +81,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
 }
 
 async fn create_thread(state: &SharedState, title: Option<&str>) -> Handled {
-    let thread = state.store.create_thread(title.and_then(trimmed)).await?;
+    let thread = state
+        .store
+        .create_thread(ThreadKind::Chat, title.and_then(trimmed)).await?;
     state.publish(Event::ThreadUpdated {
         thread: thread.clone(),
     });
@@ -138,9 +145,36 @@ async fn set_autonomy(state: &SharedState, level: AutonomyLevel) -> Handled {
     Ok(Response::Ack)
 }
 
-async fn remember(state: &SharedState, topic: MemoryTopic, value: &str) -> Handled {
+async fn remember(state: &SharedState, subject: &str, value: &str) -> Handled {
+    let subject = trimmed(subject).ok_or_else(|| bad_request("memory subject is empty"))?;
     let value = trimmed(value).ok_or_else(|| bad_request("memory is empty"))?;
-    Ok(Response::Memory {
-        memory: state.store.remember(topic, value).await?,
-    })
+    let memory = state.store.remember(subject, value).await?;
+    state.publish(Event::MemorySaved {
+        memory: memory.clone(),
+    });
+    Ok(Response::Memory { memory })
+}
+
+async fn start_onboarding(state: &SharedState) -> Handled {
+    if let Some(thread) = state.store.thread_of_kind(ThreadKind::Onboarding).await? {
+        return Ok(Response::Thread { thread });
+    }
+    let opening = state.localizer.text(keys::ONBOARDING_CHAT_OPENING);
+    let thread = state
+        .store
+        .create_thread(ThreadKind::Onboarding, None)
+        .await?;
+    state
+        .store
+        .append_message(thread.id.clone(), Role::Assistant, opening.clone())
+        .await?;
+    turns::begin_epoch(
+        state,
+        &thread.id,
+        ThreadKind::Onboarding,
+        EpochReason::Started,
+        vec![ChatMessage::new(ChatRole::Assistant, opening)],
+    )
+    .await?;
+    Ok(Response::Thread { thread })
 }

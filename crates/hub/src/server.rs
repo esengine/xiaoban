@@ -69,15 +69,14 @@ impl Hub {
             .await
             .map_err(|error| HubError::Startup(error.detail))?;
         let active = model::activate(&*runtime.connector, restored);
+        let localizer = xiaoban_i18n::Localizer::new(runtime.locale);
         let state: SharedState = Arc::new(HubState {
             info: info.clone(),
             port: addr.port(),
             store,
-            base_fingerprint: xiaoban_agent::StablePrefix::new(runtime.system_prompt.clone())
-                .fingerprint()
-                .to_owned(),
-            system_prompt: runtime.system_prompt,
-            localizer: xiaoban_i18n::Localizer::new(runtime.locale),
+            tools: crate::tools::specs(&localizer),
+            prompts: runtime.prompts,
+            localizer,
             connector: runtime.connector,
             secrets: runtime.secrets,
             active: std::sync::RwLock::new(active),

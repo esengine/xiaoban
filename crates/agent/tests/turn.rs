@@ -1,10 +1,14 @@
 use std::time::Duration;
 
+use std::sync::Mutex;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
+
+use futures_util::future::BoxFuture;
 use xiaoban_agent::{
-    Agent, AgentError, ChatMessage, ChatRole, RecordingProvider, ScriptedProvider, StablePrefix,
-    Transcript, TurnEvent, prefix_reuse, user_wire,
+    Agent, AgentError, ChatMessage, ChatRole, ModelChunk, NoTools, RecordingProvider,
+    ScriptedProvider, StablePrefix, ToolCall, ToolRunner, Transcript, TurnEvent, prefix_reuse,
+    user_wire,
 };
 use xiaoban_protocol::ContextNote;
 
@@ -15,13 +19,16 @@ async fn turn(agent: &Agent, transcript: &mut Transcript, wire: &str) -> String 
             &StablePrefix::new("system"),
             transcript,
             wire,
+            &NoTools,
             tx,
             CancellationToken::new(),
         )
         .await
         .unwrap();
     transcript.push(ChatMessage::new(ChatRole::User, wire));
-    transcript.push(ChatMessage::new(ChatRole::Assistant, outcome.text.clone()));
+    for message in outcome.messages {
+        transcript.push(message);
+    }
     outcome.text
 }
 
@@ -34,6 +41,7 @@ async fn streams_deltas_and_collects_text() {
             &StablePrefix::new("system"),
             &Transcript::default(),
             "明天几点出门",
+            &NoTools,
             tx,
             CancellationToken::new(),
         )
@@ -100,9 +108,84 @@ async fn cancellation_stops_the_turn() {
             &StablePrefix::new("system"),
             &Transcript::default(),
             "hi",
+            &NoTools,
             tx,
             cancel,
         )
         .await;
     assert!(matches!(result, Err(AgentError::Cancelled)));
+}
+
+#[derive(Default)]
+struct Recorder(Mutex<Vec<ToolCall>>);
+
+impl ToolRunner for Recorder {
+    fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String> {
+        self.0.lock().unwrap().push(call.clone());
+        Box::pin(async { "saved".to_owned() })
+    }
+}
+
+#[tokio::test]
+async fn tool_calls_run_and_the_conversation_continues_append_only() {
+    let call = |arguments: &str| ModelChunk::ToolCallDelta {
+        index: 0,
+        id: None,
+        name: None,
+        arguments: arguments.into(),
+    };
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![
+            ModelChunk::ToolCallDelta {
+                index: 0,
+                id: Some("c1".into()),
+                name: Some("remember".into()),
+                arguments: String::new(),
+            },
+            call(r#"{"subject":"称呼","#),
+            call(r#""value":"阿哲"}"#),
+        ],
+        vec![ModelChunk::Text("好，阿哲".into())],
+    ]));
+    let agent = Agent::new(provider.clone());
+    let tools = Recorder::default();
+    let (tx, mut rx) = mpsc::channel(16);
+    let outcome = agent
+        .run_turn(
+            &StablePrefix::new("system"),
+            &Transcript::default(),
+            "叫我阿哲",
+            &tools,
+            tx,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+    let calls = tools.0.lock().unwrap().clone();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(
+        calls[0].function.arguments,
+        r#"{"subject":"称呼","value":"阿哲"}"#
+    );
+    assert_eq!(outcome.text, "好，阿哲");
+    assert_eq!(
+        outcome.messages,
+        vec![
+            ChatMessage::assistant_calls("", calls.clone()),
+            ChatMessage::tool_result("c1", "saved"),
+            ChatMessage::new(ChatRole::Assistant, "好，阿哲"),
+        ]
+    );
+
+    let mut events = Vec::new();
+    while let Some(event) = rx.recv().await {
+        events.push(event);
+    }
+    assert!(events.contains(&TurnEvent::ToolUsed("remember".into())));
+
+    let requests = provider.requests();
+    assert_eq!(requests.len(), 2);
+    assert!(prefix_reuse(&requests[0], &requests[1]).is_intact());
+    assert_eq!(requests[1].messages.len(), requests[0].messages.len() + 2);
 }

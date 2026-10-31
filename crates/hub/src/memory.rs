@@ -1,24 +1,10 @@
-use xiaoban_i18n::{Key, Localizer, keys};
-use xiaoban_protocol::{Memory, MemoryTopic};
-
-const ORDER: [(MemoryTopic, Key); 3] = [
-    (
-        MemoryTopic::PreferredName,
-        keys::MEMORY_TOPIC_PREFERRED_NAME,
-    ),
-    (MemoryTopic::HomeAndWork, keys::MEMORY_TOPIC_HOME_AND_WORK),
-    (MemoryTopic::Household, keys::MEMORY_TOPIC_HOUSEHOLD),
-];
+use xiaoban_i18n::{Localizer, keys};
+use xiaoban_protocol::Memory;
 
 pub fn snapshot(localizer: &Localizer, memories: &[Memory]) -> Option<String> {
-    let lines: Vec<String> = ORDER
+    let lines: Vec<String> = memories
         .iter()
-        .filter_map(|(topic, label)| {
-            memories
-                .iter()
-                .find(|memory| memory.topic == *topic)
-                .map(|memory| format!("- {}: {}", localizer.text(*label), memory.value.trim()))
-        })
+        .map(|memory| format!("- {}: {}", memory.subject.trim(), memory.value.trim()))
         .collect();
     (!lines.is_empty()).then(|| {
         format!(
@@ -35,29 +21,17 @@ mod tests {
 
     use super::*;
 
-    fn memory(topic: MemoryTopic, value: &str, updated_at: i64) -> Memory {
-        Memory {
-            id: value.into(),
-            topic,
-            value: value.into(),
-            updated_at,
-        }
-    }
-
     #[test]
-    fn snapshot_is_ordered_by_topic_not_by_update_time() {
+    fn snapshot_keeps_the_given_order() {
         let localizer = Localizer::new(Locale::En);
-        let newer_first = [
-            memory(MemoryTopic::Household, "wife and son", 3),
-            memory(MemoryTopic::PreferredName, "Zhe", 1),
-        ];
-        let older_first = [newer_first[1].clone(), newer_first[0].clone()];
-        let snapshot = snapshot(&localizer, &newer_first).unwrap();
-        assert_eq!(
-            Some(snapshot.clone()),
-            super::snapshot(&localizer, &older_first)
-        );
-        assert!(snapshot.find("Zhe").unwrap() < snapshot.find("wife and son").unwrap());
+        let memory = |subject: &str, value: &str| Memory {
+            id: subject.into(),
+            subject: subject.into(),
+            value: value.into(),
+            updated_at: 0,
+        };
+        let snapshot = snapshot(&localizer, &[memory("name", "Zhe"), memory("kids", "one son")]).unwrap();
+        assert!(snapshot.ends_with("- name: Zhe\n- kids: one son"));
         assert_eq!(super::snapshot(&localizer, &[]), None);
     }
 }

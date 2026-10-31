@@ -2,6 +2,7 @@ import type {
   Event,
   Failure,
   HubInfo,
+  Memory,
   Message,
   ModelInfo,
   Preferences,
@@ -24,6 +25,7 @@ export interface HubState {
   modelLoaded: boolean;
   preferences: Preferences | null;
   threads: Thread[];
+  memories: Memory[];
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
 }
@@ -35,6 +37,7 @@ export const initialHubState: HubState = {
   modelLoaded: false,
   preferences: null,
   threads: [],
+  memories: [],
   messages: {},
   drafts: {},
 };
@@ -43,6 +46,12 @@ const byRecent = (a: Thread, b: Thread) => b.updatedAt - a.updatedAt;
 
 function upsertThread(threads: Thread[], thread: Thread): Thread[] {
   return [thread, ...threads.filter((existing) => existing.id !== thread.id)].sort(byRecent);
+}
+
+function upsertMemory(memories: Memory[], memory: Memory): Memory[] {
+  return memories.some((existing) => existing.id === memory.id)
+    ? memories.map((existing) => (existing.id === memory.id ? memory : existing))
+    : [...memories, memory];
 }
 
 function appendMessage(state: HubState, message: Message): HubState["messages"] {
@@ -59,7 +68,12 @@ function withoutDraft(drafts: HubState["drafts"], turnId: string): HubState["dra
 export function applyEvent(state: HubState, event: Event, now = Date.now()): HubState {
   switch (event.type) {
     case "thread_updated":
+      if (event.thread.kind !== "chat") return state;
       return { ...state, threads: upsertThread(state.threads, event.thread) };
+    case "memory_saved":
+      return { ...state, memories: upsertMemory(state.memories, event.memory) };
+    case "tool_used":
+      return state;
     case "message_created":
       return { ...state, messages: appendMessage(state, event.message) };
     case "turn_started":

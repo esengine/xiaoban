@@ -8,7 +8,7 @@ use tauri::async_runtime::Mutex;
 use xiaoban_agent::{HttpConnector, first_configured_from_env};
 use xiaoban_hub::{
     Hub, HubConfig, HubHandle, HubRuntime, KEYCHAIN_SERVICE, KeyringSecrets, default_hub_name,
-    system_locale, system_prompt,
+    Prompts, system_locale,
 };
 
 const LAN_BIND: SocketAddr =
@@ -32,7 +32,7 @@ pub async fn start(data_dir: PathBuf) -> anyhow::Result<RunningHub> {
     let locale = system_locale();
     let runtime = HubRuntime {
         locale,
-        system_prompt: system_prompt(locale),
+        prompts: Prompts::for_locale(locale),
         connector: Arc::new(HttpConnector),
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         fallback: first_configured_from_env(),

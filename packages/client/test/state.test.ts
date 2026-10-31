@@ -2,7 +2,7 @@ import type { Message, Thread } from "@xiaoban/protocol";
 import { describe, expect, it } from "vitest";
 import { applyEvent, initialHubState } from "../src/state.ts";
 
-const thread: Thread = { id: "t1", title: "出门", createdAt: 1, updatedAt: 1 };
+const thread: Thread = { id: "t1", kind: "chat", title: "出门", createdAt: 1, updatedAt: 1 };
 const reply: Message = {
   id: "m2",
   threadId: "t1",
@@ -50,5 +50,18 @@ describe("applyEvent", () => {
     let state = applyEvent(initialHubState, { type: "thread_updated", thread: older });
     state = applyEvent(state, { type: "thread_updated", thread });
     expect(state.threads.map((t) => t.id)).toEqual(["t1", "t0"]);
+  });
+
+  it("keeps the onboarding conversation out of the thread list", () => {
+    const onboarding: Thread = { ...thread, id: "o1", kind: "onboarding" };
+    const state = applyEvent(initialHubState, { type: "thread_updated", thread: onboarding });
+    expect(state.threads).toEqual([]);
+  });
+
+  it("collects memories the agent saves and updates them in place", () => {
+    const memory = { id: "k1", subject: "称呼", value: "阿哲", updatedAt: 1 };
+    let state = applyEvent(initialHubState, { type: "memory_saved", memory });
+    state = applyEvent(state, { type: "memory_saved", memory: { ...memory, value: "哲哥" } });
+    expect(state.memories).toEqual([{ ...memory, value: "哲哥" }]);
   });
 });

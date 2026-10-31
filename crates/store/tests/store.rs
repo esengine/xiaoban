@@ -1,10 +1,13 @@
-use xiaoban_protocol::{MemoryTopic, Platform, Role, Usage};
-use xiaoban_store::{EntryRole, EpochReason, Store, TranscriptEntry};
+use xiaoban_protocol::{Platform, Role, ThreadKind, Usage};
+use xiaoban_store::{EpochReason, Store};
 
 #[tokio::test]
 async fn threads_and_messages_round_trip() {
     let store = Store::open_in_memory().unwrap();
-    let thread = store.create_thread(Some("新家装修".into())).await.unwrap();
+    let thread = store
+        .create_thread(ThreadKind::Chat, Some("新家装修".into()))
+        .await
+        .unwrap();
     store
         .append_message(thread.id.clone(), Role::User, "木工几号进场".into())
         .await
@@ -59,7 +62,10 @@ async fn settings_upsert() {
 #[tokio::test]
 async fn transcript_is_append_only_and_carried_across_epochs() {
     let store = Store::open_in_memory().unwrap();
-    let thread = store.create_thread(Some("出门".into())).await.unwrap();
+    let thread = store
+        .create_thread(ThreadKind::Chat, Some("出门".into()))
+        .await
+        .unwrap();
     assert!(
         store
             .latest_epoch(thread.id.clone())
@@ -82,8 +88,8 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
         .append_transcript(
             first.id.clone(),
             vec![
-                TranscriptEntry::new(EntryRole::User, "明天几点出门"),
-                TranscriptEntry::new(EntryRole::Assistant, "7:40"),
+                r#"{"role":"user","content":"明天几点出门"}"#.to_owned(),
+                r#"{"role":"assistant","content":"7:40"}"#.to_owned(),
             ],
         )
         .await
@@ -91,7 +97,7 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
     store
         .append_transcript(
             first.id.clone(),
-            vec![TranscriptEntry::new(EntryRole::User, "带伞吗")],
+            vec![r#"{"role":"user","content":"带伞吗"}"#.to_owned()],
         )
         .await
         .unwrap();
@@ -102,13 +108,8 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
         .unwrap()
         .unwrap();
     assert_eq!(epoch, first);
-    assert_eq!(
-        entries
-            .iter()
-            .map(|e| e.content.as_str())
-            .collect::<Vec<_>>(),
-        ["明天几点出门", "7:40", "带伞吗"]
-    );
+    assert_eq!(entries.len(), 3);
+    assert!(entries[2].contains("带伞吗"));
 
     let second = store
         .start_epoch(
@@ -130,7 +131,7 @@ async fn transcript_is_append_only_and_carried_across_epochs() {
 #[tokio::test]
 async fn usage_totals_sum_every_turn() {
     let store = Store::open_in_memory().unwrap();
-    let thread = store.create_thread(None).await.unwrap();
+    let thread = store.create_thread(ThreadKind::Chat, None).await.unwrap();
     let epoch = store
         .start_epoch(
             thread.id.clone(),
@@ -171,20 +172,30 @@ async fn usage_totals_sum_every_turn() {
 #[tokio::test]
 async fn remembering_a_topic_again_replaces_the_value() {
     let store = Store::open_in_memory().unwrap();
-    let first = store
-        .remember(MemoryTopic::PreferredName, "阿哲".into())
-        .await
-        .unwrap();
+    let first = store.remember("称呼".into(), "阿哲".into()).await.unwrap();
     store
-        .remember(MemoryTopic::Household, "老婆和儿子".into())
+        .remember("家里".into(), "老婆和儿子".into())
         .await
         .unwrap();
-    let updated = store
-        .remember(MemoryTopic::PreferredName, "哲哥".into())
-        .await
-        .unwrap();
+    let updated = store.remember("称呼".into(), "哲哥".into()).await.unwrap();
     assert_eq!(updated.id, first.id);
     let memories = store.list_memories().await.unwrap();
     assert_eq!(memories.len(), 2);
-    assert!(memories.iter().any(|m| m.value == "哲哥"));
+    assert_eq!(memories[0].subject, "称呼");
+    assert_eq!(memories[0].value, "哲哥");
+}
+
+#[tokio::test]
+async fn onboarding_threads_stay_out_of_the_chat_list() {
+    let store = Store::open_in_memory().unwrap();
+    let chat = store.create_thread(ThreadKind::Chat, None).await.unwrap();
+    let onboarding = store
+        .create_thread(ThreadKind::Onboarding, None)
+        .await
+        .unwrap();
+    assert_eq!(store.list_threads().await.unwrap(), vec![chat]);
+    assert_eq!(
+        store.thread_of_kind(ThreadKind::Onboarding).await.unwrap(),
+        Some(onboarding)
+    );
 }

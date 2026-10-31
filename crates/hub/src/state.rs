@@ -1,9 +1,9 @@
 use std::sync::{Arc, RwLock};
 
 use tokio::sync::broadcast;
-use xiaoban_agent::{Agent, Connector};
+use xiaoban_agent::{Agent, Connector, StablePrefix, ToolSpec};
 use xiaoban_i18n::Localizer;
-use xiaoban_protocol::{Event, HubInfo, ModelInfo};
+use xiaoban_protocol::{Event, HubInfo, ModelInfo, ThreadKind};
 use xiaoban_store::Store;
 
 use crate::auth::Pairing;
@@ -23,8 +23,8 @@ pub struct HubState {
     pub info: HubInfo,
     pub port: u16,
     pub store: Store,
-    pub system_prompt: String,
-    pub base_fingerprint: String,
+    pub prompts: crate::prompts::Prompts,
+    pub tools: Vec<ToolSpec>,
     pub localizer: Localizer,
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
@@ -35,6 +35,14 @@ pub struct HubState {
 }
 
 impl HubState {
+    pub fn prefix(&self, kind: ThreadKind, memory: Option<&str>) -> StablePrefix {
+        StablePrefix::compose(self.prompts.for_kind(kind), memory, self.tools.clone())
+    }
+
+    pub fn base_fingerprint(&self, kind: ThreadKind) -> String {
+        self.prefix(kind, None).fingerprint().to_owned()
+    }
+
     pub fn publish(&self, event: Event) {
         let _ = self.events.send(event);
     }

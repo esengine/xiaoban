@@ -4,11 +4,14 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ChatMessage, ChatRole, StablePrefix, Transcript, TurnEvent, user_wire};
-use xiaoban_protocol::{ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role};
-use xiaoban_store::{EntryRole, Epoch, EpochReason, StoreError, TranscriptEntry};
+use xiaoban_protocol::{
+    ContextNote, ErrorCode, Event, Failure, Message, ProtocolError, Role, ThreadKind,
+};
+use xiaoban_store::{Epoch, EpochReason, StoreError};
 
 use crate::memory;
 use crate::state::SharedState;
+use crate::tools::HubTools;
 
 #[derive(Debug, Default)]
 struct Running {
@@ -61,7 +64,7 @@ pub async fn start(
     text: String,
     context: Vec<ContextNote>,
 ) -> Result<(String, Message), ProtocolError> {
-    state.store.thread(thread_id.clone()).await?;
+    let kind = state.store.thread(thread_id.clone()).await?.kind;
     let turn_id = uuid::Uuid::now_v7().to_string();
     let cancel = state.turns.claim(&thread_id, &turn_id).ok_or_else(|| {
         ProtocolError::new(
@@ -100,6 +103,7 @@ pub async fn start(
     tokio::spawn(run(
         Arc::clone(state),
         thread_id,
+        kind,
         turn_id.clone(),
         wire,
         cancel,
@@ -110,23 +114,33 @@ pub async fn start(
 async fn run(
     state: SharedState,
     thread_id: String,
+    kind: ThreadKind,
     turn_id: String,
     wire: String,
     cancel: CancellationToken,
 ) {
-    let result = drive(&state, &thread_id, &turn_id, wire, cancel).await;
+    let result = drive(&state, &thread_id, kind, &turn_id, wire, cancel).await;
     state.turns.release(&turn_id);
     if let Err(failure) = result {
         state.publish(Event::TurnFailed { turn_id, failure });
     }
 }
 
-fn to_chat(entry: TranscriptEntry) -> ChatMessage {
-    let role = match entry.role {
-        EntryRole::User => ChatRole::User,
-        EntryRole::Assistant => ChatRole::Assistant,
-    };
-    ChatMessage::new(role, entry.content)
+fn to_wire(message: &ChatMessage) -> String {
+    serde_json::to_string(message).unwrap_or_default()
+}
+
+fn parse_transcript(entries: &[String]) -> Transcript {
+    entries
+        .iter()
+        .filter_map(|entry| match serde_json::from_str::<ChatMessage>(entry) {
+            Ok(message) => Some(message),
+            Err(error) => {
+                tracing::error!(%error, "skipping unreadable transcript entry");
+                None
+            }
+        })
+        .collect()
 }
 
 async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreError> {
@@ -134,14 +148,32 @@ async fn fresh_snapshot(state: &SharedState) -> Result<Option<String>, StoreErro
     Ok(memory::snapshot(&state.localizer, &memories))
 }
 
+pub async fn begin_epoch(
+    state: &SharedState,
+    thread_id: &str,
+    kind: ThreadKind,
+    reason: EpochReason,
+    carried: Vec<ChatMessage>,
+) -> Result<Epoch, StoreError> {
+    let snapshot = fresh_snapshot(state).await?;
+    state
+        .store
+        .start_epoch(
+            thread_id.to_owned(),
+            state.base_fingerprint(kind),
+            reason,
+            snapshot,
+            carried.iter().map(to_wire).collect(),
+        )
+        .await
+}
+
 async fn current_epoch(
     state: &SharedState,
     thread_id: &str,
+    kind: ThreadKind,
 ) -> Result<(Epoch, StablePrefix, Transcript), StoreError> {
-    let base = state.base_fingerprint.clone();
-    let prefix = |epoch: &Epoch| {
-        StablePrefix::with_memory(&state.system_prompt, epoch.memory_snapshot.as_deref())
-    };
+    let base = state.base_fingerprint(kind);
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
         Some((mut epoch, entries)) if epoch.prefix_fingerprint == base => {
             if entries.is_empty() {
@@ -154,43 +186,35 @@ async fn current_epoch(
                     epoch.memory_snapshot = snapshot;
                 }
             }
-            let prefix = prefix(&epoch);
-            return Ok((epoch, prefix, entries.into_iter().map(to_chat).collect()));
+            let prefix = state.prefix(kind, epoch.memory_snapshot.as_deref());
+            return Ok((epoch, prefix, parse_transcript(&entries)));
         }
         Some((previous, entries)) => {
             tracing::info!(
                 thread = thread_id,
                 from = %previous.prefix_fingerprint,
                 to = %base,
-                "system prompt changed; starting a new epoch"
+                "stable prefix changed; starting a new epoch"
             );
-            (EpochReason::PrefixChanged, entries)
+            (EpochReason::PrefixChanged, parse_transcript(&entries))
         }
-        None => (EpochReason::Started, Vec::new()),
+        None => (EpochReason::Started, Transcript::default()),
     };
-    let snapshot = fresh_snapshot(state).await?;
-    let epoch = state
-        .store
-        .start_epoch(
-            thread_id.to_owned(),
-            base,
-            reason,
-            snapshot,
-            carried.clone(),
-        )
-        .await?;
-    let prefix = prefix(&epoch);
-    Ok((epoch, prefix, carried.into_iter().map(to_chat).collect()))
+    let carried: Vec<ChatMessage> = carried.entries().to_vec();
+    let epoch = begin_epoch(state, thread_id, kind, reason, carried.clone()).await?;
+    let prefix = state.prefix(kind, epoch.memory_snapshot.as_deref());
+    Ok((epoch, prefix, carried.into_iter().collect()))
 }
 
 async fn drive(
     state: &SharedState,
     thread_id: &str,
+    kind: ThreadKind,
     turn_id: &str,
     wire: String,
     cancel: CancellationToken,
 ) -> Result<(), Failure> {
-    let (epoch, prefix, transcript) = current_epoch(state, thread_id)
+    let (epoch, prefix, transcript) = current_epoch(state, thread_id, kind)
         .await
         .map_err(Failure::from)?;
 
@@ -204,22 +228,27 @@ async fn drive(
                 state.publish(match event {
                     TurnEvent::Thinking => Event::Thinking { turn_id },
                     TurnEvent::TextDelta(delta) => Event::TextDelta { turn_id, delta },
+                    TurnEvent::ToolUsed(tool) => Event::ToolUsed { turn_id, tool },
                 });
             }
         })
     };
     let agent = state.active().agent;
     let outcome = agent
-        .run_turn(&prefix, &transcript, &wire, tx, cancel)
+        .run_turn(
+            &prefix,
+            &transcript,
+            &wire,
+            &HubTools { state },
+            tx,
+            cancel,
+        )
         .await;
     let _ = forward.await;
 
-    let mut appended = vec![TranscriptEntry::new(EntryRole::User, wire)];
+    let mut appended = vec![to_wire(&ChatMessage::new(ChatRole::User, wire))];
     if let Ok(outcome) = &outcome {
-        appended.push(TranscriptEntry::new(
-            EntryRole::Assistant,
-            outcome.text.clone(),
-        ));
+        appended.extend(outcome.messages.iter().map(to_wire));
     }
     state
         .store

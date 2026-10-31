@@ -17,7 +17,7 @@ use rusqlite::Connection;
 pub use clock::now_ms;
 pub use devices::StoredDevice;
 pub use error::StoreError;
-pub use transcript::{EntryRole, Epoch, EpochReason, TranscriptEntry};
+pub use transcript::{Epoch, EpochReason};
 pub use usage::UsageTotals;
 
 pub type Result<T> = std::result::Result<T, StoreError>;

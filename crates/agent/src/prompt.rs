@@ -4,34 +4,47 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 use xiaoban_protocol::ContextNote;
 
-use crate::{ChatMessage, ChatRequest, ChatRole};
+use crate::{ChatMessage, ChatRequest, ChatRole, ToolSpec};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StablePrefix {
     messages: Arc<[ChatMessage]>,
+    tools: Arc<[ToolSpec]>,
     fingerprint: String,
 }
 
 impl StablePrefix {
-    pub fn with_memory(system: &str, memory: Option<&str>) -> Self {
-        match memory {
-            Some(memory) if !memory.trim().is_empty() => Self::new(format!("{system}\n\n{memory}")),
-            _ => Self::new(system),
-        }
+    pub fn new(system: impl Into<String>) -> Self {
+        Self::compose(&system.into(), None, Vec::new())
     }
 
-    pub fn new(system: impl Into<String>) -> Self {
+    pub fn with_memory(system: &str, memory: Option<&str>) -> Self {
+        Self::compose(system, memory, Vec::new())
+    }
+
+    pub fn compose(system: &str, memory: Option<&str>, tools: Vec<ToolSpec>) -> Self {
+        let system = match memory {
+            Some(memory) if !memory.trim().is_empty() => format!("{system}\n\n{memory}"),
+            _ => system.to_owned(),
+        };
         let messages: Arc<[ChatMessage]> = Arc::from([ChatMessage::new(ChatRole::System, system)]);
-        let canonical = serde_json::to_vec(&*messages).unwrap_or_default();
+        let tools: Arc<[ToolSpec]> = Arc::from(tools);
+        let wire_tools: Vec<_> = tools.iter().map(ToolSpec::wire).collect();
+        let canonical = serde_json::to_vec(&(&*messages, wire_tools)).unwrap_or_default();
         let fingerprint = hex::encode(&Sha256::digest(&canonical)[..8]);
         Self {
             messages,
+            tools,
             fingerprint,
         }
     }
 
     pub fn messages(&self) -> &[ChatMessage] {
         &self.messages
+    }
+
+    pub fn tools(&self) -> &[ToolSpec] {
+        &self.tools
     }
 
     pub fn fingerprint(&self) -> &str {
@@ -85,14 +98,29 @@ pub fn user_wire(text: &str, context: &[ContextNote]) -> String {
 }
 
 pub fn assemble(prefix: &StablePrefix, transcript: &Transcript, user_wire: &str) -> ChatRequest {
+    assemble_with(
+        prefix,
+        transcript,
+        &[ChatMessage::new(ChatRole::User, user_wire)],
+    )
+}
+
+pub fn assemble_with(
+    prefix: &StablePrefix,
+    transcript: &Transcript,
+    tail: &[ChatMessage],
+) -> ChatRequest {
     let messages = prefix
         .messages()
         .iter()
         .chain(transcript.entries())
+        .chain(tail)
         .cloned()
-        .chain(std::iter::once(ChatMessage::new(ChatRole::User, user_wire)))
         .collect();
-    ChatRequest { messages }
+    ChatRequest {
+        messages,
+        tools: prefix.tools().to_vec(),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,6 +136,12 @@ impl PrefixReuse {
 }
 
 pub fn prefix_reuse(previous: &ChatRequest, next: &ChatRequest) -> PrefixReuse {
+    if previous.tools != next.tools {
+        return PrefixReuse {
+            reused: 0,
+            previous: previous.messages.len(),
+        };
+    }
     let reused = previous
         .messages
         .iter()

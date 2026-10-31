@@ -8,13 +8,13 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use xiaoban_agent::{
     AgentError, ConfiguredProvider, Connector, ModelProvider, OpenAiConfig, ProviderPreset,
-    RecordingProvider, ScriptedProvider, prefix_reuse,
+    ModelChunk, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
-use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, SecretStore};
+use xiaoban_hub::{Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, Prompts, SecretStore};
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
     AutonomyLevel, ClientFrame, ContextNote, Credential, DeviceHello, ErrorCode, Event,
-    FailureKind, MemoryTopic, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role,
+    FailureKind, PROTOCOL_VERSION, Platform, ProviderId, Request, Response, Role,
     ServerFrame,
 };
 
@@ -128,13 +128,16 @@ fn deepseek(key: &str) -> ConfiguredProvider {
 
 fn runtime_with(
     provider: impl ModelProvider,
-    system_prompt: &str,
+    chat_prompt: &str,
     fallback: Option<ConfiguredProvider>,
     secrets: Arc<dyn SecretStore>,
 ) -> HubRuntime {
     HubRuntime {
         locale: Locale::ZhCn,
-        system_prompt: system_prompt.into(),
+        prompts: Prompts {
+            chat: chat_prompt.into(),
+            onboarding: format!("{chat_prompt}\n\nonboarding"),
+        },
         connector: Arc::new(FixedConnector(Arc::new(provider))),
         secrets,
         fallback,
@@ -677,14 +680,14 @@ async fn onboarding_steps_persist_preferences_and_memories() {
     assert_eq!(preferences.autonomy, AutonomyLevel::Balanced);
     assert!(!preferences.onboarded);
 
-    for (topic, value) in [
-        (MemoryTopic::PreferredName, "阿哲"),
-        (MemoryTopic::HomeAndWork, "北京，公司在望京"),
-        (MemoryTopic::PreferredName, "哲哥"),
+    for (subject, value) in [
+        ("称呼", "阿哲"),
+        ("住处", "北京，公司在望京"),
+        ("称呼", "哲哥"),
     ] {
         let Response::Memory { memory } = client
             .request(Request::Remember {
-                topic,
+                subject: subject.into(),
                 value: value.into(),
             })
             .await
@@ -733,10 +736,10 @@ async fn the_desktop_hears_when_a_phone_pairs() {
     hub.shutdown().await;
 }
 
-async fn remember(client: &mut TestClient, topic: MemoryTopic, value: &str) {
+async fn remember(client: &mut TestClient, subject: &str, value: &str) {
     client
         .request(Request::Remember {
-            topic,
+            subject: subject.into(),
             value: value.into(),
         })
         .await;
@@ -749,12 +752,12 @@ async fn memories_enter_new_threads_without_breaking_running_ones() {
         .await
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
-    remember(&mut client, MemoryTopic::PreferredName, "阿哲").await;
+    remember(&mut client, "称呼", "阿哲").await;
 
     let first = new_thread(&mut client).await;
     converse(&mut client, &first, "早", Vec::new()).await;
 
-    remember(&mut client, MemoryTopic::Household, "老婆和儿子").await;
+    remember(&mut client, "家里", "老婆和儿子").await;
     converse(&mut client, &first, "今天干嘛", Vec::new()).await;
 
     let second = new_thread(&mut client).await;
@@ -771,5 +774,84 @@ async fn memories_enter_new_threads_without_breaking_running_ones() {
 
     assert!(system(2).contains("阿哲"));
     assert!(system(2).contains("老婆和儿子"));
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn onboarding_is_a_model_led_conversation_that_saves_memories_through_tools() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![ModelChunk::ToolCallDelta {
+            index: 0,
+            id: Some("c1".into()),
+            name: Some("remember".into()),
+            arguments: r#"{"subject":"称呼","value":"阿哲"}"#.into(),
+        }],
+        vec![ModelChunk::Text("好的阿哲，平时几点出门？".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+
+    let Response::Thread { thread } = client.request(Request::StartOnboarding).await else {
+        panic!("expected onboarding thread");
+    };
+    let Response::Thread { thread: again } = client.request(Request::StartOnboarding).await else {
+        panic!("expected onboarding thread");
+    };
+    assert_eq!(again, thread);
+    let Response::Threads { threads } = client.request(Request::ListThreads).await else {
+        panic!("expected threads");
+    };
+    assert_eq!(threads, Vec::new());
+    let Response::Messages { messages } = client
+        .request(Request::ListMessages {
+            thread_id: thread.id.clone(),
+        })
+        .await
+    else {
+        panic!("expected messages");
+    };
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].role, Role::Assistant);
+    let opening = messages[0].text.clone();
+
+    let Response::TurnAccepted { turn_id, .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.id.clone(),
+            text: "叫我阿哲".into(),
+            context: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let (mut used, mut saved) = (false, None);
+    loop {
+        match client.next_event().await {
+            Event::ToolUsed { tool, .. } => used = tool == "remember",
+            Event::MemorySaved { memory } => saved = Some(memory),
+            Event::TurnCompleted {
+                turn_id: id,
+                message,
+                ..
+            } if id == turn_id => {
+                assert_eq!(message.text, "好的阿哲，平时几点出门？");
+                break;
+            }
+            Event::TurnFailed { failure, .. } => panic!("turn failed: {failure:?}"),
+            _ => {}
+        }
+    }
+    assert!(used);
+    let saved = saved.expect("memory should be announced");
+    assert_eq!((saved.subject.as_str(), saved.value.as_str()), ("称呼", "阿哲"));
+
+    let requests = provider.requests();
+    assert_eq!(requests.len(), 2);
+    assert!(requests[0].messages[0].content.ends_with("onboarding"));
+    assert_eq!(requests[0].messages[1].content, opening);
+    assert_eq!(requests[0].tools[0].name, "remember");
+    assert!(prefix_reuse(&requests[0], &requests[1]).is_intact());
     hub.shutdown().await;
 }

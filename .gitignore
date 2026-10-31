@@ -8,3 +8,4 @@ dist
 /apps/desktop/src-tauri/gen
 /apps/mobile/ios
 /apps/mobile/android
+/crates/*/bindings

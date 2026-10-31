@@ -74,12 +74,30 @@ CREATE TABLE memories (
     r"
 ALTER TABLE transcript_epochs ADD COLUMN memory_snapshot TEXT;
 ",
+    r"
+ALTER TABLE memories RENAME COLUMN topic TO subject;
+ALTER TABLE threads ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat';
+
+CREATE TABLE transcript_messages (
+    epoch_id TEXT NOT NULL REFERENCES transcript_epochs(id) ON DELETE CASCADE,
+    seq INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    PRIMARY KEY (epoch_id, seq)
+) WITHOUT ROWID;
+INSERT INTO transcript_messages (epoch_id, seq, message)
+    SELECT epoch_id, seq, json_object('role', role, 'content', content) FROM transcript_entries;
+DROP TABLE transcript_entries;
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {
+    apply_up_to(conn, MIGRATIONS.len())
+}
+
+fn apply_up_to(conn: &mut Connection, target: usize) -> Result<()> {
     let current: i64 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
     let tx = conn.transaction()?;
-    for (version, sql) in (1_i64..).zip(MIGRATIONS) {
+    for (version, sql) in (1_i64..).zip(&MIGRATIONS[..target]) {
         if version <= current {
             continue;
         }
@@ -88,4 +106,45 @@ pub fn apply(conn: &mut Connection) -> Result<()> {
     }
     tx.commit()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn transcript_entries_migrate_to_canonical_message_json() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply_up_to(&mut conn, 4).unwrap();
+        conn.execute_batch(
+            "INSERT INTO threads (id, title, created_at, updated_at) VALUES ('t', NULL, 0, 0);
+             INSERT INTO transcript_epochs (id, thread_id, prefix_fingerprint, reason, started_at)
+                 VALUES ('e', 't', 'f', 'started', 0);
+             INSERT INTO transcript_entries (epoch_id, seq, role, content)
+                 VALUES ('e', 0, 'user', '明天几点出门\"'), ('e', 1, 'assistant', '7:40');",
+        )
+        .unwrap();
+        apply(&mut conn).unwrap();
+
+        let messages: Vec<String> = conn
+            .prepare("SELECT message FROM transcript_messages ORDER BY seq")
+            .unwrap()
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            messages,
+            [
+                r#"{"role":"user","content":"明天几点出门\""}"#,
+                r#"{"role":"assistant","content":"7:40"}"#
+            ]
+        );
+        let kind: String = conn
+            .query_row("SELECT kind FROM threads WHERE id = 't'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(kind, "chat");
+    }
 }

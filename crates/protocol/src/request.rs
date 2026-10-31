@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    AutonomyLevel, ContextNote, Device, Failure, Memory, MemoryTopic, Message, ModelInfo,
-    Preferences, ProviderId, ProviderOption, Thread, Usage,
+    AutonomyLevel, ContextNote, Device, Failure, Memory, Message, ModelInfo, Preferences,
+    ProviderId, ProviderOption, Thread, Usage,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -49,11 +49,12 @@ pub enum Request {
         level: AutonomyLevel,
     },
     Remember {
-        topic: MemoryTopic,
+        subject: String,
         value: String,
     },
     ListMemories,
     CompleteOnboarding,
+    StartOnboarding,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

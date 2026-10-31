@@ -1,46 +1,40 @@
 use rusqlite::{Row, params};
-use xiaoban_protocol::{Memory, MemoryTopic};
+use xiaoban_protocol::Memory;
 
-use crate::{Result, Store, StoreError, new_id, now_ms};
+use crate::{Result, Store, new_id, now_ms};
 
-fn from_row(row: &Row<'_>) -> rusqlite::Result<(String, String, String, i64)> {
-    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-}
-
-fn into_memory((id, topic, value, updated_at): (String, String, String, i64)) -> Result<Memory> {
+fn from_row(row: &Row<'_>) -> rusqlite::Result<Memory> {
     Ok(Memory {
-        id,
-        topic: MemoryTopic::parse(&topic).ok_or(StoreError::Corrupt("memories.topic"))?,
-        value,
-        updated_at,
+        id: row.get(0)?,
+        subject: row.get(1)?,
+        value: row.get(2)?,
+        updated_at: row.get(3)?,
     })
 }
 
 impl Store {
-    pub async fn remember(&self, topic: MemoryTopic, value: String) -> Result<Memory> {
+    pub async fn remember(&self, subject: String, value: String) -> Result<Memory> {
         self.with(move |conn| {
-            let updated_at = now_ms();
             conn.execute(
-                "INSERT INTO memories (id, topic, value, updated_at) VALUES (?1, ?2, ?3, ?4)
-                 ON CONFLICT(topic) DO UPDATE SET value = ?3, updated_at = ?4",
-                params![new_id(), topic.as_str(), value, updated_at],
+                "INSERT INTO memories (id, subject, value, updated_at) VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(subject) DO UPDATE SET value = ?3, updated_at = ?4",
+                params![new_id(), subject, value, now_ms()],
             )?;
-            let raw = conn.query_row(
-                "SELECT id, topic, value, updated_at FROM memories WHERE topic = ?1",
-                [topic.as_str()],
+            Ok(conn.query_row(
+                "SELECT id, subject, value, updated_at FROM memories WHERE subject = ?1",
+                [&subject],
                 from_row,
-            )?;
-            into_memory(raw)
+            )?)
         })
         .await
     }
 
     pub async fn list_memories(&self) -> Result<Vec<Memory>> {
         self.with(|conn| {
-            let mut stmt = conn
-                .prepare("SELECT id, topic, value, updated_at FROM memories ORDER BY updated_at")?;
+            let mut stmt =
+                conn.prepare("SELECT id, subject, value, updated_at FROM memories ORDER BY rowid")?;
             let rows = stmt.query_map([], from_row)?;
-            rows.map(|row| into_memory(row?)).collect()
+            Ok(rows.collect::<rusqlite::Result<_>>()?)
         })
         .await
     }

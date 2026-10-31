@@ -1,12 +1,10 @@
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { MemoryTopic } from "@xiaoban/protocol";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useHub } from "../../../app/hub.tsx";
 import { StepFooter } from "../StepFooter.tsx";
 
 interface Question {
-  topic: MemoryTopic;
   ask: PlainMessageKey;
   label: PlainMessageKey;
   replies: PlainMessageKey[];
@@ -14,19 +12,16 @@ interface Question {
 
 const QUESTIONS: readonly Question[] = [
   {
-    topic: "preferred_name",
     ask: "meet-question-preferred-name",
     label: "memory-topic-preferred-name",
     replies: [],
   },
   {
-    topic: "home_and_work",
     ask: "meet-question-home-and-work",
     label: "memory-topic-home-and-work",
     replies: ["meet-reply-pass"],
   },
   {
-    topic: "household",
     ask: "meet-question-household",
     label: "memory-topic-household",
     replies: ["meet-reply-alone", "meet-reply-pass"],
@@ -64,7 +59,7 @@ export function MeetStep({ onBack, onDone }: { onBack: () => void; onDone: () =>
     setLines((current) => [...current, { kind: "answer", text: value }]);
     setTyping(true);
     if (!pass) {
-      const memory = await store.remember(question.topic, value);
+      const memory = await store.remember(t(question.label), value);
       setLines((current) => [
         ...current,
         {
