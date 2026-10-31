@@ -239,9 +239,11 @@ async fn local_client_sends_a_message_and_receives_streamed_reply() {
     assert_eq!(streamed, "明早7:40 出门");
     assert_eq!(reply.text, streamed);
 
-    let Response::Messages { messages } = client
+    let Response::Messages { messages, .. } = client
         .request(Request::ListMessages {
             thread_id: thread.id,
+            before: None,
+            limit: None,
         })
         .await
     else {
@@ -367,8 +369,12 @@ async fn consecutive_turns_reuse_the_exact_request_prefix() {
     };
     assert_eq!(turns, 3);
 
-    let Response::Messages { messages } = client
-        .request(Request::ListMessages { thread_id: thread })
+    let Response::Messages { messages, .. } = client
+        .request(Request::ListMessages {
+            thread_id: thread,
+            before: None,
+            limit: None,
+        })
         .await
     else {
         panic!("expected messages");
@@ -759,9 +765,11 @@ async fn onboarding_steps_persist_preferences_and_memories() {
     let primary = preferences
         .primary_thread_id
         .expect("onboarding creates the main thread");
-    let Response::Messages { messages } = client
+    let Response::Messages { messages, .. } = client
         .request(Request::ListMessages {
             thread_id: primary.clone(),
+            before: None,
+            limit: None,
         })
         .await
     else {
@@ -1024,9 +1032,11 @@ async fn failed_turns_can_be_retried_and_answers_regenerated() {
     assert!(prefix_reuse(&requests[0], &requests[1]).is_intact());
     assert_eq!(requests[1].messages.len(), 4);
 
-    let Response::Messages { messages } = client
+    let Response::Messages { messages, .. } = client
         .request(Request::ListMessages {
             thread_id: thread.clone(),
+            before: None,
+            limit: None,
         })
         .await
     else {
@@ -1236,9 +1246,11 @@ async fn latest_message_with(
     wanted: fn(&Attachment) -> bool,
 ) -> xiaoban_protocol::Message {
     for _ in 0..100 {
-        let Response::Messages { messages } = client
+        let Response::Messages { messages, .. } = client
             .request(Request::ListMessages {
                 thread_id: thread.into(),
+                before: None,
+                limit: None,
             })
             .await
         else {
@@ -1686,9 +1698,11 @@ async fn answer_confirms(
                 panic!("expected ack");
             };
         }
-        let Response::Messages { messages } = client
+        let Response::Messages { messages, .. } = client
             .request(Request::ListMessages {
                 thread_id: thread.into(),
+                before: None,
+                limit: None,
             })
             .await
         else {
@@ -1962,5 +1976,50 @@ async fn a_backgrounded_reply_frees_the_thread() {
         panic!("the thread should accept a new message");
     };
     assert_ne!(second, turn_id);
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn messages_come_in_pages_from_the_newest() {
+    let provider = ScriptedProvider::new(["一", "二", "三"]);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    for text in ["a", "b", "c"] {
+        converse(&mut client, &thread, text, Vec::new()).await;
+    }
+    let Response::Messages { messages, more } = client
+        .request(Request::ListMessages {
+            thread_id: thread.clone(),
+            before: None,
+            limit: Some(4),
+        })
+        .await
+    else {
+        panic!("expected messages");
+    };
+    assert!(more);
+    assert_eq!(messages.len(), 4);
+    assert_eq!(messages[2].text, "c");
+    let Response::Messages {
+        messages: older,
+        more,
+    } = client
+        .request(Request::ListMessages {
+            thread_id: thread,
+            before: Some(messages[0].created_at),
+            limit: Some(4),
+        })
+        .await
+    else {
+        panic!("expected messages");
+    };
+    assert!(!more);
+    assert_eq!(
+        older.first().map(|message| message.text.as_str()),
+        Some("a")
+    );
     hub.shutdown().await;
 }

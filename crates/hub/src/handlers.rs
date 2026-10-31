@@ -17,6 +17,8 @@ fn trimmed(value: &str) -> Option<String> {
     (!value.is_empty()).then(|| value.to_owned())
 }
 
+const MAX_PAGE: u32 = 200;
+
 #[allow(clippy::too_many_lines)]
 pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handled {
     match request {
@@ -24,9 +26,22 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             threads: state.store.list_threads().await?,
         }),
         Request::CreateThread { title } => create_thread(state, title.as_deref()).await,
-        Request::ListMessages { thread_id } => Ok(Response::Messages {
-            messages: state.store.list_messages(thread_id).await?,
-        }),
+        Request::ListMessages {
+            thread_id,
+            before,
+            limit,
+        } => {
+            let (messages, more) = match limit {
+                Some(limit) => {
+                    state
+                        .store
+                        .page_messages(thread_id, before, limit.clamp(1, MAX_PAGE))
+                        .await?
+                }
+                None => (state.store.list_messages(thread_id).await?, false),
+            };
+            Ok(Response::Messages { messages, more })
+        }
         Request::SendMessage {
             thread_id,
             text,

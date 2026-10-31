@@ -25,6 +25,8 @@ import type {
 import type { HubClient } from "./client.ts";
 import { applyEvent, type HubState, initialHubState, tripKey } from "./state.ts";
 
+const PAGE = 50;
+
 export class HubStore {
   readonly client: HubClient;
   #state: HubState = initialHubState;
@@ -168,9 +170,41 @@ export class HubStore {
   }
 
   async loadMessages(threadId: string): Promise<Message[]> {
-    const { messages } = await this.client.request({ type: "list_messages", threadId }, "messages");
-    this.#update((state) => ({ ...state, messages: { ...state.messages, [threadId]: messages } }));
+    const { messages, more } = await this.client.request(
+      { type: "list_messages", threadId, before: null, limit: PAGE },
+      "messages",
+    );
+    this.#update((state) => ({
+      ...state,
+      messages: { ...state.messages, [threadId]: messages },
+      olderMessages: { ...state.olderMessages, [threadId]: more },
+    }));
     return messages;
+  }
+
+  async loadOlderMessages(threadId: string): Promise<number> {
+    const current = this.#state.messages[threadId] ?? [];
+    const first = current[0];
+    if (!first || !this.#state.olderMessages[threadId]) return 0;
+    const { messages, more } = await this.client.request(
+      { type: "list_messages", threadId, before: first.createdAt, limit: PAGE },
+      "messages",
+    );
+    this.#update((state) => {
+      const known = new Set((state.messages[threadId] ?? []).map((message) => message.id));
+      return {
+        ...state,
+        messages: {
+          ...state.messages,
+          [threadId]: [
+            ...messages.filter((message) => !known.has(message.id)),
+            ...(state.messages[threadId] ?? []),
+          ],
+        },
+        olderMessages: { ...state.olderMessages, [threadId]: more },
+      };
+    });
+    return messages.length;
   }
 
   async send(

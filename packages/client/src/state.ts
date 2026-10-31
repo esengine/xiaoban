@@ -51,6 +51,7 @@ export interface HubState {
   hub: HubInfo | null;
   usedMemories: string[];
   archivedBefore: Record<string, number>;
+  olderMessages: Record<string, boolean>;
   galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
   modelLoaded: boolean;
@@ -72,6 +73,7 @@ export const initialHubState: HubState = {
   hub: null,
   usedMemories: [],
   archivedBefore: {},
+  olderMessages: {},
   galaxies: [],
   model: null,
   modelLoaded: false,

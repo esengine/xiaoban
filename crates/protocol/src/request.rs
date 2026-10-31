@@ -22,6 +22,11 @@ pub enum Request {
     },
     ListMessages {
         thread_id: String,
+        #[serde(default)]
+        #[ts(type = "number | null")]
+        before: Option<i64>,
+        #[serde(default)]
+        limit: Option<u32>,
     },
     SendMessage {
         thread_id: String,
@@ -158,6 +163,8 @@ pub enum Response {
     },
     Messages {
         messages: Vec<Message>,
+        #[serde(default)]
+        more: bool,
     },
     TurnAccepted {
         turn_id: String,

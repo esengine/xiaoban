@@ -78,7 +78,10 @@ describe("HubClient", () => {
       type: "threads",
       threads: [],
     });
-    const failure = client.request({ type: "list_messages", threadId: "x" }, "messages");
+    const failure = client.request(
+      { type: "list_messages", before: null, limit: null, threadId: "x" },
+      "messages",
+    );
     await expect(failure).rejects.toBeInstanceOf(HubRequestError);
     await expect(failure).rejects.toMatchObject({ code: "not_found" });
   });

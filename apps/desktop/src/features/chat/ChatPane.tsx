@@ -5,7 +5,14 @@ import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Message, Quote } from "@xiaoban/protocol";
-import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useHub } from "../../app/hub.tsx";
 import { DropZone, SentFiles } from "../attach/Attachments.tsx";
 import { useAttachments } from "../attach/useAttachments.ts";
@@ -50,6 +57,8 @@ interface Queued {
   quote: Quote | null;
   files: string[];
 }
+
+const OLDER_THRESHOLD = 240;
 
 let counter = 0;
 
@@ -194,6 +203,32 @@ export function ChatPane(props: Props) {
         ? t("chat-subtitle-primary", { model })
         : model
       : t(connectionKey(state.status));
+
+  const anchor = useRef<{ height: number; top: number } | null>(null);
+  const loadingOlder = useRef(false);
+  const hasOlder = state.olderMessages[threadId] ?? false;
+  const onScroll = () => {
+    const node = list.current;
+    if (!node || !hasOlder || loadingOlder.current || node.scrollTop > OLDER_THRESHOLD) return;
+    loadingOlder.current = true;
+    anchor.current = { height: node.scrollHeight, top: node.scrollTop };
+    void store
+      .loadOlderMessages(threadId)
+      .catch(() => {
+        anchor.current = null;
+      })
+      .finally(() => {
+        loadingOlder.current = false;
+      });
+  };
+  const firstMessage = messages[0]?.id;
+  useLayoutEffect(() => {
+    const node = list.current;
+    const saved = anchor.current;
+    if (!node || !saved || firstMessage === undefined) return;
+    node.scrollTop = node.scrollHeight - saved.height + saved.top;
+    anchor.current = null;
+  }, [firstMessage]);
 
   const lastMessage = messages.at(-1)?.id;
   const lastDraft = drafts.at(-1);
@@ -394,7 +429,7 @@ export function ChatPane(props: Props) {
           onToggle={props.onToggleWorkspace}
         />
       </header>
-      <ol ref={list} className="chat__messages" aria-live="polite">
+      <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>
         {rows.map(renderRow)}
         {trailing.map((draft) => (
           <DraftItem

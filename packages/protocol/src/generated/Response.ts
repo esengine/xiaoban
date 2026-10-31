@@ -24,7 +24,7 @@ export type Response =
   | { type: "memories_tidied"; merged: number; replaced: number; moved: number; summaries: number }
   | { type: "threads"; threads: Array<Thread> }
   | { type: "thread"; thread: Thread }
-  | { type: "messages"; messages: Array<Message> }
+  | { type: "messages"; messages: Array<Message>; more: boolean }
   | { type: "turn_accepted"; turnId: string; message: Message }
   | {
       type: "pairing_code";

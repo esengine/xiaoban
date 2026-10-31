@@ -9,7 +9,7 @@ import type { ServiceId } from "./ServiceId.ts";
 export type Request =
   | { type: "list_threads" }
   | { type: "create_thread"; title: string | null }
-  | { type: "list_messages"; threadId: string }
+  | { type: "list_messages"; threadId: string; before: number | null; limit: number | null }
   | {
       type: "send_message";
       threadId: string;

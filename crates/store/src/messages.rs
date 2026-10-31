@@ -151,6 +151,31 @@ impl Store {
         .await
     }
 
+    pub async fn page_messages(
+        &self,
+        thread_id: String,
+        before: Option<i64>,
+        limit: u32,
+    ) -> Result<(Vec<Message>, bool)> {
+        self.with(move |conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, thread_id, role, text, created_at, quote, replaces, attachment, files
+                 FROM messages WHERE thread_id = ?1 AND created_at < ?2
+                 ORDER BY created_at DESC, rowid DESC LIMIT ?3",
+            )?;
+            let rows = stmt.query_map(
+                params![thread_id, before.unwrap_or(i64::MAX), i64::from(limit) + 1],
+                from_row,
+            )?;
+            let mut page: Vec<Message> = rows.map(|row| with_role(row?)).collect::<Result<_>>()?;
+            let more = page.len() > limit as usize;
+            page.truncate(limit as usize);
+            page.reverse();
+            Ok((page, more))
+        })
+        .await
+    }
+
     pub async fn list_messages(&self, thread_id: String) -> Result<Vec<Message>> {
         self.with(move |conn| {
             let mut stmt = conn.prepare(
