@@ -7,7 +7,7 @@ import { MascotFace } from "../onboarding/Mascot.tsx";
 import { RichText } from "./RichText.tsx";
 import { WorkingLine } from "./Trace.tsx";
 
-function useElapsed(since: number, active: boolean): number {
+export function useElapsed(since: number, active: boolean): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!active) return;
@@ -48,9 +48,8 @@ export function DraftBubble({ draft, onRetry }: { draft: Draft; onRetry: () => v
     );
   }
 
-  const tool = draft.tools.at(-1);
   if (waitingForText) {
-    if (tool) return <WorkingLine tool={tool} />;
+    if (draft.steps.length > 0) return <WorkingLine steps={draft.steps} />;
     if (elapsed < waiting.silentMs) return null;
     return (
       <li className="thinking" aria-live="polite">

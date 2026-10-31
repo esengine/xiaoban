@@ -1,8 +1,9 @@
-import type { TurnTrace } from "@xiaoban/client";
+import type { TraceStep, TurnTrace } from "@xiaoban/client";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Memory } from "@xiaoban/protocol";
 import { useState } from "react";
+import { StepList, stepText } from "./Steps.tsx";
 
 const TOOL_NAMES: Record<string, PlainMessageKey> = {
   remember: "tool-name-remember",
@@ -13,15 +14,6 @@ const TOOL_NAMES: Record<string, PlainMessageKey> = {
   locate: "tool-name-locate",
 };
 
-const TOOL_PROGRESS: Record<string, PlainMessageKey> = {
-  remember: "tool-progress-remember",
-  weather: "tool-progress-weather",
-  web_search: "tool-progress-search",
-  read_page: "tool-progress-page",
-  save_trip: "tool-progress-trip",
-  locate: "tool-progress-locate",
-};
-
 export function useToolName() {
   const { t } = useI18n();
   return (tool: string) => {
@@ -30,15 +22,26 @@ export function useToolName() {
   };
 }
 
-export function WorkingLine({ tool }: { tool: string }) {
+export function WorkingLine({ steps }: { steps: readonly TraceStep[] }) {
   const { t } = useI18n();
-  const key = TOOL_PROGRESS[tool];
+  const [open, setOpen] = useState(false);
+  const current = steps.at(-1);
+  if (!current) return null;
   return (
-    <li className="working-line" aria-live="polite">
-      <span className="working-line__dot" aria-hidden="true" />
-      <span key={tool} className="working-line__text">
-        {key ? t(key) : t("tool-progress-generic")}
-      </span>
+    <li className="working" aria-live="polite">
+      <button
+        type="button"
+        className="working-line"
+        aria-expanded={open}
+        title={t("working-show-steps")}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="working-line__dot" aria-hidden="true" />
+        <span key={current.callId} className="working-line__text">
+          {stepText(t, current)}
+        </span>
+      </button>
+      {open && <StepList steps={steps} />}
     </li>
   );
 }
@@ -59,13 +62,16 @@ export function TraceSummary({ trace }: { trace: TurnTrace }) {
       >
         {t("trace-summary", { names, count: trace.tools.length })}
       </button>
-      {open && (
-        <ol className="trace__steps">
-          {trace.tools.map((tool, index) => (
-            <li key={index}>{name(tool)}</li>
-          ))}
-        </ol>
-      )}
+      {open &&
+        (trace.steps.length > 0 ? (
+          <StepList steps={trace.steps} />
+        ) : (
+          <ol className="trace__steps">
+            {trace.tools.map((tool, index) => (
+              <li key={index}>{name(tool)}</li>
+            ))}
+          </ol>
+        ))}
     </li>
   );
 }

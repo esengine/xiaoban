@@ -43,7 +43,8 @@ export function TripWorkbench(props: Props) {
   const state = useHubState(store);
   const trip = useTrip(props.tripId, props.version);
   const latest = state.latestTrip[props.tripId] ?? trip?.version ?? 0;
-  const busy = draftsForThread(state, props.threadId).some((draft) => !draft.failure);
+  const running = draftsForThread(state, props.threadId).find((draft) => !draft.failure) ?? null;
+  const busy = running !== null;
   const { toast, show } = useToast();
   const [selected, setSelected] = useState<StopRef | null>(null);
   const [draft, setDraft] = useState("");
@@ -214,7 +215,11 @@ export function TripWorkbench(props: Props) {
             color={dayColor(selected.day)}
             readOnly={old}
             busy={busy}
-            looking={busy && asking === `${selected.day}-${selected.index}`}
+            looking={asking === `${selected.day}-${selected.index}` ? running : null}
+            onStop={() => {
+              if (running) void store.cancel(running.turnId);
+              setAsking(null);
+            }}
             onClose={() => setSelected(null)}
             onOpen={open}
             onAsk={(text, stay) => {

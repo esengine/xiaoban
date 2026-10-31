@@ -1,10 +1,34 @@
+import type { Draft } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Trip, TripStop } from "@xiaoban/protocol";
 import { useEffect, useRef } from "react";
+import { useElapsed } from "../chat/DraftBubble.tsx";
+import { StepList } from "../chat/Steps.tsx";
 import { amapPlace, amapRoute, monthDay } from "./format.ts";
 import { CameraIcon, CheckIcon, CloseIcon, OutIcon } from "./icons.tsx";
 
 const STALE_MS = 30 * 24 * 60 * 60 * 1000;
+const SLOW_MS = 60_000;
+
+function LookingPanel({ draft, onStop }: { draft: Draft; onStop: () => void }) {
+  const { t } = useI18n();
+  const elapsed = useElapsed(draft.startedAt, true);
+  return (
+    <section className="looking">
+      <div className="looking__head">
+        <b>{t("looking-title")}</b>
+        <span className="looking__elapsed">
+          {t("looking-elapsed", { seconds: Math.floor(elapsed / 1000) })}
+        </span>
+        <button type="button" className="button button--line looking__stop" onClick={onStop}>
+          {t("looking-stop")}
+        </button>
+      </div>
+      {draft.steps.length > 0 && <StepList steps={draft.steps} />}
+      {elapsed > SLOW_MS && <p className="looking__slow">{t("looking-slow")}</p>}
+    </section>
+  );
+}
 
 export interface StopRef {
   day: number;
@@ -24,6 +48,7 @@ export function PlaceDetail({
   readOnly,
   busy,
   looking,
+  onStop,
   onClose,
   onOpen,
   onAsk,
@@ -33,7 +58,8 @@ export function PlaceDetail({
   color: string;
   readOnly: boolean;
   busy: boolean;
-  looking: boolean;
+  looking: Draft | null;
+  onStop: () => void;
   onClose: () => void;
   onOpen: (url: string) => void;
   onAsk: (text: string, stay: boolean) => void;
@@ -104,7 +130,9 @@ export function PlaceDetail({
             <OutIcon />
           </button>
         </div>
-        {detail ? (
+        {looking ? (
+          <LookingPanel draft={looking} onStop={onStop} />
+        ) : detail ? (
           <>
             <section>
               <h3 className="place-detail__title">{t("place-why")}</h3>
@@ -200,22 +228,15 @@ export function PlaceDetail({
         ) : (
           <div className="place-detail__empty">
             {t("place-empty")}
-            {looking ? (
-              <button type="button" className="button button--line" disabled>
-                <span className="spinner" aria-hidden="true" />
-                {t("place-looking")}
+            {!readOnly && (
+              <button
+                type="button"
+                className="button button--line"
+                disabled={busy}
+                onClick={() => onAsk(t("place-ask-message", { name: stop.name }), true)}
+              >
+                {t("place-ask")}
               </button>
-            ) : (
-              !readOnly && (
-                <button
-                  type="button"
-                  className="button button--line"
-                  disabled={busy}
-                  onClick={() => onAsk(t("place-ask-message", { name: stop.name }), true)}
-                >
-                  {t("place-ask")}
-                </button>
-              )
             )}
           </div>
         )}

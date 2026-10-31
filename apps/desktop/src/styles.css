@@ -2425,6 +2425,150 @@ button {
   color: var(--color-accent);
 }
 
+.working {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 86%;
+}
+
+.working-line {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-ground);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.working .steps {
+  background: var(--color-surface);
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.step__body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.step[data-current] .step__body {
+  font-weight: 500;
+}
+
+.step__result {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.step__icon,
+.step__now {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+}
+
+.step__icon {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  animation: fade-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.step__icon svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.step__icon--failed {
+  background: var(--color-line-soft);
+  color: var(--color-faint);
+}
+
+.step__icon--failed svg {
+  width: 10px;
+  height: 10px;
+}
+
+.step__now::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-accent);
+  animation: breathe-dot 1.4s ease-in-out infinite;
+}
+
+.looking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  animation: bubble-in var(--motion-slow) var(--ease-standard) both;
+}
+
+.looking__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 13px;
+}
+
+.looking__elapsed {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.looking__stop.button--line {
+  margin-left: auto;
+  height: 30px;
+  font-size: 12px;
+}
+
+.looking__slow {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-attention-soft);
+  font-size: 12px;
+  color: var(--color-attention-ink);
+  animation: fade-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.place-detail__body > * {
+  animation: bubble-in var(--motion-slow) var(--ease-standard) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bubble,
   .delivered,
@@ -2439,8 +2583,13 @@ button {
   .voice-panel,
   .voice-alert,
   .place-detail,
+  .place-detail__body > *,
   .trip__scrim,
-  .toast {
+  .toast,
+  .looking,
+  .looking__slow,
+  .step,
+  .step__icon {
     animation: fade-in var(--motion-fast) linear both;
   }
 
@@ -2449,6 +2598,7 @@ button {
   .caret,
   .button--stop,
   .spinner,
+  .step__now::before,
   .voice-panel__mic,
   .working-line__dot,
   .mascot-face--thinking .mascot-face__eyes {
