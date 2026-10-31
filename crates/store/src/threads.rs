@@ -37,7 +37,12 @@ impl Store {
             };
             conn.execute(
                 "INSERT INTO threads (id, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4)",
-                params![thread.id, thread.title, thread.created_at, thread.updated_at],
+                params![
+                    thread.id,
+                    thread.title,
+                    thread.created_at,
+                    thread.updated_at
+                ],
             )?;
             Ok(thread)
         })

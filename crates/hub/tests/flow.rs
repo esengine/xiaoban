@@ -718,7 +718,9 @@ async fn onboarding_steps_persist_preferences_and_memories() {
     };
     assert_eq!(preferences.autonomy, AutonomyLevel::Cautious);
     assert!(preferences.onboarded);
-    let primary = preferences.primary_thread_id.expect("onboarding creates the main thread");
+    let primary = preferences
+        .primary_thread_id
+        .expect("onboarding creates the main thread");
     let Response::Messages { messages } = client
         .request(Request::ListMessages {
             thread_id: primary.clone(),
@@ -735,7 +737,10 @@ async fn onboarding_steps_persist_preferences_and_memories() {
     };
     assert_eq!(threads.len(), 1);
     assert_eq!(threads[0].id, primary);
-    assert_eq!(threads[0].last_message.as_deref(), Some(messages[1].text.as_str()));
+    assert_eq!(
+        threads[0].last_message.as_deref(),
+        Some(messages[1].text.as_str())
+    );
     hub.shutdown().await;
 }
 

@@ -1,5 +1,6 @@
 mod hub;
 mod location;
+mod voice;
 
 use tauri::{Manager, RunEvent};
 
@@ -21,7 +22,13 @@ pub fn run() {
             app.manage(running);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![hub::hub_endpoint])
+        .invoke_handler(tauri::generate_handler![
+            hub::hub_endpoint,
+            voice::voice_available,
+            voice::voice_start,
+            voice::voice_stop,
+            voice::voice_cancel,
+        ])
         .build(tauri::generate_context!())
         .expect("failed to build the desktop app");
 

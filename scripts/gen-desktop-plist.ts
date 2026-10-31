@@ -9,6 +9,8 @@ const DESKTOP_KEYS = [
   "CFBundleDisplayName",
   "NSLocationUsageDescription",
   "NSLocationWhenInUseUsageDescription",
+  "NSMicrophoneUsageDescription",
+  "NSSpeechRecognitionUsageDescription",
 ] as const;
 
 type Strings = Record<(typeof DESKTOP_KEYS)[number], string>;

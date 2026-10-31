@@ -18,6 +18,7 @@ export const color = {
   attentionSoft: "#FDEBD9",
   success: "#1E6A44",
   successSoft: "#E3F1EA",
+  danger: "#D93A3A",
 } as const;
 
 export const dark = {

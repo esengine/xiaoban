@@ -2,5 +2,7 @@
   "CFBundleDisplayName": "Xiaoban",
   "NSLocalNetworkUsageDescription": "Xiaoban looks for your home computer on the local network.",
   "NSLocationUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up.",
-  "NSLocationWhenInUseUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up."
+  "NSLocationWhenInUseUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up.",
+  "NSMicrophoneUsageDescription": "Used to hear you and turn speech into text, only while you hold the microphone.",
+  "NSSpeechRecognitionUsageDescription": "Turns what you say into text, on this computer whenever possible."
 }

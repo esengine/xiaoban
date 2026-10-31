@@ -1,3 +1,5 @@
 "CFBundleDisplayName" = "小伴";
 "NSLocationUsageDescription" = "用来猜你所在的城市，只在你让小伴查的时候用一次。";
 "NSLocationWhenInUseUsageDescription" = "用来猜你所在的城市，只在你让小伴查的时候用一次。";
+"NSMicrophoneUsageDescription" = "用来听你说话，把语音变成文字。只在你按下麦克风时使用。";
+"NSSpeechRecognitionUsageDescription" = "把你说的话转成文字，优先在这台电脑上识别。";

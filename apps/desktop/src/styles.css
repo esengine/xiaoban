@@ -519,11 +519,196 @@ button {
 
 .composer {
   display: flex;
+  flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-xl) 20px;
   max-width: 760px;
   width: 100%;
   align-self: center;
+}
+
+.composer__row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.mic-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.composer__mic {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  display: grid;
+  place-items: center;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.composer__mic:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.composer__mic:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.voice-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent);
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.voice-panel__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.voice-panel__mic {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  color: var(--color-surface);
+  display: grid;
+  place-items: center;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.voice-panel__wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+}
+
+.voice-panel__wave span {
+  width: 3px;
+  height: 30px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  transition: transform 90ms linear;
+}
+
+.voice-panel__clock {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-panel__text {
+  margin: 0;
+  min-height: 24px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.voice-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.voice-panel__hint {
+  flex: 1;
+}
+
+.voice-panel__cancel,
+.voice-panel__done {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voice-panel__cancel {
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.voice-panel__cancel kbd {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.voice-panel__done {
+  padding: 0 14px;
+  border: 0;
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+
+.voice-panel__done:disabled {
+  opacity: 0.5;
+}
+
+.voice-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-attention-soft);
+  color: var(--color-attention-ink);
+  font-size: 13px;
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.voice-alert__text {
+  flex: 1;
+}
+
+.voice-alert__action {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 12px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-attention-ink) 20%, transparent);
+}
+
+.voice-alert__close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px;
+  display: grid;
+  place-items: center;
+}
+
+.voice-alert__close svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .composer__field {
@@ -597,6 +782,16 @@ button {
   }
 }
 
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-danger) 0%, transparent);
+  }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-danger) 35%, transparent);
+  }
+}
+
 @keyframes breathe {
   50% {
     transform: scale(0.95);
@@ -607,13 +802,18 @@ button {
   .bubble,
   .shimmer,
   .caret,
-  .button--stop {
+  .button--stop,
+  .voice-panel,
+  .voice-panel__mic,
+  .voice-alert {
     animation: none;
   }
 
   .rail__item,
   .thread-row,
   .suggestion,
+  .composer__mic,
+  .voice-panel__wave span,
   .button {
     transition: none;
   }

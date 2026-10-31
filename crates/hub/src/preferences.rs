@@ -52,7 +52,10 @@ async fn greeting(state: &SharedState) -> Result<Vec<String>, ProtocolError> {
             .format(keys::HOME_GREETING_NAMED, &[("name", &name)]),
         None => state.localizer.text(keys::HOME_GREETING),
     };
-    Ok(vec![hello, state.localizer.text(keys::HOME_GREETING_SUGGEST)])
+    Ok(vec![
+        hello,
+        state.localizer.text(keys::HOME_GREETING_SUGGEST),
+    ])
 }
 
 async fn ensure_primary_thread(state: &SharedState) -> Result<(), ProtocolError> {
