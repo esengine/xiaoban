@@ -50,6 +50,7 @@ export interface HubState {
   status: ConnectionStatus;
   hub: HubInfo | null;
   usedMemories: string[];
+  archivedBefore: Record<string, number>;
   galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
   modelLoaded: boolean;
@@ -70,6 +71,7 @@ export const initialHubState: HubState = {
   status: "idle",
   hub: null,
   usedMemories: [],
+  archivedBefore: {},
   galaxies: [],
   model: null,
   modelLoaded: false,
@@ -127,6 +129,11 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           ...state.confirms.filter((confirm) => confirm.id !== event.confirm.id),
           event.confirm,
         ],
+      };
+    case "thread_archived":
+      return {
+        ...state,
+        archivedBefore: { ...state.archivedBefore, [event.threadId]: event.before },
       };
     case "turn_backgrounded": {
       const draft = state.drafts[event.turnId];
