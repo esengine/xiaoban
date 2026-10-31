@@ -7,13 +7,17 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App.tsx";
 import { HubProvider } from "./app/hub.tsx";
+import { Island } from "./features/island/Island.tsx";
+import "./features/island/island.css";
 import "./styles.css";
 
 const translator = createTranslator(negotiateLocale(navigator.languages));
 const title = translator.t("app-name");
+const island = isTauri() && getCurrentWindow().label === "island";
 document.documentElement.lang = translator.locale;
+document.documentElement.dataset.window = island ? "island" : "main";
 document.title = title;
-if (isTauri()) void getCurrentWindow().setTitle(title);
+if (isTauri() && !island) void getCurrentWindow().setTitle(title);
 
 const tokens = document.createElement("style");
 tokens.textContent = cssVariables();
@@ -25,9 +29,7 @@ if (!root) throw new Error("missing #root");
 createRoot(root).render(
   <StrictMode>
     <I18nProvider translator={translator}>
-      <HubProvider>
-        <App />
-      </HubProvider>
+      <HubProvider window={island ? "island" : "main"}>{island ? <Island /> : <App />}</HubProvider>
     </I18nProvider>
   </StrictMode>,
 );

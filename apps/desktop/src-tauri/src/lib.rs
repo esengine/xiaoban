@@ -1,5 +1,6 @@
 mod calendar;
 mod hub;
+mod island;
 mod location;
 mod voice;
 
@@ -21,11 +22,17 @@ pub fn run() {
                 location::system(app.handle().clone()),
             ))?;
             app.manage(running);
+            island::keep_running_when_closed(app.handle());
+            island::create(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             hub::hub_endpoint,
             calendar::calendar_sync,
+            island::main_visible,
+            island::island_resize,
+            island::island_visible,
+            island::island_open_main,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,
@@ -35,6 +42,9 @@ pub fn run() {
         .expect("failed to build the desktop app");
 
     app.run(|handle, event| {
+        if let RunEvent::Reopen { .. } = event {
+            island::show_main(handle);
+        }
         if let RunEvent::Exit = event
             && let Some(running) = handle.try_state::<hub::RunningHub>()
         {

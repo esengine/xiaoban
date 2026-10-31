@@ -1,3 +1,5 @@
+import { isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
@@ -32,6 +34,15 @@ function Home() {
   useEffect(() => {
     if (activeId && status === "open") void store.loadMessages(activeId);
   }, [activeId, status, store]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    const stop = listen<string>("main://open-thread", ({ payload }) => {
+      setTrip(null);
+      setSelected(payload);
+    });
+    return () => void stop.then((unlisten) => unlisten());
+  }, []);
 
   const setQuote = (threadId: string, text: string | null) =>
     setQuotes(({ [threadId]: _old, ...rest }) => (text ? { ...rest, [threadId]: text } : rest));

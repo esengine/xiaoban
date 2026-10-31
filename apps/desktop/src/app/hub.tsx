@@ -6,11 +6,12 @@ import { createContext, type ReactNode, use, useEffect, useState } from "react";
 const DEVICE_KEY = "xiaoban.deviceId";
 const FALLBACK_URL = import.meta.env.VITE_HUB_URL ?? "ws://127.0.0.1:47100/ws";
 
-function deviceId(): string {
-  const existing = localStorage.getItem(DEVICE_KEY);
+function deviceId(window: string): string {
+  const key = window === "main" ? DEVICE_KEY : `${DEVICE_KEY}.${window}`;
+  const existing = localStorage.getItem(key);
   if (existing) return existing;
   const created = crypto.randomUUID();
-  localStorage.setItem(DEVICE_KEY, created);
+  localStorage.setItem(key, created);
   return created;
 }
 
@@ -20,7 +21,7 @@ async function endpoint(): Promise<string> {
 
 const HubContext = createContext<HubStore | null>(null);
 
-export function HubProvider({ children }: { children: ReactNode }) {
+export function HubProvider({ children, window }: { children: ReactNode; window: string }) {
   const { t } = useI18n();
   const [store, setStore] = useState<HubStore | null>(null);
   const deviceName = t("device-desktop");
@@ -32,7 +33,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       const client = new HubClient({
         url,
-        device: { deviceId: deviceId(), name: deviceName, platform: "desktop" },
+        device: { deviceId: deviceId(window), name: deviceName, platform: "desktop" },
         credential: { kind: "local" },
       });
       created = new HubStore(client);
@@ -43,7 +44,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
       active = false;
       created?.client.close();
     };
-  }, [deviceName]);
+  }, [deviceName, window]);
 
   if (!store) return null;
   return <HubContext value={store}>{children}</HubContext>;

@@ -39,6 +39,8 @@ export const dark = {
   textSoft: "#D5D9E3",
   textMuted: "#B9BECB",
   link: "#9AAAE6",
+  island: "#0B0C0F",
+  islandRing: "#FFFFFF14",
 } as const;
 
 export const radius = {
@@ -91,6 +93,7 @@ export function cssVariables(): string {
     ["--motion-fast", `${motion.fast}ms`],
     ["--motion-standard", `${motion.standard}ms`],
     ["--motion-slow", `${motion.slow}ms`],
+    ["--motion-island", `${motion.island}ms`],
     ["--ease-standard", motion.easeStandard],
     ["--ease-spring", motion.easeSpring],
   ];
