@@ -19,6 +19,14 @@ export const color = {
   success: "#1E6A44",
   successSoft: "#E3F1EA",
   danger: "#D93A3A",
+  dangerInk: "#B42318",
+  sun: "#C77A12",
+  rain: "#2F6FB5",
+  tripGreen: "#2F8A5B",
+  tripPurple: "#6A2C7A",
+  tripRust: "#B5541C",
+  tripTeal: "#1F7A8C",
+  scrim: "#15171C14",
 } as const;
 
 export const dark = {

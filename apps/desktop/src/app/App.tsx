@@ -1,20 +1,30 @@
 import { useHubState } from "@xiaoban/client/react";
+import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { Rail } from "../features/shell/Rail.tsx";
+import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
 import { Workspace } from "../features/workspace/Workspace.tsx";
 import { useHub } from "./hub.tsx";
 import { usePanels } from "./usePanels.ts";
 
+interface OpenTrip {
+  tripId: string;
+  version: number | null;
+  threadId: string;
+}
+
 function Home() {
+  const { t } = useI18n();
   const store = useHub();
   const { threads, status, preferences } = useHubState(store);
   const panels = usePanels();
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, string>>({});
+  const [trip, setTrip] = useState<OpenTrip | null>(null);
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
   const activeId = exists(selected) ? selected : (primaryId ?? threads[0]?.id ?? null);
@@ -31,6 +41,29 @@ function Home() {
     setQuote(thread.id, text);
     setSelected(thread.id);
   };
+
+  const openTrip = (tripId: string, version: number | null) =>
+    activeId && setTrip({ tripId, version, threadId: activeId });
+
+  if (trip) {
+    const thread = threads.find((candidate) => candidate.id === trip.threadId);
+    return (
+      <div className="shell">
+        <Rail />
+        <TripWorkbench
+          key={`${trip.tripId}@${trip.version ?? "latest"}`}
+          tripId={trip.tripId}
+          version={trip.version}
+          threadId={trip.threadId}
+          threadTitle={
+            trip.threadId === primaryId ? t("app-name") : (thread?.title ?? t("thread-untitled"))
+          }
+          onBack={() => setTrip(null)}
+          onLatest={() => setTrip({ ...trip, version: null })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="shell">
@@ -55,12 +88,13 @@ function Home() {
           quote={quotes[activeId] ?? null}
           onQuote={(text) => setQuote(activeId, text)}
           onNewThreadWith={(text) => void newThreadWith(text)}
+          onOpenTrip={openTrip}
         />
       ) : (
         <main className="chat" aria-busy="true" />
       )}
       <div className="panel panel--workspace" data-open={panels.workspace}>
-        <Workspace />
+        <Workspace threadId={activeId} onOpenTrip={openTrip} />
       </div>
     </div>
   );

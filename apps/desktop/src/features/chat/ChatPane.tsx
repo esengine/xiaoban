@@ -3,9 +3,11 @@ import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Message } from "@xiaoban/protocol";
-import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
+import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
+import { TripCard } from "../trip/TripCard.tsx";
 import { Composer } from "./Composer.tsx";
 import { DraftBubble } from "./DraftBubble.tsx";
 import { flyToMe } from "./flyToMe.ts";
@@ -31,6 +33,7 @@ interface Props {
   quote: string | null;
   onQuote: (text: string | null) => void;
   onNewThreadWith: (text: string) => void;
+  onOpenTrip: (tripId: string, version: number | null) => void;
 }
 
 interface Regenerating {
@@ -131,6 +134,7 @@ export function ChatPane(props: Props) {
   const [speaking, setSpeaking] = useState(false);
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
+  const [searchDialog, setSearchDialog] = useState(false);
   const fresh = primary && drafts.length === 0 && messages.every((m) => m.role === "assistant");
   const lastRow = rows.at(-1);
   const lastAnswer = lastRow?.kind === "answer" ? lastRow : null;
@@ -251,6 +255,27 @@ export function ChatPane(props: Props) {
     openMenu(event, entries);
   };
 
+  const attachmentFor = (message: Message): ReactNode => {
+    const attachment = message.attachment;
+    if (attachment?.kind === "trip") {
+      return (
+        <TripCard
+          tripId={attachment.tripId}
+          version={attachment.version}
+          actions={{
+            onOpen: props.onOpenTrip,
+            onRevise: (text) => onQuote(text),
+            onConnectSearch: () => setSearchDialog(true),
+          }}
+        />
+      );
+    }
+    if (attachment?.kind === "service_needed") {
+      return <SearchCard threadId={threadId} answered={messages.at(-1)?.id !== message.id} />;
+    }
+    return null;
+  };
+
   const renderRow = (row: Row) => {
     if (row.kind === "user") {
       const message = row.message;
@@ -278,6 +303,7 @@ export function ChatPane(props: Props) {
         message={message}
         settled={settled}
         footer={footer}
+        attachment={attachmentFor(message)}
         versions={
           count > 1
             ? {
@@ -334,6 +360,7 @@ export function ChatPane(props: Props) {
         onSend={(text) => send(text, quote).then(() => onQuote(null))}
         onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
       />
+      {searchDialog && <SearchDialog threadId={threadId} onClose={() => setSearchDialog(false)} />}
     </main>
   );
 }
@@ -363,12 +390,14 @@ function AnswerItem({
   message,
   settled,
   footer,
+  attachment,
   versions,
   onContextMenu,
 }: {
   message: Message;
   settled: Settled | undefined;
   footer: boolean;
+  attachment: ReactNode;
   versions: { index: number; count: number; onPick: (index: number) => void } | null;
   onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
 }) {
@@ -383,6 +412,7 @@ function AnswerItem({
       >
         <RichText text={message.text} />
         {settled && <span className="caret caret--done" aria-hidden="true" />}
+        {attachment}
         {footer && <ReplyFooter message={message} settled={settled} versions={versions} />}
       </li>
       {settled && <MemoryChips memories={settled.memories} />}

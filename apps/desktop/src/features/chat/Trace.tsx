@@ -7,11 +7,19 @@ import { useState } from "react";
 const TOOL_NAMES: Record<string, PlainMessageKey> = {
   remember: "tool-name-remember",
   weather: "tool-name-weather",
+  web_search: "tool-name-search",
+  read_page: "tool-name-page",
+  save_trip: "tool-name-trip",
+  locate: "tool-name-locate",
 };
 
 const TOOL_PROGRESS: Record<string, PlainMessageKey> = {
   remember: "tool-progress-remember",
   weather: "tool-progress-weather",
+  web_search: "tool-progress-search",
+  read_page: "tool-progress-page",
+  save_trip: "tool-progress-trip",
+  locate: "tool-progress-locate",
 };
 
 export function useToolName() {

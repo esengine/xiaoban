@@ -158,7 +158,7 @@ fn runtime_with(
             now: None,
             days: vec![Day {
                 date: "2026-11-01".into(),
-                sky: Sky::Rain,
+                sky: Sky::LightRain,
                 condition: "light rain",
                 high: 29.3,
                 low: 16.2,
@@ -1298,7 +1298,7 @@ async fn deepseek_users_search_with_their_model_key_and_routes_replace_estimates
     let day = &trip.days[0];
     assert_eq!(
         day.weather.as_ref().map(|weather| weather.sky),
-        Some(Sky::Rain)
+        Some(Sky::LightRain)
     );
     assert!(day.stops.iter().all(|stop| stop.location.is_some()));
     assert_eq!(
@@ -1418,5 +1418,23 @@ async fn declining_search_saves_the_trip_unverified() {
         (detail.tickets_source.as_ref(), detail.checked_at),
         (None, None)
     );
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn locate_tool_reports_the_current_city() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call("locate", &serde_json::json!({}))],
+        vec![ModelChunk::Text("你在北京".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "附近有什么好吃的", Vec::new()).await;
+    let answered = &provider.requests()[1];
+    let tool = answered.messages.last().unwrap();
+    assert!(tool.content.contains("北京市") && tool.content.contains("朝阳区"));
     hub.shutdown().await;
 }

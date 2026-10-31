@@ -245,11 +245,14 @@ impl OpenMeteo {
 fn sky(code: u8) -> Sky {
     match code {
         0 | 1 => Sky::Clear,
+        2 => Sky::Cloudy,
         45 | 48 => Sky::Fog,
-        51..=67 | 80..=82 => Sky::Rain,
+        51..=57 | 61 | 80 => Sky::LightRain,
+        63 | 66 | 81 => Sky::Rain,
+        65 | 67 | 82 => Sky::HeavyRain,
         71..=77 | 85 | 86 => Sky::Snow,
         95..=99 => Sky::Storm,
-        _ => Sky::Cloudy,
+        _ => Sky::Overcast,
     }
 }
 

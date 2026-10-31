@@ -7,7 +7,9 @@ import type {
   Message,
   ModelInfo,
   Preferences,
+  ServiceStatus,
   Thread,
+  Trip,
 } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
 
@@ -40,6 +42,9 @@ export interface HubState {
   messages: Readonly<Record<string, Message[]>>;
   drafts: Readonly<Record<string, Draft>>;
   settled: Readonly<Record<string, Settled>>;
+  trips: Readonly<Record<string, Trip>>;
+  latestTrip: Readonly<Record<string, number>>;
+  services: ServiceStatus[];
 }
 
 export const initialHubState: HubState = {
@@ -54,7 +59,12 @@ export const initialHubState: HubState = {
   messages: {},
   drafts: {},
   settled: {},
+  trips: {},
+  latestTrip: {},
+  services: [],
 };
+
+export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
 
 const byRecent = (a: Thread, b: Thread) => b.updatedAt - a.updatedAt;
 
@@ -72,6 +82,13 @@ function appendMessage(state: HubState, message: Message): HubState["messages"] 
   const existing = state.messages[message.threadId] ?? [];
   if (existing.some((candidate) => candidate.id === message.id)) return state.messages;
   return { ...state.messages, [message.threadId]: [...existing, message] };
+}
+
+function withTripVersion(latest: HubState["latestTrip"], message: Message): HubState["latestTrip"] {
+  const attachment = message.attachment;
+  if (attachment?.kind !== "trip") return latest;
+  if ((latest[attachment.tripId] ?? 0) >= attachment.version) return latest;
+  return { ...latest, [attachment.tripId]: attachment.version };
 }
 
 function withoutDraft(drafts: HubState["drafts"], turnId: string): HubState["drafts"] {
@@ -151,6 +168,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         ...state,
         messages: appendMessage(state, event.message),
         drafts: withoutDraft(state.drafts, event.turnId),
+        latestTrip: withTripVersion(state.latestTrip, event.message),
         settled: draft
           ? {
               ...state.settled,

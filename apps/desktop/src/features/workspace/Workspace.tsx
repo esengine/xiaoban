@@ -3,16 +3,64 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { PairingDialog } from "../pairing/PairingDialog.tsx";
+import { range, stopCount } from "../trip/format.ts";
+import { MapIcon } from "../trip/icons.tsx";
+import { useTrip } from "../trip/TripCard.tsx";
 
-export function Workspace() {
+function TripOutput({ tripId, onOpen }: { tripId: string; onOpen: () => void }) {
+  const { t } = useI18n();
+  const trip = useTrip(tripId, null);
+  if (!trip) return null;
+  return (
+    <li>
+      <button type="button" className="workspace__card workspace__output" onClick={onOpen}>
+        <span className="workspace__output-icon">
+          <MapIcon />
+        </span>
+        <span className="workspace__card-body">
+          {trip.title}
+          <span className="workspace__card-note">
+            {t("workspace-trip", { range: range(t, trip), count: stopCount(trip) })}
+          </span>
+        </span>
+        <span className="workspace__output-open">{t("workspace-open")}</span>
+      </button>
+    </li>
+  );
+}
+
+export function Workspace({
+  threadId,
+  onOpenTrip,
+}: {
+  threadId: string | null;
+  onOpenTrip: (tripId: string, version: number | null) => void;
+}) {
   const { t } = useI18n();
   const store = useHub();
-  const { memories, devices } = useHubState(store);
+  const { memories, devices, messages } = useHubState(store);
+  const tripIds = [
+    ...new Set(
+      (threadId ? (messages[threadId] ?? []) : []).flatMap((message) =>
+        message.attachment?.kind === "trip" ? [message.attachment.tripId] : [],
+      ),
+    ),
+  ].reverse();
   const [pairing, setPairing] = useState(false);
   const phones = devices.filter((device) => device.platform !== "desktop");
 
   return (
     <aside className="workspace" aria-label={t("workspace-label")}>
+      {tripIds.length > 0 && (
+        <section className="workspace__section">
+          <h2 className="workspace__title">{t("workspace-outputs")}</h2>
+          <ul className="workspace__outputs">
+            {tripIds.map((tripId) => (
+              <TripOutput key={tripId} tripId={tripId} onOpen={() => onOpenTrip(tripId, null)} />
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="workspace__section">
         <h2 className="workspace__title">{t("workspace-memories")}</h2>
         {memories.length > 0 ? (

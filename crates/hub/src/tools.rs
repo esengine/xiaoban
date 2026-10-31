@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use xiaoban_agent::{ToolCall, ToolRunner, ToolSpec};
 use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
-use xiaoban_protocol::{Attachment, Event, ServiceId};
+use xiaoban_protocol::{Attachment, Event, Location, ServiceId};
 
 use crate::services::ServiceError;
 use crate::state::SharedState;
@@ -15,6 +15,7 @@ use crate::weather::{MAX_DAYS, WeatherError};
 pub const REMEMBER: &str = "remember";
 pub const WEATHER: &str = "weather";
 pub const READ_PAGE: &str = "read_page";
+pub const LOCATE: &str = "locate";
 pub const WEB_SEARCH: &str = "web_search";
 pub const SAVE_TRIP: &str = "save_trip";
 const DEFAULT_DAYS: u8 = 7;
@@ -134,6 +135,11 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
                 &json!({ "query": text(l, keys::TOOL_WEB_SEARCH_QUERY) }),
                 &["query"],
             ),
+        ),
+        spec(
+            LOCATE,
+            l.text(keys::TOOL_LOCATE_DESCRIPTION),
+            object(&json!({}), &[]),
         ),
         spec(
             READ_PAGE,
@@ -313,6 +319,20 @@ impl<'a> HubTools<'a> {
         }
     }
 
+    async fn locate(&self) -> String {
+        match self.state.locator.locate().await {
+            Location::Found { city, district } => {
+                json!({ "city": city, "district": district }).to_string()
+            }
+            Location::Denied => {
+                error("location access is turned off; use the home city you remember and say so")
+            }
+            Location::Unavailable => error(
+                "location is unavailable right now; use the home city you remember and say so",
+            ),
+        }
+    }
+
     async fn read_page(&self, arguments: &str) -> String {
         let Ok(args) = serde_json::from_str::<PageArgs>(arguments) else {
             return error("arguments must be {url}");
@@ -358,6 +378,7 @@ impl ToolRunner for HubTools<'_> {
                 REMEMBER => self.remember(arguments).await,
                 WEATHER => self.weather(arguments).await,
                 READ_PAGE => self.read_page(arguments).await,
+                LOCATE => self.locate().await,
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 other => error(&format!("unknown tool {other}")),

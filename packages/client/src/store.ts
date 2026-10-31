@@ -12,11 +12,13 @@ import type {
   ProviderId,
   ProviderOption,
   Response,
+  ServiceStatus,
   Thread,
+  Trip,
   Usage,
 } from "@xiaoban/protocol";
 import type { HubClient } from "./client.ts";
-import { applyEvent, type HubState, initialHubState } from "./state.ts";
+import { applyEvent, type HubState, initialHubState, tripKey } from "./state.ts";
 
 export class HubStore {
   readonly client: HubClient;
@@ -199,6 +201,43 @@ export class HubStore {
     return { usage, turns };
   }
 
+  async loadTrip(tripId: string, version: number | null = null): Promise<Trip> {
+    const cached = version === null ? null : this.#state.trips[tripKey(tripId, version)];
+    if (cached) return cached;
+    const { trip, latest } = await this.client.request(
+      { type: "get_trip", tripId, version },
+      "trip",
+    );
+    this.#update((state) => ({
+      ...state,
+      trips: { ...state.trips, [tripKey(trip.id, trip.version)]: trip },
+      latestTrip: {
+        ...state.latestTrip,
+        [trip.id]: Math.max(latest, state.latestTrip[trip.id] ?? 0),
+      },
+    }));
+    return trip;
+  }
+
+  async refreshServices(): Promise<ServiceStatus[]> {
+    const { services } = await this.client.request({ type: "services" }, "services");
+    this.#update((state) => ({ ...state, services }));
+    return services;
+  }
+
+  async configureSearch(apiKey: string, resumeThreadId: string | null): Promise<boolean> {
+    const { connected, services } = await this.client.request(
+      { type: "configure_service", service: "web_search", apiKey, resumeThreadId },
+      "service_configured",
+    );
+    this.#update((state) => ({ ...state, services }));
+    return connected;
+  }
+
+  async declineSearch(threadId: string): Promise<void> {
+    await this.client.request({ type: "decline_service", service: "web_search", threadId }, "ack");
+  }
+
   async cancel(turnId: string): Promise<void> {
     await this.client.request({ type: "cancel_turn", turnId }, "ack");
   }
@@ -210,6 +249,7 @@ export class HubStore {
       this.refreshPreferences(),
       this.refreshMemories(),
       this.refreshDevices(),
+      this.refreshServices(),
     ]).catch(() => undefined);
   }
 

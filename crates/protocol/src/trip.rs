@@ -37,10 +37,13 @@ impl Eq for Coord {}
 pub enum Sky {
     Clear,
     Cloudy,
+    Overcast,
+    Fog,
+    LightRain,
     Rain,
+    HeavyRain,
     Snow,
     Storm,
-    Fog,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
