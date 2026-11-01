@@ -247,6 +247,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         request @ (Request::Plan { .. } | Request::ListPlans | Request::PlanAction { .. }) => {
             crate::plan::handle(state, request).await
         }
+        request @ (Request::FindCapabilities { .. }
+        | Request::ListCapabilities
+        | Request::InstallCapability { .. }
+        | Request::SetCapabilityEnabled { .. }
+        | Request::RemoveCapability { .. }) => crate::capability::handle(state, request).await,
         Request::ContextUsage { thread_id } => Ok(Response::ContextUsage {
             usage: turns::context_usage(state, &thread_id).await,
         }),

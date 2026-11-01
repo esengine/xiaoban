@@ -56,6 +56,7 @@ pub struct HubState {
     pub doc_tools: Vec<ToolSpec>,
     pub sheet_tools: Vec<ToolSpec>,
     pub deck_tools: Vec<ToolSpec>,
+    pub capabilities: crate::capability::Capabilities,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
@@ -107,11 +108,13 @@ impl HubState {
             let system = format!("{}\n\n{}", self.prompts.chat, self.localizer.text(prompt));
             let mut tools = self.tools.clone();
             tools.extend(extra.iter().cloned());
+            self.capabilities.extend(&mut tools);
             return StablePrefix::compose(&system, memory, tools);
         }
         let Some(workspace) = workspace else {
             let mut tools = self.tools.clone();
             tools.extend(self.life_tools.iter().cloned());
+            self.capabilities.extend(&mut tools);
             return StablePrefix::compose(&self.prompts.chat, memory, tools);
         };
         let system = format!(
@@ -130,6 +133,7 @@ impl HubState {
         if crate::vcs_tools::gh_binary().is_some() {
             tools.extend(self.gh_tools.iter().cloned());
         }
+        self.capabilities.extend(&mut tools);
         StablePrefix::compose(&system, memory, tools)
     }
 

@@ -13,11 +13,14 @@ pub struct SecretError(String);
 pub trait SecretStore: Debug + Send + Sync + 'static {
     fn load(&self, provider: ProviderId) -> Result<Option<String>, SecretError>;
     fn save(&self, provider: ProviderId, secret: &str) -> Result<(), SecretError>;
+    fn load_named(&self, name: &str) -> Result<Option<String>, SecretError>;
+    fn save_named(&self, name: &str, secret: Option<&str>) -> Result<(), SecretError>;
 }
 
 type Secrets = HashMap<ProviderId, String>;
 
 const BUNDLE: &str = "providers";
+const NAMED: &str = "capabilities";
 
 fn failed(err: impl std::fmt::Display) -> SecretError {
     SecretError(err.to_string())
@@ -26,6 +29,7 @@ fn failed(err: impl std::fmt::Display) -> SecretError {
 pub struct KeyringSecrets {
     service: String,
     cache: Mutex<Option<Secrets>>,
+    named: Mutex<Option<HashMap<String, String>>>,
 }
 
 impl Debug for KeyringSecrets {
@@ -41,6 +45,7 @@ impl KeyringSecrets {
         Self {
             service: service.into(),
             cache: Mutex::new(None),
+            named: Mutex::new(None),
         }
     }
 
@@ -92,6 +97,21 @@ impl KeyringSecrets {
         }
         f(cache.as_mut().expect("cache was just filled"))
     }
+
+    fn with_named<T>(
+        &self,
+        f: impl FnOnce(&mut HashMap<String, String>) -> Result<T, SecretError>,
+    ) -> Result<T, SecretError> {
+        let mut named = self.named.lock().unwrap();
+        if named.is_none() {
+            let loaded = match Self::read(&self.entry(NAMED)?)? {
+                Some(json) => serde_json::from_str(&json).map_err(failed)?,
+                None => HashMap::new(),
+            };
+            *named = Some(loaded);
+        }
+        f(named.as_mut().expect("named secrets were just loaded"))
+    }
 }
 
 impl SecretStore for KeyringSecrets {
@@ -108,11 +128,30 @@ impl SecretStore for KeyringSecrets {
             Ok(())
         })
     }
+
+    fn load_named(&self, name: &str) -> Result<Option<String>, SecretError> {
+        self.with_named(|secrets| Ok(secrets.get(name).cloned()))
+    }
+
+    fn save_named(&self, name: &str, secret: Option<&str>) -> Result<(), SecretError> {
+        self.with_named(|secrets| {
+            let mut next = secrets.clone();
+            match secret {
+                Some(secret) => next.insert(name.to_owned(), secret.to_owned()),
+                None => next.remove(name),
+            };
+            let json = serde_json::to_string(&next).map_err(failed)?;
+            self.entry(NAMED)?.set_password(&json).map_err(failed)?;
+            *secrets = next;
+            Ok(())
+        })
+    }
 }
 
 #[derive(Debug, Default)]
 pub struct MemorySecrets {
     secrets: Mutex<HashMap<ProviderId, String>>,
+    named: Mutex<HashMap<String, String>>,
 }
 
 impl SecretStore for MemorySecrets {
@@ -125,6 +164,19 @@ impl SecretStore for MemorySecrets {
             .lock()
             .unwrap()
             .insert(provider, secret.to_owned());
+        Ok(())
+    }
+
+    fn load_named(&self, name: &str) -> Result<Option<String>, SecretError> {
+        Ok(self.named.lock().unwrap().get(name).cloned())
+    }
+
+    fn save_named(&self, name: &str, secret: Option<&str>) -> Result<(), SecretError> {
+        let mut named = self.named.lock().unwrap();
+        match secret {
+            Some(secret) => named.insert(name.to_owned(), secret.to_owned()),
+            None => named.remove(name),
+        };
         Ok(())
     }
 }

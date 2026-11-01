@@ -101,6 +101,22 @@ pub enum Event {
         thread_id: String,
         plan: Option<crate::Plan>,
     },
+    CapabilitiesChanged {
+        capabilities: Vec<crate::Capability>,
+    },
+    CapabilitiesFound {
+        thread_id: String,
+        turn_id: String,
+        capabilities: Vec<crate::Capability>,
+    },
+    CapabilityUsed {
+        thread_id: String,
+        turn_id: String,
+        id: String,
+        title: String,
+        tool: String,
+        uses: u32,
+    },
     TurnBackgrounded {
         turn_id: String,
     },
@@ -159,7 +175,9 @@ impl Event {
             | Self::ThreadDeleted { thread_id }
             | Self::ThreadArchived { thread_id, .. }
             | Self::ThreadCompacting { thread_id, .. }
-            | Self::PlanUpdated { thread_id, .. } => Some(thread_id),
+            | Self::PlanUpdated { thread_id, .. }
+            | Self::CapabilityUsed { thread_id, .. }
+            | Self::CapabilitiesFound { thread_id, .. } => Some(thread_id),
             Self::Thinking { .. }
             | Self::TextDelta { .. }
             | Self::ReasoningDelta { .. }
@@ -185,7 +203,8 @@ impl Event {
             | Self::DocUpdated { .. }
             | Self::SheetUpdated { .. }
             | Self::DeckUpdated { .. }
-            | Self::WeatherAlert { .. } => None,
+            | Self::WeatherAlert { .. }
+            | Self::CapabilitiesChanged { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
         }
