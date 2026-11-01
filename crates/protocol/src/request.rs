@@ -479,6 +479,10 @@ pub enum Request {
         format: crate::DocFormat,
         path: String,
     },
+    NotifySettings,
+    SetNotifySettings {
+        settings: crate::NotifySettings,
+    },
     SetDailyLayout {
         layout: crate::DailyLayout,
     },
@@ -720,6 +724,9 @@ pub enum Response {
     },
     Weather {
         weather: crate::WeatherView,
+    },
+    NotifySettings {
+        settings: crate::NotifySettings,
     },
     DailyLayout {
         layout: crate::DailyLayout,

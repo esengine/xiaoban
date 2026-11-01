@@ -8,13 +8,14 @@ use xiaoban_hub::{
     Apps, DeepseekWeb, Hub, HubConfig, HubHandle, HubRuntime, Locator, MemorySecrets, NoApps, NoLocator,
     NoOperator, NoPresence, NoRouter, OpenMeteo, Operator, Prompts, SecretStore,
 };
-use xiaoban_i18n::Locale;
+use xiaoban_i18n::{Locale, Localizer};
 use xiaoban_protocol::ProviderId;
 
 static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static RUNNING: Mutex<Option<HubHandle>> = Mutex::new(None);
 static BRIDGE: OnceLock<operator::Bridge> = OnceLock::new();
 
+mod notices;
 mod operator;
 
 fn hands() -> (Arc<dyn Operator>, Arc<dyn Apps>, Arc<dyn Locator>) {
@@ -56,14 +57,9 @@ fn secrets_from(json: &str) -> Arc<MemorySecrets> {
     secrets
 }
 
-pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) -> anyhow::Result<u16> {
-    let mut running = RUNNING.lock().unwrap();
-    if let Some(handle) = running.as_ref() {
-        return Ok(handle.addr.port());
-    }
-    let locale = locale_of(locale);
+fn runtime_config(locale: Locale, secrets_json: &str) -> HubRuntime {
     let (operator, apps, locator) = hands();
-    let runtime_config = HubRuntime {
+    HubRuntime {
         locale,
         prompts: Prompts::for_phone(locale),
         connector: Arc::new(HttpConnector),
@@ -78,17 +74,36 @@ pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) ->
         fallback: None,
         auto_titles: true,
         auto_thinking: true,
-    };
+    }
+}
+
+pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) -> anyhow::Result<u16> {
+    let mut running = RUNNING.lock().unwrap();
+    if let Some(handle) = running.as_ref() {
+        return Ok(handle.addr.port());
+    }
+    let locale = locale_of(locale);
     let config = HubConfig {
         data_dir: Some(data_dir),
         bind: SocketAddr::from(([127, 0, 0, 1], 0)),
         name: name.to_owned(),
         advertise: false,
     };
-    let handle = runtime().block_on(Hub::start(config, runtime_config))?;
+    let handle = runtime().block_on(Hub::start(config, runtime_config(locale, secrets_json)))?;
+    if let Some(bridge) = BRIDGE.get() {
+        runtime().spawn(notices::forward(handle.link(), bridge.clone(), Localizer::new(locale)));
+    }
     let port = handle.addr.port();
     *running = Some(handle);
     Ok(port)
+}
+
+pub fn deliver(answer: &str) -> String {
+    let link = RUNNING.lock().unwrap().as_ref().map(HubHandle::link);
+    let Some(link) = link else {
+        return serde_json::json!({ "error": "the phone hub is not running" }).to_string();
+    };
+    runtime().block_on(notices::deliver(&link, answer)).to_string()
 }
 
 pub fn stop() {
@@ -104,8 +119,8 @@ mod android {
     use std::sync::Arc;
 
     use jni::JNIEnv;
-    use jni::objects::{JClass, JString, JValue};
-    use jni::sys::jint;
+    use jni::objects::{JClass, JObject, JString, JValue};
+    use jni::sys::{jint, jstring};
 
     use crate::operator::Bridge;
 
@@ -194,6 +209,23 @@ mod android {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "system" fn Java_app_xiaoban_hub_XiaobanHubNative_deliver<'local>(
+        mut env: JNIEnv<'local>,
+        _class: JClass<'local>,
+        answer: JString<'local>,
+    ) -> jstring {
+        let answer = text(&mut env, &answer);
+        let reply = super::deliver(&answer);
+        match env.new_string(reply) {
+            Ok(value) => JObject::from(value).into_raw(),
+            Err(error) => {
+                log(&format!("could not hand back the answer: {error}"));
+                std::ptr::null_mut()
+            }
+        }
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "system" fn Java_app_xiaoban_hub_XiaobanHubNative_stop<'local>(
         _env: JNIEnv<'local>,
         _class: JClass<'local>,
@@ -204,6 +236,70 @@ mod android {
 
 #[cfg(test)]
 mod tests {
+    use std::net::SocketAddr;
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+
+    use serde_json::Value;
+    use xiaoban_hub::{Hub, HubConfig};
+    use xiaoban_i18n::{Locale, Localizer};
+    use xiaoban_protocol::{NotifySettings, Request};
+
+    use crate::notices;
+    use crate::operator::Bridge;
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn posts_reminders_and_hands_answers_to_the_hub() {
+        let config = HubConfig {
+            data_dir: None,
+            bind: SocketAddr::from(([127, 0, 0, 1], 0)),
+            name: "phone".to_owned(),
+            advertise: false,
+        };
+        let handle = Hub::start(config, super::runtime_config(Locale::ZhCn, "{}"))
+            .await
+            .unwrap();
+        let link = handle.link();
+        link.request(Request::SetNotifySettings {
+            settings: NotifySettings { quiet: false, ..NotifySettings::default() },
+        })
+        .await
+        .unwrap();
+        let seen: Arc<Mutex<Vec<Value>>> = Arc::default();
+        let sink = Arc::clone(&seen);
+        let bridge: Bridge = Arc::new(move |request: String| {
+            sink.lock().unwrap().push(serde_json::from_str(&request).unwrap());
+            Ok("{}".to_owned())
+        });
+        tokio::spawn(notices::forward(link.clone(), bridge, Localizer::new(Locale::ZhCn)));
+        link.request(Request::StartTimer {
+            step: None,
+            label: "Rice".to_owned(),
+            after: String::new(),
+            seconds: 1,
+        })
+        .await
+        .unwrap();
+        let mut posted = None;
+        for _ in 0..60 {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            posted = seen.lock().unwrap().iter().find(|op| op["op"] == "notify").cloned();
+            if posted.is_some() {
+                break;
+            }
+        }
+        let posted = posted.expect("the timer should post a notification");
+        assert_eq!(posted["notice"]["category"], "remind");
+        assert_eq!(posted["route"], "local");
+        assert!(posted["notice"]["title"].as_str().unwrap().contains("Rice"));
+        assert_ne!(posted["texts"]["channelUrgent"].as_str().unwrap(), "");
+        let reply = notices::deliver(&link, r#"{"kind":"confirm","confirmId":"gone","choice":"yes"}"#).await;
+        assert!(reply.get("error").is_some());
+        let reply = notices::deliver(&link, "nonsense").await;
+        assert!(reply.get("error").is_some());
+        handle.shutdown().await;
+    }
+
     #[test]
     fn starts_and_stops_a_local_hub() {
         let dir = std::env::temp_dir().join(format!("xiaoban-mobile-{}", std::process::id()));

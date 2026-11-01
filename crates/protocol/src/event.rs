@@ -161,6 +161,14 @@ pub enum Event {
     WeatherAlert {
         title: String,
         body: String,
+        #[serde(default)]
+        morning: bool,
+    },
+    Notify {
+        notice: crate::Notice,
+    },
+    NoticeWithdrawn {
+        id: String,
     },
 }
 
@@ -204,8 +212,10 @@ impl Event {
             | Self::SheetUpdated { .. }
             | Self::DeckUpdated { .. }
             | Self::WeatherAlert { .. }
+            | Self::NoticeWithdrawn { .. }
             | Self::CapabilitiesChanged { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
+            Self::Notify { notice } => notice.thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
         }
     }

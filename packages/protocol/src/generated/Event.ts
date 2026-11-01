@@ -14,6 +14,7 @@ import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
+import type { Notice } from "./Notice.ts";
 import type { Plan } from "./Plan.ts";
 import type { PrepTask } from "./PrepTask.ts";
 import type { StepResult } from "./StepResult.ts";
@@ -82,4 +83,6 @@ export type Event =
   | { type: "doc_updated"; summary: DocSummary }
   | { type: "sheet_updated"; summary: WorkbookSummary }
   | { type: "deck_updated"; summary: DeckSummary }
-  | { type: "weather_alert"; title: string; body: string };
+  | { type: "weather_alert"; title: string; body: string; morning: boolean }
+  | { type: "notify"; notice: Notice }
+  | { type: "notice_withdrawn"; id: string };

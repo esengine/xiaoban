@@ -10,6 +10,7 @@ import type { DocBlock } from "./DocBlock.ts";
 import type { DocFormat } from "./DocFormat.ts";
 import type { Expense } from "./Expense.ts";
 import type { ModelApi } from "./ModelApi.ts";
+import type { NotifySettings } from "./NotifySettings.ts";
 import type { PlanAction } from "./PlanAction.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
@@ -191,6 +192,8 @@ export type Request =
   | { type: "search_images"; query: string }
   | { type: "save_export"; path: string; data: string }
   | { type: "export_doc"; id: string; format: DocFormat; path: string }
+  | { type: "notify_settings" }
+  | { type: "set_notify_settings"; settings: NotifySettings }
   | { type: "set_daily_layout"; layout: DailyLayout }
   | { type: "context_usage"; threadId: string }
   | { type: "plan"; threadId: string }

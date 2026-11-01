@@ -134,6 +134,26 @@ export function MeTab({ store }: { store: HubStore }) {
         </Svg>
       </Pressable>
 
+      <Pressable
+        style={[styles.card, styles.modelRow]}
+        onPress={() => router.push("/notify-settings")}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.cardTitle, styles.flex]}>{t("notify-settings-title")}</Text>
+        <Svg
+          width={14}
+          height={14}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color.faint}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M9 6l6 6-6 6" />
+        </Svg>
+      </Pressable>
+
       <View style={styles.card}>
         <View style={styles.cardHead}>
           <Text style={styles.cardTitle}>{t("me-memories")}</Text>

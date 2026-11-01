@@ -257,6 +257,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::RestoreDocVersion { .. }
         | Request::DocVersionBlocks { .. }
         | Request::ExportDoc { .. }) => crate::doc::handle(state, local, request).await,
+        request @ (Request::NotifySettings | Request::SetNotifySettings { .. }) => {
+            crate::notify::handle(state, request).await
+        }
         request @ (Request::DailyLayout | Request::SetDailyLayout { .. }) => {
             crate::daily::handle(state, request).await
         }
