@@ -13,6 +13,7 @@ jobs:
     name: Android
     runs-on: ubuntu-latest
     steps:
+      - run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -92,6 +93,7 @@ jobs:
             targets: ""
     runs-on: ${{ matrix.os }}
     steps:
+      - run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
