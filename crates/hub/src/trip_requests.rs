@@ -1,6 +1,7 @@
 use xiaoban_i18n::keys;
 use xiaoban_protocol::{
-    ErrorCode, ProtocolError, ProviderId, Request, Response, ServiceId, ServiceStatus,
+    ErrorCode, PriceSource, ProtocolError, ProviderId, Request, Response, ServiceId, ServiceStatus,
+    TripCosts,
 };
 
 use crate::services::ServiceError;
@@ -30,6 +31,58 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         Request::EventCalendar { event } => Ok(Response::TripCalendar {
             calendar: crate::calendar::single(&event),
         }),
+        Request::ChooseTripStay { trip_id, stay } => {
+            edit_costs(state, trip_id, |costs| {
+                let index = usize::try_from(stay).ok().filter(|index| *index < costs.stays.len())?;
+                for (at, option) in costs.stays.iter_mut().enumerate() {
+                    option.chosen = at == index;
+                }
+                Some(())
+            })
+            .await
+        }
+        Request::FillTripPrice {
+            trip_id,
+            line,
+            stay,
+            cents,
+        } => {
+            if cents < 0 {
+                return Err(ProtocolError::new(ErrorCode::BadRequest, "the amount is negative"));
+            }
+            edit_costs(state, trip_id, |costs| {
+                let price = match (line, stay) {
+                    (Some(line), _) => &mut costs.lines.get_mut(usize::try_from(line).ok()?)?.price,
+                    (None, Some(stay)) => &mut costs.stays.get_mut(usize::try_from(stay).ok()?)?.price,
+                    (None, None) => return None,
+                };
+                price.cents = Some(cents);
+                price.unit_cents = None;
+                price.quantity = None;
+                price.source = PriceSource::User;
+                price.checked_at = Some(xiaoban_store::now_ms());
+                Some(())
+            })
+            .await
+        }
+        Request::AddTripExpense {
+            trip_id,
+            name,
+            cents,
+        } => {
+            let (trip, _) = load_trip(state, trip_id, None).await?;
+            crate::trip_spend::log(state, &trip, &name, cents, None)
+                .await
+                .ok_or_else(|| {
+                    ProtocolError::new(ErrorCode::BadRequest, "the amount or the name is empty")
+                })?;
+            Ok(Response::Ack)
+        }
+        Request::TripSpending { trip_id } => {
+            let (trip, _) = load_trip(state, trip_id, None).await?;
+            let (category, entries) = crate::trip_spend::spent(state, &trip).await;
+            Ok(Response::TripSpending { category, entries })
+        }
         _ => Err(ProtocolError::new(
             ErrorCode::BadRequest,
             "not a trip request",
@@ -122,6 +175,18 @@ async fn load_trip(
         .trip(trip_id, version)
         .await?
         .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such trip"))
+}
+
+async fn edit_costs(
+    state: &SharedState,
+    trip_id: String,
+    change: impl FnOnce(&mut TripCosts) -> Option<()>,
+) -> Handled {
+    let (mut trip, latest) = load_trip(state, trip_id, None).await?;
+    let costs = trip.costs.get_or_insert_with(TripCosts::default);
+    change(costs).ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "no such price in this trip"))?;
+    state.store.replace_trip(trip.clone()).await?;
+    Ok(Response::Trip { trip, latest })
 }
 
 async fn trip(state: &SharedState, trip_id: String, version: Option<u32>) -> Handled {

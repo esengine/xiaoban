@@ -210,6 +210,7 @@ fn choice(choice: ConfirmChoice, label: String, primary: bool) -> NoticeChoice {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn confirm_text(l: &Localizer, kind: &ConfirmKind) -> (String, String, Vec<NoticeChoice>) {
     use ConfirmChoice::{Always, Edit, No, Once, Yes};
     match kind {
@@ -260,6 +261,33 @@ pub fn confirm_text(l: &Localizer, kind: &ConfirmKind) -> (String, String, Vec<N
                 choice(No, l.text(keys::CONFIRM_ACTION_NO), false),
                 choice(Edit, l.text(keys::CONFIRM_ACTION_EDIT), false),
                 choice(Yes, l.text(keys::CONFIRM_ACTION_YES), true),
+            ],
+        ),
+        ConfirmKind::PriceCheck {
+            app,
+            item,
+            detail,
+            phone,
+        } => (
+            l.format(
+                if *phone {
+                    keys::CONFIRM_PRICE_TITLE
+                } else {
+                    keys::CONFIRM_PRICE_TITLE_COMPUTER
+                },
+                &[("app", app), ("item", item)],
+            ),
+            format!(
+                "{detail}\n{}",
+                l.text(if *phone {
+                    keys::CONFIRM_PRICE_HINT
+                } else {
+                    keys::CONFIRM_PRICE_HINT_COMPUTER
+                })
+            ),
+            vec![
+                choice(Yes, l.text(keys::CONFIRM_PRICE_YES), true),
+                choice(No, l.text(keys::CONFIRM_PRICE_NO), false),
             ],
         ),
         ConfirmKind::RunCommand { command, rule, .. } => {

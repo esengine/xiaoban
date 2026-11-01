@@ -49,7 +49,11 @@ export function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
       <View style={styles.body}>
         <Text style={styles.title}>{text.title}</Text>
         {text.detail ? <Text style={styles.detail}>{text.detail}</Text> : null}
-        {text.hint ? <Text style={styles.detail}>{text.hint}</Text> : null}
+        {text.hint ? (
+          <Text style={[styles.detail, confirm.kind.kind === "price_check" && styles.strong]}>
+            {text.hint}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.choices}>
         {text.choices.map((option) => (
@@ -93,6 +97,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 14, paddingVertical: 12, gap: 4 },
   title: { fontSize: 15, fontWeight: "500", color: color.ink },
   detail: { fontSize: 12, color: color.muted, lineHeight: 18 },
+  strong: { color: color.ink, fontWeight: "600" },
   choices: { flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingBottom: 12 },
   choice: {
     flex: 1,

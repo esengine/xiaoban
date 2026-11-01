@@ -133,11 +133,106 @@ pub struct Trip {
     pub party: String,
     pub needs: Option<String>,
     pub reminder: Option<String>,
-    pub cost: Option<String>,
+    #[serde(default)]
+    pub costs: Option<TripCosts>,
     pub verified: bool,
     pub days: Vec<TripDay>,
     #[ts(type = "number")]
     pub created_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum CostCategory {
+    Transport,
+    Stay,
+    Tickets,
+    Food,
+    Other,
+}
+
+impl CostCategory {
+    pub const ALL: [Self; 5] = [
+        Self::Transport,
+        Self::Stay,
+        Self::Tickets,
+        Self::Food,
+        Self::Other,
+    ];
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Transport => "transport",
+            Self::Stay => "stay",
+            Self::Tickets => "tickets",
+            Self::Food => "food",
+            Self::Other => "other",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct CostLine {
+    pub category: CostCategory,
+    pub price: crate::Price,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct StayOption {
+    pub name: String,
+    pub price: crate::Price,
+    pub note: Option<String>,
+    pub location: Option<Coord>,
+    pub meters: Option<u32>,
+    pub chosen: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Saving {
+    pub title: String,
+    pub detail: String,
+    pub category: CostCategory,
+    #[ts(type = "number | null")]
+    pub saves_cents: Option<i64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct TripCosts {
+    pub lines: Vec<CostLine>,
+    pub stays: Vec<StayOption>,
+    pub people: Option<u32>,
+    #[ts(type = "number | null")]
+    pub budget_cents: Option<i64>,
+    pub savings: Vec<Saving>,
+}
+
+impl TripCosts {
+    pub fn category_cents(&self, category: CostCategory) -> (i64, bool) {
+        let chosen = self.stays.iter().find(|stay| stay.chosen);
+        if category == CostCategory::Stay
+            && let Some(stay) = chosen
+        {
+            return (stay.price.known().unwrap_or(0), stay.price.known().is_none());
+        }
+        self.lines
+            .iter()
+            .filter(|line| line.category == category)
+            .fold((0, false), |(sum, missing), line| match line.price.known() {
+                Some(cents) => (sum + cents, missing),
+                None => (sum, true),
+            })
+    }
+
+    pub fn total_cents(&self) -> i64 {
+        CostCategory::ALL
+            .iter()
+            .map(|category| self.category_cents(*category).0)
+            .sum()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

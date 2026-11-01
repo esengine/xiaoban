@@ -102,6 +102,7 @@ export interface HubState {
   filesVersion: Readonly<Record<string, number>>;
   kitchen: Kitchen | null;
   ledger: Ledger | null;
+  ledgerTick: number;
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
   recipes: Readonly<Record<string, RecipeView>>;
@@ -143,6 +144,7 @@ export const initialHubState: HubState = {
   filesVersion: {},
   kitchen: null,
   ledger: null,
+  ledgerTick: 0,
   weather: null,
   docs: {},
   recipes: {},
@@ -454,9 +456,10 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "notice_withdrawn":
     case "timer_fired":
     case "prep_due":
-    case "ledger_changed":
     case "weather_alert":
       return state;
+    case "ledger_changed":
+      return { ...state, ledgerTick: state.ledgerTick + 1 };
     case "command_updated": {
       const list = state.commands[event.command.workspaceId] ?? [];
       const others = list.filter((run) => run.id !== event.command.id);

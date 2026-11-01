@@ -135,6 +135,18 @@ impl Operator for PhoneOperator {
         let reply = call(&self.bridge, json!({ "op": "type", "app": app_id, "text": text }));
         Box::pin(async move { reply.await.map(|_| ()) })
     }
+
+    fn is_phone(&self) -> bool {
+        true
+    }
+
+    fn status(&self, title: Option<String>) {
+        let bridge = self.bridge.clone();
+        let request = json!({ "op": "status", "title": title.unwrap_or_default() });
+        std::thread::spawn(move || {
+            let _ = ask(&bridge, &request);
+        });
+    }
 }
 
 #[derive(Clone)]

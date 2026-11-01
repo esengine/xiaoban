@@ -186,7 +186,7 @@ mod tests {
             party: String::new(),
             needs: None,
             reminder: None,
-            cost: None,
+            costs: None,
             verified: true,
             days: vec![TripDay {
                 date: "2026-11-14".into(),

@@ -8,18 +8,21 @@ import {
   todayIndex,
   tripClock,
 } from "@xiaoban/client";
+import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Trip, TripDay, TripStop } from "@xiaoban/protocol";
 import { color, dark } from "@xiaoban/tokens";
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ConfirmCard } from "../chat/ConfirmCard.tsx";
 import { TickIcon } from "../life/LifeIcons.tsx";
 import { ChatBar, goBack } from "../life/LifeUI.tsx";
 import { Icon } from "../ui/Icon.tsx";
 import { ReplyCard } from "./ReplyCard.tsx";
 import { DotIcon } from "./TripIcons.tsx";
 import { TripMap } from "./TripMap.tsx";
+import { TripSpend } from "./TripSpend.tsx";
 import {
   dayInk,
   openFirst,
@@ -42,6 +45,7 @@ export function TripLiveScreen({ store, tripId }: { store: HubStore; tripId: str
   const found = trip && clock ? todayIndex(trip, clock) : -1;
   const dayIndex = Math.max(0, found);
   const { say, reply, busy, dismiss } = useTripSay(store, trip, dayIndex);
+  const { confirms } = useHubState(store);
 
   if (!trip || !clock) {
     return (
@@ -59,6 +63,7 @@ export function TripLiveScreen({ store, tripId }: { store: HubStore; tripId: str
   const focus = next ?? stops.at(-1);
   const mapHeight = MAP + insets.top;
   const tone = dayInk(dayIndex);
+  const confirm = confirms.find((item) => item.threadId === trip.threadId) ?? null;
 
   return (
     <View style={styles.screen}>
@@ -100,9 +105,14 @@ export function TripLiveScreen({ store, tripId }: { store: HubStore; tripId: str
       >
         <NextCard trip={trip} next={next ?? null} previous={previous ?? null} time={next?.time} />
         {day ? <Progress day={day} nextIndex={next ? nextIndex : stops.length} /> : null}
+        <TripSpend store={store} trip={trip} />
         <Quick trip={trip} day={day ?? null} focus={focus ?? null} />
       </ScrollView>
-      {reply ? (
+      {confirm ? (
+        <View style={styles.reply}>
+          <ConfirmCard confirm={confirm} />
+        </View>
+      ) : reply ? (
         <ReplyCard
           reply={reply}
           day={dayIndex}

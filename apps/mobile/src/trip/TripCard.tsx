@@ -1,14 +1,16 @@
-import { range, stopsText, weekday } from "@xiaoban/client";
+import { cardCostParts, costNumber, costSummary, range, stopsText, weekday } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useHubStore } from "../hub/HubProvider.tsx";
+import { CostBar, useMoney } from "./TripCostView.tsx";
 import { ChevronIcon } from "./TripIcons.tsx";
 import { dayInk, openTrip, useTrip } from "./useTrip.ts";
 
 export function TripCard({ tripId, version }: { tripId: string; version: number }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const money = useMoney();
   const store = useHubStore();
   const { latestTrip } = useHubState(store);
   const trip = useTrip(store, tripId, version);
@@ -21,6 +23,7 @@ export function TripCard({ tripId, version }: { tripId: string; version: number 
   }
   const outdated = (latestTrip[tripId] ?? version) > version;
   const open = () => openTrip(tripId, outdated ? version : null);
+  const summary = trip.costs ? costSummary(trip.costs) : null;
   return (
     <Pressable
       style={[styles.card, outdated && styles.outdated]}
@@ -49,6 +52,18 @@ export function TripCard({ tripId, version }: { tripId: string; version: number 
           </View>
         ))}
       </View>
+      {trip.costs && summary && summary.cents > 0 ? (
+        <View style={styles.cost}>
+          <View style={styles.costRow}>
+            <Text style={styles.meta}>{t("trip-card-cost")}</Text>
+            <Text style={styles.costTotal}>{money(summary.cents)}</Text>
+            <Text style={styles.costParts} numberOfLines={1}>
+              {cardCostParts(t, costNumber(locale), trip.costs)}
+            </Text>
+          </View>
+          <CostBar summary={summary} />
+        </View>
+      ) : null}
       <View style={styles.foot}>
         <Text style={styles.open}>{t(outdated ? "trip-view-version" : "trip-open")}</Text>
         <ChevronIcon color={color.accent} size={12} />
@@ -96,4 +111,8 @@ const styles = StyleSheet.create({
     borderTopColor: color.lineSoft,
   },
   open: { fontSize: 13, fontWeight: "500", color: color.accent },
+  cost: { marginTop: 4 },
+  costRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  costTotal: { fontSize: 17, fontWeight: "700", color: color.ink },
+  costParts: { flex: 1, fontSize: 11, color: color.muted },
 });

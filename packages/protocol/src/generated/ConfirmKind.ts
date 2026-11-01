@@ -6,6 +6,7 @@ export type ConfirmKind =
   | { kind: "open_subthreads"; titles: Array<string>; reason: string }
   | { kind: "borrow_mouse"; app: string }
   | { kind: "action"; title: string; detail: string }
+  | { kind: "price_check"; app: string; item: string; detail: string; phone: boolean }
   | { kind: "permissions" }
   | { kind: "run_command"; command: string; cwd: string; rule: string }
   | { kind: "read_outside"; path: string; folder: string }

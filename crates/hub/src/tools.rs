@@ -6,7 +6,9 @@ use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ToolCall, ToolRunner, ToolSpec};
 use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
-use xiaoban_protocol::{Attachment, Event, Location, MemoryCategory, MemoryKind, ServiceId};
+use xiaoban_protocol::{
+    Attachment, CostCategory, Event, Location, MemoryCategory, MemoryKind, ServiceId,
+};
 use xiaoban_store::NewMemory;
 
 use crate::services::ServiceError;
@@ -80,6 +82,59 @@ fn detail_schema(l: &Localizer) -> Value {
     )
 }
 
+fn costs_schema(l: &Localizer) -> Value {
+    let category = json!({
+        "type": "string",
+        "enum": CostCategory::ALL.map(CostCategory::as_str),
+        "description": l.text(keys::TOOL_SAVE_TRIP_COST_CATEGORY),
+    });
+    let mut line = crate::price::schema_properties(l);
+    line.insert("category".to_owned(), category.clone());
+    let mut stay = crate::price::schema_properties(l);
+    stay.insert("name".to_owned(), text(l, keys::TOOL_SAVE_TRIP_STAY_NAME));
+    stay.insert("note".to_owned(), text(l, keys::TOOL_SAVE_TRIP_STAY_NOTE));
+    stay.insert(
+        "chosen".to_owned(),
+        json!({ "type": "boolean", "description": l.text(keys::TOOL_SAVE_TRIP_STAY_CHOSEN) }),
+    );
+    let saving = object(
+        &json!({
+            "title": text(l, keys::TOOL_SAVE_TRIP_SAVING_TITLE),
+            "detail": text(l, keys::TOOL_SAVE_TRIP_SAVING_DETAIL),
+            "category": category,
+            "saves": { "type": "number", "minimum": 0, "description": l.text(keys::TOOL_SAVE_TRIP_SAVING_SAVES) },
+        }),
+        &["title", "category"],
+    );
+    with_description(
+        object(
+            &json!({
+                "lines": {
+                    "type": "array",
+                    "description": l.text(keys::TOOL_SAVE_TRIP_COST_LINES),
+                    "items": object(&Value::Object(line), &["category", "label", "source"]),
+                },
+                "stays": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "description": l.text(keys::TOOL_SAVE_TRIP_STAYS),
+                    "items": object(&Value::Object(stay), &["name", "source"]),
+                },
+                "people": { "type": "integer", "minimum": 1, "description": l.text(keys::TOOL_SAVE_TRIP_PEOPLE) },
+                "budget": { "type": "number", "minimum": 0, "description": l.text(keys::TOOL_SAVE_TRIP_BUDGET) },
+                "savings": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "description": l.text(keys::TOOL_SAVE_TRIP_SAVINGS),
+                    "items": saving,
+                },
+            }),
+            &["lines"],
+        ),
+        l.text(keys::TOOL_SAVE_TRIP_COSTS),
+    )
+}
+
 fn trip_day(l: &Localizer) -> Value {
     let detail = detail_schema(l);
     let stop = object(
@@ -115,6 +170,8 @@ fn trip_day(l: &Localizer) -> Value {
 pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let mut specs = base_specs(localizer);
     specs.extend(crate::operate_tools::specs(localizer));
+    specs.extend(crate::price_check::specs(localizer));
+    specs.push(crate::trip_spend::spec(localizer));
     specs.extend(crate::file_tools::specs(localizer));
     specs.push(crate::file_tools::recall_spec(localizer));
     specs.extend(crate::file_tools::history_specs(localizer));
@@ -270,7 +327,7 @@ fn base_specs(localizer: &Localizer) -> Vec<ToolSpec> {
                     "party": text(l, keys::TOOL_SAVE_TRIP_PARTY),
                     "needs": text(l, keys::TOOL_SAVE_TRIP_NEEDS),
                     "reminder": text(l, keys::TOOL_SAVE_TRIP_REMINDER),
-                    "cost": text(l, keys::TOOL_SAVE_TRIP_COST),
+                    "costs": costs_schema(l),
                     "update": { "type": "boolean", "description": l.text(keys::TOOL_SAVE_TRIP_UPDATE) },
                     "days": { "type": "array", "items": day, "minItems": 1 },
                 }),
@@ -373,7 +430,16 @@ pub struct HubTools<'a> {
     pub(crate) mouse_once: Mutex<Vec<String>>,
     pub(crate) sub_agent: bool,
     pub(crate) touched: Mutex<std::collections::BTreeMap<std::path::PathBuf, Option<Vec<u8>>>>,
+    pub(crate) evidence: Mutex<crate::price::Evidence>,
+    pub(crate) labels: Mutex<std::collections::HashMap<String, std::collections::HashMap<u32, String>>>,
+    pub(crate) price_check: Mutex<Option<crate::price_check::PriceCheck>>,
     attachment: Mutex<Option<Attachment>>,
+}
+
+impl Drop for HubTools<'_> {
+    fn drop(&mut self) {
+        self.end_price_check();
+    }
 }
 
 impl<'a> HubTools<'a> {
@@ -392,6 +458,9 @@ impl<'a> HubTools<'a> {
             mouse_once: Mutex::new(Vec::new()),
             sub_agent: false,
             touched: Mutex::new(std::collections::BTreeMap::new()),
+            evidence: Mutex::new(crate::price::Evidence::default()),
+            labels: Mutex::new(std::collections::HashMap::new()),
+            price_check: Mutex::new(None),
             attachment: Mutex::new(None),
         }
     }
@@ -402,10 +471,9 @@ impl<'a> HubTools<'a> {
         turn_id: &'a str,
         cancel: CancellationToken,
     ) -> Self {
-        Self {
-            sub_agent: true,
-            ..Self::new(state, thread_id, turn_id, cancel)
-        }
+        let mut tools = Self::new(state, thread_id, turn_id, cancel);
+        tools.sub_agent = true;
+        tools
     }
 
     pub fn attachment(&self) -> Option<Attachment> {
@@ -540,7 +608,14 @@ impl<'a> HubTools<'a> {
             Key::Missing => return self.missing(ServiceId::WebSearch),
         };
         match self.state.web.search(key, args.query, None).await {
-            Ok(hits) => json!({ "results": hits }).to_string(),
+            Ok(hits) => {
+                let mut evidence = self.evidence.lock().unwrap();
+                for hit in &hits {
+                    evidence.saw_link(&hit.url);
+                }
+                drop(evidence);
+                json!({ "results": hits }).to_string()
+            }
             Err(failure) => Self::failed(failure),
         }
     }
@@ -609,8 +684,11 @@ impl<'a> HubTools<'a> {
             Key::Declined => return Self::declined(),
             Key::Missing => return self.missing(ServiceId::WebSearch),
         };
-        match self.state.web.fetch(key, args.url).await {
-            Ok(page) => serde_json::to_string(&page).unwrap_or_default(),
+        match self.state.web.fetch(key, args.url.clone()).await {
+            Ok(page) => {
+                self.evidence.lock().unwrap().saw_link(&args.url);
+                serde_json::to_string(&page).unwrap_or_default()
+            }
             Err(failure) => Self::failed(failure),
         }
     }
@@ -624,7 +702,8 @@ impl<'a> HubTools<'a> {
             }
         };
         let verified = matches!(self.key(ServiceId::WebSearch).await, Key::Ready(_));
-        match trip::save(self.state, self.thread_id, draft, verified).await {
+        let evidence = self.evidence.lock().unwrap().clone();
+        match trip::save(self.state, self.thread_id, draft, verified, &evidence).await {
             Ok((trip, report)) => {
                 *self.attachment.lock().unwrap() = Some(Attachment::Trip {
                     trip_id: trip.id.clone(),
@@ -682,6 +761,9 @@ impl ToolRunner for HubTools<'_> {
                 | SAVE_TRIP
                 | SAVE_PLACE_DETAIL
                 | crate::agenda::PROPOSE_EVENT
+                | crate::price_check::CHECK
+                | crate::price_check::NOTE
+                | crate::trip_spend::SPEND
                 | crate::operate_tools::LOOK_AT_APP
                 | crate::operate_tools::CLICK
                 | crate::operate_tools::TYPE_TEXT
@@ -762,6 +844,9 @@ impl ToolRunner for HubTools<'_> {
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,
+                crate::price_check::CHECK => self.check_price(arguments).await,
+                crate::price_check::NOTE => self.note_price(arguments),
+                crate::trip_spend::SPEND => self.trip_spend(arguments).await,
                 name if crate::kitchen::is_tool(name) => self.kitchen_tool(name, arguments).await,
                 name if crate::ledger::is_tool(name) => self.ledger_tool(name, arguments).await,
                 crate::life::LIFE => self.life(arguments).await,

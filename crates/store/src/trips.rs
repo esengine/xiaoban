@@ -31,6 +31,18 @@ impl Store {
         .await
     }
 
+    pub async fn replace_trip(&self, trip: Trip) -> Result<()> {
+        self.with(move |conn| {
+            let data = serde_json::to_string(&trip).map_err(|_| StoreError::Corrupt("trips.data"))?;
+            conn.execute(
+                "UPDATE trips SET data = ?3 WHERE id = ?1 AND version = ?2",
+                params![trip.id, trip.version, data],
+            )?;
+            Ok(())
+        })
+        .await
+    }
+
     pub async fn trip(&self, id: String, version: Option<u32>) -> Result<Option<(Trip, u32)>> {
         self.with(move |conn| {
             let latest: Option<u32> = conn.query_row(
@@ -108,7 +120,7 @@ mod tests {
             party: "2 大 1 小".into(),
             needs: None,
             reminder: None,
-            cost: None,
+            costs: None,
             verified: true,
             days: Vec::new(),
             created_at: 0,
@@ -138,6 +150,20 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(newest.version, 2);
+        let mut edited = newest.clone();
+        edited.reminder = Some("带伞".into());
+        store.replace_trip(edited).await.unwrap();
+        let (kept, latest) = store.trip(first.id.clone(), None).await.unwrap().unwrap();
+        assert_eq!((kept.version, latest), (2, 2));
+        assert_eq!(kept.reminder.as_deref(), Some("带伞"));
+    }
+
+    #[test]
+    fn trips_saved_before_costs_existed_still_load() {
+        let old = r#"{"id":"t","threadId":"h","version":1,"title":"杭州","city":"杭州","timezone":null,
+            "party":"3 人","needs":null,"reminder":null,"cost":"约 ¥4,800","verified":true,"days":[],"createdAt":1}"#;
+        let trip = decode(old).unwrap();
+        assert_eq!(trip.costs, None);
     }
 
     #[tokio::test]

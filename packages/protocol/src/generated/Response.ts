@@ -15,6 +15,7 @@ import type { DirEntry } from "./DirEntry.ts";
 import type { Doc } from "./Doc.ts";
 import type { DocBlock } from "./DocBlock.ts";
 import type { DocSummary } from "./DocSummary.ts";
+import type { Expense } from "./Expense.ts";
 import type { Failure } from "./Failure.ts";
 import type { FileDiff } from "./FileDiff.ts";
 import type { FloorPlan } from "./FloorPlan.ts";
@@ -80,6 +81,7 @@ export type Response =
   | { type: "service_configured"; connected: boolean; services: Array<ServiceStatus> }
   | { type: "trip"; trip: Trip; latest: number }
   | { type: "trip_calendar"; calendar: TripCalendar }
+  | { type: "trip_spending"; category: string; entries: Array<Expense> }
   | { type: "pending_confirms"; confirms: Array<ConfirmRequest> }
   | { type: "operate_status"; permissions: OperatePermissions }
   | { type: "workspaces"; workspaces: Array<Workspace> }

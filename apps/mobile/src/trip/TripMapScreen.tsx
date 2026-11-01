@@ -27,11 +27,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Line } from "react-native-svg";
+import { ConfirmCard } from "../chat/ConfirmCard.tsx";
 import { ChatBar, goBack } from "../life/LifeUI.tsx";
 import { Icon } from "../ui/Icon.tsx";
 import { useKeyboard } from "../ui/useKeyboard.ts";
 import { ReplyCard } from "./ReplyCard.tsx";
 import { TripCalendarSheet, useTripFollow } from "./TripCalendarSheet.tsx";
+import { TripCostView } from "./TripCostView.tsx";
 import { CalendarIcon, ChevronIcon, NavigateIcon, OutIcon, ShareIcon } from "./TripIcons.tsx";
 import { TripMap } from "./TripMap.tsx";
 import {
@@ -45,6 +47,7 @@ import {
 } from "./useTrip.ts";
 
 type Snap = "low" | "half" | "full";
+type Tab = "route" | "cost";
 
 const BUTTON = 44;
 
@@ -65,6 +68,7 @@ export function TripMapScreen({
   const [day, setDay] = useState(0);
   const [selected, setSelected] = useState(0);
   const [snap, setSnap] = useState<Snap>("half");
+  const [tab, setTab] = useState<Tab>("route");
   const keyboard = useKeyboard();
   const now = useNow();
   const share = useShareTrip();
@@ -169,7 +173,8 @@ export function TripMapScreen({
     left: 48,
     right: window.width - 48,
   };
-  const facts = [trip.party, trip.cost].filter(Boolean).join(t("daily-dot"));
+  const facts = trip.party;
+  const confirm = state.confirms.find((item) => item.threadId === trip.threadId) ?? null;
   const navigate = () => {
     const stop = stops[pick];
     if (!stop) return;
@@ -266,7 +271,11 @@ export function TripMapScreen({
       </View>
       <View style={styles.spacer} pointerEvents="none" />
       <Animated.View style={{ height: sheet }}>
-        {reply && !old ? (
+        {confirm && !old ? (
+          <View style={styles.reply}>
+            <ConfirmCard confirm={confirm} />
+          </View>
+        ) : reply && !old ? (
           <ReplyCard
             reply={reply}
             day={dayIndex}
@@ -285,14 +294,35 @@ export function TripMapScreen({
             >
               <View style={styles.grabber} />
             </Pressable>
-            <DayTabs
-              trip={trip}
-              day={dayIndex}
-              onPick={(index) => {
-                setDay(index);
-                setSelected(0);
-              }}
-            />
+            <View
+              style={styles.switch}
+              accessibilityRole="tablist"
+              accessibilityLabel={t("trip-tabs")}
+            >
+              {(["route", "cost"] as const).map((item) => (
+                <Pressable
+                  key={item}
+                  style={[styles.switchItem, tab === item && styles.switchOn]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: tab === item }}
+                  onPress={() => setTab(item)}
+                >
+                  <Text style={[styles.switchText, tab === item && styles.switchTextOn]}>
+                    {t(item === "route" ? "trip-tab-route" : "trip-tab-cost")}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {tab === "route" ? (
+              <DayTabs
+                trip={trip}
+                day={dayIndex}
+                onPick={(index) => {
+                  setDay(index);
+                  setSelected(0);
+                }}
+              />
+            ) : null}
           </View>
           {old ? (
             <View style={styles.old}>
@@ -305,16 +335,38 @@ export function TripMapScreen({
               </Pressable>
             </View>
           ) : null}
-          <ScrollView style={styles.list} contentContainerStyle={styles.listBody}>
-            {trip.reminder ? (
-              <Text style={styles.reminder}>{t("trip-reminder", { text: trip.reminder })}</Text>
-            ) : null}
-            {tripDay?.change ? <Text style={styles.change}>{tripDay.change}</Text> : null}
-            {tripDay ? (
-              <Stops trip={trip} day={tripDay} tone={tone} selected={pick} onSelect={setSelected} />
-            ) : null}
-            {!trip.verified ? <Text style={styles.note}>{t("trip-unverified")}</Text> : null}
-          </ScrollView>
+          {tab === "cost" ? (
+            <ScrollView
+              style={styles.list}
+              contentContainerStyle={styles.listBody}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TripCostView
+                store={store}
+                trip={trip}
+                readOnly={old}
+                busy={busy}
+                onSay={(text) => void say(text)}
+              />
+            </ScrollView>
+          ) : (
+            <ScrollView style={styles.list} contentContainerStyle={styles.listBody}>
+              {trip.reminder ? (
+                <Text style={styles.reminder}>{t("trip-reminder", { text: trip.reminder })}</Text>
+              ) : null}
+              {tripDay?.change ? <Text style={styles.change}>{tripDay.change}</Text> : null}
+              {tripDay ? (
+                <Stops
+                  trip={trip}
+                  day={tripDay}
+                  tone={tone}
+                  selected={pick}
+                  onSelect={setSelected}
+                />
+              ) : null}
+              {!trip.verified ? <Text style={styles.note}>{t("trip-unverified")}</Text> : null}
+            </ScrollView>
+          )}
           {old ? null : (
             <ChatBar
               store={store}
@@ -556,6 +608,32 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   handle: { height: 24, alignItems: "center", justifyContent: "center" },
+  switch: {
+    flexDirection: "row",
+    gap: 6,
+    padding: 3,
+    borderRadius: 10,
+    backgroundColor: color.ground,
+    marginHorizontal: 14,
+    marginBottom: 10,
+  },
+  switchItem: {
+    flex: 1,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  switchOn: {
+    backgroundColor: color.surface,
+    shadowColor: color.ink,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  switchText: { fontSize: 13, color: color.muted },
+  switchTextOn: { color: color.ink, fontWeight: "600" },
   grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: color.lineStrong },
   tabs: { flexDirection: "row", gap: 6, paddingHorizontal: 14, paddingBottom: 10 },
   tab: {

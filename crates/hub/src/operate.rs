@@ -61,6 +61,10 @@ pub trait Operator: Debug + Send + Sync + 'static {
     ) -> BoxFuture<'static, Result<(), ActFailure>>;
     fn keys(&self, app_id: String, combo: String) -> BoxFuture<'static, Result<(), String>>;
     fn type_into(&self, app_id: String, text: String) -> BoxFuture<'static, Result<(), String>>;
+    fn is_phone(&self) -> bool {
+        false
+    }
+    fn status(&self, _title: Option<String>) {}
 }
 
 #[derive(Debug, Clone, Copy, Default)]

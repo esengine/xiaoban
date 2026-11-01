@@ -121,6 +121,26 @@ pub enum Request {
     EventCalendar {
         event: crate::EventDraft,
     },
+    ChooseTripStay {
+        trip_id: String,
+        stay: u32,
+    },
+    FillTripPrice {
+        trip_id: String,
+        line: Option<u32>,
+        stay: Option<u32>,
+        #[ts(type = "number")]
+        cents: i64,
+    },
+    AddTripExpense {
+        trip_id: String,
+        name: String,
+        #[ts(type = "number")]
+        cents: i64,
+    },
+    TripSpending {
+        trip_id: String,
+    },
     AnswerConfirm {
         confirm_id: String,
         choice: ConfirmChoice,
@@ -693,6 +713,10 @@ pub enum Response {
     },
     TripCalendar {
         calendar: TripCalendar,
+    },
+    TripSpending {
+        category: String,
+        entries: Vec<crate::Expense>,
     },
     PendingConfirms {
         confirms: Vec<ConfirmRequest>,
