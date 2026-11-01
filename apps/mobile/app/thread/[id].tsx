@@ -37,7 +37,6 @@ import { Icon } from "../../src/ui/Icon.tsx";
 import { useWhen } from "../../src/ui/useWhen.ts";
 
 const GAP_MS = 30 * 60_000;
-const STICK_DISTANCE = 80;
 const SUGGESTIONS: readonly PlainMessageKey[] = [
   "home-suggestion-umbrella",
   "home-suggestion-expense",
@@ -116,29 +115,12 @@ export default function ThreadScreen() {
   const [speaking, setSpeaking] = useState(false);
   const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
   const list = useRef<FlatList<Row>>(null);
-  const stick = useRef(true);
-  const dragging = useRef(false);
-  const offset = useRef(0);
-  const content = useRef(0);
-  const [positioned, setPositioned] = useState(false);
-  const loaded = state.messages[id] !== undefined;
-  useEffect(() => {
-    if (loaded && !positioned) {
-      const timer = setTimeout(() => setPositioned(true), 400);
-      return () => clearTimeout(timer);
-    }
-  }, [loaded, positioned]);
   useEffect(() => {
     const shown = Keyboard.addListener("keyboardDidShow", () => {
-      if (stick.current) requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
-    });
-    const hidden = Keyboard.addListener("keyboardDidHide", () => {
-      if (stick.current)
-        requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+      list.current?.scrollToOffset({ offset: 0, animated: true });
     });
     return () => {
       shown.remove();
-      hidden.remove();
     };
   }, []);
   const primary = state.preferences?.primaryThreadId === id;
@@ -226,7 +208,7 @@ export default function ThreadScreen() {
       : "";
 
   const send = (text: string, sentQuote: Quote | null = quote, files: string[] = []) => {
-    stick.current = true;
+    list.current?.scrollToOffset({ offset: 0, animated: true });
     if (running || holding) {
       if (running && isCancel(text, t("composer-cancel-words"))) {
         void store.cancel(running.turnId).catch(() => undefined);
@@ -308,6 +290,8 @@ export default function ThreadScreen() {
       { text: t("dialog-cancel"), style: "cancel" as const },
     ]);
 
+  const newestFirst = [...rows].reverse();
+
   const renderRow = (row: Row) => {
     switch (row.kind) {
       case "time":
@@ -380,43 +364,15 @@ export default function ThreadScreen() {
       </View>
       <FlatList<Row>
         ref={list}
-        style={[styles.flex, !positioned && styles.hidden]}
-        initialNumToRender={60}
-        data={rows}
+        style={styles.flex}
+        inverted
+        initialNumToRender={30}
+        data={newestFirst}
         keyExtractor={(row) => row.key}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={() => {
-          dragging.current = true;
-        }}
-        onScrollEndDrag={() => {
-          setTimeout(() => {
-            dragging.current = false;
-          }, 250);
-        }}
-        onMomentumScrollEnd={() => {
-          dragging.current = false;
-        }}
-        onScroll={(event) => {
-          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-          offset.current = contentOffset.y;
-          content.current = contentSize.height;
-          if (!dragging.current) return;
-          stick.current =
-            contentSize.height - contentOffset.y - layoutMeasurement.height < STICK_DISTANCE;
-        }}
-        scrollEventThrottle={100}
-        onLayout={(event) => {
-          const height = event.nativeEvent.layout.height;
-          if (stick.current || offset.current > content.current - height) {
-            list.current?.scrollToEnd({ animated: false });
-          }
-        }}
-        onContentSizeChange={() => {
-          if (stick.current) list.current?.scrollToEnd({ animated: false });
-          if (!positioned && loaded) requestAnimationFrame(() => setPositioned(true));
-        }}
-        ListFooterComponent={
+        maintainVisibleContentPosition={{ minIndexForVisible: 1, autoscrollToTopThreshold: 80 }}
+        ListHeaderComponent={
           confirms.length === 0 ? undefined : (
             <View style={styles.footer}>
               {confirms.map((confirm) => (
@@ -468,7 +424,6 @@ export default function ThreadScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.ground },
   flex: { flex: 1 },
-  hidden: { opacity: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",
