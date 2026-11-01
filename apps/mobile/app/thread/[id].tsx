@@ -117,6 +117,7 @@ export default function ThreadScreen() {
   const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
   const list = useRef<FlatList<Row>>(null);
   const stick = useRef(true);
+  const dragging = useRef(false);
   const [positioned, setPositioned] = useState(false);
   const loaded = state.messages[id] !== undefined;
   useEffect(() => {
@@ -375,7 +376,14 @@ export default function ThreadScreen() {
         keyExtractor={(row) => row.key}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={() => {
+          dragging.current = true;
+        }}
+        onMomentumScrollEnd={() => {
+          dragging.current = false;
+        }}
         onScroll={(event) => {
+          if (!dragging.current) return;
           const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
           stick.current =
             contentSize.height - contentOffset.y - layoutMeasurement.height < STICK_DISTANCE;
