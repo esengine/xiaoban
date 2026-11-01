@@ -22,6 +22,7 @@ import { CloseIcon } from "../life/LifeIcons.tsx";
 import { ChatBar, HeaderLink, LifeHeader, life, Sheet, SheetAction } from "../life/LifeUI.tsx";
 import { Icon } from "../ui/Icon.tsx";
 import { useReduceMotion } from "../ui/useReduceMotion.ts";
+import { saveExport, useExporter } from "./exportFile.ts";
 import { SheetChart } from "./SheetChart.tsx";
 import { AskChip } from "./WorkUI.tsx";
 
@@ -212,6 +213,7 @@ export function SheetScreen({ store, sheetId }: { store: HubStore; sheetId: stri
   const [turn, setTurn] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const exporter = useExporter(() => setExporting(false));
   const [sorting, setSorting] = useState(false);
   const headScroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const bodyScroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -401,7 +403,15 @@ export function SheetScreen({ store, sheetId }: { store: HubStore; sheetId: stri
     <View style={styles.screen}>
       <LifeHeader
         title={book.title}
-        right={<HeaderLink label={t("sheet-phone-export")} onPress={() => setExporting(true)} />}
+        right={
+          <HeaderLink
+            label={t("sheet-phone-export")}
+            onPress={() => {
+              exporter.clear();
+              setExporting(true);
+            }}
+          />
+        }
       />
       <View style={styles.body}>
         <ScrollView
@@ -663,6 +673,24 @@ export function SheetScreen({ store, sheetId }: { store: HubStore; sheetId: stri
       <Sheet open={exporting} onClose={() => setExporting(false)}>
         <Text style={life.sheetTitle}>{book.title}</Text>
         <SheetAction
+          label={exporter.busy === "xlsx" ? t("export-phone-busy") : t("sheet-export-excel")}
+          disabled={exporter.busy !== null}
+          onPress={() =>
+            exporter.start("xlsx", async () =>
+              saveExport(await store.exportSheetData(book.id, "xlsx", tab.id)),
+            )
+          }
+        />
+        <SheetAction
+          label={exporter.busy === "csv" ? t("export-phone-busy") : t("sheet-export-csv")}
+          disabled={exporter.busy !== null}
+          onPress={() =>
+            exporter.start("csv", async () =>
+              saveExport(await store.exportSheetData(book.id, "csv", tab.id)),
+            )
+          }
+        />
+        <SheetAction
           label={t("sheet-phone-share-csv")}
           onPress={() => {
             setExporting(false);
@@ -678,7 +706,9 @@ export function SheetScreen({ store, sheetId }: { store: HubStore; sheetId: stri
             void Clipboard.setStringAsync(toTsv(tab.values)).catch(() => undefined);
           }}
         />
-        <Text style={life.hint}>{t("sheet-phone-export-note")}</Text>
+        {exporter.failed ? (
+          <Text style={[life.hint, styles.failed]}>{t("export-phone-failed")}</Text>
+        ) : null}
       </Sheet>
     </View>
   );
@@ -686,6 +716,7 @@ export function SheetScreen({ store, sheetId }: { store: HubStore; sheetId: stri
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.ground },
+  failed: { color: color.dangerInk },
   body: { flex: 1, minHeight: 0, paddingHorizontal: 14, paddingTop: 4, paddingBottom: 10, gap: 10 },
   tabsScroll: { flexGrow: 0 },
   tabs: { gap: 4 },

@@ -1,13 +1,16 @@
-import { countChars, type HubStore, plainText } from "@xiaoban/client";
+import { countChars, fileName, type HubStore, plainText } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { ContextNote, Doc, DocBlock, DocSuggestion } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
+import * as Print from "expo-print";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { ChatBar, LifeHeader, life, Sheet, SheetAction } from "../life/LifeUI.tsx";
 import { Working } from "../life/Working.tsx";
+import { docHtml } from "./docHtml.ts";
+import { keepFile, MIME, saveExport, useExporter } from "./exportFile.ts";
 import { AskChip, rich, ShareButton } from "./WorkUI.tsx";
 
 type Translate = ReturnType<typeof useI18n>["t"];
@@ -108,6 +111,7 @@ export function DocScreen({ store, docId }: { store: HubStore; docId: string }) 
   const [turn, setTurn] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
   const [sharing, setSharing] = useState(false);
+  const exporter = useExporter(() => setSharing(false));
 
   useEffect(() => {
     void store.openDoc(docId).catch(() => undefined);
@@ -163,7 +167,15 @@ export function DocScreen({ store, docId }: { store: HubStore; docId: string }) 
       <LifeHeader
         title={current.title}
         sub={sub}
-        right={<ShareButton label={t("doc-phone-share")} onPress={() => setSharing(true)} />}
+        right={
+          <ShareButton
+            label={t("doc-phone-share")}
+            onPress={() => {
+              exporter.clear();
+              setSharing(true);
+            }}
+          />
+        }
       />
       <View style={styles.rule} />
       <ScrollView
@@ -331,6 +343,25 @@ export function DocScreen({ store, docId }: { store: HubStore; docId: string }) 
       <Sheet open={sharing} onClose={() => setSharing(false)}>
         <Text style={life.sheetTitle}>{current.title}</Text>
         <SheetAction
+          label={exporter.busy === "docx" ? t("export-phone-busy") : t("doc-export-word")}
+          disabled={current.writing || exporter.busy !== null}
+          onPress={() =>
+            exporter.start("docx", async () =>
+              saveExport(await store.exportDocData(current.id, "docx")),
+            )
+          }
+        />
+        <SheetAction
+          label={exporter.busy === "pdf" ? t("export-phone-busy") : t("doc-export-pdf")}
+          disabled={current.writing || exporter.busy !== null}
+          onPress={() =>
+            exporter.start("pdf", async () => {
+              const { uri } = await Print.printToFileAsync({ html: docHtml(current) });
+              return keepFile(uri, fileName(current.title, "pdf"), MIME.pdf);
+            })
+          }
+        />
+        <SheetAction
           label={t("doc-phone-send")}
           disabled={current.writing}
           onPress={() => {
@@ -346,7 +377,9 @@ export function DocScreen({ store, docId }: { store: HubStore; docId: string }) 
             void Clipboard.setStringAsync(text).catch(() => undefined);
           }}
         />
-        <Text style={life.hint}>{t("doc-phone-export-note")}</Text>
+        {exporter.failed ? (
+          <Text style={[life.hint, styles.failed]}>{t("export-phone-failed")}</Text>
+        ) : null}
       </Sheet>
     </View>
   );
@@ -354,6 +387,7 @@ export function DocScreen({ store, docId }: { store: HubStore; docId: string }) 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.surface },
+  failed: { color: color.dangerInk },
   rule: { height: 1, backgroundColor: color.lineSoft },
   article: { paddingHorizontal: 22, paddingTop: 20, paddingBottom: 28, gap: 12 },
   flex: { flex: 1, minWidth: 0 },

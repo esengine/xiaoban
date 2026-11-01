@@ -51,7 +51,8 @@
           ]
         }
       ],
-      "./plugins/with-short-object-paths.js"
+      "./plugins/with-short-object-paths.js",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

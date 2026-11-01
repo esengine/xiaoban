@@ -120,7 +120,7 @@ export function DocCard({ docId }: { docId: string }) {
         </View>
       ) : null}
       <Text style={[styles.meta, styles.indent]}>
-        {t("doc-meta", { chars: summary.chars, sections: summary.sections.length })}
+        {t("doc-meta-exportable", { chars: summary.chars })}
       </Text>
     </CardShell>
   );

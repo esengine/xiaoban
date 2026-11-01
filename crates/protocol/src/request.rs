@@ -479,6 +479,15 @@ pub enum Request {
         format: crate::DocFormat,
         path: String,
     },
+    ExportDocData {
+        id: String,
+        format: crate::DocFormat,
+    },
+    ExportSheetData {
+        id: String,
+        format: crate::SheetFormat,
+        tab_id: String,
+    },
     NotifySettings,
     SetNotifySettings {
         settings: crate::NotifySettings,
@@ -784,6 +793,11 @@ pub enum Response {
     },
     Exported {
         path: String,
+    },
+    ExportData {
+        name: String,
+        mime: String,
+        data: String,
     },
     Places {
         places: Vec<crate::WeatherPlace>,

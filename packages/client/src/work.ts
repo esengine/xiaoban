@@ -65,3 +65,10 @@ export function toCsv(grid: string[][]) {
 export function toTsv(grid: string[][]) {
   return grid.map((row) => row.join("\t")).join("\n");
 }
+
+const UNSAFE_NAME = /[\\/:*?"<>|\n\r\t]/g;
+
+export function fileName(title: string, ext: string) {
+  const base = title.replace(UNSAFE_NAME, " ").trim().slice(0, 60);
+  return `${base || "document"}.${ext}`;
+}

@@ -125,6 +125,7 @@ export type Response =
   | { type: "deck_summary"; summary: DeckSummary }
   | { type: "images"; images: Array<FoundImage> }
   | { type: "exported"; path: string }
+  | { type: "export_data"; name: string; mime: string; data: string }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };

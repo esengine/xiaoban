@@ -1,5 +1,4 @@
 import type { Slide } from "@xiaoban/protocol";
-import { type SlideThemeName, slideThemes } from "@xiaoban/tokens";
 import {
   Award,
   BookOpen,
@@ -58,6 +57,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import { type SlideTheme, themeOf } from "./theme.ts";
 
 export const BASE_W = 960;
 export const BASE_H = 540;
@@ -119,11 +119,7 @@ export const ICONS: Record<string, LucideIcon> = {
   smile: Smile,
 };
 
-export type SlideTheme = (typeof slideThemes)[SlideThemeName];
-
-export function themeOf(name: string): SlideTheme {
-  return slideThemes[(name in slideThemes ? name : "blue") as SlideThemeName];
-}
+export { type SlideTheme, themeOf } from "./theme.ts";
 
 export type Part = "title" | "subtitle" | "body" | "chart" | "image";
 

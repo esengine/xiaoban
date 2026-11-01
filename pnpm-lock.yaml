@@ -241,15 +241,9 @@ importers:
       html-to-image:
         specifier: ^1.11.13
         version: 1.11.13
-      jszip:
-        specifier: ^3.10.2
-        version: 3.10.2
       lucide-react:
         specifier: ^1.66.0
         version: 1.66.0(@types/react@19.3.0)(react@19.3.0)
-      pptxgenjs:
-        specifier: ^4.0.1
-        version: 4.0.1
       react:
         specifier: 'catalog:'
         version: 19.3.0
@@ -359,12 +353,18 @@ importers:
       expo-localization:
         specifier: ~58.0.5
         version: 58.0.5(expo@58.0.21)(react@19.3.0)
+      expo-print:
+        specifier: ~58.0.8
+        version: 58.0.8(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
       expo-router:
         specifier: ~58.0.28
         version: 58.0.28(7794929cff1006e2f0e325cf31b491f8)
       expo-secure-store:
         specifier: ~58.0.2
         version: 58.0.2(expo@58.0.21)
+      expo-sharing:
+        specifier: ~58.0.21
+        version: 58.0.21(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
       expo-speech:
         specifier: ~58.0.3
         version: 58.0.3(expo@58.0.21)
@@ -483,16 +483,28 @@ importers:
       '@xiaoban/tokens':
         specifier: workspace:*
         version: link:../tokens
+      jszip:
+        specifier: ^3.10.2
+        version: 3.10.2
       lucide-react:
         specifier: ^1.66.0
         version: 1.66.0(@types/react@19.3.0)(react@19.3.0)
+      pptxgenjs:
+        specifier: ^4.0.1
+        version: 4.0.1
     devDependencies:
       '@types/react':
         specifier: 'catalog:'
         version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
       react:
         specifier: 'catalog:'
         version: 19.3.0
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.0(react@19.3.0)
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -2616,6 +2628,12 @@ packages:
   expo-modules-macros@0.27.1:
     resolution: {integrity: sha512-xWNI+LpK4Pdmj52ygNYlxefZDhw4mpe6s5yVCLXpqtOyU3PPrFGJJJnDyBpOsOv+mXiYLeaszEEJEpDKBObZ7A==}
 
+  expo-print@58.0.8:
+    resolution: {integrity: sha512-0flhJ0WuHDlq+H5XFBpqyb9B80PYgbPOVw2cb8hnDWWI++rhfJ2J6WvrBP/PePnOypuIQ1dO3e6u6725xMO4Lg==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+
   expo-router@58.0.28:
     resolution: {integrity: sha512-figS9IpRn1h3iYUii1PY7ka/6XSIQ0EBKR5HqKcDl8gadN4hGfS90WFU9gjpquIdM72lS3Dxm6CT2vGQmsiQSg==}
     peerDependencies:
@@ -2665,6 +2683,13 @@ packages:
   expo-server@58.0.6:
     resolution: {integrity: sha512-6DBlSZwxk3J0y1j2s4XebAWNiwGaMp32NcWX7b2kJC2+EFf1g+pCcVmx8ylawt2tyLmbDHswm4MHOfrd4bqfvA==}
     engines: {node: ^22.13.0 || ^24.3.0 || ^26.0.0 || >=27.0.0}
+
+  expo-sharing@58.0.21:
+    resolution: {integrity: sha512-YLtDPH0bCU+VUt3rgWRZHTVPIv9aKBRpQjwke+Pw6rvhDwYbolg5VnGnNNI0z4ONWCeQ73HvFX1ZTY6dCfnx1A==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
 
   expo-speech-recognition@58.0.1:
     resolution: {integrity: sha512-ycDe1BxXblqFGsXxedjBKn3tVQO8Vnj/BtBIycdMjXkXueTYto1LaenkjeBGycJmnS/6mOWC8oQcyBSbZsueFg==}
@@ -6450,6 +6475,11 @@ snapshots:
       '@expo/modules-macros-win32-arm64': 0.27.1
       '@expo/modules-macros-win32-x64': 0.27.1
 
+  expo-print@58.0.8(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)):
+    dependencies:
+      expo: 58.0.21(9ae2817faf1dbb25177fadd42890e976)
+      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+
   expo-router@58.0.28(7794929cff1006e2f0e325cf31b491f8):
     dependencies:
       '@expo/log-box': 58.0.13(@expo/dom-webview@58.0.2)(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
@@ -6491,6 +6521,18 @@ snapshots:
       expo: 58.0.21(9ae2817faf1dbb25177fadd42890e976)
 
   expo-server@58.0.6: {}
+
+  expo-sharing@58.0.21(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2):
+    dependencies:
+      '@expo/config-plugins': 58.0.11(supports-color@8.1.1)(typescript@7.0.2)
+      '@expo/config-types': 58.0.3
+      '@expo/plist': 0.10.1
+      expo: 58.0.21(9ae2817faf1dbb25177fadd42890e976)
+      react: 19.3.0
+      react-native: 0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
 
   expo-speech-recognition@58.0.1(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0):
     dependencies:

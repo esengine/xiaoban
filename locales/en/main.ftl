@@ -2046,12 +2046,10 @@ doc-phone-pending = { $count ->
 }
 doc-phone-share = Export and share
 doc-phone-send = Send to someone
-doc-phone-export-note = Word and PDF export is on your computer
 doc-phone-suggestion = Xiaoban's version · "{ $action }"
 doc-phone-asking = Ask about: { $text }
 sheet-phone-export = Export
 sheet-phone-share-csv = Open in another app (CSV)
-sheet-phone-export-note = Excel export is on your computer
 sheet-phone-done = Done
 sheet-phone-fn-equals = { "=" }
 sheet-phone-fn-sum = SUM
@@ -2114,3 +2112,6 @@ notify-channel-quiet = Quiet notifications
 voice-finishing = Recognizing, sends by itself · tap to cancel
 voice-tap-cancel = Tap to cancel this voice message
 island-answer-failed = Couldn't send that; open Xiaoban and tap again
+export-phone-busy = Exporting…
+export-phone-failed = Export failed. Try again
+doc-meta-exportable = About { $chars } characters · export to Word / PDF

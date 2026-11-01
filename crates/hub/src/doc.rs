@@ -527,7 +527,7 @@ fn runs(text: &str, size: usize) -> docx_rs::Paragraph {
     paragraph
 }
 
-fn docx(doc: &Doc, path: &std::path::Path) -> Result<(), String> {
+fn docx(doc: &Doc) -> Result<Vec<u8>, String> {
     let mut file = docx_rs::Docx::new();
     let mut number = 0;
     for block in &doc.blocks {
@@ -551,9 +551,31 @@ fn docx(doc: &Doc, path: &std::path::Path) -> Result<(), String> {
             file = file.add_paragraph(runs(&doc.subtitle, 20));
         }
     }
-    let out = std::fs::File::create(path).map_err(|error| error.to_string())?;
-    file.build().pack(out).map_err(|error| error.to_string())
+    let mut out = std::io::Cursor::new(Vec::new());
+    file.build().pack(&mut out).map_err(|error| error.to_string())?;
+    Ok(out.into_inner())
 }
+
+fn exported(doc: &Doc, format: DocFormat) -> Result<Vec<u8>, String> {
+    match format {
+        DocFormat::Docx => docx(doc),
+        DocFormat::Markdown => Ok(markdown(doc).into_bytes()),
+    }
+}
+
+pub(crate) fn file_name(title: &str, ext: &str) -> String {
+    let cleaned: String = title.chars().map(|c| if "\\/:*?\"<>|\n\r\t".contains(c) { ' ' } else { c }).collect();
+    let base: String = cleaned.trim().chars().take(60).collect();
+    let base = if base.is_empty() { "document".to_owned() } else { base };
+    format!("{base}.{ext}")
+}
+
+pub(crate) fn export_data(name: String, mime: &str, bytes: &[u8]) -> Response {
+    use base64::Engine;
+    Response::ExportData { name, mime: mime.to_owned(), data: base64::engine::general_purpose::STANDARD.encode(bytes) }
+}
+
+
 
 pub(crate) fn unique(path: &std::path::Path) -> std::path::PathBuf {
     if !path.exists() {
@@ -579,7 +601,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Resul
         | Request::ResolveSuggestion { id, .. }
         | Request::RestoreDocVersion { id, .. }
         | Request::DocVersionBlocks { id, .. }
-        | Request::ExportDoc { id, .. } => id.clone(),
+        | Request::ExportDoc { id, .. }
+        | Request::ExportDocData { id, .. } => id.clone(),
         _ => return Err(ProtocolError::new(ErrorCode::BadRequest, "not a document request")),
     };
     let missing = || ProtocolError::new(ErrorCode::NotFound, "document not found");
@@ -599,20 +622,31 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Resul
             }
             let doc = load(state, &id).await.ok_or_else(missing)?;
             let target = unique(std::path::Path::new(&path));
-            let result = match format {
-                DocFormat::Docx => {
-                    let target = target.clone();
-                    tokio::task::spawn_blocking(move || docx(&doc, &target)).await.unwrap_or_else(|_| Err("stopped".to_owned()))
-                }
-                DocFormat::Markdown => std::fs::write(&target, markdown(&doc)).map_err(|error| error.to_string()),
-            };
-            result.map_err(|failure| ProtocolError::new(ErrorCode::Internal, failure))?;
+            let bytes = render(doc, format).await?;
+            std::fs::write(&target, bytes).map_err(|error| ProtocolError::new(ErrorCode::Internal, error.to_string()))?;
             return Ok(Response::Exported { path: target.to_string_lossy().into_owned() });
+        }
+        Request::ExportDocData { format, .. } => {
+            let doc = load(state, &id).await.ok_or_else(missing)?;
+            let (ext, mime) = match format {
+                DocFormat::Docx => ("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                DocFormat::Markdown => ("md", "text/markdown"),
+            };
+            let name = file_name(&doc.title, ext);
+            let bytes = render(doc, format).await?;
+            return Ok(export_data(name, mime, &bytes));
         }
         _ => {}
     }
     let doc = load(state, &id).await.ok_or_else(missing)?;
     Ok(Response::Doc { doc: change(state, &id, doc, request).await })
+}
+
+async fn render(doc: Doc, format: DocFormat) -> Result<Vec<u8>, ProtocolError> {
+    tokio::task::spawn_blocking(move || exported(&doc, format))
+        .await
+        .unwrap_or_else(|_| Err("stopped".to_owned()))
+        .map_err(|failure| ProtocolError::new(ErrorCode::Internal, failure))
 }
 
 fn undo(doc: &mut Doc, mark: DocMark) {
@@ -740,8 +774,25 @@ mod tests {
             ],
             ..Doc::default()
         };
-        let path = std::env::temp_dir().join(format!("doc-test-{}.docx", new_id()));
-        docx(&doc, &path).unwrap();
-        assert!(std::fs::metadata(&path).unwrap().len() > 1000);
+        let bytes = docx(&doc).unwrap();
+        assert!(bytes.len() > 1000);
+        assert!(bytes.starts_with(b"PK"));
+    }
+
+    #[test]
+    fn export_data_names_the_file_and_encodes_the_bytes() {
+        use base64::Engine;
+        let doc = Doc { title: "周报: 10/31".into(), blocks: vec![block("a", "正文")], ..Doc::default() };
+        let name = file_name(&doc.title, "md");
+        assert_eq!(name, "周报  10 31.md");
+        assert_eq!(file_name("  ", "docx"), "document.docx");
+        let Response::ExportData { name, mime, data } = export_data(name, "text/markdown", &exported(&doc, DocFormat::Markdown).unwrap()) else {
+            panic!("not export data");
+        };
+        assert_eq!(name, "周报  10 31.md");
+        assert_eq!(mime, "text/markdown");
+        let back = base64::engine::general_purpose::STANDARD.decode(data).unwrap();
+        assert_eq!(String::from_utf8(back).unwrap(), "正文\n\n");
+        assert!(exported(&doc, DocFormat::Docx).unwrap().starts_with(b"PK"));
     }
 }

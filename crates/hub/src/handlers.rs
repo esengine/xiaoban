@@ -246,6 +246,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::RestoreSheetVersion { .. }
         | Request::SheetVersionTabs { .. }
         | Request::ExportSheet { .. }
+        | Request::ExportSheetData { .. }
         | Request::ImportSheet { .. }) => crate::sheet::handle(state, local, request).await,
         request @ (Request::Doc { .. }
         | Request::DocSummary { .. }
@@ -256,7 +257,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::ResolveSuggestion { .. }
         | Request::RestoreDocVersion { .. }
         | Request::DocVersionBlocks { .. }
-        | Request::ExportDoc { .. }) => crate::doc::handle(state, local, request).await,
+        | Request::ExportDoc { .. }
+        | Request::ExportDocData { .. }) => crate::doc::handle(state, local, request).await,
         request @ (Request::NotifySettings | Request::SetNotifySettings { .. }) => {
             crate::notify::handle(state, request).await
         }

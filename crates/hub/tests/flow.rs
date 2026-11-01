@@ -18,9 +18,9 @@ use xiaoban_hub::{
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
     Attachment, AutonomyLevel, ClientFrame, ConfirmChoice, ConfirmKind, ContextNote, Coord,
-    Credential, DeviceHello, ErrorCode, Event, FailureKind, Interpretation, Location,
+    Credential, DeviceHello, DocFormat, ErrorCode, Event, FailureKind, Interpretation, Location,
     OperatePermissions, PROTOCOL_VERSION, Platform, ProtocolError, ProviderId, Request, Response,
-    Role, ServerFrame, ServiceId, Sky, TravelMode, TripLeg,
+    Role, ServerFrame, ServiceId, SheetFormat, Sky, TravelMode, TripLeg,
 };
 
 struct TestClient {
@@ -297,6 +297,42 @@ async fn phone_pairs_with_code_then_reconnects_with_token() {
     };
     assert_eq!(devices.len(), 1);
     assert_eq!(devices[0].id, "phone");
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn paired_devices_get_export_data_but_not_file_writes() {
+    let hub = start_hub(&[]).await;
+    let (mut desktop, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let Response::PairingCode { code, .. } = desktop.request(Request::CreatePairingCode).await
+    else {
+        panic!("expected code");
+    };
+    let (mut phone, _) = TestClient::connect(&hub, "phone", Credential::PairingCode { code }).await;
+    let code_of = |result: Result<Response, ProtocolError>| result.err().map(|error| error.code);
+    let doc = phone
+        .try_request(Request::ExportDocData {
+            id: "missing".into(),
+            format: DocFormat::Docx,
+        })
+        .await;
+    assert_eq!(code_of(doc), Some(ErrorCode::NotFound));
+    let sheet = phone
+        .try_request(Request::ExportSheetData {
+            id: "missing".into(),
+            format: SheetFormat::Csv,
+            tab_id: String::new(),
+        })
+        .await;
+    assert_eq!(code_of(sheet), Some(ErrorCode::NotFound));
+    let write = phone
+        .try_request(Request::ExportDoc {
+            id: "missing".into(),
+            format: DocFormat::Docx,
+            path: "out.docx".into(),
+        })
+        .await;
+    assert_eq!(code_of(write), Some(ErrorCode::Unauthorized));
     hub.shutdown().await;
 }
 

@@ -69,6 +69,8 @@ import { applyEvent, type HubState, initialHubState, tripKey, upsertWorkspace } 
 
 const PAGE = 50;
 
+export type ExportedFile = { name: string; mime: string; data: string };
+
 export class HubStore {
   readonly client: HubClient;
   #state: HubState = initialHubState;
@@ -685,6 +687,14 @@ export class HubStore {
     return result.path;
   }
 
+  async exportSheetData(id: string, format: SheetFormat, tabId: string): Promise<ExportedFile> {
+    const { name, mime, data } = await this.client.request(
+      { type: "export_sheet_data", id, format, tabId },
+      "export_data",
+    );
+    return { name, mime, data };
+  }
+
   async docSummary(id: string): Promise<DocSummary> {
     const { summary } = await this.client.request({ type: "doc_summary", id }, "doc_summary");
     this.#update((state) => ({ ...state, docs: { ...state.docs, [id]: summary } }));
@@ -740,6 +750,14 @@ export class HubStore {
   async exportDoc(id: string, format: DocFormat, path: string): Promise<string> {
     const result = await this.client.request({ type: "export_doc", id, format, path }, "exported");
     return result.path;
+  }
+
+  async exportDocData(id: string, format: DocFormat): Promise<ExportedFile> {
+    const { name, mime, data } = await this.client.request(
+      { type: "export_doc_data", id, format },
+      "export_data",
+    );
+    return { name, mime, data };
   }
 
   async loadPlan(threadId: string): Promise<Plan | null> {

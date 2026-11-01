@@ -6,7 +6,7 @@ export { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 export { activeModelName, modelName } from "./modelName.ts";
 export type { AgentState, Draft, HubState, Settled, TraceStep, TurnTrace } from "./state.ts";
 export { applyEvent, initialHubState, tripKey } from "./state.ts";
-export { HubStore } from "./store.ts";
+export { type ExportedFile, HubStore } from "./store.ts";
 export {
   amapFood,
   amapGo,
@@ -36,6 +36,7 @@ export {
   cellName,
   colName,
   countChars,
+  fileName,
   parseRange,
   plainText,
   toCsv,
