@@ -16,15 +16,16 @@ const SCENES: Scene[] = [
   {
     name: "skills-scene-life",
     items: [
+      { title: "skills-remind", example: "skills-remind-example" },
       { title: "skills-ledger", example: "skills-ledger-example" },
-      { title: "skills-weather", example: "skills-weather-example" },
-      { title: "skills-plan", example: "skills-plan-example" },
+      { title: "skills-bills", example: "skills-bills-example" },
     ],
   },
   {
     name: "skills-scene-trip",
     items: [
       { title: "skills-trip", example: "skills-trip-example" },
+      { title: "skills-compare", example: "skills-compare-example" },
       { title: "skills-trip-change", example: "skills-trip-change-example" },
     ],
   },
@@ -41,14 +42,22 @@ const SCENES: Scene[] = [
     items: [
       { title: "skills-slides", example: "skills-slides-example" },
       { title: "skills-doc", example: "skills-doc-example" },
-      { title: "skills-sheet", example: "skills-sheet-example" },
+      { title: "skills-contract", example: "skills-contract-example" },
     ],
   },
   {
-    name: "skills-scene-computer",
+    name: "skills-scene-code",
+    items: [
+      { title: "skills-code", example: "skills-code-example" },
+      { title: "skills-script", example: "skills-script-example" },
+    ],
+  },
+  {
+    name: "skills-scene-devices",
     items: [
       { title: "skills-operate", example: "skills-operate-example" },
-      { title: "skills-code", example: "skills-code-example" },
+      { title: "skills-browser", example: "skills-browser-example" },
+      { title: "skills-phone", example: "skills-phone-example" },
     ],
   },
 ];
