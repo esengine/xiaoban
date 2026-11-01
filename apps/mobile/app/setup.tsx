@@ -33,8 +33,16 @@ export default function SetupScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<PlainMessageKey | null>(null);
 
+  const [open, setOpen] = useState(false);
+
   useEffect(() => {
     if (!local) return;
+    setOpen(local.client.status === "open");
+    return local.client.onStatus((status) => setOpen(status === "open"));
+  }, [local]);
+
+  useEffect(() => {
+    if (!local || !open) return;
     void local
       .listProviders()
       .then((options) => {
@@ -42,7 +50,7 @@ export default function SetupScreen() {
         setSelected((current) => current ?? options[0]?.id ?? null);
       })
       .catch(() => undefined);
-  }, [local]);
+  }, [local, open]);
 
   if (phase === "ready") return <Redirect href="/" />;
 
