@@ -279,6 +279,7 @@ export function CodePanel({
               diff={files.find((file) => file.path === tab.path) ?? null}
               onSeeChanges={() => setTab({ kind: "changes" })}
               onQuote={onQuote}
+              onOpenFile={openFile}
             />
           )}
         </div>

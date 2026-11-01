@@ -4,9 +4,9 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { FileDiff, Workspace } from "@xiaoban/protocol";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
-import { RichText } from "../chat/RichText.tsx";
 import { useImageViewer } from "../viewer/ImageViewer.tsx";
 import { highlightLines } from "./highlight.ts";
+import { MarkdownPreview } from "./MarkdownPreview.tsx";
 
 interface Picked {
   from: number;
@@ -22,7 +22,6 @@ const MODE_KEY = "xiaoban.code.markdown";
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 const IMAGE = /\.(png|jpe?g|gif|webp|svg|ico|bmp|avif)$/i;
 const MARKDOWN = /\.(md|markdown|mdx)$/i;
-const MD_IMAGE = /!\[([^\]]*)\]\(<?([^)\s>]+)>?(\s+"[^"]*")?\)/g;
 
 export const isImage = (path: string) => IMAGE.test(path);
 export const isMarkdown = (path: string) => MARKDOWN.test(path);
@@ -36,15 +35,6 @@ function lineOf(node: Node | null): number | null {
 function size(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
-
-function joinPath(base: string, relative: string): string {
-  const parts = base.split("/").slice(0, -1);
-  for (const part of relative.split("/")) {
-    if (part === "..") parts.pop();
-    else if (part && part !== ".") parts.push(part);
-  }
-  return parts.join("/");
 }
 
 function useFile(workspace: Workspace, path: string) {
@@ -189,54 +179,20 @@ function ImageView({ workspace, path }: { workspace: Workspace; path: string }) 
   );
 }
 
-function useMarkdownImages(workspace: Workspace, path: string, text: string): string {
-  const store = useHub();
-  const [resolved, setResolved] = useState(text);
-  useEffect(() => {
-    let live = true;
-    const wanted = [...text.matchAll(MD_IMAGE)]
-      .map((match) => match[2] ?? "")
-      .filter((src) => src && !/^[a-z]+:/i.test(src) && !src.startsWith("/"));
-    setResolved(text);
-    if (wanted.length === 0) return;
-    void Promise.all(
-      [...new Set(wanted)].map((src) =>
-        store
-          .workspaceImage(workspace.id, joinPath(path, decodeURI(src)))
-          .then((image) => [src, image.url] as const)
-          .catch(() => [src, null] as const),
-      ),
-    ).then((pairs) => {
-      if (!live) return;
-      const urls = new Map(
-        pairs.filter((pair): pair is readonly [string, string] => pair[1] !== null),
-      );
-      setResolved(
-        text.replace(MD_IMAGE, (whole, alt: string, src: string) => {
-          const url = urls.get(src);
-          return url ? `![${alt}](${url})` : whole;
-        }),
-      );
-    });
-    return () => {
-      live = false;
-    };
-  }, [store, workspace.id, path, text]);
-  return resolved;
-}
-
 function TextView({
   workspace,
   path,
   diff,
   onSeeChanges,
   onQuote,
+  onOpenFile,
 }: {
   workspace: Workspace;
   path: string;
   diff: FileDiff | null;
   onSeeChanges: () => void;
   onQuote: (text: string, focus: boolean) => void;
+  onOpenFile: (path: string) => void;
 }) {
   const { t } = useI18n();
   const file = useFile(workspace, path);
@@ -247,7 +203,6 @@ function TextView({
   const preview = markdown && mode === "preview";
   const [picked, setPicked] = useState<Picked | null>(null);
   const box = useRef<HTMLDivElement>(null);
-  const resolved = useMarkdownImages(workspace, path, markdown ? (file?.text ?? "") : "");
 
   const pickMode = (next: Mode) => {
     setMode(next);
@@ -354,9 +309,12 @@ function TextView({
             </button>
           </div>
         ) : preview ? (
-          <div className="code-markdown">
-            <RichText text={resolved} />
-          </div>
+          <MarkdownPreview
+            workspace={workspace}
+            path={path}
+            text={file?.text ?? ""}
+            onOpenFile={onOpenFile}
+          />
         ) : (
           <>
             {lines.map((text, index) => {
@@ -410,6 +368,7 @@ export function FileView(props: {
   diff: FileDiff | null;
   onSeeChanges: () => void;
   onQuote: (text: string, focus: boolean) => void;
+  onOpenFile: (path: string) => void;
 }) {
   if (isImage(props.path)) return <ImageView workspace={props.workspace} path={props.path} />;
   return <TextView {...props} />;
