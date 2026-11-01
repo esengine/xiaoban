@@ -117,6 +117,14 @@ export default function ThreadScreen() {
   const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
   const list = useRef<FlatList<Row>>(null);
   const stick = useRef(true);
+  const [positioned, setPositioned] = useState(false);
+  const loaded = state.messages[id] !== undefined;
+  useEffect(() => {
+    if (loaded && !positioned) {
+      const timer = setTimeout(() => setPositioned(true), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [loaded, positioned]);
   useEffect(() => {
     const shown = Keyboard.addListener("keyboardDidShow", () => {
       if (stick.current) requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
@@ -361,7 +369,8 @@ export default function ThreadScreen() {
       </View>
       <FlatList<Row>
         ref={list}
-        style={styles.flex}
+        style={[styles.flex, !positioned && styles.hidden]}
+        initialNumToRender={60}
         data={rows}
         keyExtractor={(row) => row.key}
         contentContainerStyle={styles.list}
@@ -377,6 +386,7 @@ export default function ThreadScreen() {
         }}
         onContentSizeChange={() => {
           if (stick.current) list.current?.scrollToEnd({ animated: false });
+          if (!positioned && loaded) requestAnimationFrame(() => setPositioned(true));
         }}
         ListFooterComponent={
           confirms.length === 0 ? undefined : (
@@ -430,6 +440,7 @@ export default function ThreadScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.ground },
   flex: { flex: 1 },
+  hidden: { opacity: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",
