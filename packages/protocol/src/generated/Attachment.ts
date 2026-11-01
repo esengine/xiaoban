@@ -11,4 +11,5 @@ export type Attachment =
   | { kind: "doc"; docId: string }
   | { kind: "sheet"; sheetId: string }
   | { kind: "deck"; deckId: string }
-  | { kind: "recipe"; recipeId: string };
+  | { kind: "recipe"; recipeId: string }
+  | { kind: "floor_plan"; planId: string };

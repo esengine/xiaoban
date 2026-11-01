@@ -2249,3 +2249,4 @@ floorplan-back = 回到对话 · { $title }
 floorplan-loading = 正在打开户型…
 floorplan-advice-empty = 这个房间还没有建议，对它说一句试试。
 floorplan-rooms-list = 全部房间
+floorplan-unclear-mark = ?

@@ -2264,3 +2264,4 @@ floorplan-back = Back to chat · { $title }
 floorplan-loading = Opening the floor plan…
 floorplan-advice-empty = No advice for this room yet; tell Xiaoban what you want.
 floorplan-rooms-list = All rooms
+floorplan-unclear-mark = ?
