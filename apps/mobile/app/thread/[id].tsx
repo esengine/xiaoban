@@ -93,6 +93,8 @@ function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
   );
 }
 
+const STICK_DISTANCE = 80;
+
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useI18n();
@@ -103,6 +105,7 @@ export default function ThreadScreen() {
   const [text, setText] = useState("");
   const [queued, setQueued] = useState<string[]>([]);
   const list = useRef<FlatList<Row>>(null);
+  const stick = useRef(true);
   const primary = state.preferences?.primaryThreadId === id;
   const thread = state.threads.find((item) => item.id === id);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
@@ -171,6 +174,7 @@ export default function ThreadScreen() {
     const trimmed = value.trim();
     if (!trimmed) return;
     setText("");
+    stick.current = true;
     if (running) setQueued((items) => [...items, trimmed]);
     else void store.send(id, trimmed).catch(() => undefined);
   };
@@ -225,7 +229,15 @@ export default function ThreadScreen() {
         data={rows}
         keyExtractor={(row) => row.key}
         contentContainerStyle={styles.list}
-        onContentSizeChange={() => list.current?.scrollToEnd({ animated: false })}
+        onScroll={(event) => {
+          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+          stick.current =
+            contentSize.height - contentOffset.y - layoutMeasurement.height < STICK_DISTANCE;
+        }}
+        scrollEventThrottle={100}
+        onContentSizeChange={() => {
+          if (stick.current) list.current?.scrollToEnd({ animated: false });
+        }}
         ListFooterComponent={
           confirms.length === 0 ? undefined : (
             <View style={styles.footer}>
