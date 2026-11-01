@@ -189,6 +189,11 @@ export class HubStore {
     return this.client.request({ type: "create_pairing_code" }, "pairing_code");
   }
 
+  async uploadFile(name: string, data: string): Promise<string> {
+    const { path } = await this.client.request({ type: "upload_file", name, data }, "uploaded");
+    return path;
+  }
+
   async shareProviderKeys(
     publicKey: string,
   ): Promise<Extract<Response, { type: "provider_keys" }>> {
