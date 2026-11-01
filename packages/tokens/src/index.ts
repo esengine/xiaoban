@@ -99,6 +99,55 @@ export const motion = {
   easeSpring: "cubic-bezier(.34,1.56,.64,1)",
 } as const;
 
+export const slideThemes = {
+  blue: {
+    accent: "#3451D1",
+    soft: "#EEF1FB",
+    bg: "#FFFFFF",
+    ink: "#15171C",
+    muted: "#6B7180",
+    onAccent: "#FFFFFF",
+    deco: "circles",
+    dark: "#15171C",
+    onDark: "#FFFFFF",
+  },
+  green: {
+    accent: "#1E6A44",
+    soft: "#E3F1EA",
+    bg: "#FFFFFF",
+    ink: "#15171C",
+    muted: "#6B7180",
+    onAccent: "#FFFFFF",
+    deco: "band",
+    dark: "#15171C",
+    onDark: "#FFFFFF",
+  },
+  orange: {
+    accent: "#C77A12",
+    soft: "#FDEBD9",
+    bg: "#FFFDF8",
+    ink: "#15171C",
+    muted: "#6B7180",
+    onAccent: "#FFFFFF",
+    deco: "glow",
+    dark: "#15171C",
+    onDark: "#FFFFFF",
+  },
+  night: {
+    accent: "#9AAAE6",
+    soft: "#2A2D35",
+    bg: "#15171C",
+    ink: "#FFFFFF",
+    muted: "#B9BECB",
+    onAccent: "#15171C",
+    deco: "lines",
+    dark: "#2A2D35",
+    onDark: "#FFFFFF",
+  },
+} as const;
+
+export type SlideThemeName = keyof typeof slideThemes;
+
 export const waiting = {
   silentMs: 400,
   showElapsedMs: 3_000,

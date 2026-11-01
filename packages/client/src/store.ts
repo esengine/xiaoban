@@ -10,6 +10,8 @@ import type {
   ConflictFile,
   ContextNote,
   DailyLayout,
+  Deck,
+  DeckSummary,
   Device,
   DirEntry,
   Doc,
@@ -19,6 +21,7 @@ import type {
   Expense,
   Failure,
   FileDiff,
+  FoundImage,
   GithubRef,
   GitInfo,
   Interpretation,
@@ -40,8 +43,10 @@ import type {
   SheetFormat,
   SheetOp,
   SheetTab,
+  Slide,
   ThinkingEffort,
   Thread,
+  Transition,
   Trip,
   TripCalendar,
   Usage,
@@ -67,6 +72,9 @@ export class HubStore {
     this.client = client;
     client.onEvent((event) => {
       this.#update((state) => applyEvent(state, event));
+      if (event.type === "deck_updated" && this.#state.deck?.id === event.summary.id) {
+        void this.loadDeck(event.summary.id).catch(() => undefined);
+      }
       if (event.type === "sheet_updated" && this.#state.sheet?.id === event.summary.id) {
         void this.loadSheet(event.summary.id).catch(() => undefined);
       }
@@ -535,6 +543,56 @@ export class HubStore {
 
   cancelImport(month: string): Promise<void> {
     return this.#ledgerRequest({ type: "cancel_import", month });
+  }
+
+  async deckSummary(id: string): Promise<DeckSummary> {
+    const { summary } = await this.client.request({ type: "deck_summary", id }, "deck_summary");
+    this.#update((state) => ({ ...state, decks: { ...state.decks, [id]: summary } }));
+    return summary;
+  }
+
+  async #deckRequest(request: Parameters<HubClient["request"]>[0]): Promise<Deck> {
+    const { deck } = await this.client.request(request, "deck");
+    this.#update((state) => ({ ...state, deck }));
+    return deck;
+  }
+
+  loadDeck(id: string): Promise<Deck> {
+    return this.#deckRequest({ type: "deck", id });
+  }
+
+  openDeck(id: string): Promise<Deck> {
+    return this.#deckRequest({ type: "open_deck", id });
+  }
+
+  setSlides(
+    id: string,
+    slides: Slide[],
+    theme: string | null = null,
+    transition: Transition | null = null,
+  ): Promise<Deck> {
+    this.#update((state) =>
+      state.deck?.id === id ? { ...state, deck: { ...state.deck, slides } } : state,
+    );
+    return this.#deckRequest({ type: "set_slides", id, slides, theme, transition });
+  }
+
+  resolveSlideChange(id: string, slideId: string, keep: boolean): Promise<Deck> {
+    return this.#deckRequest({ type: "resolve_slide_change", id, slideId, keep });
+  }
+
+  restoreDeckVersion(id: string, version: number): Promise<Deck> {
+    return this.#deckRequest({ type: "restore_deck_version", id, version });
+  }
+
+  async searchImages(query: string): Promise<FoundImage[]> {
+    const { images } = await this.client.request({ type: "search_images", query }, "images");
+    return images;
+  }
+
+  async saveExport(path: string, data: string): Promise<string> {
+    const result = await this.client.request({ type: "save_export", path, data }, "exported");
+    return result.path;
   }
 
   async sheetSummary(id: string): Promise<WorkbookSummary> {

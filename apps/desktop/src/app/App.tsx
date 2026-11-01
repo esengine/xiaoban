@@ -21,6 +21,7 @@ import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
 import { SheetPage } from "../features/sheet/SheetPage.tsx";
 import { Rail, type View } from "../features/shell/Rail.tsx";
+import { DeckPage } from "../features/slides/DeckPage.tsx";
 import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
 import { ImageViewerProvider } from "../features/viewer/ImageViewer.tsx";
 import { Workspace } from "../features/workspace/Workspace.tsx";
@@ -45,6 +46,10 @@ function Home() {
   const [trip, setTrip] = useState<OpenTrip | null>(null);
   const [docView, setDocView] = useState<{ docId: string; print: boolean } | null>(null);
   const [sheetView, setSheetView] = useState<string | null>(null);
+  const [deckView, setDeckView] = useState<{
+    deckId: string;
+    action: "present" | "pptx" | "pdf" | null;
+  } | null>(null);
   const [view, setView] = useState<
     "chat" | "daily" | "kitchen" | "week" | "cook" | "ledger" | "weather"
   >("chat");
@@ -161,6 +166,25 @@ function Home() {
     );
   }
 
+  if (deckView) {
+    return (
+      <div className="shell">
+        <Rail
+          onNavigate={(next) => {
+            setDeckView(null);
+            navigate(next);
+          }}
+        />
+        <DeckPage
+          deckId={deckView.deckId}
+          action={deckView.action}
+          onBack={() => setDeckView(null)}
+        />
+        {consent && <OperateConsent key={consent.id} confirm={consent} />}
+      </div>
+    );
+  }
+
   if (sheetView) {
     return (
       <div className="shell">
@@ -259,6 +283,7 @@ function Home() {
           onOpenTrip={openTrip}
           onOpenDoc={(docId, print) => setDocView({ docId, print: Boolean(print) })}
           onOpenSheet={setSheetView}
+          onOpenDeck={(deckId, action) => setDeckView({ deckId, action: action ?? null })}
         />
       ) : (
         <main className="chat" aria-busy="true" />

@@ -26,6 +26,7 @@ import { DocCard, WritingDocs } from "../doc/DocCard.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SheetCard } from "../sheet/SheetCard.tsx";
+import { DeckCard, WritingDecks } from "../slides/DeckCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { Composer } from "./Composer.tsx";
@@ -67,6 +68,7 @@ interface Props {
   onOpenTrip: (tripId: string, version: number | null) => void;
   onOpenDoc: (docId: string, print?: boolean) => void;
   onOpenSheet: (sheetId: string) => void;
+  onOpenDeck: (deckId: string, action?: "present" | "pptx" | "pdf") => void;
   onOpenThread: (threadId: string) => void;
 }
 
@@ -477,6 +479,9 @@ export function ChatPane(props: Props) {
         />
       );
     }
+    if (attachment?.kind === "deck") {
+      return <DeckCard deckId={attachment.deckId} onOpen={props.onOpenDeck} />;
+    }
     if (attachment?.kind === "sheet") {
       return <SheetCard sheetId={attachment.sheetId} onOpen={props.onOpenSheet} />;
     }
@@ -621,6 +626,7 @@ export function ChatPane(props: Props) {
             />
           ))}
           {running && <WritingDocs threadId={threadId} onOpen={props.onOpenDoc} />}
+          {running && <WritingDecks threadId={threadId} onOpen={props.onOpenDeck} />}
           {waitingHere.map((item) => (
             <li key={item.id} className="bubble bubble--user bubble--queued">
               <InlineText text={item.text} />

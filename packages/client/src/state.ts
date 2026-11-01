@@ -2,6 +2,8 @@ import type {
   Archived,
   CommandRun,
   ConfirmRequest,
+  Deck,
+  DeckSummary,
   Device,
   Doc,
   DocSummary,
@@ -95,6 +97,8 @@ export interface HubState {
   doc: Doc | null;
   sheets: Readonly<Record<string, WorkbookSummary>>;
   sheet: Workbook | null;
+  decks: Readonly<Record<string, DeckSummary>>;
+  deck: Deck | null;
 }
 
 export const initialHubState: HubState = {
@@ -127,6 +131,8 @@ export const initialHubState: HubState = {
   doc: null,
   sheets: {},
   sheet: null,
+  decks: {},
+  deck: null,
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -390,6 +396,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "kitchen_updated":
       return { ...state, kitchen: event.kitchen };
+    case "deck_updated":
+      return { ...state, decks: { ...state.decks, [event.summary.id]: event.summary } };
     case "sheet_updated":
       return { ...state, sheets: { ...state.sheets, [event.summary.id]: event.summary } };
     case "doc_updated":
