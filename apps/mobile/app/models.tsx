@@ -132,7 +132,17 @@ function ProviderRow({
       >
         <View style={styles.tile}>
           {custom ? (
-            <Text style={styles.plus}>+</Text>
+            <Svg
+              width={18}
+              height={18}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={color.muted}
+              strokeWidth={2}
+              strokeLinecap="round"
+            >
+              <Path d="M12 5v14M5 12h14" />
+            </Svg>
           ) : (
             <SvgXml xml={providerSvg(option.id)} width={24} height={24} />
           )}
@@ -376,7 +386,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  plus: { fontSize: 18, fontWeight: "500", color: color.muted },
   name: { fontSize: 15, fontWeight: "500", color: color.ink },
   model: { fontSize: 12, color: color.muted, fontFamily: "monospace" },
   status: {

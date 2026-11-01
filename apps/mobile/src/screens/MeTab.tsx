@@ -8,6 +8,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 import { useHubContext } from "../hub/HubProvider.tsx";
 import { firstChar } from "../ui/format.ts";
 import { Icon } from "../ui/Icon.tsx";
@@ -119,7 +120,18 @@ export function MeTab({ store }: { store: HubStore }) {
         <Text style={styles.modelName} numberOfLines={1}>
           {model ? activeModelName(model) : t("model-not-connected")}
         </Text>
-        <Text style={styles.chevron}>›</Text>
+        <Svg
+          width={14}
+          height={14}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color.faint}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M9 6l6 6-6 6" />
+        </Svg>
       </Pressable>
 
       <View style={styles.card}>
@@ -241,7 +253,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: "700", color: color.ink },
   modelRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   modelName: { flex: 1, textAlign: "right", fontSize: 13, color: color.muted },
-  chevron: { fontSize: 18, color: color.faint },
   link: { fontSize: 13, color: color.accent },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
