@@ -39,6 +39,18 @@
           }
         }
       ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Used to hear you and turn speech into text, only while you hold the microphone.",
+          "speechRecognitionPermission": "Turns what you say into text while you hold the microphone.",
+          "androidSpeechServicePackages": [
+            "com.xiaomi.mibrain.speech",
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.as"
+          ]
+        }
+      ],
       "./plugins/with-short-object-paths.js"
     ],
     "experiments": {
