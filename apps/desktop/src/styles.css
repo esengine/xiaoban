@@ -4981,7 +4981,6 @@ button.sent-files__image {
   cursor: pointer;
 }
 
-
 .workspace-group__name {
   font-size: 12px;
   font-weight: 700;
@@ -5400,7 +5399,6 @@ button.sent-files__image {
   color: var(--color-success);
 }
 
-
 .code-tree__name {
   min-width: 0;
   white-space: nowrap;
@@ -5523,7 +5521,6 @@ button.sent-files__image {
   text-align: left;
   cursor: pointer;
 }
-
 
 .diff-file__path {
   min-width: 0;
@@ -6125,7 +6122,6 @@ button.sent-files__image {
   font: inherit;
   cursor: pointer;
 }
-
 
 .terminal__cursor {
   display: inline-block;
