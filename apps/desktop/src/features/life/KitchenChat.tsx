@@ -13,7 +13,15 @@ export type ChatLabels = {
   placeholder: string;
 };
 
-export function KitchenChat({ threadId, labels }: { threadId: string; labels?: ChatLabels }) {
+export function KitchenChat({
+  threadId,
+  labels,
+  extra,
+}: {
+  threadId: string;
+  labels?: ChatLabels;
+  extra?: React.ReactNode;
+}) {
   const { t } = useI18n();
   const store = useHub();
   const state = useHubState(store);
@@ -98,6 +106,7 @@ export function KitchenChat({ threadId, labels }: { threadId: string; labels?: C
             {running.text ? <RichText text={running.text} /> : t("kitchen-thinking")}
           </div>
         )}
+        {extra}
         <div ref={end} />
       </div>
       <div className="kitchen-chat__bar">

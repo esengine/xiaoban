@@ -3,6 +3,8 @@ import type {
   CommandRun,
   ConfirmRequest,
   Device,
+  Doc,
+  DocSummary,
   Event,
   Failure,
   HubInfo,
@@ -87,6 +89,8 @@ export interface HubState {
   kitchen: Kitchen | null;
   ledger: Ledger | null;
   weather: WeatherView | null;
+  docs: Readonly<Record<string, DocSummary>>;
+  doc: Doc | null;
 }
 
 export const initialHubState: HubState = {
@@ -115,6 +119,8 @@ export const initialHubState: HubState = {
   kitchen: null,
   ledger: null,
   weather: null,
+  docs: {},
+  doc: null,
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -378,6 +384,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "kitchen_updated":
       return { ...state, kitchen: event.kitchen };
+    case "doc_updated":
+      return { ...state, docs: { ...state.docs, [event.summary.id]: event.summary } };
     case "timer_fired":
     case "prep_due":
     case "ledger_changed":

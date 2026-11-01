@@ -74,13 +74,14 @@ impl Hub {
             info: info.clone(),
             port: addr.port(),
             store,
-            tools: crate::tools::specs(&localizer),
+            tools: crate::doc::with_write_specs(crate::tools::specs(&localizer), &localizer),
             code_tools: crate::code_tools::specs(&localizer),
             git_tools: vec![crate::vcs_tools::git_spec(&localizer)],
             gh_tools: vec![crate::vcs_tools::gh_spec(&localizer)],
             kitchen_tools: crate::kitchen::specs(&localizer),
             ledger_tools: crate::ledger::specs(&localizer),
             life_tools: vec![crate::life::spec(&localizer)],
+            doc_tools: crate::doc::edit_specs(&localizer),
             code_reads: std::sync::Mutex::default(),
             running_commands: std::sync::Mutex::default(),
             github_cache: crate::github::Cache::default(),
@@ -116,13 +117,7 @@ impl Hub {
             .flatten();
 
         let shutdown = CancellationToken::new();
-        crate::tidy::watch(Arc::clone(&state), shutdown.clone());
-        crate::week::watch(Arc::clone(&state), shutdown.clone());
-        crate::weather_page::watch(Arc::clone(&state), shutdown.clone());
-        {
-            let state = Arc::clone(&state);
-            tokio::spawn(async move { crate::cooking::rearm(&state).await });
-        }
+        watch(&state, &shutdown);
         let app = Router::new().route("/ws", get(upgrade)).with_state(state);
         let signal = shutdown.clone();
         let task = tokio::spawn(async move {
@@ -155,4 +150,12 @@ async fn upgrade(
     State(state): State<SharedState>,
 ) -> Response {
     ws.on_upgrade(move |socket| session::run(socket, peer, state))
+}
+
+fn watch(state: &SharedState, shutdown: &CancellationToken) {
+    crate::tidy::watch(Arc::clone(state), shutdown.clone());
+    crate::week::watch(Arc::clone(state), shutdown.clone());
+    crate::weather_page::watch(Arc::clone(state), shutdown.clone());
+    let state = Arc::clone(state);
+    tokio::spawn(async move { crate::cooking::rearm(&state).await });
 }

@@ -11,6 +11,10 @@ import type {
   DailyLayout,
   Device,
   DirEntry,
+  Doc,
+  DocBlock,
+  DocFormat,
+  DocSummary,
   Expense,
   Failure,
   FileDiff,
@@ -57,6 +61,9 @@ export class HubStore {
     this.client = client;
     client.onEvent((event) => {
       this.#update((state) => applyEvent(state, event));
+      if (event.type === "doc_updated" && this.#state.doc?.id === event.summary.id) {
+        void this.loadDoc(event.summary.id).catch(() => undefined);
+      }
       if (event.type === "ledger_changed") {
         void this.#reloadLedger().catch(() => undefined);
       }
@@ -519,6 +526,59 @@ export class HubStore {
 
   cancelImport(month: string): Promise<void> {
     return this.#ledgerRequest({ type: "cancel_import", month });
+  }
+
+  async docSummary(id: string): Promise<DocSummary> {
+    const { summary } = await this.client.request({ type: "doc_summary", id }, "doc_summary");
+    this.#update((state) => ({ ...state, docs: { ...state.docs, [id]: summary } }));
+    return summary;
+  }
+
+  async loadDoc(id: string): Promise<Doc> {
+    const { doc } = await this.client.request({ type: "doc", id }, "doc");
+    this.#update((state) => ({ ...state, doc }));
+    return doc;
+  }
+
+  async openDoc(id: string): Promise<Doc> {
+    const { doc } = await this.client.request({ type: "open_doc", id }, "doc");
+    this.#update((state) => ({ ...state, doc }));
+    return doc;
+  }
+
+  async #docRequest(request: Parameters<HubClient["request"]>[0]): Promise<Doc> {
+    const { doc } = await this.client.request(request, "doc");
+    this.#update((state) => ({ ...state, doc }));
+    return doc;
+  }
+
+  setDocBlocks(id: string, blocks: DocBlock[]): Promise<Doc> {
+    return this.#docRequest({ type: "set_doc_blocks", id, blocks });
+  }
+
+  resolveMark(id: string, blockId: string, keep: boolean): Promise<Doc> {
+    return this.#docRequest({ type: "resolve_mark", id, blockId, keep });
+  }
+
+  resolveSuggestion(id: string, suggestionId: string, accept: boolean): Promise<Doc> {
+    return this.#docRequest({ type: "resolve_suggestion", id, suggestionId, accept });
+  }
+
+  restoreDocVersion(id: string, version: number): Promise<Doc> {
+    return this.#docRequest({ type: "restore_doc_version", id, version });
+  }
+
+  async docVersionBlocks(id: string, version: number): Promise<DocBlock[]> {
+    const { blocks } = await this.client.request(
+      { type: "doc_version_blocks", id, version },
+      "doc_blocks",
+    );
+    return blocks;
+  }
+
+  async exportDoc(id: string, format: DocFormat, path: string): Promise<string> {
+    const result = await this.client.request({ type: "export_doc", id, format, path }, "exported");
+    return result.path;
   }
 
   async dailyLayout(): Promise<DailyLayout> {

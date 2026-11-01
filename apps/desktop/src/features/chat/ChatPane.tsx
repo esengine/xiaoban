@@ -22,6 +22,7 @@ import { refsIn } from "../code/githubRefs.ts";
 import { Pins } from "../code/Pins.tsx";
 import { RefsContext, type RefsValue } from "../code/RefChip.tsx";
 import { useWorkspaceOf } from "../code/useCode.ts";
+import { DocCard, WritingDocs } from "../doc/DocCard.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
@@ -63,6 +64,7 @@ interface Props {
   onQuote: (quote: Quote | null) => void;
   onNewThreadWith: (quote: Quote) => void;
   onOpenTrip: (tripId: string, version: number | null) => void;
+  onOpenDoc: (docId: string, print?: boolean) => void;
   onOpenThread: (threadId: string) => void;
 }
 
@@ -473,6 +475,9 @@ export function ChatPane(props: Props) {
         />
       );
     }
+    if (attachment?.kind === "doc") {
+      return <DocCard docId={attachment.docId} onOpen={props.onOpenDoc} />;
+    }
     if (attachment?.kind === "subthreads") {
       return <SubthreadCards threadIds={attachment.threadIds} onOpen={props.onOpenThread} />;
     }
@@ -604,6 +609,7 @@ export function ChatPane(props: Props) {
               onRetry={() => retry(draft.turnId)}
             />
           ))}
+          {running && <WritingDocs threadId={threadId} onOpen={props.onOpenDoc} />}
           {waitingHere.map((item) => (
             <li key={item.id} className="bubble bubble--user bubble--queued">
               <InlineText text={item.text} />

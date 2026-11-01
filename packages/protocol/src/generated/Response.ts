@@ -8,6 +8,9 @@ import type { ConflictFile } from "./ConflictFile.ts";
 import type { DailyLayout } from "./DailyLayout.ts";
 import type { Device } from "./Device.ts";
 import type { DirEntry } from "./DirEntry.ts";
+import type { Doc } from "./Doc.ts";
+import type { DocBlock } from "./DocBlock.ts";
+import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
 import type { FileDiff } from "./FileDiff.ts";
 import type { GitInfo } from "./GitInfo.ts";
@@ -88,6 +91,10 @@ export type Response =
   | { type: "ledger_year"; year: LedgerYear }
   | { type: "weather"; weather: WeatherView }
   | { type: "daily_layout"; layout: DailyLayout }
+  | { type: "doc"; doc: Doc }
+  | { type: "doc_summary"; summary: DocSummary }
+  | { type: "doc_blocks"; blocks: Array<DocBlock> }
+  | { type: "exported"; path: string }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };

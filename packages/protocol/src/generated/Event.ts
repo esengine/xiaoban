@@ -5,6 +5,7 @@ import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { CookTimer } from "./CookTimer.ts";
 import type { Device } from "./Device.ts";
+import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
 import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
@@ -55,4 +56,5 @@ export type Event =
   | { type: "timer_fired"; timer: CookTimer }
   | { type: "prep_due"; task: PrepTask }
   | { type: "ledger_changed" }
+  | { type: "doc_updated"; summary: DocSummary }
   | { type: "weather_alert"; title: string; body: string };

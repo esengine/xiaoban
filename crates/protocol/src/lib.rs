@@ -1,5 +1,6 @@
 mod code;
 mod daily;
+mod doc;
 mod event;
 mod frame;
 mod kitchen;
@@ -13,6 +14,7 @@ mod weather;
 
 pub use code::*;
 pub use daily::*;
+pub use doc::*;
 pub use event::*;
 pub use frame::*;
 pub use kitchen::*;

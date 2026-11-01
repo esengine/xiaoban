@@ -353,6 +353,42 @@ pub enum Request {
     },
     LocateWeather,
     DailyLayout,
+    Doc {
+        id: String,
+    },
+    DocSummary {
+        id: String,
+    },
+    OpenDoc {
+        id: String,
+    },
+    SetDocBlocks {
+        id: String,
+        blocks: Vec<crate::DocBlock>,
+    },
+    ResolveMark {
+        id: String,
+        block_id: String,
+        keep: bool,
+    },
+    ResolveSuggestion {
+        id: String,
+        suggestion_id: String,
+        accept: bool,
+    },
+    RestoreDocVersion {
+        id: String,
+        version: u32,
+    },
+    DocVersionBlocks {
+        id: String,
+        version: u32,
+    },
+    ExportDoc {
+        id: String,
+        format: crate::DocFormat,
+        path: String,
+    },
     SetDailyLayout {
         layout: crate::DailyLayout,
     },
@@ -562,6 +598,18 @@ pub enum Response {
     },
     DailyLayout {
         layout: crate::DailyLayout,
+    },
+    Doc {
+        doc: crate::Doc,
+    },
+    DocSummary {
+        summary: crate::DocSummary,
+    },
+    DocBlocks {
+        blocks: Vec<crate::DocBlock>,
+    },
+    Exported {
+        path: String,
     },
     Places {
         places: Vec<crate::WeatherPlace>,

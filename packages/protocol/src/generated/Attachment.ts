@@ -7,4 +7,5 @@ export type Attachment =
   | { kind: "service_needed"; service: ServiceId }
   | { kind: "subthreads"; threadIds: Array<string> }
   | { kind: "report"; threadId: string; title: string }
-  | { kind: "changes"; files: Array<ChangedFile> };
+  | { kind: "changes"; files: Array<ChangedFile> }
+  | { kind: "doc"; docId: string };

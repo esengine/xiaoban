@@ -5,6 +5,8 @@ import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConflictChoice } from "./ConflictChoice.ts";
 import type { ContextNote } from "./ContextNote.ts";
 import type { DailyLayout } from "./DailyLayout.ts";
+import type { DocBlock } from "./DocBlock.ts";
+import type { DocFormat } from "./DocFormat.ts";
 import type { Expense } from "./Expense.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
@@ -144,6 +146,15 @@ export type Request =
   | { type: "set_weather_rules"; rules: WeatherRules }
   | { type: "locate_weather" }
   | { type: "daily_layout" }
+  | { type: "doc"; id: string }
+  | { type: "doc_summary"; id: string }
+  | { type: "open_doc"; id: string }
+  | { type: "set_doc_blocks"; id: string; blocks: Array<DocBlock> }
+  | { type: "resolve_mark"; id: string; blockId: string; keep: boolean }
+  | { type: "resolve_suggestion"; id: string; suggestionId: string; accept: boolean }
+  | { type: "restore_doc_version"; id: string; version: number }
+  | { type: "doc_version_blocks"; id: string; version: number }
+  | { type: "export_doc"; id: string; format: DocFormat; path: string }
   | { type: "set_daily_layout"; layout: DailyLayout }
   | { type: "locate_place" }
   | { type: "update_place"; id: string; label: string | null; location: WeatherPlace | null }

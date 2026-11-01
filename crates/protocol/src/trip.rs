@@ -173,4 +173,5 @@ pub enum Attachment {
     Subthreads { thread_ids: Vec<String> },
     Report { thread_id: String, title: String },
     Changes { files: Vec<crate::ChangedFile> },
+    Doc { doc_id: String },
 }

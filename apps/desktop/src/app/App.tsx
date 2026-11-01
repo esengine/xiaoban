@@ -9,6 +9,7 @@ import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { CodePanel } from "../features/code/CodePanel.tsx";
 import { NewWorkspace } from "../features/code/NewWorkspace.tsx";
 import { useCodeWidth } from "../features/code/useCodeWidth.ts";
+import { DocPage } from "../features/doc/DocPage.tsx";
 import { CookPage } from "../features/life/CookPage.tsx";
 import { DailyPage } from "../features/life/DailyPage.tsx";
 import { KitchenPage } from "../features/life/KitchenPage.tsx";
@@ -41,6 +42,7 @@ function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
+  const [docView, setDocView] = useState<{ docId: string; print: boolean } | null>(null);
   const [view, setView] = useState<
     "chat" | "daily" | "kitchen" | "week" | "cook" | "ledger" | "weather"
   >("chat");
@@ -157,6 +159,21 @@ function Home() {
     );
   }
 
+  if (docView) {
+    return (
+      <div className="shell">
+        <Rail
+          onNavigate={(next) => {
+            setDocView(null);
+            navigate(next);
+          }}
+        />
+        <DocPage docId={docView.docId} print={docView.print} onBack={() => setDocView(null)} />
+        {consent && <OperateConsent key={consent.id} confirm={consent} />}
+      </div>
+    );
+  }
+
   if (trip) {
     const thread = threads.find((candidate) => candidate.id === trip.threadId);
     return (
@@ -223,6 +240,7 @@ function Home() {
           onNewThreadWith={(quote) => void newThreadWith(quote)}
           onOpenThread={setSelected}
           onOpenTrip={openTrip}
+          onOpenDoc={(docId, print) => setDocView({ docId, print: Boolean(print) })}
         />
       ) : (
         <main className="chat" aria-busy="true" />

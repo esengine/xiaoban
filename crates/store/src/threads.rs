@@ -119,6 +119,17 @@ impl Store {
         .await
     }
 
+    pub async fn set_thread_parent(&self, id: String, parent_id: String) -> Result<Thread> {
+        self.with(move |conn| {
+            conn.execute(
+                "UPDATE threads SET parent_id = ?2 WHERE id = ?1",
+                params![id, parent_id],
+            )?;
+            by_id(conn, &id)
+        })
+        .await
+    }
+
     pub async fn set_thread_thinking(&self, id: String, effort: ThinkingEffort) -> Result<Thread> {
         self.with(move |conn| {
             conn.execute(

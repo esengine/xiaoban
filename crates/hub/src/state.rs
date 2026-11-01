@@ -53,6 +53,7 @@ pub struct HubState {
     pub kitchen_tools: Vec<ToolSpec>,
     pub ledger_tools: Vec<ToolSpec>,
     pub life_tools: Vec<ToolSpec>,
+    pub doc_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
@@ -64,6 +65,7 @@ pub enum Scene {
     Chat,
     Kitchen,
     Ledger,
+    Doc,
 }
 
 pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
@@ -71,6 +73,8 @@ pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
         Scene::Kitchen
     } else if crate::ledger::is_ledger(state, thread_id).await {
         Scene::Ledger
+    } else if crate::doc::is_doc_thread(state, thread_id).await {
+        Scene::Doc
     } else {
         Scene::Chat
     }
@@ -86,6 +90,7 @@ impl HubState {
         let special = match scene {
             Scene::Kitchen => Some((xiaoban_i18n::keys::PROMPT_KITCHEN, &self.kitchen_tools)),
             Scene::Ledger => Some((xiaoban_i18n::keys::PROMPT_LEDGER, &self.ledger_tools)),
+            Scene::Doc => Some((xiaoban_i18n::keys::PROMPT_DOC, &self.doc_tools)),
             Scene::Chat => None,
         };
         if let Some((prompt, extra)) = special {
