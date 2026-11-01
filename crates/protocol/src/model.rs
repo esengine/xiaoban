@@ -166,6 +166,31 @@ impl ProviderId {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelApi {
+    #[default]
+    OpenAi,
+    Anthropic,
+}
+
+impl ModelApi {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::OpenAi => "open_ai",
+            Self::Anthropic => "anthropic",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "open_ai" => Some(Self::OpenAi),
+            "anthropic" => Some(Self::Anthropic),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
@@ -173,6 +198,8 @@ pub struct ModelInfo {
     pub model: String,
     pub label: Option<String>,
     pub base_url: Option<String>,
+    #[serde(default)]
+    pub api: ModelApi,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

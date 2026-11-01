@@ -69,6 +69,8 @@ pub enum Request {
         model: Option<String>,
         base_url: Option<String>,
         label: Option<String>,
+        #[serde(default)]
+        api: Option<crate::ModelApi>,
     },
     SelectModel {
         provider: ProviderId,

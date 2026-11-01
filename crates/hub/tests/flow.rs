@@ -502,6 +502,7 @@ async fn configure(client: &mut TestClient, key: &str) -> Response {
             model: Some("deepseek-v4-pro".into()),
             base_url: None,
             label: None,
+            api: None,
         })
         .await
 }
@@ -615,6 +616,7 @@ async fn paired_devices_cannot_configure_providers() {
                 model: None,
                 base_url: None,
                 label: None,
+                api: None,
             },
         })
         .await;
@@ -642,6 +644,7 @@ async fn configure_custom(client: &mut TestClient, base_url: &str, model: &str) 
             model: Some(model.into()),
             base_url: Some(base_url.into()),
             label: Some("我的中转站".into()),
+            api: None,
         })
         .await
 }

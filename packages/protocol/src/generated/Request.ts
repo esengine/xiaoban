@@ -9,6 +9,7 @@ import type { DailyLayout } from "./DailyLayout.ts";
 import type { DocBlock } from "./DocBlock.ts";
 import type { DocFormat } from "./DocFormat.ts";
 import type { Expense } from "./Expense.ts";
+import type { ModelApi } from "./ModelApi.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
@@ -50,6 +51,7 @@ export type Request =
       model: string | null;
       baseUrl: string | null;
       label: string | null;
+      api: ModelApi | null;
     }
   | { type: "select_model"; provider: ProviderId; model: string }
   | { type: "preferences" }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use xiaoban_agent::{
     Agent, ConfiguredProvider, Connector, PRESETS, ProviderPreset, UnconfiguredProvider,
 };
-use xiaoban_protocol::{ErrorCode, ProtocolError, ProviderId, ProviderOption, Response};
+use xiaoban_protocol::{ErrorCode, ModelApi, ProtocolError, ProviderId, ProviderOption, Response};
 use xiaoban_store::Store;
 
 use crate::secrets::SecretStore;
@@ -13,6 +13,7 @@ const PROVIDER_KEY: &str = "model_provider";
 const MODEL_KEY: &str = "model_name";
 const BASE_URL_KEY: &str = "model_base_url";
 const LABEL_KEY: &str = "model_label";
+const API_KEY: &str = "model_api";
 
 #[derive(Debug, Clone, Default)]
 pub struct Selection {
@@ -21,6 +22,7 @@ pub struct Selection {
     pub model: Option<String>,
     pub base_url: Option<String>,
     pub label: Option<String>,
+    pub api: ModelApi,
 }
 
 fn internal(detail: &dyn std::fmt::Display) -> ProtocolError {
@@ -72,6 +74,7 @@ fn resolve(selection: Selection) -> Result<ConfiguredProvider, xiaoban_agent::Ag
             selection.api_key,
             selection.model.as_deref().unwrap_or_default(),
             selection.label,
+            selection.api,
         ),
     }
 }
@@ -102,6 +105,12 @@ pub async fn restore(
         model: store.setting(MODEL_KEY).await?,
         base_url: store.setting(BASE_URL_KEY).await?,
         label: store.setting(LABEL_KEY).await?,
+        api: store
+            .setting(API_KEY)
+            .await?
+            .as_deref()
+            .and_then(ModelApi::parse)
+            .unwrap_or_default(),
     };
     Ok(resolve(selection)
         .inspect_err(|error| tracing::warn!(%error, "saved provider settings are unusable"))
@@ -151,6 +160,7 @@ async fn persist(
         .set_setting(PROVIDER_KEY, provider.as_str().to_owned())
         .await?;
     store.set_setting(MODEL_KEY, info.model.clone()).await?;
+    store.set_setting(API_KEY, info.api.as_str().to_owned()).await?;
     for (key, value) in [(BASE_URL_KEY, &info.base_url), (LABEL_KEY, &info.label)] {
         match value {
             Some(value) => store.set_setting(key, value.clone()).await?,
@@ -216,6 +226,16 @@ pub async fn select(
     let store = &state.store;
     let base_url = if keep { store.setting(BASE_URL_KEY).await? } else { None };
     let label = if keep { store.setting(LABEL_KEY).await? } else { None };
+    let api = if keep {
+        store
+            .setting(API_KEY)
+            .await?
+            .as_deref()
+            .and_then(ModelApi::parse)
+            .unwrap_or_default()
+    } else {
+        ModelApi::OpenAi
+    };
     configure(
         state,
         Selection {
@@ -224,6 +244,7 @@ pub async fn select(
             model: Some(model),
             base_url,
             label,
+            api,
         },
     )
     .await

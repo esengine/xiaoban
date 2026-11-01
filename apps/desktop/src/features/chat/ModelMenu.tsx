@@ -4,6 +4,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { ProviderId, ProviderOption, ThinkingEffort } from "@xiaoban/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { dismiss, dismissOnCancel } from "../../lib/dialog.ts";
 import { ModelStep } from "../onboarding/steps/ModelStep.tsx";
 import { FloatPanel } from "./FloatPanel.tsx";
 
@@ -149,13 +150,34 @@ export function ModelMenu({ threadId }: { threadId: string }) {
 }
 
 function AddModel({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
   return (
-    <dialog ref={dialog} className="dialog dialog--model" onClose={onClose}>
-      <ModelStep onDone={() => dialog.current?.close()} />
+    // biome-ignore lint/a11y/useKeyWithClickEvents: Escape already closes the dialog
+    <dialog
+      ref={dialog}
+      className="dialog dialog--model"
+      aria-label={t("model-add")}
+      onCancel={dismissOnCancel}
+      onClose={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) dismiss(dialog.current);
+      }}
+    >
+      <button
+        type="button"
+        className="dialog__close dialog--model__close"
+        aria-label={t("dialog-close")}
+        onClick={() => dismiss(dialog.current)}
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+      <ModelStep onDone={() => dismiss(dialog.current)} />
     </dialog>
   );
 }

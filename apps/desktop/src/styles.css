@@ -12713,7 +12713,14 @@ button.sent-files__image {
 }
 
 .dialog--model {
-  width: min(560px, calc(100vw - 48px));
+  position: relative;
+  width: min(720px, calc(100vw - 48px));
+}
+
+.dialog--model__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }
 
 .context-meter__head {

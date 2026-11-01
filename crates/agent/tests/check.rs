@@ -46,6 +46,7 @@ fn provider(base_url: &str, key: &str, model: &str) -> OpenAiCompatible {
         base_url: base_url.into(),
         api_key: key.into(),
         model: model.into(),
+        api: xiaoban_protocol::ModelApi::OpenAi,
     })
 }
 

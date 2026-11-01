@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use futures_util::future::BoxFuture;
 
-use crate::{AgentError, ModelProvider, OpenAiCompatible, OpenAiConfig};
+use xiaoban_protocol::ModelApi;
+
+use crate::{AgentError, Anthropic, ModelProvider, OpenAiCompatible, OpenAiConfig};
 
 pub trait Connector: std::fmt::Debug + Send + Sync + 'static {
     fn provider(&self, config: OpenAiConfig) -> Arc<dyn ModelProvider>;
@@ -18,7 +20,10 @@ pub struct HttpConnector;
 
 impl Connector for HttpConnector {
     fn provider(&self, config: OpenAiConfig) -> Arc<dyn ModelProvider> {
-        Arc::new(OpenAiCompatible::new(config))
+        match config.api {
+            ModelApi::OpenAi => Arc::new(OpenAiCompatible::new(config)),
+            ModelApi::Anthropic => Arc::new(Anthropic::new(config)),
+        }
     }
 
     fn check(
@@ -26,6 +31,11 @@ impl Connector for HttpConnector {
         config: OpenAiConfig,
         verify_model: bool,
     ) -> BoxFuture<'static, Result<(), AgentError>> {
-        Box::pin(async move { OpenAiCompatible::new(config).check(verify_model).await })
+        Box::pin(async move {
+            match config.api {
+                ModelApi::OpenAi => OpenAiCompatible::new(config).check(verify_model).await,
+                ModelApi::Anthropic => Anthropic::new(config).check().await,
+            }
+        })
     }
 }

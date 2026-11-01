@@ -10,7 +10,13 @@ describe("modelName", () => {
 
   it("prefers the user's own label", () => {
     expect(
-      activeModelName({ provider: "custom", model: "x-1", label: "My relay", baseUrl: null }),
+      activeModelName({
+        provider: "custom",
+        model: "x-1",
+        label: "My relay",
+        baseUrl: null,
+        api: "open_ai",
+      }),
     ).toBe("My relay");
   });
 });

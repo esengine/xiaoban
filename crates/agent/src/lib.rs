@@ -1,3 +1,4 @@
+mod anthropic;
 mod connector;
 mod error;
 mod openai;
@@ -8,6 +9,7 @@ mod recording;
 mod scripted;
 mod turn;
 
+pub use anthropic::Anthropic;
 pub use connector::{Connector, HttpConnector};
 pub use error::AgentError;
 pub use openai::{OpenAiCompatible, OpenAiConfig};

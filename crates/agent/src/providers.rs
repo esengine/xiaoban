@@ -1,4 +1,4 @@
-use xiaoban_protocol::{ModelInfo, ProviderId};
+use xiaoban_protocol::{ModelApi, ModelInfo, ProviderId};
 
 use crate::{AgentError, OpenAiConfig};
 
@@ -41,6 +41,7 @@ impl ProviderPreset {
             base_url: self.base_url.to_owned(),
             api_key,
             model: model.unwrap_or_else(|| self.default_model.to_owned()),
+            api: ModelApi::OpenAi,
         }
     }
 
@@ -63,6 +64,7 @@ pub fn normalize_base_url(raw: &str) -> Result<String, AgentError> {
     let path = url.path().trim_end_matches('/');
     let path = path
         .strip_suffix("/chat/completions")
+        .or_else(|| path.strip_suffix("/messages"))
         .or_else(|| path.strip_suffix("/models"))
         .unwrap_or(path)
         .to_owned();
@@ -84,6 +86,7 @@ impl ConfiguredProvider {
                 model: config.model.clone(),
                 label: None,
                 base_url: None,
+                api: ModelApi::OpenAi,
             },
             config,
         }
@@ -94,6 +97,7 @@ impl ConfiguredProvider {
         api_key: String,
         model: &str,
         label: Option<String>,
+        api: ModelApi,
     ) -> Result<Self, AgentError> {
         let base_url = normalize_base_url(base_url)?;
         let model = model.trim().to_owned();
@@ -111,11 +115,13 @@ impl ConfiguredProvider {
                     .map(|label| label.trim().to_owned())
                     .filter(|label| !label.is_empty()),
                 base_url: Some(base_url.clone()),
+                api,
             },
             config: OpenAiConfig {
                 base_url,
                 api_key,
                 model,
+                api,
             },
         })
     }
@@ -200,6 +206,7 @@ mod tests {
             "k".into(),
             " gpt-x ",
             Some(" 我的中转站 ".into()),
+            ModelApi::OpenAi,
         )
         .unwrap();
         assert_eq!(custom.info.provider, ProviderId::Custom);
@@ -207,7 +214,7 @@ mod tests {
         assert_eq!(custom.info.label.as_deref(), Some("我的中转站"));
         assert_eq!(custom.config.base_url, "https://relay.example.com/v1");
         assert!(matches!(
-            ConfiguredProvider::custom("https://r.example.com", "k".into(), " ", None),
+            ConfiguredProvider::custom("https://r.example.com", "k".into(), " ", None, ModelApi::OpenAi),
             Err(AgentError::UnknownModel { .. })
         ));
     }

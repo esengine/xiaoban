@@ -71,7 +71,13 @@ fn custom(args: &Args) -> anyhow::Result<ConfiguredProvider> {
         .as_deref()
         .context("--api-key-env is required for custom")?;
     let api_key = std::env::var(key_env).with_context(|| format!("{key_env} is not set"))?;
-    Ok(ConfiguredProvider::custom(base_url, api_key, &model, None)?)
+    Ok(ConfiguredProvider::custom(
+        base_url,
+        api_key,
+        &model,
+        None,
+        xiaoban_protocol::ModelApi::OpenAi,
+    )?)
 }
 
 fn configured(args: &Args) -> anyhow::Result<Option<ConfiguredProvider>> {

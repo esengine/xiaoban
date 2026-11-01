@@ -78,6 +78,7 @@ export type { MemoryCategory } from "./MemoryCategory.ts";
 export type { MemoryGalaxy } from "./MemoryGalaxy.ts";
 export type { MemoryKind } from "./MemoryKind.ts";
 export type { Message } from "./Message.ts";
+export type { ModelApi } from "./ModelApi.ts";
 export type { ModelInfo } from "./ModelInfo.ts";
 export type { MonthTotal } from "./MonthTotal.ts";
 export type { OperatePermissions } from "./OperatePermissions.ts";

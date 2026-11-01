@@ -92,6 +92,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             model,
             base_url,
             label,
+            api,
         } => {
             let selection = model::Selection {
                 provider: Some(provider),
@@ -99,6 +100,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 model,
                 base_url,
                 label,
+                api: api.unwrap_or_default(),
             };
             configure(state, local, selection).await
         }

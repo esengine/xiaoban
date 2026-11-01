@@ -33,6 +33,7 @@ import type {
   Memory,
   MemoryGalaxy,
   Message,
+  ModelApi,
   ModelInfo,
   OperatePermissions,
   Preferences,
@@ -196,6 +197,7 @@ export class HubStore {
     model?: string;
     baseUrl?: string;
     label?: string;
+    api?: ModelApi;
   }): Promise<{ model: ModelInfo | null; failure: Failure | null }> {
     const { model: active, failure } = await this.client.request(
       {
@@ -205,6 +207,7 @@ export class HubStore {
         model: input.model ?? null,
         baseUrl: input.baseUrl ?? null,
         label: input.label ?? null,
+        api: input.api ?? null,
       },
       "provider_configured",
     );

@@ -1,6 +1,6 @@
 import { describeError, failureKey, providerKey } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { Failure, ProviderId, ProviderOption } from "@xiaoban/protocol";
+import type { Failure, ModelApi, ProviderId, ProviderOption } from "@xiaoban/protocol";
 import { providerSvgDataUri } from "@xiaoban/provider-icons";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useHub } from "../../../app/hub.tsx";
@@ -11,10 +11,12 @@ type Problem =
   | { failure: Failure; model: string }
   | { unreachable: true; key: ReturnType<typeof describeError> };
 
+const APIS: ModelApi[] = ["open_ai", "anthropic"];
+
 export function ModelStep({ onDone }: { onDone: () => void }) {
   const { t, locale } = useI18n();
   const store = useHub();
-  const ids = { key: useId(), baseUrl: useId(), model: useId(), label: useId() };
+  const ids = { key: useId(), baseUrl: useId(), model: useId(), label: useId(), api: useId() };
   const [providers, setProviders] = useState<ProviderOption[]>([]);
   const [selected, setSelected] = useState<ProviderId | null>(null);
   const [apiKey, setApiKey] = useState("");
@@ -22,6 +24,7 @@ export function ModelStep({ onDone }: { onDone: () => void }) {
   const [baseUrl, setBaseUrl] = useState("");
   const [customModel, setCustomModel] = useState("");
   const [label, setLabel] = useState("");
+  const [api, setApi] = useState<ModelApi>("open_ai");
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
 
@@ -54,7 +57,7 @@ export function ModelStep({ onDone }: { onDone: () => void }) {
     try {
       const { failure } = await store.configureProvider(
         isCustom
-          ? { provider: provider.id, apiKey, baseUrl, model: customModel, label }
+          ? { provider: provider.id, apiKey, baseUrl, model: customModel, label, api }
           : { provider: provider.id, apiKey },
       );
       if (failure) setProblem({ failure, model: customModel.trim() });
@@ -113,6 +116,29 @@ export function ModelStep({ onDone }: { onDone: () => void }) {
 
         {isCustom ? (
           <div className="custom-panel">
+            <div className="field">
+              <span className="field__label" id={ids.api}>
+                {t("custom-api-label")}
+              </span>
+              <div className="api-picker" role="radiogroup" aria-labelledby={ids.api}>
+                {APIS.map((value) => (
+                  <label key={value} data-checked={api === value || undefined}>
+                    <input
+                      type="radio"
+                      name="model-api"
+                      value={value}
+                      checked={api === value}
+                      onChange={() => {
+                        setApi(value);
+                        setProblem(null);
+                      }}
+                    />
+                    {t(`custom-api-${value}`)}
+                  </label>
+                ))}
+              </div>
+              <span className="field__hint">{t(`custom-api-${api}-hint`)}</span>
+            </div>
             <div className="field">
               <label htmlFor={ids.baseUrl}>{t("custom-base-url-label")}</label>
               <input
