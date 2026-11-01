@@ -11,6 +11,7 @@ import type {
   ConflictFile,
   ContextNote,
   ContextUsage,
+  DailyFeed,
   DailyLayout,
   Deck,
   DeckSummary,
@@ -28,6 +29,7 @@ import type {
   FoundImage,
   GithubRef,
   GitInfo,
+  InsightKind,
   Interpretation,
   Kitchen,
   Ledger,
@@ -94,6 +96,12 @@ export class HubStore {
       }
       if (event.type === "ledger_changed") {
         void this.#reloadLedger().catch(() => undefined);
+      }
+      if (
+        this.#state.dailyFeed &&
+        (event.type === "daily_feed_changed" || event.type === "turn_completed")
+      ) {
+        void this.loadDailyFeed().catch(() => undefined);
       }
     });
     client.onStatus((status) => this.#update((state) => ({ ...state, status })));
@@ -959,6 +967,38 @@ export class HubStore {
   async setDailyLayout(layout: DailyLayout): Promise<DailyLayout> {
     const result = await this.client.request({ type: "set_daily_layout", layout }, "daily_layout");
     return result.layout;
+  }
+
+  async loadDailyFeed(): Promise<DailyFeed> {
+    const { feed } = await this.client.request({ type: "daily_feed" }, "daily_feed");
+    this.#update((state) => ({ ...state, dailyFeed: feed }));
+    return feed;
+  }
+
+  async resolveInsight(id: string, mute: boolean): Promise<DailyFeed> {
+    this.#update((state) =>
+      state.dailyFeed
+        ? {
+            ...state,
+            dailyFeed: {
+              ...state.dailyFeed,
+              insights: state.dailyFeed.insights.filter((item) => item.id !== id),
+            },
+          }
+        : state,
+    );
+    const { feed } = await this.client.request({ type: "resolve_insight", id, mute }, "daily_feed");
+    this.#update((state) => ({ ...state, dailyFeed: feed }));
+    return feed;
+  }
+
+  async unmuteInsight(kind: InsightKind, subject: string): Promise<DailyFeed> {
+    const { feed } = await this.client.request(
+      { type: "unmute_insight", kind, subject },
+      "daily_feed",
+    );
+    this.#update((state) => ({ ...state, dailyFeed: feed }));
+    return feed;
   }
 
   async loadWeather(placeId: string | null = null): Promise<WeatherView> {

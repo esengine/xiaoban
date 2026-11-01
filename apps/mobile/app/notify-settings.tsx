@@ -190,12 +190,13 @@ export default function NotifySettingsScreen() {
   const insets = useSafeAreaInsets();
   const store = useHubStore();
   const { local } = useHubContext();
-  const { status } = useHubState(store);
+  const { status, dailyFeed } = useHubState(store);
   const [settings, setSettings] = useState<NotifySettings | null>(null);
 
   useEffect(() => {
     if (status !== "open") return;
     let live = true;
+    void store.loadDailyFeed().catch(() => undefined);
     void store
       .notifySettings()
       .then((loaded) => {
@@ -336,6 +337,32 @@ export default function NotifySettingsScreen() {
               />
             </View>
           </View>
+
+          <View style={styles.card}>
+            <Text style={styles.toggleTitle}>{t("notify-muted-title")}</Text>
+            <Text style={styles.toggleDesc}>{t("notify-muted-desc")}</Text>
+            {(dailyFeed?.muted ?? []).length === 0 ? (
+              <Text style={[styles.toggleDesc, styles.mutedEmpty]}>{t("notify-muted-empty")}</Text>
+            ) : (
+              (dailyFeed?.muted ?? []).map((item) => (
+                <View key={`${item.kind}:${item.subject}`} style={styles.mutedRow}>
+                  <Text style={styles.mutedLabel} numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                  <Pressable
+                    style={styles.mutedRestore}
+                    accessibilityRole="button"
+                    hitSlop={6}
+                    onPress={() =>
+                      void store.unmuteInsight(item.kind, item.subject).catch(() => undefined)
+                    }
+                  >
+                    <Text style={styles.mutedRestoreText}>{t("notify-muted-restore")}</Text>
+                  </Pressable>
+                </View>
+              ))
+            )}
+          </View>
         </ScrollView>
       ) : null}
     </View>
@@ -407,6 +434,19 @@ const styles = StyleSheet.create({
   toggleTitle: { fontSize: 14, color: color.ink },
   toggleDesc: { fontSize: 12, color: color.muted, marginTop: 2, lineHeight: 18 },
   switch: { width: 50, height: 30, borderRadius: 15, flex: 0 },
+  mutedEmpty: { marginTop: 8 },
+  mutedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: color.lineSoft,
+    marginTop: 8,
+  },
+  mutedLabel: { flex: 1, minWidth: 0, fontSize: 14, color: color.ink },
+  mutedRestore: { paddingHorizontal: 4, paddingVertical: 4 },
+  mutedRestoreText: { fontSize: 13, color: color.accent },
   knob: {
     position: "absolute",
     top: 3,

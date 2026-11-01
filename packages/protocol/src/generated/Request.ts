@@ -10,6 +10,7 @@ import type { DocBlock } from "./DocBlock.ts";
 import type { DocFormat } from "./DocFormat.ts";
 import type { EventDraft } from "./EventDraft.ts";
 import type { Expense } from "./Expense.ts";
+import type { InsightKind } from "./InsightKind.ts";
 import type { ModelApi } from "./ModelApi.ts";
 import type { NotifySettings } from "./NotifySettings.ts";
 import type { PlanAction } from "./PlanAction.ts";
@@ -216,6 +217,9 @@ export type Request =
   | { type: "notify_settings" }
   | { type: "set_notify_settings"; settings: NotifySettings }
   | { type: "set_daily_layout"; layout: DailyLayout }
+  | { type: "daily_feed" }
+  | { type: "resolve_insight"; id: string; mute: boolean }
+  | { type: "unmute_insight"; kind: InsightKind; subject: string }
   | { type: "context_usage"; threadId: string }
   | { type: "plan"; threadId: string }
   | { type: "list_plans" }

@@ -159,10 +159,20 @@ function Home() {
         ) : view === "weather" ? (
           <WeatherPage onBack={() => setView("daily")} />
         ) : view === "ledger" ? (
-          <LedgerPage onBack={() => setView("daily")} onOpenWeek={() => setView("week")} />
+          <LedgerPage
+            onBack={() => setView("daily")}
+            onOpenWeek={() => setView("week")}
+            onOpenKitchen={() => setView("kitchen")}
+            onOpenWeather={() => setView("weather")}
+            onOpenThread={(threadId) => {
+              setView("chat");
+              setSelected(threadId);
+            }}
+          />
         ) : (
           <DailyPage
             onOpenKitchen={() => setView("kitchen")}
+            onOpenWeek={() => setView("week")}
             onOpenLedger={() => setView("ledger")}
             onOpenWeather={() => setView("weather")}
             onTalk={() => {

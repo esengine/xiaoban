@@ -209,6 +209,24 @@ async fn between(state: &SharedState, from: jiff::civil::Date, to: jiff::civil::
     out
 }
 
+pub async fn recent(state: &SharedState, days: i64) -> Vec<Expense> {
+    let Ok(today) = jiff::Timestamp::from_millisecond(now_ms()).map(|stamp| stamp.to_zoned(zone()).date()) else {
+        return Vec::new();
+    };
+    let from = today.checked_sub(jiff::Span::new().days(days)).unwrap_or(today);
+    between(state, from, today).await
+}
+
+pub async fn unmute(state: &SharedState, category: &str) {
+    let mut meta = meta(state).await;
+    let before = meta.muted.len();
+    meta.muted.retain(|key| key != category);
+    if meta.muted.len() != before {
+        save_meta(state, &meta).await;
+        changed(state);
+    }
+}
+
 pub async fn view_range(state: &SharedState, from: &str, to: &str) -> Ledger {
     let parse = |value: &str| value.trim().parse::<jiff::civil::Date>().ok();
     let (Some(mut from), Some(mut to)) = (parse(from), parse(to)) else {
@@ -650,6 +668,34 @@ pub async fn take_import(state: &SharedState, thread_id: &str, paths: Vec<String
     (rest, Some(ContextNote { label: l.text(keys::LEDGER_IMPORT_LABEL), body: summary }))
 }
 
+async fn commit_import(state: &SharedState) {
+    let mut meta = meta(state).await;
+    if let Some(preview) = meta.import.take() {
+        let file = preview.file.clone();
+        let fallback = state.localizer.text(keys::LEDGER_OTHER);
+        let items: Vec<Expense> = preview
+            .rows
+            .into_iter()
+            .filter(|row| row.checked && row.cents > 0)
+            .map(|row| Expense {
+                id: uuid::Uuid::now_v7().to_string(),
+                name: if row.item.is_empty() || row.item == "/" { row.payee.clone() } else { row.item.clone() },
+                category: if row.category.is_empty() { fallback.clone() } else { row.category },
+                cents: row.cents,
+                at: row.at,
+                source: ExpenseSource::Import,
+                note: row.payee,
+            })
+            .collect();
+        let count = items.len();
+        add(state, items).await;
+        if count > 0 {
+            crate::insights::record_import(state, count, &file, thread(state).await).await;
+        }
+    }
+    save_meta(state, &meta).await;
+}
+
 pub async fn handle(state: &SharedState, request: Request) -> Result<Response, ProtocolError> {
     let month = match &request {
         Request::Ledger { month }
@@ -716,26 +762,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
             changed(state);
         }
         Request::CommitImport { .. } => {
-            let mut meta = meta(state).await;
-            if let Some(preview) = meta.import.take() {
-                let fallback = state.localizer.text(keys::LEDGER_OTHER);
-                let items: Vec<Expense> = preview
-                    .rows
-                    .into_iter()
-                    .filter(|row| row.checked && row.cents > 0)
-                    .map(|row| Expense {
-                        id: uuid::Uuid::now_v7().to_string(),
-                        name: if row.item.is_empty() || row.item == "/" { row.payee.clone() } else { row.item.clone() },
-                        category: if row.category.is_empty() { fallback.clone() } else { row.category },
-                        cents: row.cents,
-                        at: row.at,
-                        source: ExpenseSource::Import,
-                        note: row.payee,
-                    })
-                    .collect();
-                add(state, items).await;
-            }
-            save_meta(state, &meta).await;
+            commit_import(state).await;
             changed(state);
         }
         Request::CancelImport { .. } => {

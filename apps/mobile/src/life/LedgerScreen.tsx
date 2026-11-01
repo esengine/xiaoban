@@ -9,6 +9,7 @@ import { moneyFormat } from "../ui/format.ts";
 import { monthDate, monthKey, parseDay, spanDays } from "./dates.ts";
 import { LedgerPicker, type LedgerQuery } from "./LedgerPicker.tsx";
 import { ChatBar, Checkbox, DarkButton, LifeHeader, life, Sheet, SwipeRow } from "./LifeUI.tsx";
+import { LedgerNoticed } from "./Noticed.tsx";
 
 const SHADES = [color.ledger0, color.ledger1, color.ledger2, color.ledger3, color.ledger4] as const;
 const DEFAULT_CATEGORIES = [
@@ -223,33 +224,6 @@ function Categories({
           </Pressable>
         );
       })}
-    </View>
-  );
-}
-
-function Noticed({ ledger, totals }: { ledger: Ledger; totals: CategoryTotal[] }) {
-  const { t } = useI18n();
-  const money = useMoney();
-  const note = totals
-    .map((total) => {
-      const before = ledger.previous.find((item) => item.category === total.category)?.cents ?? 0;
-      const diff = total.cents - before;
-      if (before <= 0 || diff < 20_000 || total.cents < before * 1.3) return null;
-      return { key: total.category, diff, pct: Math.round((diff / before) * 100) };
-    })
-    .filter((item): item is { key: string; diff: number; pct: number } => item !== null)
-    .find((item) => !ledger.muted.includes(item.key));
-  if (!note) return null;
-  return (
-    <View style={styles.noticed}>
-      <Text style={styles.noticedTag}>{t("ledger-noticed")}</Text>
-      <Text style={styles.noticedText}>
-        {t("ledger-noticed-up", {
-          category: note.key,
-          amount: money(note.diff),
-          pct: String(note.pct),
-        })}
-      </Text>
     </View>
   );
 }
@@ -489,7 +463,7 @@ function Empty({ onBudget }: { onBudget: () => void }) {
 
 export function LedgerScreen({ store }: { store: HubStore }) {
   const { t, locale } = useI18n();
-  const { ledger, status } = useHubState(store);
+  const { ledger, status, dailyFeed } = useHubState(store);
   const [query, setQuery] = useState<LedgerQuery>(() => ({
     kind: "month",
     month: monthKey(new Date()),
@@ -504,6 +478,14 @@ export function LedgerScreen({ store }: { store: HubStore }) {
     if (query.kind === "month") void store.loadLedger(query.month).catch(() => undefined);
     else void store.loadLedgerRange(query.from, query.to).catch(() => undefined);
   }, [store, status, query]);
+
+  useEffect(() => {
+    if (status === "open") void store.loadDailyFeed().catch(() => undefined);
+  }, [store, status]);
+
+  const noticed = (dailyFeed?.insights ?? []).filter(
+    (insight) => insight.kind === "ledger_up" || insight.kind === "takeout",
+  );
 
   const go = (next: LedgerQuery) => {
     setFilter(null);
@@ -568,7 +550,11 @@ export function LedgerScreen({ store }: { store: HubStore }) {
                 <RangeSummary ledger={current} spent={spent} label={rangeLabel} />
               )}
               <Categories totals={totals} filter={filter} onFilter={setFilter} />
-              {query.kind === "month" ? <Noticed ledger={current} totals={totals} /> : null}
+              {query.kind === "month" && query.month === monthKey(new Date())
+                ? noticed.map((insight) => (
+                    <LedgerNoticed key={insight.id} store={store} insight={insight} />
+                  ))
+                : null}
               <Flow
                 store={store}
                 ledger={current}
@@ -686,25 +672,6 @@ const styles = StyleSheet.create({
     color: color.ink,
     fontVariant: ["tabular-nums"],
   },
-  noticed: {
-    backgroundColor: color.surface,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-start",
-  },
-  noticedTag: {
-    fontSize: 11,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    overflow: "hidden",
-    backgroundColor: color.accentSoft,
-    color: color.accentStrong,
-  },
-  noticedText: { flex: 1, fontSize: 12, lineHeight: 19, color: color.inkSoft },
   flow: {
     backgroundColor: color.surface,
     borderRadius: 16,

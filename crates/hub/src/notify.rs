@@ -6,7 +6,7 @@ use tokio::sync::broadcast::error::RecvError;
 use tokio_util::sync::CancellationToken;
 use xiaoban_i18n::{Localizer, keys};
 use xiaoban_protocol::{
-    ConfirmChoice, ConfirmKind, ConfirmRequest, Event, FailureKind, Notice, NoticeChoice,
+    ConfirmChoice, ConfirmKind, ConfirmRequest, Event, FailureKind, Insight, InsightAction, Notice, NoticeChoice,
     NotifyCategory, NotifyLevel, NotifyRing, NotifyScene, NotifySettings, ProtocolError, Request,
     Response,
 };
@@ -375,6 +375,21 @@ async fn thread_title(state: &SharedState, thread_id: &str) -> String {
         .unwrap_or_else(|| state.localizer.text(keys::APP_NAME))
 }
 
+fn insight_draft(l: &Localizer, insight: Insight) -> Draft {
+    Draft {
+        id: crate::insights::notice_id(&insight.id),
+        category: NotifyCategory::Remind,
+        title: l.text(keys::INSIGHT_TAG),
+        body: insight.text,
+        thread_id: match insight.action {
+            InsightAction::Say { thread_id, .. } | InsightAction::Open { thread_id, .. } => thread_id,
+        },
+        confirm_id: None,
+        choices: Vec::new(),
+        reply: false,
+    }
+}
+
 async fn draft_for(
     state: &SharedState,
     turns: &mut HashMap<String, String>,
@@ -536,7 +551,11 @@ pub fn watch(state: SharedState, shutdown: CancellationToken) {
             };
             match event {
                 Ok(event) => {
-                    if let Some(draft) = draft_for(&state, &mut turns, event).await {
+                    let draft = match event {
+                        Event::InsightAlert { insight } => Some(insight_draft(&state.localizer, insight)),
+                        event => draft_for(&state, &mut turns, event).await,
+                    };
+                    if let Some(draft) = draft {
                         raise(&state, draft, &shutdown).await;
                     }
                 }

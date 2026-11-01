@@ -7,6 +7,7 @@ import type { CommitInfo } from "./CommitInfo.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { ConflictFile } from "./ConflictFile.ts";
 import type { ContextUsage } from "./ContextUsage.ts";
+import type { DailyFeed } from "./DailyFeed.ts";
 import type { DailyLayout } from "./DailyLayout.ts";
 import type { Deck } from "./Deck.ts";
 import type { DeckSummary } from "./DeckSummary.ts";
@@ -108,6 +109,7 @@ export type Response =
   | { type: "weather"; weather: WeatherView }
   | { type: "notify_settings"; settings: NotifySettings }
   | { type: "daily_layout"; layout: DailyLayout }
+  | { type: "daily_feed"; feed: DailyFeed }
   | { type: "context_usage"; usage: ContextUsage }
   | { type: "uploaded"; path: string }
   | {

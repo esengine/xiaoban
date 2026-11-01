@@ -11,6 +11,7 @@ import type { Device } from "./Device.ts";
 import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
 import type { FloorPlan } from "./FloorPlan.ts";
+import type { Insight } from "./Insight.ts";
 import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
@@ -87,4 +88,6 @@ export type Event =
   | { type: "deck_updated"; summary: DeckSummary }
   | { type: "weather_alert"; title: string; body: string; morning: boolean }
   | { type: "notify"; notice: Notice }
-  | { type: "notice_withdrawn"; id: string };
+  | { type: "notice_withdrawn"; id: string }
+  | { type: "daily_feed_changed" }
+  | { type: "insight_alert"; insight: Insight };

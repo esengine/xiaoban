@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SkyIcon } from "../life/LifeIcons.tsx";
+import { DoneCard, NoticedCard } from "../life/Noticed.tsx";
 import { moneyFormat } from "../ui/format.ts";
 import { openThread } from "./ChatsTab.tsx";
 
@@ -119,7 +120,7 @@ function PlanRow({ plan }: { plan: Plan }) {
 export function DailyTab({ store }: { store: HubStore }) {
   const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
-  const { weather, kitchen, ledger, memories, plans, status } = useHubState(store);
+  const { weather, kitchen, ledger, memories, plans, status, dailyFeed } = useHubState(store);
   const sky = useSky();
   const money = moneyFormat(locale);
 
@@ -129,6 +130,7 @@ export function DailyTab({ store }: { store: HubStore }) {
     void store.loadKitchen().catch(() => undefined);
     void store.loadLedger(thisMonth()).catch(() => undefined);
     void store.listPlans().catch(() => undefined);
+    void store.loadDailyFeed().catch(() => undefined);
   }, [store, status]);
 
   const now = new Date();
@@ -200,6 +202,12 @@ export function DailyTab({ store }: { store: HubStore }) {
           {tip ? <Text style={styles.tip}>{tip.title}</Text> : null}
         </Card>
       )}
+
+      {(dailyFeed?.insights ?? []).slice(0, 2).map((insight) => (
+        <NoticedCard key={insight.id} store={store} insight={insight} />
+      ))}
+
+      {dailyFeed && dailyFeed.done.length > 0 ? <DoneCard items={dailyFeed.done} /> : null}
 
       <Card title={t("daily-food")} open={{ label: t("daily-open-kitchen"), href: "/kitchen" }}>
         {dishes.length > 0 ? (

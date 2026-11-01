@@ -417,10 +417,13 @@ impl HubTools<'_> {
         };
         let choice = self
             .ask(ConfirmKind::Action {
-                title: args.title,
-                detail: args.detail,
+                title: args.title.clone(),
+                detail: args.detail.clone(),
             })
             .await;
+        if matches!(choice, ConfirmChoice::Yes | ConfirmChoice::Once | ConfirmChoice::Always) {
+            crate::insights::record_action(self.state, self.thread_id, self.turn_id, &args.title, &args.detail).await;
+        }
         let answer = match choice {
             ConfirmChoice::Yes | ConfirmChoice::Once | ConfirmChoice::Always => "yes",
             ConfirmChoice::Edit => "edit: ask the user what to change before doing it",

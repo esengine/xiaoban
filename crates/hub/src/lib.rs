@@ -24,6 +24,7 @@ mod files;
 mod git_ops;
 mod github;
 mod handlers;
+mod insights;
 mod interpret;
 mod key_share;
 mod kitchen;

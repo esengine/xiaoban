@@ -15,6 +15,7 @@ import {
   parseDay,
   spanDays,
 } from "./LedgerPicker.tsx";
+import { type InsightNav, LedgerNoticed } from "./Noticed.tsx";
 
 const IMAGE = /\.(png|jpe?g|heic|webp|gif)$/i;
 const BILL = /\.(csv|xlsx|xls)$/i;
@@ -231,62 +232,6 @@ function Categories({
           </button>
         ))}
       </div>
-    </section>
-  );
-}
-
-function Noticed({
-  ledger,
-  totals,
-  onOpenWeek,
-}: {
-  ledger: Ledger;
-  totals: CategoryTotal[];
-  onOpenWeek: () => void;
-}) {
-  const { t } = useI18n();
-  const store = useHub();
-  const money = useMoney();
-  const dining = t("ledger-cat-dining");
-  const notes = totals
-    .map((total) => {
-      const before = ledger.previous.find((item) => item.category === total.category)?.cents ?? 0;
-      const diff = total.cents - before;
-      if (before <= 0 || diff < 20_000 || total.cents < before * 1.3) return null;
-      return { key: total.category, diff, pct: Math.round((diff / before) * 100) };
-    })
-    .filter((note): note is { key: string; diff: number; pct: number } => note !== null)
-    .filter((note) => !ledger.muted.includes(note.key))
-    .slice(0, 2);
-  if (notes.length === 0) return null;
-  return (
-    <section className="life-card ledger-noticed">
-      <b>{t("ledger-noticed")}</b>
-      {notes.map((note) => (
-        <div key={note.key} className="ledger-noticed__item">
-          <p>
-            {t("ledger-noticed-up", {
-              category: note.key,
-              amount: money(note.diff),
-              pct: String(note.pct),
-            })}
-          </p>
-          <div className="ledger-noticed__actions">
-            {note.key === dining && (
-              <button type="button" className="code-status-button" onClick={onOpenWeek}>
-                {t("ledger-open-week")}
-              </button>
-            )}
-            <button
-              type="button"
-              className="code-link"
-              onClick={() => void store.muteInsight(ledger.month, note.key).catch(() => undefined)}
-            >
-              {t("ledger-mute")}
-            </button>
-          </div>
-        </div>
-      ))}
     </section>
   );
 }
@@ -672,10 +617,38 @@ function Empty({ month, onImport }: { month: string; onImport: () => void }) {
   );
 }
 
-export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenWeek: () => void }) {
+export function LedgerPage({
+  onBack,
+  onOpenWeek,
+  onOpenKitchen,
+  onOpenWeather,
+  onOpenThread,
+}: {
+  onBack: () => void;
+  onOpenWeek: () => void;
+  onOpenKitchen: () => void;
+  onOpenWeather: () => void;
+  onOpenThread: (threadId: string) => void;
+}) {
   const { t, locale } = useI18n();
   const store = useHub();
-  const { ledger } = useHubState(store);
+  const { ledger, dailyFeed } = useHubState(store);
+  const nav: InsightNav = {
+    onOpenThread,
+    onOpenPage: (page) =>
+      ({
+        kitchen: onOpenKitchen,
+        week: onOpenWeek,
+        ledger: () => undefined,
+        weather: onOpenWeather,
+      })[page](),
+  };
+  const noticed = (dailyFeed?.insights ?? []).filter(
+    (insight) => insight.kind === "ledger_up" || insight.kind === "takeout",
+  );
+  useEffect(() => {
+    void store.loadDailyFeed().catch(() => undefined);
+  }, [store]);
   const [query, setQuery] = useState<LedgerQuery>(() => ({
     kind: "month",
     month: monthKey(new Date()),
@@ -819,8 +792,8 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
                     <RangeSummary ledger={current} spent={spent} label={rangeLabel} />
                   )}
                   <Categories totals={totals} filter={filter} onFilter={setFilter} />
-                  {query.kind === "month" && (
-                    <Noticed ledger={current} totals={totals} onOpenWeek={onOpenWeek} />
+                  {query.kind === "month" && query.month === monthKey(new Date()) && (
+                    <LedgerNoticed insights={noticed} nav={nav} />
                   )}
                 </div>
                 <Flow

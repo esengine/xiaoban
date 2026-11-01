@@ -197,6 +197,7 @@ fn watch(state: &SharedState, shutdown: &CancellationToken) {
     crate::week::watch(Arc::clone(state), shutdown.clone());
     crate::weather_page::watch(Arc::clone(state), shutdown.clone());
     crate::notify::watch(Arc::clone(state), shutdown.clone());
+    crate::insights::watch(Arc::clone(state), shutdown.clone());
     let owned = Arc::clone(state);
     let stop = shutdown.clone();
     tokio::spawn(async move {

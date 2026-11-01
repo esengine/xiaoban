@@ -544,6 +544,15 @@ pub enum Request {
     SetDailyLayout {
         layout: crate::DailyLayout,
     },
+    DailyFeed,
+    ResolveInsight {
+        id: String,
+        mute: bool,
+    },
+    UnmuteInsight {
+        kind: crate::InsightKind,
+        subject: String,
+    },
     ContextUsage {
         thread_id: String,
     },
@@ -798,6 +807,9 @@ pub enum Response {
     },
     DailyLayout {
         layout: crate::DailyLayout,
+    },
+    DailyFeed {
+        feed: crate::DailyFeed,
     },
     ContextUsage {
         usage: crate::ContextUsage,

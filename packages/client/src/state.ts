@@ -4,6 +4,7 @@ import type {
   CommandRun,
   CompactPhase,
   ConfirmRequest,
+  DailyFeed,
   Deck,
   DeckSummary,
   Device,
@@ -103,6 +104,7 @@ export interface HubState {
   kitchen: Kitchen | null;
   ledger: Ledger | null;
   ledgerTick: number;
+  dailyFeed: DailyFeed | null;
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
   recipes: Readonly<Record<string, RecipeView>>;
@@ -145,6 +147,7 @@ export const initialHubState: HubState = {
   kitchen: null,
   ledger: null,
   ledgerTick: 0,
+  dailyFeed: null,
   weather: null,
   docs: {},
   recipes: {},
@@ -457,6 +460,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "timer_fired":
     case "prep_due":
     case "weather_alert":
+    case "daily_feed_changed":
+    case "insight_alert":
       return state;
     case "ledger_changed":
       return { ...state, ledgerTick: state.ledgerTick + 1 };
