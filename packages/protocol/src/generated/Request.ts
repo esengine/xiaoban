@@ -15,6 +15,7 @@ import type { NotifySettings } from "./NotifySettings.ts";
 import type { PlanAction } from "./PlanAction.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
+import type { Schedule } from "./Schedule.ts";
 import type { ServiceId } from "./ServiceId.ts";
 import type { SheetFormat } from "./SheetFormat.ts";
 import type { SheetOp } from "./SheetOp.ts";
@@ -205,6 +206,13 @@ export type Request =
   | { type: "context_usage"; threadId: string }
   | { type: "plan"; threadId: string }
   | { type: "list_plans" }
+  | { type: "list_schedules" }
+  | { type: "schedule"; id: string }
+  | { type: "start_schedule"; id: string }
+  | { type: "update_schedule"; schedule: Schedule }
+  | { type: "set_schedule_active"; id: string; active: boolean }
+  | { type: "run_schedule"; id: string }
+  | { type: "delete_schedule"; id: string }
   | { type: "plan_action"; threadId: string; action: PlanAction }
   | { type: "find_capabilities"; query: string }
   | { type: "list_capabilities" }

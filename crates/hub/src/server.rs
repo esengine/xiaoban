@@ -134,6 +134,7 @@ impl Hub {
             operator: runtime.operator,
             confirms: crate::confirms::Confirms::default(),
             pauses: crate::pauses::Pauses::default(),
+            schedules: crate::schedules::Runs::default(),
             files: crate::files::Files::new(config.data_dir.as_ref().map_or_else(
                 || std::env::temp_dir().join(format!("xiaoban-files-{}", uuid::Uuid::now_v7())),
                 |dir| dir.join("files"),
@@ -197,6 +198,7 @@ fn watch(state: &SharedState, shutdown: &CancellationToken) {
     crate::week::watch(Arc::clone(state), shutdown.clone());
     crate::weather_page::watch(Arc::clone(state), shutdown.clone());
     crate::notify::watch(Arc::clone(state), shutdown.clone());
+    crate::schedules::watch(Arc::clone(state), shutdown.clone());
     let owned = Arc::clone(state);
     let stop = shutdown.clone();
     tokio::spawn(async move {

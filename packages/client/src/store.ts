@@ -47,6 +47,7 @@ import type {
   Quote,
   RecipeView,
   Response,
+  Schedule,
   ServiceStatus,
   SheetFormat,
   SheetOp,
@@ -804,6 +805,66 @@ export class HubStore {
     const { plan } = await this.client.request({ type: "plan_action", threadId, action }, "plan");
     this.#update((state) => ({ ...state, plans: { ...state.plans, [threadId]: plan } }));
     return plan;
+  }
+
+  #putSchedule(schedule: Schedule): Schedule {
+    this.#update((state) => ({
+      ...state,
+      schedules: { ...state.schedules, [schedule.id]: schedule },
+    }));
+    return schedule;
+  }
+
+  async listSchedules(): Promise<Schedule[]> {
+    const { schedules } = await this.client.request({ type: "list_schedules" }, "schedules");
+    this.#update((state) => ({
+      ...state,
+      schedulesLoaded: true,
+      schedules: {
+        ...state.schedules,
+        ...Object.fromEntries(schedules.map((schedule) => [schedule.id, schedule])),
+      },
+    }));
+    return schedules;
+  }
+
+  async loadSchedule(id: string): Promise<Schedule> {
+    const { schedule } = await this.client.request({ type: "schedule", id }, "schedule");
+    return this.#putSchedule(schedule);
+  }
+
+  async startSchedule(id: string): Promise<Schedule> {
+    const { schedule } = await this.client.request({ type: "start_schedule", id }, "schedule");
+    return this.#putSchedule(schedule);
+  }
+
+  async updateSchedule(next: Schedule): Promise<Schedule> {
+    const { schedule } = await this.client.request(
+      { type: "update_schedule", schedule: next },
+      "schedule",
+    );
+    return this.#putSchedule(schedule);
+  }
+
+  async setScheduleActive(id: string, active: boolean): Promise<Schedule> {
+    const { schedule } = await this.client.request(
+      { type: "set_schedule_active", id, active },
+      "schedule",
+    );
+    return this.#putSchedule(schedule);
+  }
+
+  async runSchedule(id: string): Promise<Schedule> {
+    const { schedule } = await this.client.request({ type: "run_schedule", id }, "schedule");
+    return this.#putSchedule(schedule);
+  }
+
+  async deleteSchedule(id: string): Promise<void> {
+    await this.client.request({ type: "delete_schedule", id }, "ack");
+    this.#update((state) => {
+      const { [id]: _removed, ...schedules } = state.schedules;
+      return { ...state, schedules };
+    });
   }
 
   async findCapabilities(query: string): Promise<Capability[]> {

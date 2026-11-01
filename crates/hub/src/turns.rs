@@ -331,6 +331,7 @@ pub async fn start(
     let sheet_note = crate::sheet::note(state, &thread_id).await;
     let deck_note = crate::slides::note(state, &thread_id).await;
     let plan_note = crate::plan::note(state, &thread_id).await;
+    let schedule_note = crate::schedules::note(state, &thread_id).await;
     let skills_note = crate::capability::note(state);
 
     let (file_notes, images) = attachments(state, &files);
@@ -352,6 +353,7 @@ pub async fn start(
                 .chain(sheet_note)
                 .chain(deck_note)
                 .chain(plan_note)
+                .chain(schedule_note)
                 .chain(skills_note)
                 .chain(import_note)
                 .chain(context)
@@ -454,6 +456,7 @@ async fn run(
     state.turns.release(&turn_id);
     state.pauses.forget(&turn_id);
     if let Err(failure) = result {
+        crate::schedules::after_failure(&state, &thread_id, &turn_id, &failure).await;
         state.publish(Event::TurnFailed { turn_id, failure });
     }
 }
@@ -668,6 +671,7 @@ async fn after_answer(state: &SharedState, thread_id: &str, turn_id: &str, outco
         crate::subthreads::report(state, thread_id, &outcome.text);
     }
     crate::plan::after_turn(state, thread_id, &outcome.text).await;
+    crate::schedules::after_turn(state, thread_id, turn_id).await;
 }
 
 async fn mark_used(state: &SharedState, turn_id: &str, answer: &str) {

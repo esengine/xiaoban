@@ -42,6 +42,7 @@ mod preferences;
 mod prompts;
 mod registry;
 mod router;
+mod schedules;
 mod runtime;
 mod secrets;
 mod server;

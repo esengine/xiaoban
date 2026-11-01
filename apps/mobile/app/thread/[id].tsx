@@ -1,4 +1,10 @@
-import { activeModelName, type Draft, type Settled } from "@xiaoban/client";
+import {
+  activeModelName,
+  type Draft,
+  runFailed,
+  type Settled,
+  scheduleOfThread,
+} from "@xiaoban/client";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
@@ -33,6 +39,7 @@ import { isCancel, toGroups } from "../../src/chat/rows.ts";
 import { ThoughtToggle } from "../../src/chat/ThoughtToggle.tsx";
 import { MemoryChips, TraceSummary } from "../../src/chat/Trace.tsx";
 import { useHubStore } from "../../src/hub/HubProvider.tsx";
+import { RunMarker, ScheduleBar } from "../../src/schedule/ScheduleBits.tsx";
 import { Icon } from "../../src/ui/Icon.tsx";
 import { useWhen } from "../../src/ui/useWhen.ts";
 
@@ -150,6 +157,13 @@ export default function ThreadScreen() {
     if (state.status === "open") void store.loadMessages(id).catch(() => undefined);
   }, [id, state.status, store]);
 
+  const schedulesLoaded = state.schedulesLoaded;
+  useEffect(() => {
+    if (state.status === "open" && !schedulesLoaded)
+      void store.listSchedules().catch(() => undefined);
+  }, [state.status, schedulesLoaded, store]);
+  const schedule = scheduleOfThread(state.schedules, id);
+
   const next = queued[0];
   useEffect(() => {
     if (running || holding || next === undefined) return;
@@ -180,7 +194,9 @@ export default function ThreadScreen() {
     const message = group.kind === "user" ? group.message : group.versions.at(-1);
     if (!message) continue;
     const time = group.kind === "user" ? message.createdAt : (group.versions[0]?.createdAt ?? 0);
-    if (time - last > GAP_MS) rows.push({ key: `t-${message.id}`, kind: "time", text: when(time) });
+    const trigger = message.attachment?.kind === "schedule_run";
+    if (!trigger && time - last > GAP_MS)
+      rows.push({ key: `t-${message.id}`, kind: "time", text: when(time) });
     last = time;
     if (group.kind === "user") {
       rows.push({ key: message.id, kind: "user", message });
@@ -274,8 +290,21 @@ export default function ThreadScreen() {
     });
   };
 
+  const removeSchedule = (target: NonNullable<typeof schedule>) =>
+    Alert.alert(t("schedule-delete-confirm", { title: target.title }), undefined, [
+      { text: t("dialog-cancel"), style: "cancel" as const },
+      {
+        text: t("schedule-delete"),
+        style: "destructive" as const,
+        onPress: () => void store.deleteSchedule(target.id).catch(() => undefined),
+      },
+    ]);
+
   const more = () =>
     Alert.alert(title, undefined, [
+      ...(schedule
+        ? [{ text: t("schedule-delete"), onPress: () => removeSchedule(schedule) }]
+        : []),
       ...(primary
         ? []
         : [
@@ -296,13 +325,24 @@ export default function ThreadScreen() {
     switch (row.kind) {
       case "time":
         return <Text style={styles.time}>{row.text}</Text>;
-      case "user":
+      case "user": {
+        const run = row.message.attachment;
+        if (run?.kind === "schedule_run") {
+          return (
+            <RunMarker
+              mark={run.mark}
+              dueAt={run.dueAt}
+              failed={runFailed(messages, messages.indexOf(row.message))}
+            />
+          );
+        }
         return (
           <MessageItem
             message={row.message}
             onLongPress={(view) => openMenu(row.message, null, view)}
           />
         );
+      }
       case "answer":
         return (
           <View style={styles.group}>
@@ -362,6 +402,7 @@ export default function ThreadScreen() {
           <Icon name="more" color={color.ink} />
         </Pressable>
       </View>
+      {schedule ? <ScheduleBar schedule={schedule} /> : null}
       <FlatList<Row>
         ref={list}
         style={styles.flex}
@@ -403,6 +444,7 @@ export default function ThreadScreen() {
         busy={Boolean(running) || holding}
         stoppable={Boolean(running)}
         quote={quote}
+        placeholder={schedule ? t("schedule-composer-hint") : undefined}
         onClearQuote={() => setQuote(null)}
         onSend={(text, files) => send(text, quote, files)}
         onStop={() => {

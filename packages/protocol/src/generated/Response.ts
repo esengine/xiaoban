@@ -35,6 +35,7 @@ import type { Plan } from "./Plan.ts";
 import type { Preferences } from "./Preferences.ts";
 import type { ProviderOption } from "./ProviderOption.ts";
 import type { RecipeView } from "./RecipeView.ts";
+import type { Schedule } from "./Schedule.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
 import type { SheetTab } from "./SheetTab.ts";
 import type { Thread } from "./Thread.ts";
@@ -115,6 +116,8 @@ export type Response =
     }
   | { type: "plan"; plan: Plan | null }
   | { type: "plans"; plans: Array<Plan> }
+  | { type: "schedule"; schedule: Schedule }
+  | { type: "schedules"; schedules: Array<Schedule> }
   | { type: "capabilities"; capabilities: Array<Capability> }
   | { type: "capability"; capability: Capability }
   | { type: "doc"; doc: Doc }

@@ -1,7 +1,8 @@
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { MascotFace } from "../onboarding/Mascot.tsx";
+import { SchedulesDialog } from "../schedule/SchedulesDialog.tsx";
 
 interface Destination {
   id: string;
@@ -59,11 +60,14 @@ export type View = "chat" | "daily";
 export function Rail({
   current = "chat",
   onNavigate,
+  onOpenThread,
 }: {
   current?: View;
   onNavigate?: (view: View) => void;
+  onOpenThread?: (threadId: string) => void;
 }) {
   const { t } = useI18n();
+  const [schedules, setSchedules] = useState(false);
   return (
     <nav className="rail" aria-label={t("nav-main")}>
       <div className="rail__logo" role="img" aria-label={t("app-name")}>
@@ -95,6 +99,35 @@ export function Rail({
           </svg>
         </button>
       ))}
+      <button
+        type="button"
+        className="rail__item"
+        data-nav="schedules"
+        aria-label={t("schedules-title")}
+        aria-expanded={schedules}
+        title={t("schedules-title")}
+        onClick={() => setSchedules(true)}
+      >
+        <svg
+          aria-hidden="true"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        >
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {schedules && (
+        <SchedulesDialog
+          onClose={() => setSchedules(false)}
+          onOpenThread={(threadId) => onOpenThread?.(threadId)}
+        />
+      )}
     </nav>
   );
 }

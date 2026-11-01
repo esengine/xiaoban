@@ -507,6 +507,11 @@ pub fn watch(state: SharedState, shutdown: CancellationToken) {
                 () = shutdown.cancelled() => return,
             };
             match event {
+                Ok(Event::TurnCompleted { turn_id, .. } | Event::TurnFailed { turn_id, .. })
+                    if state.schedules.take_quiet(&turn_id) =>
+                {
+                    turns.remove(&turn_id);
+                }
                 Ok(event) => {
                     if let Some(draft) = draft_for(&state, &mut turns, event).await {
                         raise(&state, draft, &shutdown).await;
