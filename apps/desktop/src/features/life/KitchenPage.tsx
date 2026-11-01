@@ -9,8 +9,10 @@ import { useHub } from "../../app/hub.tsx";
 import { SideChat } from "../chat/SideChat.tsx";
 import { recency } from "../chat/time.ts";
 import { FridgeItems } from "./FridgeItems.tsx";
+import { RecipeCard } from "./RecipeCard.tsx";
 import { KeepTag, WeekMenu } from "./WeekMenu.tsx";
 
+const RECENT_RECIPES = 4;
 const IMAGE = /\.(png|jpe?g|heic|webp|gif)$/i;
 
 export function DishCover({ name, image }: { name: string; image: string | null }) {
@@ -263,6 +265,18 @@ function Tonight({
               {kitchen.cook ? t("kitchen-resume-cook") : t("kitchen-start-button")}
             </button>
           </div>
+        )}
+        {kitchen.recipes.length > 0 && (
+          <>
+            <div className="kitchen-main__head">
+              <b>{t("recipe-recent")}</b>
+            </div>
+            <div className="kitchen-recipes">
+              {kitchen.recipes.slice(0, RECENT_RECIPES).map((id) => (
+                <RecipeCard key={id} recipeId={id} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -148,6 +148,9 @@ export type Request =
   | { type: "set_fridge_item"; name: string; amount: string }
   | { type: "remove_fridge_item"; name: string; shop: boolean }
   | { type: "week_item_gone"; start: string; name: string }
+  | { type: "recipe"; id: string }
+  | { type: "cook_recipe"; id: string }
+  | { type: "recipe_to_shopping"; id: string }
   | { type: "ledger"; month: string }
   | { type: "ledger_range"; from: string; to: string }
   | { type: "ledger_year"; year: number }

@@ -53,6 +53,7 @@ function Home() {
   const [view, setView] = useState<
     "chat" | "daily" | "kitchen" | "week" | "cook" | "ledger" | "weather"
   >("chat");
+  const [cookReturn, setCookReturn] = useState<"chat" | "kitchen">("kitchen");
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
   const activeId = exists(selected) ? selected : (primaryId ?? threads[0]?.id ?? null);
@@ -138,13 +139,16 @@ function Home() {
       <div className="shell">
         <Rail current="daily" onNavigate={navigate} />
         {view === "cook" ? (
-          <CookPage onBack={() => setView("kitchen")} />
+          <CookPage onBack={() => setView(cookReturn)} />
         ) : view === "kitchen" || view === "week" ? (
           <KitchenPage
             key={view}
             initialTab={view === "week" ? "week" : "tonight"}
             onBack={() => setView("daily")}
-            onCook={() => setView("cook")}
+            onCook={() => {
+              setCookReturn("kitchen");
+              setView("cook");
+            }}
           />
         ) : view === "weather" ? (
           <WeatherPage onBack={() => setView("daily")} />
@@ -288,6 +292,11 @@ function Home() {
           onOpenDoc={(docId, print) => setDocView({ docId, print: Boolean(print) })}
           onOpenSheet={setSheetView}
           onOpenDeck={(deckId, action) => setDeckView({ deckId, action: action ?? null })}
+          onCook={() => {
+            setTrip(null);
+            setCookReturn("chat");
+            setView("cook");
+          }}
         />
       ) : (
         <main className="chat" aria-busy="true" />
