@@ -6,6 +6,7 @@ import type {
   Event,
   Failure,
   HubInfo,
+  Kitchen,
   Memory,
   MemoryGalaxy,
   Message,
@@ -81,6 +82,7 @@ export interface HubState {
   workspaces: Workspace[];
   commands: Readonly<Record<string, CommandRun[]>>;
   filesVersion: Readonly<Record<string, number>>;
+  kitchen: Kitchen | null;
 }
 
 export const initialHubState: HubState = {
@@ -106,6 +108,7 @@ export const initialHubState: HubState = {
   workspaces: [],
   commands: {},
   filesVersion: {},
+  kitchen: null,
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -367,6 +370,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           [event.workspaceId]: (state.filesVersion[event.workspaceId] ?? 0) + 1,
         },
       };
+    case "kitchen_updated":
+      return { ...state, kitchen: event.kitchen };
     case "command_updated": {
       const list = state.commands[event.command.workspaceId] ?? [];
       const others = list.filter((run) => run.id !== event.command.id);

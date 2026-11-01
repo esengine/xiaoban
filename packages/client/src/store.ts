@@ -15,6 +15,7 @@ import type {
   GithubRef,
   GitInfo,
   Interpretation,
+  Kitchen,
   Location,
   Memory,
   MemoryGalaxy,
@@ -378,6 +379,38 @@ export class HubStore {
     await this.client.request({ type: "add_note", turnId, text }, "ack");
   }
 
+  async loadKitchen(): Promise<Kitchen> {
+    const { kitchen } = await this.client.request({ type: "kitchen" }, "kitchen");
+    this.#update((state) => ({ ...state, kitchen }));
+    return kitchen;
+  }
+
+  async selectDish(name: string, selected: boolean): Promise<void> {
+    const { kitchen } = await this.client.request(
+      { type: "select_dish", name, selected },
+      "kitchen",
+    );
+    this.#update((state) => ({ ...state, kitchen }));
+  }
+
+  async addMissingToShopping(): Promise<void> {
+    const { kitchen } = await this.client.request({ type: "add_missing_to_shopping" }, "kitchen");
+    this.#update((state) => ({ ...state, kitchen }));
+  }
+
+  async toggleShopping(name: string, done: boolean): Promise<void> {
+    const { kitchen } = await this.client.request(
+      { type: "toggle_shopping", name, done },
+      "kitchen",
+    );
+    this.#update((state) => ({ ...state, kitchen }));
+  }
+
+  async clearBought(): Promise<void> {
+    const { kitchen } = await this.client.request({ type: "clear_bought" }, "kitchen");
+    this.#update((state) => ({ ...state, kitchen }));
+  }
+
   async refreshWorkspaces(): Promise<Workspace[]> {
     const { workspaces } = await this.client.request({ type: "list_workspaces" }, "workspaces");
     this.#update((state) => ({ ...state, workspaces }));
@@ -647,6 +680,7 @@ export class HubStore {
     Promise.all([
       this.refreshThreads(),
       this.refreshWorkspaces(),
+      this.loadKitchen(),
       this.refreshModel(),
       this.refreshPreferences(),
       this.refreshMemories(),

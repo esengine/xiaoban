@@ -20,7 +20,7 @@ const DESTINATIONS: readonly Destination[] = [
   {
     id: "daily",
     label: "nav-daily",
-    ready: false,
+    ready: true,
     icon: (
       <>
         <circle cx="12" cy="12" r="4" />
@@ -54,22 +54,31 @@ const DESTINATIONS: readonly Destination[] = [
   },
 ];
 
-export function Rail() {
+export type View = "chat" | "daily";
+
+export function Rail({
+  current = "chat",
+  onNavigate,
+}: {
+  current?: View;
+  onNavigate?: (view: View) => void;
+}) {
   const { t } = useI18n();
   return (
     <nav className="rail" aria-label={t("nav-main")}>
       <div className="rail__logo" role="img" aria-label={t("app-name")}>
         <MascotFace />
       </div>
-      {DESTINATIONS.map((destination, position) => (
+      {DESTINATIONS.map((destination) => (
         <button
           key={destination.label}
           type="button"
           className="rail__item"
           data-nav={destination.id}
           aria-label={t(destination.label)}
-          aria-current={position === 0 ? "page" : undefined}
+          aria-current={destination.id === current ? "page" : undefined}
           disabled={!destination.ready}
+          onClick={() => onNavigate?.(destination.id as View)}
           title={destination.ready ? t(destination.label) : t("nav-soon")}
         >
           <svg

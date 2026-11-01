@@ -9,10 +9,12 @@ import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { CodePanel } from "../features/code/CodePanel.tsx";
 import { NewWorkspace } from "../features/code/NewWorkspace.tsx";
 import { useCodeWidth } from "../features/code/useCodeWidth.ts";
+import { DailyPage } from "../features/life/DailyPage.tsx";
+import { KitchenPage } from "../features/life/KitchenPage.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
-import { Rail } from "../features/shell/Rail.tsx";
+import { Rail, type View } from "../features/shell/Rail.tsx";
 import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
 import { ImageViewerProvider } from "../features/viewer/ImageViewer.tsx";
 import { Workspace } from "../features/workspace/Workspace.tsx";
@@ -35,6 +37,7 @@ function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
+  const [view, setView] = useState<"chat" | "daily" | "kitchen">("chat");
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
   const activeId = exists(selected) ? selected : (primaryId ?? threads[0]?.id ?? null);
@@ -47,6 +50,7 @@ function Home() {
     if (!isTauri()) return;
     const stop = listen<string>("main://open-thread", ({ payload }) => {
       setTrip(null);
+      setView("chat");
       setSelected(payload);
     });
     return () => void stop.then((unlisten) => unlisten());
@@ -109,11 +113,36 @@ function Home() {
   const openTrip = (tripId: string, version: number | null) =>
     activeId && setTrip({ tripId, version, threadId: activeId });
 
+  const navigate = (next: View) => {
+    setTrip(null);
+    setView(next === "daily" ? "daily" : "chat");
+  };
+
+  if (view !== "chat" && !trip) {
+    return (
+      <div className="shell">
+        <Rail current="daily" onNavigate={navigate} />
+        {view === "kitchen" ? (
+          <KitchenPage onBack={() => setView("daily")} />
+        ) : (
+          <DailyPage
+            onOpenKitchen={() => setView("kitchen")}
+            onTalk={() => {
+              setView("chat");
+              setSelected(primaryId);
+            }}
+          />
+        )}
+        {consent && <OperateConsent key={consent.id} confirm={consent} />}
+      </div>
+    );
+  }
+
   if (trip) {
     const thread = threads.find((candidate) => candidate.id === trip.threadId);
     return (
       <div className="shell">
-        <Rail />
+        <Rail onNavigate={navigate} />
         <TripWorkbench
           key={`${trip.tripId}@${trip.version ?? "latest"}`}
           tripId={trip.tripId}
@@ -132,7 +161,7 @@ function Home() {
 
   return (
     <div className="shell" data-chat-hidden={chatHidden || undefined}>
-      <Rail />
+      <Rail onNavigate={navigate} />
       <div
         className="panel panel--list"
         data-open={panels.list}

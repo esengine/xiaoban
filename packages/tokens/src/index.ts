@@ -40,6 +40,11 @@ export const color = {
   panelSoft: "#FBFBFC",
   synKeyword: "#7A3E9D",
   merged: "#5B3FC4",
+  dish0: "#E8775A",
+  dish1: "#6BAF6A",
+  dish2: "#B98352",
+  dish3: "#D9A23A",
+  dish4: "#8E7BC9",
   mergedSoft: "#EFEBFC",
 } as const;
 
