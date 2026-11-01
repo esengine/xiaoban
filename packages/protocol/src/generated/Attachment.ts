@@ -9,4 +9,5 @@ export type Attachment =
   | { kind: "report"; threadId: string; title: string }
   | { kind: "changes"; files: Array<ChangedFile> }
   | { kind: "doc"; docId: string }
-  | { kind: "sheet"; sheetId: string };
+  | { kind: "sheet"; sheetId: string }
+  | { kind: "deck"; deckId: string };

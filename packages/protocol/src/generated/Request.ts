@@ -14,7 +14,9 @@ import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
 import type { SheetFormat } from "./SheetFormat.ts";
 import type { SheetOp } from "./SheetOp.ts";
+import type { Slide } from "./Slide.ts";
 import type { ThinkingEffort } from "./ThinkingEffort.ts";
+import type { Transition } from "./Transition.ts";
 import type { WeatherPlace } from "./WeatherPlace.ts";
 import type { WeatherRules } from "./WeatherRules.ts";
 
@@ -168,6 +170,20 @@ export type Request =
   | { type: "sheet_version_tabs"; id: string; version: number }
   | { type: "export_sheet"; id: string; format: SheetFormat; tabId: string; path: string }
   | { type: "import_sheet"; threadId: string; fileId: string; name: string }
+  | { type: "deck"; id: string }
+  | { type: "deck_summary"; id: string }
+  | { type: "open_deck"; id: string }
+  | {
+      type: "set_slides";
+      id: string;
+      slides: Array<Slide>;
+      theme: string | null;
+      transition: Transition | null;
+    }
+  | { type: "resolve_slide_change"; id: string; slideId: string; keep: boolean }
+  | { type: "restore_deck_version"; id: string; version: number }
+  | { type: "search_images"; query: string }
+  | { type: "save_export"; path: string; data: string }
   | { type: "export_doc"; id: string; format: DocFormat; path: string }
   | { type: "set_daily_layout"; layout: DailyLayout }
   | { type: "locate_place" }

@@ -6,6 +6,8 @@ import type { CommitInfo } from "./CommitInfo.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { ConflictFile } from "./ConflictFile.ts";
 import type { DailyLayout } from "./DailyLayout.ts";
+import type { Deck } from "./Deck.ts";
+import type { DeckSummary } from "./DeckSummary.ts";
 import type { Device } from "./Device.ts";
 import type { DirEntry } from "./DirEntry.ts";
 import type { Doc } from "./Doc.ts";
@@ -13,6 +15,7 @@ import type { DocBlock } from "./DocBlock.ts";
 import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
 import type { FileDiff } from "./FileDiff.ts";
+import type { FoundImage } from "./FoundImage.ts";
 import type { GitInfo } from "./GitInfo.ts";
 import type { GithubRef } from "./GithubRef.ts";
 import type { Interpretation } from "./Interpretation.ts";
@@ -100,6 +103,9 @@ export type Response =
   | { type: "workbook"; workbook: Workbook }
   | { type: "workbook_summary"; summary: WorkbookSummary }
   | { type: "sheet_tabs"; tabs: Array<SheetTab> }
+  | { type: "deck"; deck: Deck }
+  | { type: "deck_summary"; summary: DeckSummary }
+  | { type: "images"; images: Array<FoundImage> }
   | { type: "exported"; path: string }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }

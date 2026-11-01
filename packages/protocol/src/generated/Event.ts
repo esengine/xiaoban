@@ -4,6 +4,7 @@ import type { CommandRun } from "./CommandRun.ts";
 import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { CookTimer } from "./CookTimer.ts";
+import type { DeckSummary } from "./DeckSummary.ts";
 import type { Device } from "./Device.ts";
 import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
@@ -59,4 +60,5 @@ export type Event =
   | { type: "ledger_changed" }
   | { type: "doc_updated"; summary: DocSummary }
   | { type: "sheet_updated"; summary: WorkbookSummary }
+  | { type: "deck_updated"; summary: DeckSummary }
   | { type: "weather_alert"; title: string; body: string };

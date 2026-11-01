@@ -131,6 +131,9 @@ pub enum Event {
     SheetUpdated {
         summary: crate::WorkbookSummary,
     },
+    DeckUpdated {
+        summary: crate::DeckSummary,
+    },
     WeatherAlert {
         title: String,
         body: String,
@@ -171,6 +174,7 @@ impl Event {
             | Self::LedgerChanged
             | Self::DocUpdated { .. }
             | Self::SheetUpdated { .. }
+            | Self::DeckUpdated { .. }
             | Self::WeatherAlert { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),

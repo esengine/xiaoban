@@ -699,6 +699,9 @@ impl ToolRunner for HubTools<'_> {
                 | crate::doc::SUGGEST
                 | crate::sheet::CREATE
                 | crate::sheet::EDIT
+                | crate::slides::START
+                | crate::slides::PAGE
+                | crate::slides::EDIT
         )
     }
 
@@ -742,6 +745,7 @@ impl ToolRunner for HubTools<'_> {
                 crate::life::LIFE => self.life(arguments).await,
                 name if crate::doc::is_tool(name) => self.doc_tool(name, arguments).await,
                 name if crate::sheet::is_tool(name) => self.sheet_tool(name, arguments).await,
+                name if crate::slides::is_tool(name) => self.slides_tool(name, arguments).await,
                 name if crate::code_tools::is_code_tool(name) => {
                     self.run_code_tool(name, arguments).await
                 }

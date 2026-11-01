@@ -175,4 +175,5 @@ pub enum Attachment {
     Changes { files: Vec<crate::ChangedFile> },
     Doc { doc_id: String },
     Sheet { sheet_id: String },
+    Deck { deck_id: String },
 }

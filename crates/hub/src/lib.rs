@@ -57,6 +57,7 @@ mod life;
 mod daily;
 mod doc;
 mod sheet;
+mod slides;
 mod sheet_formula;
 mod workspace;
 

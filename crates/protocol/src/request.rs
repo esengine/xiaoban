@@ -430,6 +430,37 @@ pub enum Request {
         file_id: String,
         name: String,
     },
+    Deck {
+        id: String,
+    },
+    DeckSummary {
+        id: String,
+    },
+    OpenDeck {
+        id: String,
+    },
+    SetSlides {
+        id: String,
+        slides: Vec<crate::Slide>,
+        theme: Option<String>,
+        transition: Option<crate::Transition>,
+    },
+    ResolveSlideChange {
+        id: String,
+        slide_id: String,
+        keep: bool,
+    },
+    RestoreDeckVersion {
+        id: String,
+        version: u32,
+    },
+    SearchImages {
+        query: String,
+    },
+    SaveExport {
+        path: String,
+        data: String,
+    },
     ExportDoc {
         id: String,
         format: crate::DocFormat,
@@ -662,6 +693,15 @@ pub enum Response {
     },
     SheetTabs {
         tabs: Vec<crate::SheetTab>,
+    },
+    Deck {
+        deck: crate::Deck,
+    },
+    DeckSummary {
+        summary: crate::DeckSummary,
+    },
+    Images {
+        images: Vec<crate::FoundImage>,
     },
     Exported {
         path: String,

@@ -55,6 +55,7 @@ pub struct HubState {
     pub life_tools: Vec<ToolSpec>,
     pub doc_tools: Vec<ToolSpec>,
     pub sheet_tools: Vec<ToolSpec>,
+    pub deck_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
@@ -68,6 +69,7 @@ pub enum Scene {
     Ledger,
     Doc,
     Sheet,
+    Deck,
 }
 
 pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
@@ -79,6 +81,8 @@ pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
         Scene::Doc
     } else if crate::sheet::is_sheet_thread(state, thread_id).await {
         Scene::Sheet
+    } else if crate::slides::is_deck_thread(state, thread_id).await {
+        Scene::Deck
     } else {
         Scene::Chat
     }
@@ -96,6 +100,7 @@ impl HubState {
             Scene::Ledger => Some((xiaoban_i18n::keys::PROMPT_LEDGER, &self.ledger_tools)),
             Scene::Doc => Some((xiaoban_i18n::keys::PROMPT_DOC, &self.doc_tools)),
             Scene::Sheet => Some((xiaoban_i18n::keys::PROMPT_SHEET, &self.sheet_tools)),
+            Scene::Deck => Some((xiaoban_i18n::keys::PROMPT_SLIDES, &self.deck_tools)),
             Scene::Chat => None,
         };
         if let Some((prompt, extra)) = special {

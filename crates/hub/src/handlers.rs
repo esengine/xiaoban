@@ -202,6 +202,14 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             ErrorCode::Unauthorized,
             "only the hub's own machine can be located",
         )),
+        request @ (Request::Deck { .. }
+        | Request::DeckSummary { .. }
+        | Request::OpenDeck { .. }
+        | Request::SetSlides { .. }
+        | Request::ResolveSlideChange { .. }
+        | Request::RestoreDeckVersion { .. }
+        | Request::SearchImages { .. }
+        | Request::SaveExport { .. }) => crate::slides::handle(state, local, request).await,
         request @ (Request::Sheet { .. }
         | Request::SheetSummary { .. }
         | Request::OpenSheet { .. }
