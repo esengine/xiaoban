@@ -37,30 +37,52 @@ function useToolName() {
 export function WorkingLine({
   steps,
   agents,
+  paused = false,
+  onPause,
 }: {
   steps: readonly TraceStep[];
   agents?: Record<string, AgentState[]> | undefined;
+  paused?: boolean;
+  onPause?: (() => void) | undefined;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const current = steps.at(-1);
   if (!current) return null;
-  const text = isBetweenSteps(steps) ? t("step-thinking") : stepText(t, current);
+  const text = paused
+    ? t("island-paused")
+    : isBetweenSteps(steps)
+      ? t("step-thinking")
+      : stepText(t, current);
   return (
     <View style={styles.working} accessibilityLiveRegion="polite">
-      <Pressable
-        style={styles.workingLine}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        accessibilityHint={t("working-show-steps")}
-        onPress={() => setOpen((value) => !value)}
-      >
-        <Pulse />
-        <FadeIn key={text} style={styles.workingTextWrap}>
-          <Text style={styles.workingText}>{text}</Text>
-        </FadeIn>
-        <Icon name={open ? "chevronDown" : "chevronRight"} size={14} color={color.accentStrong} />
-      </Pressable>
+      <View style={styles.workingRow}>
+        <Pressable
+          style={styles.workingLine}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+          accessibilityHint={t("working-show-steps")}
+          onPress={() => setOpen((value) => !value)}
+        >
+          <Pulse />
+          <FadeIn key={text} style={styles.workingTextWrap}>
+            <Text style={styles.workingText}>{text}</Text>
+          </FadeIn>
+          <Icon name={open ? "chevronDown" : "chevronRight"} size={14} color={color.accentStrong} />
+        </Pressable>
+        {onPause ? (
+          <Pressable
+            style={[styles.pause, paused && styles.pauseOn]}
+            accessibilityRole="button"
+            hitSlop={6}
+            onPress={onPause}
+          >
+            <Text style={[styles.pauseText, paused && styles.pauseTextOn]}>
+              {t(paused ? "island-resume" : "island-pause")}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
       {open && <StepList steps={steps} live agents={agents} />}
     </View>
   );
@@ -127,6 +149,18 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   workingTextWrap: { flexShrink: 1 },
+  workingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  pause: {
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: color.lineStrong,
+    justifyContent: "center",
+  },
+  pauseOn: { backgroundColor: color.ink, borderColor: color.ink },
+  pauseText: { fontSize: 12, color: color.inkMid },
+  pauseTextOn: { color: color.surface, fontWeight: "500" },
   workingText: { fontSize: 13, lineHeight: 19, color: color.accentStrong },
   trace: { alignSelf: "stretch", gap: 6 },
   summary: {

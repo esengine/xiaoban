@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { MascotFace } from "../components/Mascot.tsx";
+import { useHubStore } from "../hub/HubProvider.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
 import { Caret, FadeIn, Shimmer } from "./Motion.tsx";
 import { Rich } from "./Rich.tsx";
@@ -114,6 +115,7 @@ export function DraftBubble({
   onBackground?: () => void;
 }) {
   const { t } = useI18n();
+  const store = useHubStore();
   const waitingForText = draft.text === "" && !draft.failure;
   const elapsed = useElapsed(draft.startedAt, waitingForText);
 
@@ -148,7 +150,16 @@ export function DraftBubble({
     if (draft.steps.length > 0) {
       return (
         <>
-          <WorkingLine steps={draft.steps} agents={draft.agents} />
+          <WorkingLine
+            steps={draft.steps}
+            agents={draft.agents}
+            paused={Boolean(draft.paused)}
+            onPause={() =>
+              void (draft.paused ? store.resume(draft.turnId) : store.pause(draft.turnId)).catch(
+                () => undefined,
+              )
+            }
+          />
           {hint}
         </>
       );
