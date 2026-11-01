@@ -10,6 +10,7 @@ import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
+import type { PrepTask } from "./PrepTask.ts";
 import type { StepResult } from "./StepResult.ts";
 import type { Thread } from "./Thread.ts";
 import type { Usage } from "./Usage.ts";
@@ -51,4 +52,5 @@ export type Event =
   | { type: "files_changed"; workspaceId: string; threadId: string | null; paths: Array<string> }
   | { type: "command_updated"; command: CommandRun }
   | { type: "kitchen_updated"; kitchen: Kitchen }
-  | { type: "timer_fired"; timer: CookTimer };
+  | { type: "timer_fired"; timer: CookTimer }
+  | { type: "prep_due"; task: PrepTask };

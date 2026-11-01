@@ -373,6 +373,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "kitchen_updated":
       return { ...state, kitchen: event.kitchen };
     case "timer_fired":
+    case "prep_due":
       return state;
     case "command_updated": {
       const list = state.commands[event.command.workspaceId] ?? [];

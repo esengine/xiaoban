@@ -18,7 +18,7 @@ pub const PREFERENCES: &str = "kitchen_preferences";
 pub const SHOPPING: &str = "shopping_add";
 
 pub fn is_tool(name: &str) -> bool {
-    matches!(name, FRIDGE | DISHES | PREFERENCES | SHOPPING | crate::cooking::STEPS)
+    matches!(name, FRIDGE | DISHES | PREFERENCES | SHOPPING | crate::cooking::STEPS | crate::week::PLAN)
 }
 
 pub async fn load(state: &SharedState) -> Kitchen {
@@ -94,6 +94,7 @@ pub async fn note(state: &SharedState, thread_id: &str) -> Option<ContextNote> {
         "max_minutes": kitchen.max_minutes,
         "dishes": kitchen.dishes.iter().map(|dish| json!({ "name": dish.name, "selected": dish.selected })).collect::<Vec<_>>(),
         "shopping": kitchen.shopping.iter().filter(|item| !item.done).map(|item| &item.name).collect::<Vec<_>>(),
+        "calendar": crate::week::context(&kitchen),
         "cooking": kitchen.cook.as_ref().map(|cook| json!({
             "dishes": cook.dishes,
             "current_step": cook.current + 1,
@@ -159,7 +160,7 @@ pub async fn clear_bought(state: &SharedState) -> Kitchen {
     save(state, kitchen).await
 }
 
-fn add_item(kitchen: &mut Kitchen, item: ShoppingItem) {
+pub fn add_item(kitchen: &mut Kitchen, item: ShoppingItem) {
     let name = item.name.trim().to_owned();
     if name.is_empty() {
         return;
@@ -168,6 +169,9 @@ fn add_item(kitchen: &mut Kitchen, item: ShoppingItem) {
         existing.done = false;
         if !item.amount.is_empty() {
             existing.amount = item.amount;
+        }
+        if item.keep != xiaoban_protocol::Keep::None {
+            existing.keep = item.keep;
         }
         return;
     }
@@ -214,6 +218,7 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
     });
     vec![
         crate::cooking::spec(l),
+        crate::week::spec(l),
         spec(
             FRIDGE,
             l.text(keys::TOOL_KITCHEN_FRIDGE_DESCRIPTION),
@@ -245,7 +250,7 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
             l.text(keys::TOOL_SHOPPING_ADD_DESCRIPTION),
             &json!({ "items": { "type": "array", "items": {
                 "type": "object",
-                "properties": { "name": text(l, keys::TOOL_KITCHEN_ITEM_NAME), "amount": text(l, keys::TOOL_KITCHEN_ITEM_AMOUNT), "note": text(l, keys::TOOL_SHOPPING_NOTE) },
+                "properties": { "name": text(l, keys::TOOL_KITCHEN_ITEM_NAME), "amount": text(l, keys::TOOL_KITCHEN_ITEM_AMOUNT), "note": text(l, keys::TOOL_SHOPPING_NOTE), "keep": crate::week::keep_spec(l) },
                 "required": ["name"],
                 "additionalProperties": false,
             } } }),
@@ -303,6 +308,9 @@ impl HubTools<'_> {
     pub(crate) async fn kitchen_tool(&self, name: &str, arguments: &str) -> String {
         if name == crate::cooking::STEPS {
             return self.cook_steps(arguments).await;
+        }
+        if name == crate::week::PLAN {
+            return self.week_plan(arguments).await;
         }
         let mut kitchen = load(self.state).await;
         match name {
@@ -410,6 +418,7 @@ pub async fn handle(
         Request::ExtendTimer { id, seconds } => crate::cooking::extend(state, &id, seconds).await,
         Request::DismissTimer { id } => crate::cooking::dismiss(state, &id).await,
         Request::FinishCooking => crate::cooking::finish(state).await,
+        Request::WeekToShopping { start } => crate::week::to_shopping(state, &start).await,
         Request::ResetKitchen => {
             let _ = state.store.set_setting_owned(THREAD_KEY.to_owned(), String::new()).await;
             let _ = state.store.set_setting_owned(KEY.to_owned(), String::new()).await;

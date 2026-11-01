@@ -8864,3 +8864,264 @@ button.sent-files__image {
   box-shadow: 0 8px 24px var(--color-scrim);
   cursor: pointer;
 }
+
+.keep-tag {
+  flex: none;
+  min-width: 37px;
+  box-sizing: border-box;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.keep-tag[data-keep="frozen"] {
+  color: var(--color-accent-strong);
+  background: var(--color-accent-wash);
+}
+
+.keep-tag[data-keep="chilled"] {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.keep-tag[data-keep="room"] {
+  color: var(--color-ink-mid);
+  background: var(--color-line-soft);
+}
+
+.week {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.week__head {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.week__head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.week__head .life-card__note {
+  font-size: 13px;
+}
+
+.week__title {
+  font-size: 18px;
+}
+
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.week-day {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 300px;
+}
+
+.week-day[data-today] {
+  border: 2px solid var(--color-accent);
+}
+
+.week-day__head {
+  padding: 10px 12px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.week-day__head b {
+  font-size: 14px;
+}
+
+.week-day__head > span:not(.life-card__spacer) {
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.week-day__head .week-day__tag {
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.week-day__head .week-day__tag[data-kind="today"] {
+  color: var(--color-surface);
+  background: var(--color-accent);
+}
+
+.week-day__head .week-day__tag[data-kind="changed"] {
+  color: var(--color-attention-ink);
+  background: var(--color-attention-soft);
+}
+
+.week-day .dish__cover {
+  height: 92px;
+  border-radius: 0;
+}
+
+.week-day__body {
+  flex: 1;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.week-day__body > b {
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.week-day__meta {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-faint);
+}
+
+.week-day__swap {
+  margin-top: 6px;
+}
+
+.week-day__cook {
+  align-self: stretch;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.week-day__blank {
+  align-items: center;
+  justify-content: center;
+}
+
+.week-idea {
+  flex-direction: row;
+  gap: 22px;
+}
+
+.week-idea b {
+  font-size: 13px;
+}
+
+.week-idea p,
+.week-idea ul {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-ink-mid);
+}
+
+.week-idea__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.week-idea__prep {
+  width: 260px;
+  flex: none;
+  padding-left: 22px;
+  border-left: 1px solid var(--color-line-soft);
+}
+
+.week-idea ul {
+  padding: 0;
+  list-style: none;
+}
+
+.week-idea li[data-done] {
+  color: var(--color-memory-other);
+  text-decoration: line-through;
+}
+
+.week-buy {
+  display: flex;
+  gap: 28px;
+}
+
+.week-buy__group {
+  flex: 1;
+  min-width: 0;
+}
+
+.week-buy__title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-faint);
+}
+
+.week-buy__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.week-buy__row[data-have] {
+  color: var(--color-memory-other);
+}
+
+.week-buy__name {
+  flex: none;
+  white-space: nowrap;
+}
+
+.week-buy__note {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-faint);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.week__empty {
+  min-height: 560px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.week__empty-card {
+  width: 460px;
+  align-items: center;
+  text-align: center;
+  padding: 36px 32px;
+  gap: 12px;
+}
+
+.week__empty-card b {
+  font-size: 18px;
+}
+
+.week__empty-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-ink-mid);
+}
+
+.week-day[data-takeout] .dish__cover {
+  background: linear-gradient(135deg, var(--color-line-soft), var(--color-line-strong));
+}

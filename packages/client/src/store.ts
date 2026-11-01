@@ -431,6 +431,10 @@ export class HubStore {
     return this.#kitchenRequest({ type: "finish_cooking" });
   }
 
+  weekToShopping(start: string): Promise<void> {
+    return this.#kitchenRequest({ type: "week_to_shopping", start });
+  }
+
   async clearBought(): Promise<void> {
     const { kitchen } = await this.client.request({ type: "clear_bought" }, "kitchen");
     this.#update((state) => ({ ...state, kitchen }));

@@ -121,6 +121,9 @@ pub enum Event {
     TimerFired {
         timer: crate::CookTimer,
     },
+    PrepDue {
+        task: crate::PrepTask,
+    },
 }
 
 impl Event {
@@ -152,7 +155,8 @@ impl Event {
             | Self::WorkspaceRemoved { .. }
             | Self::CommandUpdated { .. }
             | Self::KitchenUpdated { .. }
-            | Self::TimerFired { .. } => None,
+            | Self::TimerFired { .. }
+            | Self::PrepDue { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),

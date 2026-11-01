@@ -193,7 +193,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::StartTimer { .. }
         | Request::ExtendTimer { .. }
         | Request::DismissTimer { .. }
-        | Request::FinishCooking) => crate::kitchen::handle(state, request).await,
+        | Request::FinishCooking
+        | Request::WeekToShopping { .. }) => crate::kitchen::handle(state, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

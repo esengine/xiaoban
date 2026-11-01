@@ -311,6 +311,9 @@ pub enum Request {
         id: String,
     },
     FinishCooking,
+    WeekToShopping {
+        start: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

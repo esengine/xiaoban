@@ -125,4 +125,5 @@ export type Request =
   | { type: "start_timer"; step: number | null; label: string; after: string; seconds: number }
   | { type: "extend_timer"; id: string; seconds: number }
   | { type: "dismiss_timer"; id: string }
-  | { type: "finish_cooking" };
+  | { type: "finish_cooking" }
+  | { type: "week_to_shopping"; start: string };

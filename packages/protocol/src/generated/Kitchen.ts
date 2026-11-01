@@ -4,6 +4,7 @@ import type { CookTimer } from "./CookTimer.ts";
 import type { Dish } from "./Dish.ts";
 import type { Ingredient } from "./Ingredient.ts";
 import type { ShoppingItem } from "./ShoppingItem.ts";
+import type { WeekPlan } from "./WeekPlan.ts";
 
 export type Kitchen = {
   threadId: string | null;
@@ -17,4 +18,5 @@ export type Kitchen = {
   shopping: Array<ShoppingItem>;
   cook: CookSession | null;
   timers: Array<CookTimer>;
+  weeks: Array<WeekPlan>;
 };

@@ -28,6 +28,61 @@ pub struct ShoppingItem {
     pub amount: String,
     pub note: String,
     pub done: bool,
+    pub keep: Keep,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum Keep {
+    Frozen,
+    Chilled,
+    Room,
+    #[default]
+    None,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WeekDay {
+    pub date: String,
+    pub dish: String,
+    pub minutes: u32,
+    pub why: String,
+    pub takeout: bool,
+    pub photo_query: String,
+    pub image: Option<String>,
+    pub changed: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PrepTask {
+    pub date: String,
+    pub time: String,
+    pub text: String,
+    pub notified: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WeekItem {
+    pub name: String,
+    pub amount: String,
+    pub note: String,
+    pub group: String,
+    pub keep: Keep,
+    pub have: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WeekPlan {
+    pub start: String,
+    pub days: Vec<WeekDay>,
+    pub idea: String,
+    pub prep: Vec<PrepTask>,
+    pub buy: Vec<WeekItem>,
+    pub added: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -91,6 +146,7 @@ pub struct Kitchen {
     pub shopping: Vec<ShoppingItem>,
     pub cook: Option<CookSession>,
     pub timers: Vec<CookTimer>,
+    pub weeks: Vec<WeekPlan>,
 }
 
 impl Default for Kitchen {
@@ -107,6 +163,7 @@ impl Default for Kitchen {
             shopping: Vec::new(),
             cook: None,
             timers: Vec::new(),
+            weeks: Vec::new(),
         }
     }
 }

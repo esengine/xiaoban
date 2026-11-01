@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { recency } from "../chat/time.ts";
 import { KitchenChat } from "./KitchenChat.tsx";
+import { KeepTag, WeekMenu } from "./WeekMenu.tsx";
 
 const IMAGE = /\.(png|jpe?g|heic|webp|gif)$/i;
 
@@ -311,6 +312,7 @@ function Shopping({ kitchen }: { kitchen: Kitchen }) {
                   <span className="shopping-list__name">{item.name}</span>
                   {item.amount && <span className="shopping-list__amount">{item.amount}</span>}
                   {item.note && <span className="shopping-list__note">{item.note}</span>}
+                  {!item.done && <KeepTag keep={item.keep} />}
                 </label>
               </li>
             ))}
@@ -325,7 +327,7 @@ export function KitchenPage({ onBack, onCook }: { onBack: () => void; onCook: ()
   const { t } = useI18n();
   const store = useHub();
   const { kitchen } = useHubState(store);
-  const [tab, setTab] = useState<"tonight" | "shopping">("tonight");
+  const [tab, setTab] = useState<"tonight" | "week" | "shopping">("tonight");
   const threadId = kitchen?.threadId ?? null;
 
   useEffect(() => {
@@ -379,6 +381,15 @@ export function KitchenPage({ onBack, onCook }: { onBack: () => void; onCook: ()
             type="button"
             role="tab"
             className="code-tab"
+            aria-selected={tab === "week"}
+            onClick={() => setTab("week")}
+          >
+            {t("kitchen-tab-week")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className="code-tab"
             aria-selected={tab === "shopping"}
             onClick={() => setTab("shopping")}
           >
@@ -392,6 +403,8 @@ export function KitchenPage({ onBack, onCook }: { onBack: () => void; onCook: ()
           {kitchen &&
             (tab === "tonight" ? (
               <Tonight kitchen={kitchen} onSay={say} onCook={onCook} />
+            ) : tab === "week" ? (
+              <WeekMenu kitchen={kitchen} onSay={say} onCook={onCook} />
             ) : (
               <Shopping kitchen={kitchen} />
             ))}

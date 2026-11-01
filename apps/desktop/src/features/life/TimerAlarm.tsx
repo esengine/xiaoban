@@ -43,6 +43,10 @@ export function TimerAlarm() {
   useEffect(
     () =>
       store.client.onEvent((event) => {
+        if (event.type === "prep_due") {
+          void notify(t("prep-due-title"), event.task.text);
+          return;
+        }
         if (event.type !== "timer_fired") return;
         void notify(
           t("timer-done-title", { label: event.timer.label }),

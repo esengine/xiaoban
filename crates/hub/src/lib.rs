@@ -9,6 +9,7 @@ mod code_tools;
 mod commands;
 mod conflicts;
 mod cooking;
+mod week;
 mod config;
 mod confirms;
 mod discovery;
