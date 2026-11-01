@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { HubProvider } from "../src/hub/HubProvider.tsx";
 import { Island } from "../src/hub/Island.tsx";
 import { Notices } from "../src/hub/Notices.tsx";
+import { PlanBall } from "../src/hub/PlanBall.tsx";
 import { translator } from "../src/i18n.ts";
 
 const { t } = translator;
@@ -15,6 +16,7 @@ export default function RootLayout() {
       <HubProvider>
         <Island />
         <Notices />
+        <PlanBall />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{

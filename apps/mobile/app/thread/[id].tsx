@@ -22,17 +22,22 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { Bubble, bubbleStyles } from "../../src/chat/Bubble.tsx";
 import { Composer } from "../../src/chat/Composer.tsx";
 import { ConfirmCard } from "../../src/chat/ConfirmCard.tsx";
 import { BackgroundCard, DraftBubble } from "../../src/chat/DraftBubble.tsx";
 import { MessageItem } from "../../src/chat/MessageItem.tsx";
 import { type MenuActions, type MenuTarget, MessageMenu } from "../../src/chat/MessageMenu.tsx";
+import { PlanPin } from "../../src/chat/PlanPin.tsx";
 import { plain } from "../../src/chat/plain.ts";
+import { usePlanNotices } from "../../src/chat/planNotice.ts";
 import { isCancel, toGroups } from "../../src/chat/rows.ts";
 import { ThoughtToggle } from "../../src/chat/ThoughtToggle.tsx";
 import { MemoryChips, TraceSummary } from "../../src/chat/Trace.tsx";
 import { useHubStore } from "../../src/hub/HubProvider.tsx";
+import { planBallSupported, setPlanBall, usePlanBall } from "../../src/hub/planBallStore.ts";
+import { shortToast } from "../../src/hub/shortToast.ts";
 import { Icon } from "../../src/ui/Icon.tsx";
 import { useWhen } from "../../src/ui/useWhen.ts";
 
@@ -57,6 +62,7 @@ interface Regenerating {
 
 type Row =
   | { key: string; kind: "time"; text: string }
+  | { key: string; kind: "notice"; text: string }
   | { key: string; kind: "user"; message: Message }
   | {
       key: string;
@@ -102,7 +108,7 @@ function DraftItem({
 }
 
 export default function ThreadScreen() {
-  const params = useLocalSearchParams<{ id: string; quote?: string }>();
+  const params = useLocalSearchParams<{ id: string; quote?: string; plan?: string }>();
   const id = params.id;
   const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
@@ -150,6 +156,36 @@ export default function ThreadScreen() {
     if (state.status === "open") void store.loadMessages(id).catch(() => undefined);
   }, [id, state.status, store]);
 
+  const plan = state.plans[id];
+  const planNotices = usePlanNotices(id, plan);
+  const [planOpen, setPlanOpen] = useState<boolean | null>(params.plan === "open" ? true : null);
+  const ballThread = usePlanBall();
+  useEffect(() => {
+    if (params.plan === "open") setPlanOpen(true);
+  }, [params.plan]);
+  useEffect(() => {
+    if (state.status === "open") void store.loadPlan(id).catch(() => undefined);
+  }, [id, state.status, store]);
+
+  const toggleBall = () => {
+    if (ballThread === id) {
+      setPlanBall(null);
+      return;
+    }
+    if (!XiaobanHub?.operatorReady()) {
+      Alert.alert(t("plan-ball-need-title"), t("plan-ball-need-body"), [
+        { text: t("dialog-cancel"), style: "cancel" },
+        {
+          text: t("plan-ball-need-open"),
+          onPress: () => router.push({ pathname: "/consent", params: { ball: id } }),
+        },
+      ]);
+      return;
+    }
+    setPlanBall(id);
+    shortToast(t("plan-ball-on"));
+  };
+
   const next = queued[0];
   useEffect(() => {
     if (running || holding || next === undefined) return;
@@ -176,10 +212,20 @@ export default function ThreadScreen() {
 
   const rows: Row[] = [];
   let last = 0;
+  let noticeAt = 0;
+  const flushNotices = (before: number) => {
+    while (noticeAt < planNotices.length) {
+      const notice = planNotices[noticeAt];
+      if (!notice || notice.at > before) return;
+      rows.push({ key: notice.key, kind: "notice", text: notice.text });
+      noticeAt += 1;
+    }
+  };
   for (const group of groups) {
     const message = group.kind === "user" ? group.message : group.versions.at(-1);
     if (!message) continue;
     const time = group.kind === "user" ? message.createdAt : (group.versions[0]?.createdAt ?? 0);
+    flushNotices(time);
     if (time - last > GAP_MS) rows.push({ key: `t-${message.id}`, kind: "time", text: when(time) });
     last = time;
     if (group.kind === "user") {
@@ -196,6 +242,7 @@ export default function ThreadScreen() {
       });
     }
   }
+  flushNotices(Number.POSITIVE_INFINITY);
   for (const draft of trailing) {
     rows.push({ key: draft.turnId, kind: "draft", draft, question: questionFor(draft) });
   }
@@ -296,6 +343,8 @@ export default function ThreadScreen() {
     switch (row.kind) {
       case "time":
         return <Text style={styles.time}>{row.text}</Text>;
+      case "notice":
+        return <Text style={styles.notice}>{row.text}</Text>;
       case "user":
         return (
           <MessageItem
@@ -362,6 +411,14 @@ export default function ThreadScreen() {
           <Icon name="more" color={color.ink} />
         </Pressable>
       </View>
+      {plan && (
+        <PlanPin
+          plan={plan}
+          open={planOpen ?? plan.status === "draft"}
+          onToggle={() => setPlanOpen(!(planOpen ?? plan.status === "draft"))}
+          ball={planBallSupported ? { on: ballThread === id, onPress: toggleBall } : undefined}
+        />
+      )}
       <FlatList<Row>
         ref={list}
         style={styles.flex}
@@ -448,6 +505,16 @@ const styles = StyleSheet.create({
   group: { gap: 6 },
   footer: { gap: 12, marginTop: 12 },
   time: { alignSelf: "center", fontSize: 11, color: color.faint },
+  notice: {
+    alignSelf: "center",
+    fontSize: 11,
+    color: color.muted,
+    backgroundColor: color.chipSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
   queued: { alignItems: "flex-end", gap: 2 },
   queuedNote: { fontSize: 11, color: color.faint },
   suggestions: { flexGrow: 0 },

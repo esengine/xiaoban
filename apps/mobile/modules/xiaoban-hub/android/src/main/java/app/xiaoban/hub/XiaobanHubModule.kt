@@ -16,15 +16,22 @@ class XiaobanHubModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("XiaobanHub")
 
-    Events("onNoticeAnswer")
+    Events("onNoticeAnswer", "onPlanBall")
 
     OnCreate {
       XiaobanOperator.context = appContext.reactContext?.applicationContext
       XiaobanNotices.listener = { answer -> sendEvent("onNoticeAnswer", mapOf("answer" to answer)) }
+      PlanBall.listener = { action -> sendEvent("onPlanBall", mapOf("action" to action)) }
     }
 
     OnDestroy {
       XiaobanNotices.listener = null
+      PlanBall.listener = null
+    }
+
+    Function("planBall") { state: String ->
+      PlanBall.update(state)
+      Unit
     }
 
     OnActivityEntersForeground {

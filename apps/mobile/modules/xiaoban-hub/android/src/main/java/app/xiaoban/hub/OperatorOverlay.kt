@@ -164,10 +164,12 @@ object OperatorOverlay {
     frame = null
     mode = Mode.Hidden
     steps = 0
+    PlanBall.yieldTo(false)
   }
 
   private fun show(next: Mode, build: (Context) -> View) {
     val service = service() ?: return
+    PlanBall.yieldTo(operating || next == Mode.Working || next == Mode.Paused || next == Mode.Handover)
     val manager = service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     val holder = frame ?: FrameLayout(service).also { created ->
       val padding = dp(service, 10f).toInt()

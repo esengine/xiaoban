@@ -9,6 +9,7 @@ interface XiaobanHubNative {
   stop(): Promise<void>;
   setStrings(strings: string): void;
   island(state: string): void;
+  planBall?(state: string): void;
   turnDone(title: string): boolean;
   operatorReady(): boolean;
   openOperatorSettings(detailHint: string, listHint: string): void;
@@ -17,6 +18,7 @@ interface XiaobanHubNative {
   withdrawNotice(id: string): void;
   setForeground(active: boolean): void;
   addListener(event: "onNoticeAnswer", listener: (event: { answer: string }) => void): Subscription;
+  addListener(event: "onPlanBall", listener: (event: { action: string }) => void): Subscription;
 }
 
 export const XiaobanHub = requireOptionalNativeModule<XiaobanHubNative>("XiaobanHub");

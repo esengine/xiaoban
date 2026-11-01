@@ -1,21 +1,10 @@
 import { confirmText } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
-import { useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { useEffect, useRef } from "react";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { useHubContext } from "./HubProvider.tsx";
-
-function useBackground(): boolean {
-  const [background, setBackground] = useState(AppState.currentState !== "active");
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (next) =>
-      setBackground(next !== "active"),
-    );
-    return () => subscription.remove();
-  }, []);
-  return background;
-}
+import { useBackground } from "./useBackground.ts";
 
 function Bridge({
   store,

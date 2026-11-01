@@ -8,4 +8,17 @@
   <color name="xiaoban_glass">#26FFFFFF</color>
   <color name="xiaoban_done">#3FB37F</color>
   <color name="xiaoban_attention">#F08C3A</color>
+  <color name="xiaoban_attention_soft">#FDEBD9</color>
+  <color name="xiaoban_attention_ink">#8A3D05</color>
+  <color name="xiaoban_ground">#F4F5F7</color>
+  <color name="xiaoban_ink_mid">#4A505C</color>
+  <color name="xiaoban_muted">#5B616E</color>
+  <color name="xiaoban_line_strong">#D5D9E3</color>
+  <color name="xiaoban_link_dark">#9AAAE6</color>
+  <color name="xiaoban_ball_track">#2A2D35</color>
+  <color name="xiaoban_ball_arc">#6B82DB</color>
+  <color name="xiaoban_zone_fade_top">#0015171C</color>
+  <color name="xiaoban_zone_fade_bottom">#4015171C</color>
+  <color name="xiaoban_zone_idle">#B315171C</color>
+  <color name="xiaoban_zone_near">#A33A0A</color>
 </resources>
