@@ -16,15 +16,11 @@ pub const SEARCH_FILES: &str = "search_files";
 pub const WRITE_FILE: &str = "write_file";
 pub const EDIT_FILE: &str = "edit_file";
 pub const RUN_COMMAND: &str = "run_command";
-pub const GIT_STATUS: &str = "git_status";
-pub const GIT_DIFF: &str = "git_diff";
-pub const GIT_LOG: &str = "git_log";
 
 const READ_LINES: usize = 2_000;
 const LIST_LIMIT: usize = 500;
 const HITS: usize = 200;
 const SEARCH_BYTES: u64 = 1_000_000;
-const GIT_CHARS: usize = 20_000;
 const PREVIEW_LINES: usize = 14;
 const READ_FOLDERS: &str = "workspace.read.";
 const WRITE_FOLDERS: &str = "workspace.write.";
@@ -109,31 +105,17 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
     ]
 }
 
-pub fn git_specs(l: &Localizer) -> Vec<ToolSpec> {
-    vec![
-        spec(GIT_STATUS, l.text(keys::TOOL_GIT_STATUS_DESCRIPTION), &json!({}), &[]),
-        spec(
-            GIT_DIFF,
-            l.text(keys::TOOL_GIT_DIFF_DESCRIPTION),
-            &json!({
-                "path": text(l, keys::TOOL_CODE_PATH),
-                "staged": { "type": "boolean", "description": l.text(keys::TOOL_GIT_DIFF_STAGED) },
-            }),
-            &[],
-        ),
-        spec(
-            GIT_LOG,
-            l.text(keys::TOOL_GIT_LOG_DESCRIPTION),
-            &json!({ "count": { "type": "integer", "minimum": 1, "maximum": 100, "description": l.text(keys::TOOL_GIT_LOG_COUNT) } }),
-            &[],
-        ),
-    ]
-}
-
 pub fn is_code_tool(name: &str) -> bool {
     matches!(
         name,
-        LIST_DIR | READ_FILE | SEARCH_FILES | WRITE_FILE | EDIT_FILE | RUN_COMMAND | GIT_STATUS | GIT_DIFF | GIT_LOG
+        LIST_DIR
+            | READ_FILE
+            | SEARCH_FILES
+            | WRITE_FILE
+            | EDIT_FILE
+            | RUN_COMMAND
+            | crate::vcs_tools::GIT
+            | crate::vcs_tools::GH
     )
 }
 
@@ -191,20 +173,6 @@ struct CommandArgs {
     command: String,
 }
 
-#[derive(Deserialize)]
-struct DiffArgs {
-    #[serde(default)]
-    path: Option<String>,
-    #[serde(default)]
-    staged: bool,
-}
-
-#[derive(Deserialize)]
-struct LogArgs {
-    #[serde(default)]
-    count: Option<u32>,
-}
-
 fn walk(root: &Path, depth: Option<usize>) -> ignore::Walk {
     let mut builder = ignore::WalkBuilder::new(root);
     builder
@@ -228,13 +196,6 @@ fn preview(old: &str, new: &str) -> Vec<DiffLine> {
         .collect()
 }
 
-fn clip(text: &str, limit: usize) -> (String, bool) {
-    if text.chars().count() <= limit {
-        (text.to_owned(), false)
-    } else {
-        (text.chars().take(limit).collect(), true)
-    }
-}
 
 impl HubTools<'_> {
     async fn workspace(&self) -> Result<Workspace, String> {
@@ -413,7 +374,7 @@ impl HubTools<'_> {
             WRITE_FILE => self.write_file(&workspace, arguments).await,
             EDIT_FILE => self.edit_file(&workspace, arguments).await,
             RUN_COMMAND => self.run_command(&workspace, arguments).await,
-            GIT_STATUS | GIT_DIFF | GIT_LOG => self.git_tool(&workspace, name, arguments).await,
+            crate::vcs_tools::GIT | crate::vcs_tools::GH => Ok(self.vcs_tool(&workspace, name, arguments).await),
             _ => Err(error("unknown tool")),
         };
         result.unwrap_or_else(|failure| failure)
@@ -611,39 +572,4 @@ impl HubTools<'_> {
         Ok(crate::commands::for_model(&finished))
     }
 
-    async fn git_tool(&self, workspace: &Workspace, name: &str, arguments: &str) -> Result<String, String> {
-        let dir = workspace::root(workspace);
-        if workspace::git_binary().is_none() {
-            return Err(error("git is not installed on this computer"));
-        }
-        if !workspace::is_repository(&dir).await {
-            return Err(error("this folder is not a git repository"));
-        }
-        let output = match name {
-            GIT_STATUS => workspace::git(&dir, &["status", "--short", "--branch"]).await,
-            GIT_DIFF => {
-                let args: DiffArgs = serde_json::from_str(arguments).unwrap_or(DiffArgs { path: None, staged: false });
-                let mut list = vec!["diff"];
-                if args.staged {
-                    list.push("--staged");
-                }
-                let path;
-                if let Some(given) = &args.path {
-                    path = workspace::resolve(workspace, given).path.to_string_lossy().into_owned();
-                    list.push("--");
-                    list.push(&path);
-                }
-                workspace::git(&dir, &list).await
-            }
-            _ => {
-                let args: LogArgs = serde_json::from_str(arguments).unwrap_or(LogArgs { count: None });
-                let count = args.count.unwrap_or(20).clamp(1, 100).to_string();
-                workspace::git(&dir, &["log", "--oneline", "--decorate", "-n", &count]).await
-            }
-        };
-        let output = output.ok_or_else(|| error("git did not answer"))?;
-        let body = if output.ok { output.stdout } else { output.stderr };
-        let (body, truncated) = clip(&body, GIT_CHARS);
-        Ok(json!({ "ok": output.ok, "output": body, "truncated": truncated }).to_string())
-    }
 }

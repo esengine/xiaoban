@@ -27,7 +27,8 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   write_file: { detail: "step-write_file", plain: "step-write_file-plain" },
   edit_file: { detail: "step-edit_file", plain: "step-edit_file-plain" },
   run_command: { detail: "step-run_command", plain: "step-run_command-plain" },
-  git_diff: { detail: "step-git_diff", plain: "step-git_diff-plain" },
+  git: { detail: "step-git", plain: "step-git-plain" },
+  gh: { detail: "step-gh", plain: "step-gh-plain" },
   save_place_detail: {
     detail: "step-save_place_detail",
     plain: "step-save_place_detail-plain",
@@ -41,8 +42,6 @@ const PLAIN: Record<string, PlainMessageKey> = {
   read_thread: "step-read_thread",
   list_threads: "step-list_threads",
   history_outline: "step-history_outline",
-  git_status: "step-git_status",
-  git_log: "step-git_log",
 };
 
 export function stepText(t: T, step: TraceStep): string {

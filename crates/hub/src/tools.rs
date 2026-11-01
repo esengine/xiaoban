@@ -679,9 +679,8 @@ impl ToolRunner for HubTools<'_> {
                 | crate::code_tools::READ_FILE
                 | crate::code_tools::LIST_DIR
                 | crate::code_tools::SEARCH_FILES
-                | crate::code_tools::GIT_STATUS
-                | crate::code_tools::GIT_DIFF
-                | crate::code_tools::GIT_LOG
+                | crate::vcs_tools::GIT
+                | crate::vcs_tools::GH
         )
     }
 

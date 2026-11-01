@@ -49,8 +49,19 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::code_tools::LIST_DIR
         | crate::code_tools::READ_FILE
         | crate::code_tools::WRITE_FILE
-        | crate::code_tools::EDIT_FILE
-        | crate::code_tools::GIT_DIFF => text(&args, "path"),
+        | crate::code_tools::EDIT_FILE => text(&args, "path"),
+        crate::vcs_tools::GIT | crate::vcs_tools::GH => args
+            .get("args")
+            .and_then(Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .chars()
+                    .take(MAX_DETAIL)
+                    .collect()
+            }),
         crate::code_tools::RUN_COMMAND => text(&args, "command"),
         _ => None,
     }

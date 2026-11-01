@@ -39,6 +39,7 @@ mod tidy;
 mod tools;
 mod trip;
 mod trip_requests;
+mod vcs_tools;
 mod turns;
 mod weather;
 mod workspace;

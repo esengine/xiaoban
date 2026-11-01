@@ -46,6 +46,7 @@ pub struct HubState {
     pub active: RwLock<Active>,
     pub code_tools: Vec<ToolSpec>,
     pub git_tools: Vec<ToolSpec>,
+    pub gh_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub code_reads: std::sync::Mutex<std::collections::HashMap<(String, std::path::PathBuf), String>>,
 }
@@ -75,6 +76,9 @@ impl HubState {
         tools.extend(self.code_tools.iter().cloned());
         if crate::workspace::git_binary().is_some() {
             tools.extend(self.git_tools.iter().cloned());
+        }
+        if crate::vcs_tools::gh_binary().is_some() {
+            tools.extend(self.gh_tools.iter().cloned());
         }
         StablePrefix::compose(&system, memory, tools)
     }
