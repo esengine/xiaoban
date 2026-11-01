@@ -34,6 +34,7 @@ import type { OperatePermissions } from "./OperatePermissions.ts";
 import type { Plan } from "./Plan.ts";
 import type { Preferences } from "./Preferences.ts";
 import type { ProviderOption } from "./ProviderOption.ts";
+import type { RecipeView } from "./RecipeView.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
 import type { SheetTab } from "./SheetTab.ts";
 import type { Thread } from "./Thread.ts";
@@ -97,6 +98,7 @@ export type Response =
   | { type: "conflicts"; files: Array<ConflictFile> }
   | { type: "workspace_settings"; settings: WorkspaceSettings }
   | { type: "kitchen"; kitchen: Kitchen }
+  | { type: "recipe"; view: RecipeView }
   | { type: "ledger"; ledger: Ledger }
   | { type: "ledger_year"; year: LedgerYear }
   | { type: "weather"; weather: WeatherView }

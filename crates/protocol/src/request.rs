@@ -339,6 +339,15 @@ pub enum Request {
         start: String,
         name: String,
     },
+    Recipe {
+        id: String,
+    },
+    CookRecipe {
+        id: String,
+    },
+    RecipeToShopping {
+        id: String,
+    },
     Ledger {
         month: String,
     },
@@ -724,6 +733,9 @@ pub enum Response {
     },
     Kitchen {
         kitchen: crate::Kitchen,
+    },
+    Recipe {
+        view: crate::RecipeView,
     },
     Ledger {
         ledger: crate::Ledger,

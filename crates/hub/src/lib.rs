@@ -10,6 +10,7 @@ mod code_tools;
 mod commands;
 mod conflicts;
 mod cooking;
+mod recipes;
 mod week;
 mod config;
 mod confirms;

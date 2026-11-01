@@ -10,4 +10,5 @@ export type Attachment =
   | { kind: "changes"; files: Array<ChangedFile> }
   | { kind: "doc"; docId: string }
   | { kind: "sheet"; sheetId: string }
-  | { kind: "deck"; deckId: string };
+  | { kind: "deck"; deckId: string }
+  | { kind: "recipe"; recipeId: string };

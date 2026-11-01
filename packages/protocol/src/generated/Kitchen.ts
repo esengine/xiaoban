@@ -19,4 +19,5 @@ export type Kitchen = {
   cook: CookSession | null;
   timers: Array<CookTimer>;
   weeks: Array<WeekPlan>;
+  recipes: Array<string>;
 };

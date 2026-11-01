@@ -19,26 +19,28 @@ export function DishCover({
   name,
   image,
   size,
+  height = size,
   radius,
 }: {
   name: string;
   image: string | null;
   size: number;
+  height?: number;
   radius: number;
 }) {
   const id = useSvgId();
   const [broken, setBroken] = useState(false);
   const tone = TONES[toneOf(name)] ?? color.dish0;
   return (
-    <View style={[styles.cover, { width: size, height: size, borderRadius: radius }]}>
-      <Svg width={size} height={size}>
+    <View style={[styles.cover, { width: size, height, borderRadius: radius }]}>
+      <Svg width={size} height={height}>
         <Defs>
           <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor={color.surface} />
             <Stop offset="0.8" stopColor={tone} />
           </LinearGradient>
         </Defs>
-        <Rect width={size} height={size} fill={`url(#${id})`} />
+        <Rect width={size} height={height} fill={`url(#${id})`} />
       </Svg>
       {image && !broken ? (
         <Image

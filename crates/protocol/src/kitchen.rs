@@ -147,6 +147,7 @@ pub struct Kitchen {
     pub cook: Option<CookSession>,
     pub timers: Vec<CookTimer>,
     pub weeks: Vec<WeekPlan>,
+    pub recipes: Vec<String>,
 }
 
 impl Default for Kitchen {
@@ -164,6 +165,51 @@ impl Default for Kitchen {
             cook: None,
             timers: Vec::new(),
             weeks: Vec::new(),
+            recipes: Vec::new(),
         }
     }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RecipeIngredient {
+    pub name: String,
+    pub amount: String,
+    pub staple: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RecipeStep {
+    pub title: String,
+    pub text: String,
+    pub tip: String,
+    pub heat: Heat,
+    pub seconds: u32,
+    pub after: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Recipe {
+    pub id: String,
+    pub thread_id: String,
+    pub dish: String,
+    pub minutes: u32,
+    pub servings: u32,
+    pub style: String,
+    pub ingredients: Vec<RecipeIngredient>,
+    pub steps: Vec<RecipeStep>,
+    pub photo_query: String,
+    pub image: Option<String>,
+    #[ts(type = "number")]
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RecipeView {
+    pub recipe: Recipe,
+    pub have: Vec<String>,
+    pub listed: Vec<String>,
 }

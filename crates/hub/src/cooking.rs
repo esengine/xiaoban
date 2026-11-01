@@ -12,8 +12,8 @@ use crate::state::SharedState;
 use crate::tools::HubTools;
 
 pub const STEPS: &str = "cook_steps";
-const MAX_STEPS: usize = 40;
-const MAX_TIMER: u32 = 6 * 3600;
+pub const MAX_STEPS: usize = 40;
+pub const MAX_TIMER: u32 = 6 * 3600;
 const MAX_TIMERS: usize = 12;
 
 fn text(l: &Localizer, key: Key) -> Value {
@@ -91,22 +91,33 @@ impl HubTools<'_> {
                 after: step.after,
             })
             .collect();
-        let minutes = if args.minutes > 0 {
-            args.minutes.min(600)
-        } else {
-            steps.iter().map(|step| step.seconds).sum::<u32>().div_ceil(60)
-        };
-        kitchen.cook = Some(CookSession {
-            dishes: args.dishes,
-            servings: kitchen.servings,
-            minutes,
-            steps,
-            current: 0,
-            started_at: now_ms(),
-        });
+        let servings = kitchen.servings;
+        begin(&mut kitchen, args.dishes, servings, args.minutes, steps);
         save(self.state, kitchen).await;
         json!({ "saved": true, "hint": "the app now shows the steps; reply in one short sentence" }).to_string()
     }
+}
+
+pub fn begin(
+    kitchen: &mut Kitchen,
+    dishes: Vec<String>,
+    servings: u32,
+    minutes: u32,
+    steps: Vec<CookStep>,
+) {
+    let minutes = if minutes > 0 {
+        minutes.min(600)
+    } else {
+        steps.iter().map(|step| step.seconds).sum::<u32>().div_ceil(60)
+    };
+    kitchen.cook = Some(CookSession {
+        dishes,
+        servings,
+        minutes,
+        steps,
+        current: 0,
+        started_at: now_ms(),
+    });
 }
 
 fn arm(state: &SharedState, timer: &CookTimer) {

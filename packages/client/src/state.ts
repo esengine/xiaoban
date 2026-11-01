@@ -20,6 +20,7 @@ import type {
   ModelInfo,
   Plan,
   Preferences,
+  RecipeView,
   ServiceStatus,
   StepResult,
   Thread,
@@ -102,6 +103,7 @@ export interface HubState {
   ledger: Ledger | null;
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
+  recipes: Readonly<Record<string, RecipeView>>;
   doc: Doc | null;
   sheets: Readonly<Record<string, WorkbookSummary>>;
   sheet: Workbook | null;
@@ -141,6 +143,7 @@ export const initialHubState: HubState = {
   ledger: null,
   weather: null,
   docs: {},
+  recipes: {},
   doc: null,
   sheets: {},
   sheet: null,

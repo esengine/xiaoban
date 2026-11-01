@@ -3,7 +3,7 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Dish, Ingredient, Kitchen } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useWhen } from "../ui/useWhen.ts";
@@ -18,6 +18,9 @@ import {
   SheetAction,
   useSwipeLeft,
 } from "./LifeUI.tsx";
+import { RecipeCard } from "./RecipeCard.tsx";
+
+const RECENT_RECIPES = 3;
 
 function FridgeChip({
   item,
@@ -265,14 +268,20 @@ export function KitchenScreen({ store }: { store: HubStore }) {
     if (status === "open") void store.loadKitchen().catch(() => undefined);
   }, [store, status]);
 
+  const navigation = useNavigation();
   const startedAt = kitchen?.cook?.startedAt ?? null;
   const seen = useRef<number | null | undefined>(undefined);
   useEffect(() => {
     if (kitchen === null) return;
-    if (seen.current !== undefined && startedAt !== null && startedAt !== seen.current)
+    if (
+      seen.current !== undefined &&
+      startedAt !== null &&
+      startedAt !== seen.current &&
+      navigation.isFocused()
+    )
       router.push("/cook");
     seen.current = startedAt;
-  }, [kitchen, startedAt]);
+  }, [kitchen, startedAt, navigation]);
 
   const picked = kitchen?.dishes.filter((dish) => dish.selected) ?? [];
   const used = new Set(picked.flatMap((dish) => dish.uses));
@@ -329,6 +338,14 @@ export function KitchenScreen({ store }: { store: HubStore }) {
                 />
               </View>
             )}
+            {kitchen.recipes.length > 0 ? (
+              <>
+                <Text style={styles.section}>{t("recipe-recent")}</Text>
+                {kitchen.recipes.slice(0, RECENT_RECIPES).map((id) => (
+                  <RecipeCard key={id} recipeId={id} inKitchen />
+                ))}
+              </>
+            ) : null}
           </>
         )}
       </ScrollView>

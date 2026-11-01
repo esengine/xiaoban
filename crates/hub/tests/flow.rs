@@ -2217,3 +2217,94 @@ async fn sub_agents_run_in_parallel_and_return_together() {
     assert!(result.contains("园林") && result.contains("西湖"));
     hub.shutdown().await;
 }
+
+fn is_recipe(attachment: &Attachment) -> bool {
+    matches!(attachment, Attachment::Recipe { .. })
+}
+
+#[tokio::test]
+async fn recipes_attach_a_card_and_cook_only_when_asked() {
+    let provider = ScriptedProvider::sequence([
+        vec![tool_call(
+            "kitchen_fridge",
+            &serde_json::json!({ "items": [{ "name": "豆腐", "amount": "1 块" }] }),
+        )],
+        vec![tool_call(
+            "recipe",
+            &serde_json::json!({
+                "dish": "红烧豆腐",
+                "minutes": 25,
+                "servings": 2,
+                "style": "家常",
+                "photo_query": "Braised tofu",
+                "ingredients": [
+                    { "name": "老豆腐", "amount": "1 块", "staple": false },
+                    { "name": "五花肉", "amount": "100g", "staple": false },
+                    { "name": "生抽", "amount": "1 勺", "staple": true },
+                ],
+                "steps": [
+                    { "title": "煎豆腐", "text": "豆腐切块煎到两面金黄", "heat": "medium", "seconds": 240 },
+                    { "title": "焖 8 分钟", "text": "加水焖", "heat": "low", "seconds": 480 },
+                ],
+            }),
+        )],
+        vec![ModelChunk::Text("缺五花肉".into())],
+    ]);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "红烧豆腐怎么做", Vec::new()).await;
+
+    let message = latest_message_with(&mut client, &thread, is_recipe).await;
+    let Some(Attachment::Recipe { recipe_id }) = message.attachment else {
+        panic!("expected a recipe card");
+    };
+    let Response::Recipe { view } = client
+        .request(Request::Recipe {
+            id: recipe_id.clone(),
+        })
+        .await
+    else {
+        panic!("expected recipe");
+    };
+    assert_eq!(view.recipe.dish, "红烧豆腐");
+    assert_eq!(view.recipe.thread_id, thread);
+    assert_eq!(view.have, ["老豆腐", "生抽"]);
+    assert_eq!(view.listed.len(), 0);
+
+    let Response::Kitchen { kitchen } = client.request(Request::Kitchen).await else {
+        panic!("expected kitchen");
+    };
+    assert!(kitchen.cook.is_none());
+    assert_eq!(kitchen.recipes, std::slice::from_ref(&recipe_id));
+
+    let Response::Recipe { view } = client
+        .request(Request::RecipeToShopping {
+            id: recipe_id.clone(),
+        })
+        .await
+    else {
+        panic!("expected recipe");
+    };
+    assert_eq!(view.listed, ["五花肉"]);
+
+    let Response::Kitchen { kitchen } = client
+        .request(Request::CookRecipe { id: recipe_id })
+        .await
+    else {
+        panic!("expected kitchen");
+    };
+    let cook = kitchen.cook.unwrap();
+    assert_eq!(cook.dishes, ["红烧豆腐"]);
+    assert_eq!((cook.steps.len(), cook.servings, cook.minutes), (2, 2, 25));
+    assert_eq!(kitchen.shopping[0].amount, "100g");
+
+    let missing = client
+        .try_request(Request::Recipe { id: "nope".into() })
+        .await
+        .unwrap_err();
+    assert_eq!(missing.code, ErrorCode::NotFound);
+    hub.shutdown().await;
+}
