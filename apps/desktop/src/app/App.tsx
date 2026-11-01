@@ -79,8 +79,9 @@ function Home() {
 
   const activeWorkspace = threads.find((thread) => thread.id === activeId)?.workspaceId ?? null;
   const codeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspace) ?? null;
-  const list = useListWidth();
-  const code = useCodeWidth(panels.list ? list.width : 0);
+  const resizeLabel = useCallback((width: number) => t("code-resize-width", { width }), [t]);
+  const list = useListWidth(resizeLabel);
+  const code = useCodeWidth(panels.list ? list.width : 0, resizeLabel);
   const chatHidden = Boolean(codeWorkspace && panels.workspace && code.chatHidden);
   const workspaceForShortcut = activeWorkspace ?? workspaces[0]?.id;
 

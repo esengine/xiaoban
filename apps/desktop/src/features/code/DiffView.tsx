@@ -1,12 +1,12 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import type { DiffHunk, DiffLine, FileDiff } from "@xiaoban/protocol";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Chevron } from "../chat/ThreadList.tsx";
 import { highlightLine } from "./highlight.ts";
 
 type Mode = "unified" | "split";
 
-function Painted({ text, path }: { text: string; path: string }) {
+const Painted = memo(function Painted({ text, path }: { text: string; path: string }) {
   return (
     <span
       className="diff-line__text"
@@ -14,7 +14,7 @@ function Painted({ text, path }: { text: string; path: string }) {
       dangerouslySetInnerHTML={{ __html: highlightLine(text, path) }}
     />
   );
-}
+});
 
 function Line({ line, path }: { line: DiffLine; path: string }) {
   const sign = line.kind === "added" ? "+" : line.kind === "removed" ? "-" : "";
@@ -63,7 +63,7 @@ function pairs(hunk: DiffHunk): [DiffLine | null, DiffLine | null][] {
   return out;
 }
 
-export function HunkView({
+export const HunkView = memo(function HunkView({
   hunk,
   path,
   mode,
@@ -103,7 +103,7 @@ export function HunkView({
       )}
     </div>
   );
-}
+});
 
 export function FileHead({
   file,

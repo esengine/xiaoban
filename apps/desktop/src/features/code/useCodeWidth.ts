@@ -21,7 +21,7 @@ function load(): Saved {
 
 const RAIL = 72;
 
-export function useCodeWidth(listWidth: number) {
+export function useCodeWidth(listWidth: number, label: (width: number) => string) {
   const [saved, setSaved] = useState<Saved>(load);
   const [dragging, setDragging] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
@@ -41,19 +41,27 @@ export function useCodeWidth(listWidth: number) {
     (event: PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
       const handle = event.currentTarget;
+      const panel = handle.parentElement;
+      const shell = panel?.parentElement;
       handle.setPointerCapture(event.pointerId);
       setDragging(true);
+      let next: Saved | null = null;
       const move = (moved: globalThis.PointerEvent) => {
         const wanted = window.innerWidth - moved.clientX;
         const room = window.innerWidth - leftEdge();
         const max = room - CHAT_MIN;
-        if (wanted > max + COLLAPSE_AFTER) {
-          setSaved((current) => ({ ...current, chatHidden: true }));
-          return;
-        }
-        setSaved({ width: Math.max(MIN, Math.min(max, wanted)), chatHidden: false });
+        next =
+          wanted > max + COLLAPSE_AFTER
+            ? { width: next?.width ?? saved.width, chatHidden: true }
+            : { width: Math.round(Math.max(MIN, Math.min(max, wanted))), chatHidden: false };
+        panel?.style.setProperty("--code-width", `${next.width}px`);
+        panel?.toggleAttribute("data-full", next.chatHidden);
+        shell?.toggleAttribute("data-chat-hidden", next.chatHidden);
+        const tag = handle.querySelector(".code-resize__label");
+        if (tag) tag.textContent = label(next.width);
       };
       const stop = () => {
+        if (next) setSaved(next);
         setDragging(false);
         handle.removeEventListener("pointermove", move);
         handle.removeEventListener("pointerup", stop);
@@ -63,7 +71,7 @@ export function useCodeWidth(listWidth: number) {
       handle.addEventListener("pointerup", stop);
       handle.addEventListener("pointercancel", stop);
     },
-    [leftEdge],
+    [leftEdge, label, saved.width],
   );
 
   const reset = useCallback(() => setSaved({ width: DEFAULT, chatHidden: false }), []);

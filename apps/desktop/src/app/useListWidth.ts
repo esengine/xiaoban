@@ -6,7 +6,7 @@ const MIN = 240;
 const MAX = 420;
 const RAIL = 72;
 
-export function useListWidth() {
+export function useListWidth(label: (width: number) => string) {
   const [width, setWidth] = useState(() => {
     const saved = Number(localStorage.getItem(KEY));
     return saved >= MIN && saved <= MAX ? saved : DEFAULT;
@@ -17,23 +17,33 @@ export function useListWidth() {
     localStorage.setItem(KEY, String(width));
   }, [width]);
 
-  const start = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const handle = event.currentTarget;
-    handle.setPointerCapture(event.pointerId);
-    setDragging(true);
-    const move = (moved: globalThis.PointerEvent) =>
-      setWidth(Math.round(Math.max(MIN, Math.min(MAX, moved.clientX - RAIL))));
-    const stop = () => {
-      setDragging(false);
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", stop);
-      handle.removeEventListener("pointercancel", stop);
-    };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", stop);
-    handle.addEventListener("pointercancel", stop);
-  }, []);
+  const start = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const handle = event.currentTarget;
+      const panel = handle.parentElement;
+      handle.setPointerCapture(event.pointerId);
+      setDragging(true);
+      let next: number | null = null;
+      const move = (moved: globalThis.PointerEvent) => {
+        next = Math.round(Math.max(MIN, Math.min(MAX, moved.clientX - RAIL)));
+        panel?.style.setProperty("--list-width", `${next}px`);
+        const tag = handle.querySelector(".code-resize__label");
+        if (tag) tag.textContent = label(next);
+      };
+      const stop = () => {
+        if (next !== null) setWidth(next);
+        setDragging(false);
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", stop);
+        handle.removeEventListener("pointercancel", stop);
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", stop);
+      handle.addEventListener("pointercancel", stop);
+    },
+    [label],
+  );
 
   const reset = useCallback(() => setWidth(DEFAULT), []);
   return { width, dragging, start, reset };

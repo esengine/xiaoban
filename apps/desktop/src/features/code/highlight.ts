@@ -139,6 +139,17 @@ export function highlightLines(text: string, path: string): string[] {
   }
 }
 
+const LINE_CACHE = 5_000;
+const lineCache = new Map<string, string>();
+
 export function highlightLine(text: string, path: string): string {
-  return highlightLines(text, path)[0] ?? "";
+  const language = languageOf(path);
+  if (!language) return escapeHtml(text);
+  const key = `${language}\u0000${text}`;
+  const known = lineCache.get(key);
+  if (known !== undefined) return known;
+  const painted = highlightLines(text, path)[0] ?? "";
+  if (lineCache.size >= LINE_CACHE) lineCache.clear();
+  lineCache.set(key, painted);
+  return painted;
 }
