@@ -8,7 +8,7 @@ use xiaoban_agent::ToolSpec;
 use xiaoban_i18n::{Localizer, keys};
 use xiaoban_protocol::{
     ContextNote, ErrorCode, Event, Plan, PlanAction, PlanQuestion, PlanStatus, PlanStep,
-    ProtocolError, Request, Response, StepOutput, StepOutputKind, StepOwner, StepStatus,
+    ProtocolError, Request, Response, StepOutput, StepOutputKind, StepStatus,
 };
 
 use crate::state::SharedState;
@@ -66,6 +66,10 @@ async fn set_index(state: &SharedState, ids: &[String]) {
 
 async fn save(state: &SharedState, mut plan: Plan) -> Plan {
     plan.updated_at = xiaoban_store::now_ms();
+    if plan.status == PlanStatus::Done {
+        remove(state, &plan.thread_id).await;
+        return plan;
+    }
     let _ = state
         .store
         .set_setting_owned(
@@ -133,15 +137,10 @@ fn describe(plan: &Plan) -> String {
         lines.push(format!("bounds: {bounds}"));
     }
     for (index, step) in plan.steps.iter().enumerate() {
-        let owner = match step.owner {
-            StepOwner::Xiaoban => "xiaoban",
-            StepOwner::You => "you",
-        };
         lines.push(format!(
-            "[{}|{}|{}|{}] {}{}",
+            "[{}|{}|{}] {}{}",
             index + 1,
             status(step.status),
-            owner,
             step.due.as_deref().unwrap_or("-"),
             step.title,
             step.output
@@ -180,11 +179,10 @@ pub fn spec(l: &Localizer) -> ToolSpec {
                     "type": "object",
                     "properties": {
                         "title": text(keys::TOOL_PLAN_STEP_TITLE),
-                        "owner": { "type": "string", "enum": ["xiaoban", "you"] },
                         "due": text(keys::TOOL_PLAN_STEP_DUE),
                         "detail": text(keys::TOOL_PLAN_STEP_DETAIL),
                     },
-                    "required": ["title", "owner"],
+                    "required": ["title"],
                     "additionalProperties": false,
                 } },
                 "step": { "type": "integer", "minimum": 1, "description": l.text(keys::TOOL_PLAN_STEP) },
@@ -291,15 +289,10 @@ impl HubTools<'_> {
         let steps: Vec<PlanStep> = args
             .steps
             .into_iter()
-            .filter(|step| !step.title.trim().is_empty())
+            .filter(|step| !step.title.trim().is_empty() && step.owner.as_deref() != Some("you"))
             .take(MAX_STEPS)
             .map(|step| PlanStep {
                 title: step.title.trim().to_owned(),
-                owner: if step.owner.as_deref() == Some("you") {
-                    StepOwner::You
-                } else {
-                    StepOwner::Xiaoban
-                },
                 due: trimmed(step.due),
                 detail: trimmed(step.detail),
                 ..PlanStep::default()
@@ -443,14 +436,11 @@ pub async fn after_turn(state: &SharedState, thread_id: &str, answer: &str) {
     if plan.status != PlanStatus::Running {
         return;
     }
-    let Some((index, step)) = next_step(&plan) else {
+    let Some((index, _)) = next_step(&plan) else {
         plan.status = PlanStatus::Done;
         save(state, plan).await;
         return;
     };
-    if step.owner == StepOwner::You {
-        return;
-    }
     let runs = with_progress(thread_id, |progress| {
         progress.runs += 1;
         progress.runs

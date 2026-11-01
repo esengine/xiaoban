@@ -87,11 +87,9 @@ function Steps({
         const mark =
           step.status === "done" || step.status === "skipped"
             ? "done"
-            : step.owner === "you"
-              ? "you"
-              : current || step.status === "running"
-                ? "running"
-                : "todo";
+            : current || step.status === "running"
+              ? "running"
+              : "todo";
         return (
           <li key={`${index}-${step.title}`} className="plan-step" data-mark={mark}>
             <div className="plan-step__row">
@@ -101,7 +99,6 @@ function Steps({
               {mark === "running" && !step.output && (
                 <span className="plan-step__doing">{t("plan-step-doing")}</span>
               )}
-              {step.owner === "you" && <span className="plan-tag">{t("plan-you")}</span>}
               {step.due && <span className="plan-step__due">{step.due}</span>}
             </div>
             {step.note && !compact && (
@@ -111,18 +108,6 @@ function Steps({
                 </span>
                 {step.note}
               </p>
-            )}
-            {current && step.owner === "you" && (
-              <div className="plan-step__you">
-                <span>{t("plan-your-turn")}</span>
-                <button
-                  type="button"
-                  className="plan-button"
-                  onClick={() => act({ kind: "step_done", step: index + 1 })}
-                >
-                  {t("plan-step-mark-done")}
-                </button>
-              </div>
             )}
           </li>
         );
@@ -173,7 +158,6 @@ export function PlanCard({
             <li key={`${index}-${step.title}`}>
               <span className="plan-draft__number">{index + 1}</span>
               <span className="plan-step__title">{step.title}</span>
-              {step.owner === "you" && <span className="plan-tag">{t("plan-you")}</span>}
               {step.due && <span className="plan-step__due">{step.due}</span>}
             </li>
           ))}
@@ -289,15 +273,6 @@ export function PlanCard({
               <span className="plan-card__muted" data-end title={plan.bounds ?? undefined}>
                 {plan.bounds}
               </span>
-            </footer>
-          )}
-          {!docked && plan.status === "done" && (
-            <footer className="plan-card__foot" data-line>
-              <span className="plan-card__muted">{t("plan-all-done")}</span>
-              <span className="plan-card__spacer" />
-              <button type="button" className="plan-link" onClick={() => act({ kind: "dismiss" })}>
-                {t("plan-remove")}
-              </button>
             </footer>
           )}
         </>

@@ -13170,10 +13170,6 @@ button.sent-files__image {
   animation: spin 0.9s linear infinite;
 }
 
-.plan-step[data-mark="you"] .plan-step__mark {
-  border: 1.5px dashed var(--color-attention);
-}
-
 .plan-step__title {
   flex: 1;
   min-width: 0;
@@ -13231,22 +13227,6 @@ button.sent-files__image {
   gap: 6px;
   font-size: 12px;
   color: var(--color-ink-mid);
-}
-
-.plan-step__you {
-  margin: 2px 0 6px 28px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--color-attention-soft);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--color-attention-ink);
-}
-
-.plan-step__you span {
-  flex: 1;
 }
 
 .plan-draft {

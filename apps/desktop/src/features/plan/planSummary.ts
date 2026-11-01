@@ -16,7 +16,5 @@ export function usePlanSummary(plan: Plan) {
   if (plan.status === "paused") return t("plan-sub-paused");
   if (!next) return t("plan-sub-done");
   const [, step] = next;
-  return step.owner === "you"
-    ? t("plan-sub-you", { step: step.title })
-    : t("plan-sub-doing", { step: step.title });
+  return t("plan-sub-doing", { step: step.title });
 }
