@@ -26,8 +26,7 @@ function Pin({ number, repo }: { number: number; repo: string | null }) {
   const box = useRef<HTMLDivElement>(null);
   if (!item || (repo && item.repo.toLowerCase() !== repo.toLowerCase())) return null;
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: leaving the pin closes its preview card
-    <div className="ref-pin" ref={box} onMouseLeave={() => setOpen(false)}>
+    <div className="ref-pin" ref={box}>
       <button
         type="button"
         className="ref-pin__row"
@@ -43,7 +42,7 @@ function Pin({ number, repo }: { number: number; repo: string | null }) {
         <span className="ref-pin__title">{item.title}</span>
         <Badge item={item} />
       </button>
-      {open && <RefCard item={item} onClose={() => setOpen(false)} />}
+      {open && <RefCard item={item} anchor={box.current} onClose={() => setOpen(false)} />}
     </div>
   );
 }

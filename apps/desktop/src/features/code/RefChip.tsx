@@ -6,10 +6,12 @@ import {
   type ReactNode,
   use,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
 
@@ -131,7 +133,80 @@ export function Badge({ item }: { item: GithubRef }) {
   );
 }
 
-export function RefCard({ item, onClose }: { item: GithubRef; onClose: () => void }) {
+const GAP = 6;
+const EDGE = 8;
+
+function useFloating(anchor: HTMLElement | null) {
+  const card = useRef<HTMLSpanElement>(null);
+  const [place, setPlace] = useState<{ top: number; left: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!anchor) return;
+    const update = () => {
+      const box = anchor.getBoundingClientRect();
+      const width = card.current?.offsetWidth ?? 340;
+      const height = card.current?.offsetHeight ?? 220;
+      const below = box.bottom + GAP;
+      const top =
+        below + height > window.innerHeight - EDGE && box.top - GAP - height > EDGE
+          ? box.top - GAP - height
+          : below;
+      const left = Math.min(Math.max(EDGE, box.left), window.innerWidth - width - EDGE);
+      setPlace({ top, left });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [anchor]);
+  return { card, place };
+}
+
+export function RefCard({
+  item,
+  anchor,
+  onClose,
+  onHover,
+}: {
+  item: GithubRef;
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  onHover?: (on: boolean) => void;
+}) {
+  const { card, place } = useFloating(anchor);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const away = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!card.current?.contains(target) && !anchor?.contains(target)) onClose();
+    };
+    window.addEventListener("keydown", key);
+    window.addEventListener("pointerdown", away);
+    return () => {
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("pointerdown", away);
+    };
+  }, [onClose, anchor, card]);
+  return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: hovering keeps the preview open while reading it
+    <span
+      ref={card}
+      className="ref-card"
+      style={place ? { top: place.top, left: place.left } : { visibility: "hidden" }}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
+    >
+      <RefCardBody item={item} onClose={onClose} />
+    </span>,
+    document.body,
+  );
+}
+
+function RefCardBody({ item, onClose }: { item: GithubRef; onClose: () => void }) {
   const { t } = useI18n();
   const refs = use(RefsContext);
   const pinned = refs?.pinned.includes(item.number) ?? false;
@@ -143,7 +218,7 @@ export function RefCard({ item, onClose }: { item: GithubRef; onClose: () => voi
   ];
   const shown = ordered.slice(0, 6);
   return (
-    <span className="ref-card" role="dialog" aria-label={item.title}>
+    <span className="ref-card__inner" role="dialog" aria-label={item.title}>
       <span className="ref-card__top">
         <Badge item={item} />
         <span className="ref-card__where">
@@ -220,6 +295,7 @@ export function RefChip({
   const item = useGithubRef(refs?.workspaceId ?? null, value);
   const [open, setOpen] = useState(false);
   const leave = useRef<number | null>(null);
+  const anchor = useRef<HTMLSpanElement>(null);
   if (!refs || item === null) return <>{children ?? original}</>;
   const hover = (on: boolean) => {
     if (leave.current) window.clearTimeout(leave.current);
@@ -238,6 +314,7 @@ export function RefChip({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: hover only previews; the button opens the same card
     <span
+      ref={anchor}
       className="ref-chip__anchor"
       onMouseEnter={() => hover(true)}
       onMouseLeave={() => hover(false)}
@@ -253,7 +330,14 @@ export function RefChip({
         <span className="ref-chip__dot" aria-hidden="true" />
         {t("ref-number", { number: value })}
       </button>
-      {open && <RefCard item={item} onClose={() => setOpen(false)} />}
+      {open && (
+        <RefCard
+          item={item}
+          anchor={anchor.current}
+          onClose={() => setOpen(false)}
+          onHover={hover}
+        />
+      )}
     </span>
   );
 }
