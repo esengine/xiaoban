@@ -107,7 +107,7 @@ object XiaobanOperator {
     manager.queryIntentActivities(launcher, 0)
       .map { it.activityInfo.packageName to it.loadLabel(manager).toString() }
       .distinctBy { it.first }
-      .filter { (id, _) -> id != source.packageName && !blocked(id) }
+      .filter { (id, _) -> id != source.packageName }
       .sortedBy { it.second }
       .forEach { (id, name) ->
         val entry = JSONObject().put("id", id).put("name", name)
@@ -119,7 +119,6 @@ object XiaobanOperator {
   }
 
   private fun open(app: String): JSONObject {
-    if (blocked(app)) return failure("Xiaoban never operates payment, banking or chat apps; tell the user to do this themselves")
     val source = context ?: service()
     val intent = source.packageManager.getLaunchIntentForPackage(app) ?: return failure("this app cannot be opened")
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -154,7 +153,7 @@ object XiaobanOperator {
   }
 
   private fun snapshot(app: String): JSONObject {
-    if (blocked(app)) return failure("Xiaoban never operates payment, banking or chat apps; tell the user to do this themselves")
+    if (blocked(app)) return failure("this is a chat, payment or banking app: Xiaoban may open it for the user but never reads or operates it (it does not look at chat records, payments or bank details). Tell the user that plainly, offer to just open it, and let them do the rest themselves")
     val root = foreground(app)
     val found = mutableListOf<AccessibilityNodeInfo>()
     val queue = ArrayDeque(listOf(root))
