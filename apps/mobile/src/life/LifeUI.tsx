@@ -153,10 +153,7 @@ export function Sheet({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.sheetRoot}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingView style={styles.sheetRoot} behavior="padding">
         <Pressable style={styles.scrim} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 14) + 16 }, style]}>
           <View style={styles.grabber} />

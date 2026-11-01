@@ -8,7 +8,6 @@ import { Redirect, router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Linking,
   Pressable,
   ScrollView,
@@ -21,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 import { Mascot } from "../src/components/Mascot.tsx";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
+import { useKeyboard } from "../src/ui/useKeyboard.ts";
 
 export default function SetupScreen() {
   const { t } = useI18n();
@@ -32,6 +32,7 @@ export default function SetupScreen() {
   const [model, setModel] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<PlainMessageKey | null>(null);
+  const keyboard = useKeyboard();
 
   const [open, setOpen] = useState(false);
 
@@ -108,122 +109,125 @@ export default function SetupScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView style={styles.flex} behavior="padding">
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-          <View style={styles.intro}>
-            <Mascot />
-            <Text style={styles.title} accessibilityRole="header">
-              {t("onboarding-hello")}
-            </Text>
-            <Text style={styles.lead}>
-              {`${t("onboarding-local-first")}\n${t("onboarding-pick-provider")}`}
-            </Text>
-          </View>
+      <ScrollView
+        ref={keyboard.scroll}
+        style={styles.flex}
+        contentContainerStyle={[styles.body, { paddingBottom: 36 + keyboard.height }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.intro}>
+          <Mascot />
+          <Text style={styles.title} accessibilityRole="header">
+            {t("onboarding-hello")}
+          </Text>
+          <Text style={styles.lead}>
+            {`${t("onboarding-local-first")}\n${t("onboarding-pick-provider")}`}
+          </Text>
+        </View>
 
-          <View style={styles.form}>
-            <View style={styles.chips}>
-              {builtIn.map((option, index) => {
-                const active = option.id === selected;
-                const name = t(providerKey(option.id));
-                return (
-                  <Pressable
-                    key={option.id}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => pick(option.id)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <View style={[styles.icon, active && styles.iconActive]}>
-                      <SvgXml xml={providerSvg(option.id)} width={16} height={16} />
-                    </View>
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {index === 0 ? t("setup-recommended", { provider: name }) : name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              {providers.some((option) => option.id === "custom") && (
+        <View style={styles.form}>
+          <View style={styles.chips}>
+            {builtIn.map((option, index) => {
+              const active = option.id === selected;
+              const name = t(providerKey(option.id));
+              return (
                 <Pressable
-                  style={[styles.chip, styles.chipPlain, custom && styles.chipActive]}
-                  onPress={() => pick("custom")}
+                  key={option.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => pick(option.id)}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected: custom }}
+                  accessibilityState={{ selected: active }}
                 >
-                  <Text style={[styles.chipText, custom && styles.chipTextActive]}>
-                    {custom ? t("provider-custom") : t("setup-more")}
+                  <View style={[styles.icon, active && styles.iconActive]}>
+                    <SvgXml xml={providerSvg(option.id)} width={16} height={16} />
+                  </View>
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {index === 0 ? t("setup-recommended", { provider: name }) : name}
                   </Text>
                 </Pressable>
-              )}
-            </View>
-
-            {custom && field(baseUrl, setBaseUrl, "custom-base-url-label")}
-            {custom && field(model, setModel, "custom-model-label")}
-
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("onboarding-key-label")}</Text>
-              <TextInput
-                style={styles.input}
-                value={apiKey}
-                onChangeText={(next) => {
-                  setApiKey(next);
-                  setError(null);
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder={
-                  provider
-                    ? t("onboarding-key-placeholder", { provider: t(providerKey(provider.id)) })
-                    : undefined
-                }
-                placeholderTextColor={dark.textMuted}
-                accessibilityLabel={t("onboarding-key-label")}
-              />
-            </View>
-
-            <View style={styles.links}>
-              {provider?.consoleUrl ? (
-                <Pressable onPress={() => void Linking.openURL(provider.consoleUrl ?? "")}>
-                  <Text style={styles.link}>
-                    {t("onboarding-get-key", { provider: t(providerKey(provider.id)) })}
-                  </Text>
-                </Pressable>
-              ) : (
-                <View />
-              )}
-              <Pressable onPress={() => router.push("/scan")}>
-                <Text style={styles.link}>{t("setup-scan")}</Text>
+              );
+            })}
+            {providers.some((option) => option.id === "custom") && (
+              <Pressable
+                style={[styles.chip, styles.chipPlain, custom && styles.chipActive]}
+                onPress={() => pick("custom")}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: custom }}
+              >
+                <Text style={[styles.chipText, custom && styles.chipTextActive]}>
+                  {custom ? t("provider-custom") : t("setup-more")}
+                </Text>
               </Pressable>
-            </View>
-
-            <Text style={styles.note}>{t("onboarding-cost-note")}</Text>
-
-            {error && (
-              <Text style={styles.error} accessibilityLiveRegion="polite">
-                {t(error)}
-              </Text>
             )}
           </View>
 
-          <View style={styles.flex} />
+          {custom && field(baseUrl, setBaseUrl, "custom-base-url-label")}
+          {custom && field(model, setModel, "custom-model-label")}
 
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.submit, !ready && styles.disabled]}
-              disabled={!ready}
-              onPress={submit}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !ready, busy }}
-            >
-              {busy && <ActivityIndicator color={color.ink} />}
-              <Text style={styles.submitText}>
-                {t(busy ? "onboarding-checking" : "onboarding-submit")}
-              </Text>
-            </Pressable>
-            <Text style={styles.footnote}>{t("setup-key-local")}</Text>
+          <View style={styles.field}>
+            <Text style={styles.label}>{t("onboarding-key-label")}</Text>
+            <TextInput
+              style={styles.input}
+              value={apiKey}
+              onChangeText={(next) => {
+                setApiKey(next);
+                setError(null);
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder={
+                provider
+                  ? t("onboarding-key-placeholder", { provider: t(providerKey(provider.id)) })
+                  : undefined
+              }
+              placeholderTextColor={dark.textMuted}
+              accessibilityLabel={t("onboarding-key-label")}
+            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <View style={styles.links}>
+            {provider?.consoleUrl ? (
+              <Pressable onPress={() => void Linking.openURL(provider.consoleUrl ?? "")}>
+                <Text style={styles.link}>
+                  {t("onboarding-get-key", { provider: t(providerKey(provider.id)) })}
+                </Text>
+              </Pressable>
+            ) : (
+              <View />
+            )}
+            <Pressable onPress={() => router.push("/scan")}>
+              <Text style={styles.link}>{t("setup-scan")}</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.note}>{t("onboarding-cost-note")}</Text>
+
+          {error && (
+            <Text style={styles.error} accessibilityLiveRegion="polite">
+              {t(error)}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.flex} />
+
+        <View style={styles.footer}>
+          <Pressable
+            style={[styles.submit, !ready && styles.disabled]}
+            disabled={!ready}
+            onPress={submit}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !ready, busy }}
+          >
+            {busy && <ActivityIndicator color={color.ink} />}
+            <Text style={styles.submitText}>
+              {t(busy ? "onboarding-checking" : "onboarding-submit")}
+            </Text>
+          </Pressable>
+          <Text style={styles.footnote}>{t("setup-key-local")}</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

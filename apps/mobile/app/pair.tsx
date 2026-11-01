@@ -6,8 +6,8 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Mascot } from "../src/components/Mascot.tsx";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
+import { useKeyboard } from "../src/ui/useKeyboard.ts";
 
 const CODE_LENGTH = 6;
 
@@ -44,6 +45,7 @@ export default function PairScreen() {
     }
   };
 
+  const keyboard = useKeyboard();
   const started = useRef(false);
   useEffect(() => {
     if (!linked || !link.code || started.current) return;
@@ -54,7 +56,11 @@ export default function PairScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView style={styles.body} behavior="padding">
+      <ScrollView
+        ref={keyboard.scroll}
+        contentContainerStyle={[styles.body, { paddingBottom: space.xl + keyboard.height }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.intro}>
           <Mascot />
           <Text style={styles.title} accessibilityRole="header">
@@ -135,7 +141,7 @@ export default function PairScreen() {
             </Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: dark.ground,
   },
   body: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: space.xl,
     paddingBottom: space.xl,
   },

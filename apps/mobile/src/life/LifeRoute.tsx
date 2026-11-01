@@ -22,10 +22,7 @@ export function LifeRoute({
       ) : !store ? (
         <Redirect href="/pair" />
       ) : (
-        <KeyboardAvoidingView
-          style={[styles.screen, ground]}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <KeyboardAvoidingView style={[styles.screen, ground]} behavior="padding">
           {children(store)}
         </KeyboardAvoidingView>
       )}
