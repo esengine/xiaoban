@@ -1999,3 +1999,7 @@ trip-live-placeholder = 对小伴说，比如：附近有没有孩子能吃的�
 trip-weather-short = { $sky } { $high }°
 trip-sheet-expand = 展开行程面板
 trip-sheet-collapse = 收起行程面板
+life-reply-thinking = 小伴在弄，页面会跟着更新…
+life-reply-done = 好了，页面已经更新
+life-reply-failed = 没弄成，点「在对话里看」
+life-reply-open = 在对话里看

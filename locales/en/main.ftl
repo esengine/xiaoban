@@ -2011,3 +2011,7 @@ trip-live-placeholder = Ask Xiaoban, e.g. a noodle place nearby kids can eat at
 trip-weather-short = { $sky } { $high }°
 trip-sheet-expand = Expand plan
 trip-sheet-collapse = Collapse plan
+life-reply-thinking = Xiaoban is on it; this page will update…
+life-reply-done = Done, this page is updated
+life-reply-failed = That didn't work; see the conversation
+life-reply-open = See in chat

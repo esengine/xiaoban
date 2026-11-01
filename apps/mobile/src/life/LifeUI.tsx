@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../ui/Icon.tsx";
 import { CloseIcon, TickIcon } from "./LifeIcons.tsx";
+import { LifeReply } from "./LifeReply.tsx";
 
 export function goBack() {
   if (router.canGoBack()) router.back();
@@ -99,18 +100,22 @@ export function ChatBar({
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
+  const [turn, setTurn] = useState<string | null>(null);
   const send = () => {
     const value = text.trim();
     if (!value || !threadId || disabled) return;
     setText("");
     const sent = onSend
       ? onSend(value)
-      : store.send(threadId, value).then(() => openScene(threadId));
+      : store.send(threadId, value).then((turnId) => setTurn(turnId));
     void sent.catch(() => setText(value));
   };
   const ready = Boolean(text.trim() && threadId && !disabled);
   return (
     <View style={[styles.bar, top ? styles.barRaised : null]}>
+      {turn && threadId && !onSend ? (
+        <LifeReply store={store} threadId={threadId} turnId={turn} onClose={() => setTurn(null)} />
+      ) : null}
       {top}
       <View style={[styles.barRow, { paddingBottom: Math.max(insets.bottom, 14) + 4 }]}>
         <TextInput
