@@ -1,8 +1,8 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Deck } from "@xiaoban/protocol";
+import { BASE_H, BASE_W, SlideView } from "@xiaoban/slides";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BASE_H, BASE_W, SlideView } from "@xiaoban/slides";
 
 const BUILDS = ["bullets", "flow", "timeline", "funnel", "icons"];
 

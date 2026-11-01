@@ -9,6 +9,7 @@ import type {
   SlideLayout,
   Transition,
 } from "@xiaoban/protocol";
+import { type Part, SlideView } from "@xiaoban/slides";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useHub } from "../../app/hub.tsx";
@@ -16,7 +17,6 @@ import { SideChat } from "../chat/SideChat.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { exportPngs, exportPptx } from "./deckExport.ts";
 import { Present } from "./Present.tsx";
-import { type Part, SlideView } from "@xiaoban/slides";
 
 const LAYOUTS: SlideLayout[] = [
   "title",

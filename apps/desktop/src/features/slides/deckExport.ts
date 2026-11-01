@@ -2,12 +2,12 @@ import { isTauri } from "@tauri-apps/api/core";
 import { downloadDir, join } from "@tauri-apps/api/path";
 import type { HubStore } from "@xiaoban/client";
 import type { Deck, Slide } from "@xiaoban/protocol";
+import { ICONS, type SlideTheme, themeOf } from "@xiaoban/slides";
 import JSZip from "jszip";
 import PptxGenJS from "pptxgenjs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { fileName } from "../doc/docFiles.ts";
-import { ICONS, type SlideTheme, themeOf } from "@xiaoban/slides";
 
 const IN = 96;
 const px = (value: number) => value / IN;

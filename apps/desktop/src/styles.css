@@ -2501,7 +2501,6 @@ button.quote-block__main {
   animation: slide-in var(--motion-slow) var(--ease-standard) both;
 }
 
-
 .place-detail__head {
   display: flex;
   align-items: flex-start;
@@ -11673,67 +11672,12 @@ button.sent-files__image {
   box-shadow: none;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @keyframes slide-in {
   from {
     opacity: 0;
     transform: translateY(14px);
   }
 }
-
-
 
 .deck-card__icon {
   background: var(--color-attention-soft);
