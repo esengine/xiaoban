@@ -348,6 +348,23 @@ pub enum Request {
     RecipeToShopping {
         id: String,
     },
+    FloorPlan {
+        id: String,
+    },
+    SetFloorScheme {
+        id: String,
+        scheme: String,
+    },
+    RestoreFloorVersion {
+        id: String,
+        scheme: String,
+        version: u32,
+    },
+    MeasureFloor {
+        id: String,
+        measure_id: String,
+        millimeters: u32,
+    },
     Ledger {
         month: String,
     },
@@ -736,6 +753,9 @@ pub enum Response {
     },
     Recipe {
         view: crate::RecipeView,
+    },
+    FloorPlan {
+        plan: crate::FloorPlan,
     },
     Ledger {
         ledger: crate::Ledger,
