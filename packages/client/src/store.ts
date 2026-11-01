@@ -371,6 +371,50 @@ export class HubStore {
     return trip;
   }
 
+  #keepTrip(trip: Trip, latest: number): Trip {
+    this.#update((state) => ({
+      ...state,
+      trips: { ...state.trips, [tripKey(trip.id, trip.version)]: trip },
+      latestTrip: {
+        ...state.latestTrip,
+        [trip.id]: Math.max(latest, state.latestTrip[trip.id] ?? 0),
+      },
+    }));
+    return trip;
+  }
+
+  async chooseTripStay(tripId: string, stay: number): Promise<Trip> {
+    const { trip, latest } = await this.client.request(
+      { type: "choose_trip_stay", tripId, stay },
+      "trip",
+    );
+    return this.#keepTrip(trip, latest);
+  }
+
+  async fillTripPrice(
+    tripId: string,
+    target: { line: number | null; stay: number | null },
+    cents: number,
+  ): Promise<Trip> {
+    const { trip, latest } = await this.client.request(
+      { type: "fill_trip_price", tripId, line: target.line, stay: target.stay, cents },
+      "trip",
+    );
+    return this.#keepTrip(trip, latest);
+  }
+
+  async addTripExpense(tripId: string, name: string, cents: number): Promise<void> {
+    await this.client.request({ type: "add_trip_expense", tripId, name, cents }, "ack");
+  }
+
+  async tripSpending(tripId: string): Promise<{ category: string; entries: Expense[] }> {
+    const { category, entries } = await this.client.request(
+      { type: "trip_spending", tripId },
+      "trip_spending",
+    );
+    return { category, entries };
+  }
+
   async tripCalendar(tripId: string, version: number | null): Promise<TripCalendar> {
     const { calendar } = await this.client.request(
       { type: "trip_calendar", tripId, version },

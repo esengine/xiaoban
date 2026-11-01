@@ -1,4 +1,4 @@
-import { tripKey } from "@xiaoban/client";
+import { cardCostParts, costNumber, costSummary, tripKey } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Trip } from "@xiaoban/protocol";
@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { dayColor, range, stopsText, weatherText, weekday } from "./format.ts";
 import { WeatherIcon } from "./icons.tsx";
+import { CostBar, useMoney } from "./TripCostPanel.tsx";
 
 export interface TripActions {
   onOpen: (tripId: string, version: number | null) => void;
@@ -34,7 +35,8 @@ export function TripCard({
   version: number;
   actions: TripActions;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const money = useMoney();
   const store = useHub();
   const { latestTrip } = useHubState(store);
   const trip = useTrip(tripId, version);
@@ -42,6 +44,7 @@ export function TripCard({
   const outdated = (latestTrip[tripId] ?? version) > version;
   const when = range(t, trip);
   const open = () => actions.onOpen(tripId, outdated ? version : null);
+  const summary = trip.costs ? costSummary(trip.costs) : null;
 
   return (
     <div className="trip-card" data-outdated={outdated || undefined}>
@@ -75,6 +78,18 @@ export function TripCard({
           </li>
         ))}
       </ol>
+      {trip.costs && summary && summary.cents > 0 && (
+        <div className="trip-card__cost">
+          <span className="trip-card__cost-row">
+            <span className="trip-card__meta-label">{t("trip-card-cost")}</span>
+            <b className="trip-card__cost-total">{money(summary.cents)}</b>
+            <span className="trip-card__cost-parts">
+              {cardCostParts(t, costNumber(locale), trip.costs)}
+            </span>
+          </span>
+          <CostBar summary={summary} />
+        </div>
+      )}
       {!trip.verified && !outdated && (
         <p className="trip-card__unverified">
           {t("trip-unverified-lead", { text: t("trip-unverified") })}

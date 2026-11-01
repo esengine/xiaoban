@@ -76,6 +76,16 @@ export type Request =
   | { type: "decline_service"; service: ServiceId; threadId: string }
   | { type: "get_trip"; tripId: string; version: number | null }
   | { type: "trip_calendar"; tripId: string; version: number | null }
+  | { type: "choose_trip_stay"; tripId: string; stay: number }
+  | {
+      type: "fill_trip_price";
+      tripId: string;
+      line: number | null;
+      stay: number | null;
+      cents: number;
+    }
+  | { type: "add_trip_expense"; tripId: string; name: string; cents: number }
+  | { type: "trip_spending"; tripId: string }
   | { type: "answer_confirm"; confirmId: string; choice: ConfirmChoice }
   | { type: "pending_confirms" }
   | { type: "operate_status" }

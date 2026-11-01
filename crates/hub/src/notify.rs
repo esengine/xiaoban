@@ -210,6 +210,7 @@ fn choice(choice: ConfirmChoice, label: String, primary: bool) -> NoticeChoice {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn confirm_text(l: &Localizer, kind: &ConfirmKind) -> (String, String, Vec<NoticeChoice>) {
     use ConfirmChoice::{Always, Edit, No, Once, Yes};
     match kind {

@@ -227,6 +227,7 @@ async fn route_stops(state: &SharedState, city: &str, stops: &mut [TripStop]) {
     }
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn meters(from: Coord, to: Coord) -> u32 {
     let radius = 6_371_000.0_f64;
     let (lat1, lat2) = (from.lat.to_radians(), to.lat.to_radians());
@@ -234,9 +235,7 @@ fn meters(from: Coord, to: Coord) -> u32 {
     let dlng = (to.lng - from.lng).to_radians();
     let a = (dlat / 2.0).sin().powi(2) + lat1.cos() * lat2.cos() * (dlng / 2.0).sin().powi(2);
     let distance = 2.0 * radius * a.sqrt().asin();
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let rounded = distance.round().clamp(0.0, f64::from(u32::MAX)) as u32;
-    rounded
+    distance.round().clamp(0.0, f64::from(u32::MAX)) as u32
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -417,6 +416,7 @@ fn cost_report(costs: &TripCosts, dropped: &[String]) -> Value {
     report
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn save(
     state: &SharedState,
     thread_id: &str,

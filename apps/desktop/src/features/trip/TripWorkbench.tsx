@@ -20,6 +20,7 @@ import {
 import { CalendarIcon, CopyIcon, OutIcon, WeatherIcon } from "./icons.tsx";
 import { PlaceDetail, type StopRef } from "./PlaceDetail.tsx";
 import { useTrip } from "./TripCard.tsx";
+import { TripCostPanel } from "./TripCostPanel.tsx";
 import { useToast } from "./useToast.tsx";
 
 type CalendarOutcome = { added: number } | { handed: number } | "denied" | "failed";
@@ -49,6 +50,7 @@ export function TripWorkbench(props: Props) {
   const [selected, setSelected] = useState<StopRef | null>(null);
   const [draft, setDraft] = useState("");
   const [asking, setAsking] = useState<string | null>(null);
+  const [tab, setTab] = useState<"route" | "cost">("route");
 
   if (!trip) {
     return (
@@ -125,14 +127,7 @@ export function TripWorkbench(props: Props) {
     minute: "2-digit",
     hour12: false,
   }).format(trip.createdAt);
-  const facts = [
-    range(t, trip),
-    trip.party,
-    trip.needs,
-    trip.cost && t("trip-cost", { cost: trip.cost }),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const facts = [range(t, trip), trip.party, trip.needs].filter(Boolean).join(" · ");
 
   return (
     <main className="trip" data-detail={selected ? true : undefined}>
@@ -164,10 +159,27 @@ export function TripWorkbench(props: Props) {
             {t("trip-copy-family")}
           </button>
         </header>
-        {trip.reminder && (
+        <div className="trip__tabs" role="tablist" aria-label={t("trip-tabs")}>
+          {(["route", "cost"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="tab"
+              className="trip__tab"
+              aria-selected={tab === item}
+              onClick={() => setTab(item)}
+            >
+              {t(item === "route" ? "trip-tab-route" : "trip-tab-cost")}
+            </button>
+          ))}
+        </div>
+        {tab === "cost" && (
+          <TripCostPanel trip={trip} readOnly={old} busy={busy} onSay={say} onOpen={open} />
+        )}
+        {tab === "route" && trip.reminder && (
           <p className="trip__reminder">{t("trip-reminder", { text: trip.reminder })}</p>
         )}
-        <div className="trip__days">
+        <div className="trip__days" hidden={tab !== "route"}>
           {trip.days.map((day, index) => (
             <DayColumn
               key={day.date}

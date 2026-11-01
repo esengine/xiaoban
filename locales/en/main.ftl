@@ -2271,3 +2271,5 @@ trip-live-log-save = Log it
 trip-live-log-failed = Not logged, try again
 trip-card-cost = Est.
 trip-card-cost-part = { $category } { $amount }
+trip-cost-check-app-desk = Check in an app
+trip-cost-check-message-desk = Check the price of “{ $item }” in an app

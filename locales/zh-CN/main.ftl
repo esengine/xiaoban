@@ -2256,3 +2256,5 @@ trip-live-log-save = 记上
 trip-live-log-failed = 没记上，再试一次
 trip-card-cost = 预计
 trip-card-cost-part = { $category } { $amount }
+trip-cost-check-app-desk = 用应用去查
+trip-cost-check-message-desk = 用应用帮我查一下「{ $item }」的价格

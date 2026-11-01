@@ -60,6 +60,20 @@ export function confirmText(confirm: ConfirmRequest, t: Translator["t"]) {
       ] satisfies ConfirmOption[],
     };
   }
+  if (kind.kind === "price_check") {
+    return {
+      title: t(kind.phone ? "confirm-price-title" : "confirm-price-title-computer", {
+        app: kind.app,
+        item: kind.item,
+      }),
+      hint: t(kind.phone ? "confirm-price-hint" : "confirm-price-hint-computer"),
+      detail: kind.detail || null,
+      choices: [
+        { choice: "yes", label: t("confirm-price-yes"), primary: true },
+        { choice: "no", label: t("confirm-price-no") },
+      ] satisfies ConfirmOption[],
+    };
+  }
   if (kind.kind === "run_command") {
     return {
       title: t("confirm-run-title"),

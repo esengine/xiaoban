@@ -56,7 +56,7 @@ pub fn link_key(url: &str) -> String {
 
 #[allow(clippy::cast_possible_truncation)]
 pub fn cents(amount: f64) -> Option<i64> {
-    (amount.is_finite() && amount >= 0.0 && amount < 1e12).then(|| (amount * 100.0).round() as i64)
+    (0.0..1e12).contains(&amount).then(|| (amount * 100.0).round() as i64)
 }
 
 pub fn amounts_in(text: &str) -> HashSet<i64> {
