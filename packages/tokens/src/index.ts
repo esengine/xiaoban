@@ -54,6 +54,10 @@ export const color = {
   ledger3: "#9AAAE6",
   ledger4: "#C9D2F2",
   mergedSoft: "#EFEBFC",
+  accentBright: "#6B82DB",
+  faded: "#8A90A0",
+  checkOff: "#C4C8D2",
+  sheetScrim: "#15171C55",
 } as const;
 
 export const dark = {

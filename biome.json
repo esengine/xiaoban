@@ -6,7 +6,12 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/src-tauri/gen", "!**/src-tauri/icons", "!**/*.dc.html"]
+    "includes": [
+      "**",
+      "!**/src-tauri/gen",
+      "!**/src-tauri/icons",
+      "!**/*.dc.html"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
@@ -33,7 +38,9 @@
   },
   "overrides": [
     {
-      "includes": ["packages/protocol/src/generated/**"],
+      "includes": [
+        "packages/protocol/src/generated/**"
+      ],
       "linter": {
         "enabled": false
       },
@@ -42,13 +49,27 @@
       }
     },
     {
-      "includes": ["apps/**/*.tsx"],
+      "includes": [
+        "apps/**/*.tsx"
+      ],
       "linter": {
         "rules": {
           "style": {
             "noJsxLiterals": {
               "level": "error"
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/slides/**/*.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
           }
         }
       }

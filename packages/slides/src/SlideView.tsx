@@ -193,7 +193,6 @@ function Deco({ theme, strong }: { theme: SlideTheme; strong: boolean }) {
   return (
     <>
       {Array.from({ length: 16 }, (_, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: decorative lines are positional
         <span
           key={index}
           className="slide__deco"
@@ -350,7 +349,6 @@ export function SlideView({
   onPick?: (part: Part, event: React.MouseEvent) => void;
 }) {
   const theme = themeOf(themeName);
-  const strong = slide.layout === "title" || slide.layout === "section";
   const scale = width / BASE_W;
   const anim = animate && !slide.still;
   const pick = (part: Part) =>

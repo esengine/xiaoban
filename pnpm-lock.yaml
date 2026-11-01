@@ -323,6 +323,9 @@ importers:
       expo-crypto:
         specifier: ~58.0.7
         version: 58.0.7(expo@58.0.21)
+      expo-keep-awake:
+        specifier: ~58.0.3
+        version: 58.0.3(expo@58.0.21)(react@19.3.0)
       expo-linking:
         specifier: ~58.0.15
         version: 58.0.15(expo@58.0.21)(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@7.0.2)
