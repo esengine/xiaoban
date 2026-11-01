@@ -5914,6 +5914,18 @@ button.sent-files__image {
 
 .change-card__head b {
   color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.change-card__head .code-link {
+  white-space: nowrap;
+}
+
+.change-card__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .change-card__list {

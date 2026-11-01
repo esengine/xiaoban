@@ -19,9 +19,20 @@ function load(): Saved {
   return { width: DEFAULT, chatHidden: false };
 }
 
-export function useCodeWidth(leftEdge: () => number) {
+const RAIL = 72;
+const LIST = 300;
+
+export function useCodeWidth(listOpen: boolean) {
   const [saved, setSaved] = useState<Saved>(load);
   const [dragging, setDragging] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  const leftEdge = useCallback(() => RAIL + (listOpen ? LIST : 0), [listOpen]);
+
+  useEffect(() => {
+    const resize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(saved));
@@ -58,5 +69,7 @@ export function useCodeWidth(leftEdge: () => number) {
 
   const reset = useCallback(() => setSaved({ width: DEFAULT, chatHidden: false }), []);
 
-  return { width: saved.width, chatHidden: saved.chatHidden, dragging, start, reset };
+  const room = windowWidth - leftEdge() - CHAT_MIN;
+  const width = Math.max(MIN, Math.min(saved.width, room));
+  return { width, chatHidden: saved.chatHidden, dragging, start, reset };
 }
