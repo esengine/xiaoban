@@ -25,13 +25,21 @@ export function useListWidth(label: (width: number) => string) {
       handle.setPointerCapture(event.pointerId);
       setDragging(true);
       let next: number | null = null;
+      let frame = 0;
+      let latest = 0;
       const move = (moved: globalThis.PointerEvent) => {
-        next = Math.round(Math.max(MIN, Math.min(MAX, moved.clientX - RAIL)));
+        latest = moved.clientX;
+        if (!frame) frame = requestAnimationFrame(apply);
+      };
+      const apply = () => {
+        frame = 0;
+        next = Math.round(Math.max(MIN, Math.min(MAX, latest - RAIL)));
         panel?.style.setProperty("--list-width", `${next}px`);
         const tag = handle.querySelector(".code-resize__label");
         if (tag) tag.textContent = label(next);
       };
       const stop = () => {
+        if (frame) cancelAnimationFrame(frame);
         if (next !== null) setWidth(next);
         setDragging(false);
         handle.removeEventListener("pointermove", move);

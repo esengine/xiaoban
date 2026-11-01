@@ -46,8 +46,16 @@ export function useCodeWidth(listWidth: number, label: (width: number) => string
       handle.setPointerCapture(event.pointerId);
       setDragging(true);
       let next: Saved | null = null;
+      let frame = 0;
+      let latest = 0;
       const move = (moved: globalThis.PointerEvent) => {
-        const wanted = window.innerWidth - moved.clientX;
+        latest = moved.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(apply);
+      };
+      const apply = () => {
+        frame = 0;
+        const wanted = window.innerWidth - latest;
         const room = window.innerWidth - leftEdge();
         const max = room - CHAT_MIN;
         next =
@@ -61,6 +69,7 @@ export function useCodeWidth(listWidth: number, label: (width: number) => string
         if (tag) tag.textContent = label(next.width);
       };
       const stop = () => {
+        if (frame) cancelAnimationFrame(frame);
         if (next) setSaved(next);
         setDragging(false);
         handle.removeEventListener("pointermove", move);

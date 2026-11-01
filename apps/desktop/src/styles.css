@@ -7809,3 +7809,83 @@ button.sent-files__image {
 .ref-card__inner {
   display: contents;
 }
+
+.chat__messages > li,
+.git-log__list > li,
+.diff-file,
+.conflict-block,
+.terminal__run,
+.code-line,
+.thread-row {
+  content-visibility: auto;
+}
+
+.chat__messages > li {
+  contain-intrinsic-size: auto 120px;
+}
+
+.git-log__list > li {
+  contain-intrinsic-size: auto 46px;
+}
+
+.diff-file,
+.conflict-block {
+  contain-intrinsic-size: auto 240px;
+}
+
+.terminal__run {
+  contain-intrinsic-size: auto 34px;
+}
+
+.code-line {
+  contain-intrinsic-size: auto 21px;
+}
+
+.thread-row {
+  contain-intrinsic-size: auto 60px;
+}
+
+.code-panel__content,
+.chat__messages {
+  contain: layout paint;
+}
+
+.chat__messages > li,
+.git-log__list > li,
+.diff-file,
+.conflict-block,
+.terminal__run,
+.code-line,
+.thread-row {
+  content-visibility: auto;
+}
+
+.chat__messages > li {
+  contain-intrinsic-size: auto 120px;
+}
+
+.git-log__list > li {
+  contain-intrinsic-size: auto 46px;
+}
+
+.diff-file,
+.conflict-block {
+  contain-intrinsic-size: auto 240px;
+}
+
+.terminal__run {
+  contain-intrinsic-size: auto 34px;
+}
+
+.code-line {
+  contain-intrinsic-size: auto 21px;
+}
+
+.thread-row {
+  contain-intrinsic-size: auto 60px;
+}
+
+.code-panel__content,
+.chat__messages {
+  contain: layout paint;
+}
