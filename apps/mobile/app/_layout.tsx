@@ -37,6 +37,10 @@ export default function RootLayout() {
             name="html/[id]"
             options={{ headerShown: false, title: t("html-view-title") }}
           />
+          <Stack.Screen
+            name="md/[id]"
+            options={{ headerShown: false, title: t("md-card-untitled") }}
+          />
           <Stack.Screen name="models" options={{ headerShown: false, title: t("models-title") }} />
           <Stack.Screen
             name="notify-settings"

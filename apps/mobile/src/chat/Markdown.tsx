@@ -9,6 +9,7 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { Icon } from "../ui/Icon.tsx";
+import { NoteCard } from "../work/WorkCards.tsx";
 import { keepHtml, looksLikeHtml } from "./htmlPages.ts";
 
 interface Node {
@@ -127,23 +128,7 @@ function CodeBlock({ node }: { node: Node }) {
       setTimeout(() => setCopied(false), 1500);
     });
   };
-  const markdown = Boolean(node.lang && /^(md|markdown)$/i.test(node.lang));
-  if (markdown) {
-    return (
-      <View style={styles.doc}>
-        <Markdown text={node.value ?? ""} />
-        <Pressable
-          style={styles.copy}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t(copied ? "rich-copied" : "rich-copy")}
-          onPress={copy}
-        >
-          <Icon name={copied ? "check" : "copy"} size={14} color={color.muted} />
-        </Pressable>
-      </View>
-    );
-  }
+  if (node.lang && /^(md|markdown)$/i.test(node.lang)) return <NoteCard text={node.value ?? ""} />;
   return (
     <View style={styles.pre}>
       <Text style={styles.preText} selectable>
@@ -313,15 +298,6 @@ const styles = StyleSheet.create({
   },
   preText: { fontFamily: "monospace", fontSize: 12.5, lineHeight: 19, color: color.surface },
   copy: { position: "absolute", top: 8, right: 8 },
-  doc: {
-    borderWidth: 1,
-    borderColor: color.line,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingLeft: 12,
-    paddingRight: 32,
-    backgroundColor: color.ground,
-  },
   preview: {
     alignSelf: "flex-start",
     marginTop: 8,

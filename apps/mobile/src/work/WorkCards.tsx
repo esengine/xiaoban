@@ -1,8 +1,10 @@
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
+import { router } from "expo-router";
 import { type ReactNode, useEffect } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { keepMarkdown, markdownOutline } from "../chat/htmlPages.ts";
 import { useHubStore } from "../hub/HubProvider.tsx";
 import { openDeck, openDoc, openSheet, themeKey } from "./open.ts";
 import SlideStrip from "./SlideStrip.tsx";
@@ -57,6 +59,43 @@ function CardShell({
     >
       {children}
     </Pressable>
+  );
+}
+
+export function NoteCard({ text }: { text: string }) {
+  const { t } = useI18n();
+  const width = useCardWidth();
+  const outline = markdownOutline(text);
+  const title = outline.title ?? t("md-card-untitled");
+  const shown = outline.sections.slice(0, 3);
+  const more = outline.sections.length - shown.length;
+  const open = () =>
+    router.push({ pathname: "/md/[id]", params: { id: keepMarkdown(text), title } });
+  return (
+    <CardShell width={width} label={title} onPress={open}>
+      <View style={styles.head}>
+        <Tile label={t("doc-icon")} tone="doc" />
+        <Text style={[styles.title, styles.headText]} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.open}>{t("doc-open")}</Text>
+      </View>
+      {shown.length > 0 ? (
+        <View style={styles.indent}>
+          {shown.map((section, index) => (
+            <Text key={`${index}`} style={styles.section} numberOfLines={1}>
+              {section}
+            </Text>
+          ))}
+          {more > 0 ? (
+            <Text style={styles.meta}>{t("doc-more-sections", { count: more })}</Text>
+          ) : null}
+        </View>
+      ) : null}
+      <Text style={[styles.meta, styles.indent]}>
+        {t("md-card-meta", { chars: text.replace(/\s/g, "").length })}
+      </Text>
+    </CardShell>
   );
 }
 
