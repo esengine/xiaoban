@@ -2272,13 +2272,13 @@ async fn recipes_attach_a_card_and_cook_only_when_asked() {
     assert_eq!(view.recipe.dish, "红烧豆腐");
     assert_eq!(view.recipe.thread_id, thread);
     assert_eq!(view.have, ["老豆腐", "生抽"]);
-    assert!(view.listed.is_empty());
+    assert_eq!(view.listed.len(), 0);
 
     let Response::Kitchen { kitchen } = client.request(Request::Kitchen).await else {
         panic!("expected kitchen");
     };
     assert!(kitchen.cook.is_none());
-    assert_eq!(kitchen.recipes, [recipe_id.clone()]);
+    assert_eq!(kitchen.recipes, std::slice::from_ref(&recipe_id));
 
     let Response::Recipe { view } = client
         .request(Request::RecipeToShopping {
