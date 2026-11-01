@@ -1987,3 +1987,5 @@ models-save = Test and save
 models-replaced = Connected and saved
 models-kept = { $reason }. Your previous settings are still in use
 consent-open-hint = On the page that opens, switch on "Xiaoban assistant", then come back and Xiaoban continues where it left off
+consent-toast-detail = Switch on "Xiaoban assistant", then come back to Xiaoban
+consent-toast-list = Under downloaded apps, find "Xiaoban assistant", switch it on, then come back to Xiaoban

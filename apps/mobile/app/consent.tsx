@@ -141,7 +141,9 @@ export default function ConsentScreen() {
         <Pressable
           style={[styles.open, agreed && styles.openOn]}
           disabled={!agreed}
-          onPress={() => XiaobanHub?.openOperatorSettings()}
+          onPress={() =>
+            XiaobanHub?.openOperatorSettings(t("consent-toast-detail"), t("consent-toast-list"))
+          }
           accessibilityRole="button"
           accessibilityState={{ disabled: !agreed }}
         >

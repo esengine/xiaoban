@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -43,7 +44,7 @@ class XiaobanHubModule : Module() {
       XiaobanOperatorService.current != null
     }
 
-    Function("openOperatorSettings") {
+    Function("openOperatorSettings") { detailHint: String, listHint: String ->
       val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
       val component = ComponentName(context, XiaobanOperatorService::class.java)
       val details = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
@@ -51,6 +52,7 @@ class XiaobanHubModule : Module() {
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       val opened = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
         runCatching { context.startActivity(details) }.isSuccess
+      if (opened) Toast.makeText(context, detailHint, Toast.LENGTH_LONG).show()
       if (!opened) {
         val key = component.flattenToString()
         val list = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -58,6 +60,7 @@ class XiaobanHubModule : Module() {
           .putExtra(":settings:show_fragment_args", Bundle().apply { putString(":settings:fragment_args_key", key) })
           .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(list)
+        Toast.makeText(context, listHint, Toast.LENGTH_LONG).show()
       }
     }
   }

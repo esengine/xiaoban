@@ -1978,3 +1978,5 @@ models-save = 测试并保存
 models-replaced = 已连通，已保存
 models-kept = { $reason }。原来的设置还在用，没被替换
 consent-open-hint = 在打开的页面里，把「小伴辅助服务」的开关打开，再回到小伴，它会接着做刚才的事
+consent-toast-detail = 打开「小伴辅助服务」的开关，再返回小伴
+consent-toast-list = 在「已下载的应用」里找到「小伴辅助服务」，打开开关，再返回小伴
