@@ -17,7 +17,13 @@ function useBackground(): boolean {
   return background;
 }
 
-function Bridge({ store }: { store: NonNullable<ReturnType<typeof useHubContext>["store"]> }) {
+function Bridge({
+  store,
+  onComputer,
+}: {
+  store: NonNullable<ReturnType<typeof useHubContext>["store"]>;
+  onComputer: boolean;
+}) {
   const { t } = useI18n();
   const state = useHubState(store);
   const background = useBackground();
@@ -51,6 +57,14 @@ function Bridge({ store }: { store: NonNullable<ReturnType<typeof useHubContext>
         title: text.title,
         detail: text.detail ?? text.hint,
         open: t("island-open"),
+        confirmId: confirm.id,
+        route: onComputer ? "js" : "local",
+        failed: t("island-answer-failed"),
+        choices: text.choices.map((option) => ({
+          choice: option.choice,
+          label: option.label,
+          primary: Boolean(option.primary),
+        })),
       });
       return;
     }
@@ -83,7 +97,7 @@ function Bridge({ store }: { store: NonNullable<ReturnType<typeof useHubContext>
 }
 
 export function Island() {
-  const { store } = useHubContext();
+  const { store, onComputer } = useHubContext();
   if (!store || !XiaobanHub) return null;
-  return <Bridge store={store} />;
+  return <Bridge store={store} onComputer={onComputer} />;
 }

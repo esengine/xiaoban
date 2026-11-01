@@ -2113,3 +2113,4 @@ notify-channel-urgent = Important notifications
 notify-channel-quiet = Quiet notifications
 voice-finishing = Recognizing, sends by itself · tap to cancel
 voice-tap-cancel = Tap to cancel this voice message
+island-answer-failed = Couldn't send that; open Xiaoban and tap again

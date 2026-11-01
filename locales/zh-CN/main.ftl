@@ -2098,3 +2098,4 @@ notify-channel-urgent = 要紧的通知
 notify-channel-quiet = 安静的通知
 voice-finishing = 正在识别，好了自动发出 · 轻点取消
 voice-tap-cancel = 轻点取消这次语音
+island-answer-failed = 没交上，打开小伴再点一次

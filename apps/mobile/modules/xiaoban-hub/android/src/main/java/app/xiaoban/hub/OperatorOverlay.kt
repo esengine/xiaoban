@@ -42,6 +42,7 @@ object OperatorOverlay {
   @Volatile private var ignoreUntil = 0L
   private var operating = false
   private var steps = 0
+  private var shownConfirm: String? = null
   private val idle = Runnable {
     if (mode == Mode.Working || mode == Mode.Compact) hideNow()
     operating = false
@@ -95,8 +96,8 @@ object OperatorOverlay {
   }
 
   fun external(raw: String) = main.post {
-    if (operating) return@post
     val state = org.json.JSONObject(raw)
+    if (operating && state.optString("mode") != "confirm") return@post
     main.removeCallbacks(shrink)
     main.removeCallbacks(fade)
     when (state.optString("mode")) {
@@ -110,9 +111,17 @@ object OperatorOverlay {
         main.postDelayed(shrink, ROW_MS)
       }
       "confirm" -> {
-        buzz()
-        show(Mode.Notice) { context ->
-          handoverCard(context, state.optString("title"), state.optString("detail"), "", state.optString("open"))
+        val choices = state.optJSONArray("choices")
+        if (choices == null || choices.length() == 0) {
+          buzz()
+          show(Mode.Notice) { context ->
+            handoverCard(context, state.optString("title"), state.optString("detail"), "", state.optString("open"))
+          }
+        } else if (shownConfirm != state.optString("confirmId")) {
+          shownConfirm = state.optString("confirmId")
+          operating = false
+          buzz()
+          show(Mode.Notice) { context -> confirmCard(context, state) }
         }
       }
       "done" -> {
@@ -281,6 +290,78 @@ object OperatorOverlay {
     val size = dp(context, 30f).toInt()
     layoutParams = LinearLayout.LayoutParams(size, size)
   }
+
+  private fun answer(state: org.json.JSONObject, choice: String) {
+    val payload = org.json.JSONObject()
+      .put("kind", "confirm")
+      .put("confirmId", state.optString("confirmId"))
+      .put("choice", choice)
+      .toString()
+    val route = state.optString("route", "local")
+    show(Mode.Compact) { context -> compact(context) }
+    Thread {
+      val delivered = runCatching {
+        if (route == "js") {
+          XiaobanNotices.toApp(payload)
+        } else {
+          !org.json.JSONObject(XiaobanHubNative.deliver(payload)).has("error")
+        }
+      }.getOrDefault(false)
+      if (!delivered) {
+        main.post {
+          shownConfirm = null
+          show(Mode.Notice) { context ->
+            handoverCard(context, state.optString("failed"), "", "", state.optString("open"))
+          }
+        }
+      }
+    }.start()
+  }
+
+  private fun confirmCard(context: Context, state: org.json.JSONObject): View =
+    LinearLayout(context).apply {
+      orientation = LinearLayout.VERTICAL
+      background = round(context, color(context, R.color.xiaoban_ink), 22f).apply {
+        setStroke(dp(context, 1.5f).toInt(), color(context, R.color.xiaoban_attention))
+      }
+      elevation = dp(context, 8f)
+      val pad = dp(context, 14f).toInt()
+      setPadding(pad, pad, pad, pad)
+      addView(LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(face(context))
+        addView(texts(context, state.optString("title"), ""))
+      })
+      val detail = state.optString("detail")
+      if (detail.isNotEmpty()) {
+        addView(label(context, detail, 13f, color(context, R.color.xiaoban_text_soft)).apply {
+          maxLines = 6
+          layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(context, 10f).toInt()
+          }
+        })
+      }
+      addView(LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          topMargin = dp(context, 10f).toInt()
+        }
+        val choices = state.optJSONArray("choices") ?: org.json.JSONArray()
+        for (index in 0 until minOf(choices.length(), 3)) {
+          val option = choices.getJSONObject(index)
+          val button = pill(context, option.optString("label"), option.optBoolean("primary")) {
+            answer(state, option.optString("choice"))
+          }
+          button.maxLines = 2
+          button.layoutParams = LinearLayout.LayoutParams(0, dp(context, 38f).toInt(), 1f).apply {
+            marginEnd = dp(context, 4f).toInt()
+            marginStart = dp(context, 4f).toInt()
+          }
+          addView(button)
+        }
+      })
+    }
 
   private fun compact(context: Context): View = LinearLayout(context).apply {
     orientation = LinearLayout.HORIZONTAL
