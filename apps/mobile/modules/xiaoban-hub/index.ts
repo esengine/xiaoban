@@ -5,6 +5,7 @@ interface XiaobanHubNative {
   stop(): Promise<void>;
   setStrings(strings: string): void;
   island(state: string): void;
+  turnDone(title: string): boolean;
   operatorReady(): boolean;
   openOperatorSettings(detailHint: string, listHint: string): void;
   openRecognizerSettings(hint: string): void;

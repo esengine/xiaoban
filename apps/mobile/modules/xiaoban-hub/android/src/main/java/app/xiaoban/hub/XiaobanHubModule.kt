@@ -36,6 +36,16 @@ class XiaobanHubModule : Module() {
       XiaobanOperator.strings = JSONObject(strings)
     }
 
+    Function("turnDone") { title: String ->
+      if (XiaobanOperator.touched && XiaobanOperatorService.current != null) {
+        XiaobanOperator.touched = false
+        OperatorOverlay.finished(title)
+        true
+      } else {
+        false
+      }
+    }
+
     Function("island") { state: String ->
       OperatorOverlay.external(state)
     }

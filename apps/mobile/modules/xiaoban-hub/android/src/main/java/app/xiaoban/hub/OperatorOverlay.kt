@@ -76,6 +76,24 @@ object OperatorOverlay {
     main.postDelayed(shrink, ROW_MS)
   }
 
+  fun finished(title: String) = main.post {
+    main.removeCallbacks(idle)
+    main.removeCallbacks(shrink)
+    main.removeCallbacks(fade)
+    operating = false
+    show(Mode.Done) { context -> doneBar(context, title) }
+    main.postDelayed({
+      val service = service()
+      hideNow()
+      service?.let { context ->
+        context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { intent ->
+          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+          context.startActivity(intent)
+        }
+      }
+    }, 1500)
+  }
+
   fun external(raw: String) = main.post {
     if (operating) return@post
     val state = org.json.JSONObject(raw)

@@ -71,13 +71,11 @@ function Bridge({ store }: { store: NonNullable<ReturnType<typeof useHubContext>
       return;
     }
     if (last.current.turn) {
-      push({
-        mode: "done",
-        title: t("island-done", {
-          title: last.current.title || t("app-name"),
-          count: last.current.steps,
-        }),
+      const title = t("island-done", {
+        title: last.current.title || t("app-name"),
+        count: last.current.steps,
       });
+      if (!XiaobanHub?.turnDone(title)) push({ mode: "done", title });
       last.current = { turn: null, steps: 0, title: "" };
     }
   });

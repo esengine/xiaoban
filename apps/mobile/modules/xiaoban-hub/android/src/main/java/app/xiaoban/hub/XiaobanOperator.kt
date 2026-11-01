@@ -34,6 +34,7 @@ object XiaobanOperator {
   private var stoppedAt = 0L
   private var handover: Handover? = null
   @Volatile private var lastAction = 0L
+  @Volatile var touched = false
 
   private class Handover(val labels: List<String>, val packages: Set<String>, val words: List<String>)
 
@@ -154,6 +155,7 @@ object XiaobanOperator {
 
   private fun snapshot(app: String): JSONObject {
     if (blocked(app)) return failure("this is a chat, payment or banking app: Xiaoban may open it for the user but never reads or operates it (it does not look at chat records, payments or bank details). Tell the user that plainly, offer to just open it, and let them do the rest themselves")
+    touched = true
     val root = foreground(app)
     val found = mutableListOf<AccessibilityNodeInfo>()
     val queue = ArrayDeque(listOf(root))
