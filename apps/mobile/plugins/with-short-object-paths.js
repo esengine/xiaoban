@@ -1,6 +1,6 @@
 const { withAppBuildGradle } = require("expo/config-plugins");
 
-const MARK = "-DCMAKE_OBJECT_PATH_MAX=240";
+const MARK = "-DCMAKE_OBJECT_PATH_MAX=258";
 
 module.exports = function withShortObjectPaths(config) {
   return withAppBuildGradle(config, (next) => {
