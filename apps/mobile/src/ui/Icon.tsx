@@ -10,7 +10,11 @@ export type IconName =
   | "back"
   | "more"
   | "send"
-  | "face";
+  | "face"
+  | "chevronDown"
+  | "chevronRight"
+  | "close"
+  | "check";
 
 export function Icon({
   name,
@@ -85,6 +89,10 @@ export function Icon({
           <Path {...common} d="M9 15c1.6 1.2 4.4 1.2 6 0" />
         </>
       )}
+      {name === "chevronDown" && <Path {...common} d="M6 9l6 6 6-6" />}
+      {name === "chevronRight" && <Path {...common} d="M9 5l7 7-7 7" />}
+      {name === "close" && <Path {...common} d="M6 6l12 12M18 6L6 18" />}
+      {name === "check" && <Path {...common} d="M5 12.5l4.5 4.5L19 7.5" />}
     </Svg>
   );
 }

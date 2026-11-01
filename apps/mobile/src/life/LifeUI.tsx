@@ -138,11 +138,15 @@ export function Sheet({
   onClose,
   children,
   style,
+  above,
+  onSheetHeight,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   style?: ViewStyle;
+  above?: ReactNode;
+  onSheetHeight?: (height: number) => void;
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -155,7 +159,13 @@ export function Sheet({
     >
       <KeyboardAvoidingView style={styles.sheetRoot} behavior="padding">
         <Pressable style={styles.scrim} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 14) + 16 }, style]}>
+        {above}
+        <View
+          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 14) + 16 }, style]}
+          onLayout={
+            onSheetHeight ? (event) => onSheetHeight(event.nativeEvent.layout.height) : undefined
+          }
+        >
           <View style={styles.grabber} />
           {children}
         </View>
