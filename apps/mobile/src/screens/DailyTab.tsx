@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SkyIcon } from "../life/LifeIcons.tsx";
 import { moneyFormat } from "../ui/format.ts";
 import { openThread } from "./ChatsTab.tsx";
 
@@ -182,6 +183,7 @@ export function DailyTab({ store }: { store: HubStore }) {
           open={{ label: t("daily-open-weather"), href: "/weather" }}
         >
           <View style={styles.weatherNow}>
+            <SkyIcon sky={report.now.sky} size={32} />
             <Text style={styles.big}>
               {t("weather-degrees", { value: String(report.now.temp) })}
             </Text>
