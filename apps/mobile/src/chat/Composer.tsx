@@ -3,11 +3,13 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
-import { useEffect, useState } from "react";
+import { type ComponentRef, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHubStore } from "../hub/HubProvider.tsx";
 import { Icon } from "../ui/Icon.tsx";
+import { HoldToTalk, VoiceNote, VoiceSwitch } from "../voice/HoldToTalk.tsx";
+import { useVoice } from "../voice/useVoice.ts";
 import {
   AttachmentStrip,
   AttachSheet,
@@ -61,6 +63,8 @@ export function Composer({
     !attachments.uploading &&
     !waitingVision;
 
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+
   const send = () => {
     if (!ready) return;
     const trimmed = text.trim();
@@ -69,6 +73,18 @@ export function Composer({
     attachments.clear();
     onSend(trimmed, files);
   };
+  const voice = useVoice((spoken) => {
+    if (attachments.uploading || waitingVision) {
+      setText(spoken);
+      voice.enterTyping();
+      return;
+    }
+    const files = attachments.paths;
+    attachments.clear();
+    onSend(spoken, files);
+  });
+  const speaking = voice.available && voice.mode === "voice";
+  const focusInput = () => setTimeout(() => input.current?.focus(), 50);
   const compact = () => {
     if (!usage) return;
     setUsage({ ...usage, canCompact: false, compacting: true });
@@ -99,6 +115,7 @@ export function Composer({
             onTextOnly={attachments.dropImages}
           />
         ) : null}
+        <VoiceNote voice={voice} />
         <View style={styles.line}>
           <Pressable
             style={styles.add}
@@ -109,20 +126,34 @@ export function Composer({
           >
             <Icon name="plus" color={attachments.full ? color.faint : color.inkMid} size={20} />
           </Pressable>
-          <TextInput
-            style={styles.input}
-            placeholder={busy ? t("composer-placeholder-busy") : t("chat-placeholder")}
-            placeholderTextColor={color.faint}
-            value={text}
-            onChangeText={setText}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onSubmitEditing={send}
-            submitBehavior="submit"
-            returnKeyType="send"
-            multiline
-          />
-          {ready ? (
+          {speaking ? (
+            <HoldToTalk voice={voice} height={34} />
+          ) : (
+            <TextInput
+              ref={input}
+              style={styles.input}
+              placeholder={
+                busy
+                  ? t("composer-placeholder-busy")
+                  : voice.available
+                    ? t("chat-placeholder-voice")
+                    : t("chat-placeholder")
+              }
+              placeholderTextColor={color.faint}
+              value={text}
+              onChangeText={setText}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onSubmitEditing={send}
+              submitBehavior="submit"
+              returnKeyType="send"
+              multiline
+            />
+          )}
+          {speaking || text.trim().length === 0 ? (
+            <VoiceSwitch voice={voice} onTyping={focusInput} />
+          ) : null}
+          {ready && !speaking ? (
             <Pressable
               style={styles.send}
               accessibilityRole="button"

@@ -3,7 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Keep } from "@xiaoban/protocol";
 import { color, dark } from "@xiaoban/tokens";
 import { router } from "expo-router";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { type ComponentRef, type ReactNode, useMemo, useRef, useState } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -19,6 +19,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../ui/Icon.tsx";
+import { HoldToTalk, VoiceNote, VoiceSwitch } from "../voice/HoldToTalk.tsx";
+import { useVoice } from "../voice/useVoice.ts";
 import { CloseIcon, TickIcon } from "./LifeIcons.tsx";
 import { LifeReply } from "./LifeReply.tsx";
 
@@ -101,42 +103,71 @@ export function ChatBar({
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [turn, setTurn] = useState<string | null>(null);
-  const send = () => {
-    const value = text.trim();
-    if (!value || !threadId || disabled) return;
-    setText("");
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  const submit = (value: string) => {
+    if (!value || !threadId || disabled) return false;
     const sent = onSend
       ? onSend(value)
       : store.send(threadId, value).then((turnId) => setTurn(turnId));
-    void sent.catch(() => setText(value));
+    void sent.catch(() => {
+      setText(value);
+      voice.enterTyping();
+    });
+    return true;
   };
+  const send = () => {
+    const value = text.trim();
+    if (submit(value)) setText("");
+  };
+  const voice = useVoice((spoken) => {
+    if (submit(spoken)) return;
+    setText(spoken);
+    voice.enterTyping();
+  });
+  const speaking = voice.available && voice.mode === "voice" && threadId !== null;
   const ready = Boolean(text.trim() && threadId && !disabled);
+  const focusInput = () => setTimeout(() => input.current?.focus(), 50);
   return (
     <View style={[styles.bar, top ? styles.barRaised : null]}>
       {turn && threadId && !onSend ? (
         <LifeReply store={store} threadId={threadId} turnId={turn} onClose={() => setTurn(null)} />
       ) : null}
       {top}
+      <VoiceNote voice={voice} style={styles.barNote} />
       <View style={[styles.barRow, { paddingBottom: Math.max(insets.bottom, 14) + 4 }]}>
-        <TextInput
-          style={styles.barInput}
-          value={text}
-          placeholder={placeholder}
-          placeholderTextColor={color.faint}
-          returnKeyType="send"
-          editable={threadId !== null}
-          onChangeText={setText}
-          onSubmitEditing={send}
-        />
-        <Pressable
-          style={[styles.barSend, !ready && styles.barSendIdle]}
-          accessibilityRole="button"
-          accessibilityLabel={t("composer-send")}
-          disabled={!ready}
-          onPress={send}
-        >
-          <Icon name="send" size={18} color={color.surface} />
-        </Pressable>
+        {speaking ? (
+          <>
+            <VoiceSwitch voice={voice} size={42} onTyping={focusInput} />
+            <HoldToTalk voice={voice} height={42} />
+          </>
+        ) : (
+          <>
+            <TextInput
+              ref={input}
+              style={styles.barInput}
+              value={text}
+              placeholder={placeholder}
+              placeholderTextColor={color.faint}
+              returnKeyType="send"
+              editable={threadId !== null}
+              onChangeText={setText}
+              onSubmitEditing={send}
+            />
+            {voice.available && threadId !== null && !text.trim() ? (
+              <VoiceSwitch voice={voice} size={42} />
+            ) : (
+              <Pressable
+                style={[styles.barSend, !ready && styles.barSendIdle]}
+                accessibilityRole="button"
+                accessibilityLabel={t("composer-send")}
+                disabled={!ready}
+                onPress={send}
+              >
+                <Icon name="send" size={18} color={color.surface} />
+              </Pressable>
+            )}
+          </>
+        )}
       </View>
     </View>
   );
@@ -473,7 +504,14 @@ const styles = StyleSheet.create({
     elevation: 12,
     gap: 2,
   },
-  barRow: { flexDirection: "row", gap: 8, paddingTop: 10, paddingHorizontal: 12 },
+  barNote: { paddingHorizontal: 18, paddingTop: 10 },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    paddingTop: 10,
+    paddingHorizontal: 12,
+  },
   barInput: {
     flex: 1,
     height: 42,

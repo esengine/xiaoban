@@ -15,7 +15,9 @@ export type IconName =
   | "chevronDown"
   | "chevronRight"
   | "close"
-  | "check";
+  | "check"
+  | "mic"
+  | "keyboard";
 
 export function Icon({
   name,
@@ -95,6 +97,18 @@ export function Icon({
       {name === "chevronRight" && <Path {...common} d="M9 5l7 7-7 7" />}
       {name === "close" && <Path {...common} d="M6 6l12 12M18 6L6 18" />}
       {name === "check" && <Path {...common} d="M5 12.5l4.5 4.5L19 7.5" />}
+      {name === "mic" && (
+        <>
+          <Rect {...common} x={9} y={3} width={6} height={11} rx={3} />
+          <Path {...common} d="M5 11a7 7 0 0014 0M12 18v3" />
+        </>
+      )}
+      {name === "keyboard" && (
+        <>
+          <Rect {...common} x={3} y={6} width={18} height={12} rx={2} />
+          <Path {...common} d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" />
+        </>
+      )}
     </Svg>
   );
 }
