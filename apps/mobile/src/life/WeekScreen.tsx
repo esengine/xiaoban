@@ -1,5 +1,5 @@
 import type { HubStore } from "@xiaoban/client";
-import { useHubState } from "@xiaoban/client/react";
+import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Kitchen, WeekPlan } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
@@ -17,6 +17,7 @@ import {
   Segment,
   SwipeRow,
 } from "./LifeUI.tsx";
+import { Working } from "./Working.tsx";
 
 function daysOf(monday: Date) {
   return Array.from({ length: 7 }, (_, index) => {
@@ -93,11 +94,13 @@ function Menu({
   store,
   kitchen,
   offset,
+  busy,
   onSay,
 }: {
   store: HubStore;
   kitchen: Kitchen;
   offset: number;
+  busy: boolean;
   onSay: (text: string) => void;
 }) {
   const { t, locale } = useI18n();
@@ -117,11 +120,13 @@ function Menu({
       <View style={styles.empty}>
         <Text style={styles.emptyTitle}>{t("week-empty-title")}</Text>
         <Text style={life.hint}>{t("week-empty-body")}</Text>
-        <DarkButton
-          label={t("week-empty-start")}
-          style={styles.emptyButton}
-          onPress={() => onSay(t("week-plan-message", { range, start }))}
-        />
+        {busy ? null : (
+          <DarkButton
+            label={t("week-empty-start")}
+            style={styles.emptyButton}
+            onPress={() => onSay(t("week-plan-message", { range, start }))}
+          />
+        )}
       </View>
     );
   }
@@ -222,7 +227,8 @@ function Shopping({ store, kitchen }: { store: HubStore; kitchen: Kitchen }) {
 
 export function WeekScreen({ store }: { store: HubStore }) {
   const { t, locale } = useI18n();
-  const { kitchen, status } = useHubState(store);
+  const state = useHubState(store);
+  const { kitchen, status } = state;
   const [tab, setTab] = useState<"menu" | "list">("menu");
   const [offset, setOffset] = useState(0);
 
@@ -231,6 +237,7 @@ export function WeekScreen({ store }: { store: HubStore }) {
   }, [store, status]);
 
   const threadId = kitchen?.threadId ?? null;
+  const busy = threadId ? draftsForThread(state, threadId).some((draft) => !draft.failure) : false;
   const say = (text: string) => {
     if (threadId) void store.send(threadId, text).catch(() => undefined);
   };
@@ -263,9 +270,10 @@ export function WeekScreen({ store }: { store: HubStore }) {
         onChange={setTab}
       />
       <ScrollView style={life.scroll} contentContainerStyle={styles.body}>
+        {busy && <Working text={t("week-working")} />}
         {kitchen &&
           (tab === "menu" ? (
-            <Menu store={store} kitchen={kitchen} offset={offset} onSay={say} />
+            <Menu store={store} kitchen={kitchen} offset={offset} busy={busy} onSay={say} />
           ) : (
             <Shopping store={store} kitchen={kitchen} />
           ))}

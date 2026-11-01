@@ -1969,3 +1969,4 @@ models-get-key = Get a key ›
 models-icon-credit = Icons from the LobeHub icon set; trademarks belong to their owners.
 me-model = Model
 thread-rename-save = Save
+week-working = Xiaoban is planning this week's menu; it will show up here when ready…

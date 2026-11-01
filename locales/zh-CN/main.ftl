@@ -1960,3 +1960,4 @@ models-get-key = 去申请密钥 ›
 models-icon-credit = 图标来自 LobeHub 图标库，商标归各服务商所有。
 me-model = 模型
 thread-rename-save = 保存
+week-working = 小伴正在排这周的菜单，排好就出现在这里…
