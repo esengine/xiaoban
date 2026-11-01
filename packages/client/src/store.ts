@@ -1,5 +1,6 @@
 import type {
   AutonomyLevel,
+  Branch,
   CommandRun,
   ConfirmChoice,
   ContextNote,
@@ -441,6 +442,42 @@ export class HubStore {
       commands: { ...state.commands, [workspaceId]: commands },
     }));
     return commands;
+  }
+
+  async listBranches(workspaceId: string): Promise<Branch[]> {
+    const { branches } = await this.client.request(
+      { type: "list_branches", workspaceId },
+      "branches",
+    );
+    return branches;
+  }
+
+  async switchBranch(
+    workspaceId: string,
+    name: string,
+    options: { create?: boolean; stash?: boolean } = {},
+  ): Promise<GitInfo> {
+    const { git } = await this.client.request(
+      {
+        type: "switch_branch",
+        workspaceId,
+        name,
+        create: options.create ?? false,
+        stash: options.stash ?? false,
+      },
+      "git",
+    );
+    return git;
+  }
+
+  async restoreStash(workspaceId: string): Promise<GitInfo> {
+    const { git } = await this.client.request({ type: "restore_stash", workspaceId }, "git");
+    return git;
+  }
+
+  async pullBranch(workspaceId: string): Promise<GitInfo> {
+    const { git } = await this.client.request({ type: "pull_branch", workspaceId }, "git");
+    return git;
   }
 
   async stopCommand(commandId: string): Promise<void> {

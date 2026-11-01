@@ -186,6 +186,23 @@ pub enum Request {
     StopCommand {
         command_id: String,
     },
+    ListBranches {
+        workspace_id: String,
+    },
+    SwitchBranch {
+        workspace_id: String,
+        name: String,
+        #[serde(default)]
+        create: bool,
+        #[serde(default)]
+        stash: bool,
+    },
+    PullBranch {
+        workspace_id: String,
+    },
+    RestoreStash {
+        workspace_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -314,6 +331,9 @@ pub enum Response {
     },
     Command {
         command: crate::CommandRun,
+    },
+    Branches {
+        branches: Vec<crate::Branch>,
     },
 }
 

@@ -2,7 +2,7 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use xiaoban_protocol::{ChangeStatus, ChangedFile, DirEntry, GitInfo, Workspace};
+use xiaoban_protocol::{Branch, ChangeStatus, ChangedFile, DirEntry, GitInfo, Workspace};
 
 use crate::state::SharedState;
 
@@ -225,6 +225,7 @@ pub async fn info(workspace: &Workspace) -> GitInfo {
         ahead: 0,
         behind: 0,
         changed: Vec::new(),
+        stash: None,
     };
     if !info.installed || !is_repository(&dir).await {
         return info;
@@ -236,6 +237,9 @@ pub async fn info(workspace: &Workspace) -> GitInfo {
     let mut lines = status.stdout.lines();
     if let Some(first) = lines.next() {
         (info.branch, info.upstream, info.ahead, info.behind) = parse_branch(first);
+    }
+    if let Some(branch) = &info.branch {
+        info.stash = stash_for(&dir, branch).await;
     }
     let counts = git(&dir, &["diff", "HEAD", "--numstat"]).await;
     let numstat: Vec<(u32, u32, String)> = counts
@@ -279,6 +283,119 @@ pub async fn info(workspace: &Workspace) -> GitInfo {
     info
 }
 
+fn track(text: &str) -> (u32, u32) {
+    let number = |label: &str| {
+        text.trim_matches(['[', ']'])
+            .split(", ")
+            .find_map(|part| part.strip_prefix(label))
+            .and_then(|n| n.trim().parse().ok())
+            .unwrap_or(0)
+    };
+    (number("ahead "), number("behind "))
+}
+
+pub async fn branches(workspace: &Workspace) -> Vec<Branch> {
+    let dir = root(workspace);
+    let Some(output) = git(
+        &dir,
+        &[
+            "for-each-ref",
+            "--sort=-committerdate",
+            "--format=%(refname)%09%(HEAD)%09%(committerdate:unix)%09%(upstream:short)%09%(upstream:track)",
+            "refs/heads",
+            "refs/remotes",
+        ],
+    )
+    .await
+    else {
+        return Vec::new();
+    };
+    let mut list: Vec<Branch> = output
+        .stdout
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.split('\t');
+            let full = parts.next()?;
+            let head = parts.next()? == "*";
+            let time: i64 = parts.next()?.parse().unwrap_or(0);
+            let upstream = parts.next().filter(|value| !value.is_empty()).map(str::to_owned);
+            let (ahead, behind) = track(parts.next().unwrap_or_default());
+            let (name, remote) = if let Some(local) = full.strip_prefix("refs/heads/") {
+                (local.to_owned(), false)
+            } else {
+                (full.strip_prefix("refs/remotes/")?.to_owned(), true)
+            };
+            (!name.ends_with("/HEAD")).then_some(Branch {
+                name,
+                current: head,
+                remote,
+                upstream,
+                ahead,
+                behind,
+                updated_at: time * 1000,
+            })
+        })
+        .collect();
+    let locals: Vec<String> = list.iter().filter(|b| !b.remote).map(|b| b.name.clone()).collect();
+    list.retain(|branch| {
+        !branch.remote
+            || !locals
+                .iter()
+                .any(|local| branch.name.split_once('/').is_some_and(|(_, rest)| rest == local))
+    });
+    list
+}
+
+fn failed(output: Option<GitOutput>) -> Result<(), String> {
+    match output {
+        Some(output) if output.ok => Ok(()),
+        Some(output) => Err(output.stderr.trim().lines().last().unwrap_or("git failed").to_owned()),
+        None => Err("git did not answer".to_owned()),
+    }
+}
+
+pub async fn switch(workspace: &Workspace, name: &str, create: bool, stash: bool) -> Result<(), String> {
+    let dir = root(workspace);
+    let name = name.trim();
+    if name.is_empty() || name.starts_with('-') {
+        return Err("bad branch name".to_owned());
+    }
+    if stash {
+        let from = info(workspace).await.branch.unwrap_or_default();
+        let message = format!("xiaoban: {from}");
+        failed(git(&dir, &["stash", "push", "--include-untracked", "-m", &message]).await)?;
+    }
+    if create {
+        return failed(git(&dir, &["switch", "-c", name]).await);
+    }
+    let local = name.split_once('/').map_or(name, |(_, rest)| rest);
+    let remote = branches(workspace).await.into_iter().any(|b| b.remote && b.name == name);
+    if remote {
+        return failed(git(&dir, &["switch", local]).await);
+    }
+    failed(git(&dir, &["switch", name]).await)
+}
+
+async fn stash_for(dir: &Path, branch: &str) -> Option<String> {
+    let list = git(dir, &["stash", "list", "--format=%gd%x09%gs"]).await?;
+    let mark = format!("xiaoban: {branch}");
+    list.stdout.lines().find_map(|line| {
+        let (reference, subject) = line.split_once('\t')?;
+        subject.ends_with(&mark).then(|| reference.to_owned())
+    })
+}
+
+pub async fn restore(workspace: &Workspace) -> Result<(), String> {
+    let dir = root(workspace);
+    let branch = info(workspace).await.branch.ok_or("no branch")?;
+    let reference = stash_for(&dir, &branch).await.ok_or("nothing put aside on this branch")?;
+    failed(git(&dir, &["stash", "pop", &reference]).await)
+}
+
+pub async fn pull(workspace: &Workspace) -> Result<(), String> {
+    failed(git(&root(workspace), &["pull", "--ff-only"]).await)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,6 +425,49 @@ mod tests {
         assert!(!resolve(&workspace, "../escape.txt").inside);
         assert!(!resolve(&workspace, "src/../../escape.txt").inside);
         assert_eq!(shown(&workspace, &resolve(&workspace, "src/a.rs").path), "src/a.rs");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn switches_branches_and_keeps_changes_aside() {
+        if git_binary().is_none() {
+            return;
+        }
+        let dir = std::env::temp_dir().join(format!("xiaoban-git-{}", uuid::Uuid::now_v7()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let run = |args: &[&str]| {
+            std::process::Command::new("git")
+                .args(args)
+                .current_dir(&dir)
+                .output()
+                .unwrap()
+        };
+        run(&["init", "-q", "-b", "main"]);
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        run(&["add", "."]);
+        run(&["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"]);
+        let workspace = Workspace {
+            id: "w".to_owned(),
+            name: "w".to_owned(),
+            path: dir.to_string_lossy().into_owned(),
+            created_at: 0,
+            active_at: 0,
+        };
+        switch(&workspace, "feature", true, false).await.unwrap();
+        assert_eq!(info(&workspace).await.branch.as_deref(), Some("feature"));
+        std::fs::write(dir.join("a.txt"), "two\n").unwrap();
+        switch(&workspace, "main", false, true).await.unwrap();
+        let now = info(&workspace).await;
+        assert_eq!(now.branch.as_deref(), Some("main"));
+        assert_eq!(now.changed, Vec::new());
+        let names: Vec<String> = branches(&workspace).await.into_iter().map(|b| b.name).collect();
+        assert!(names.contains(&"feature".to_owned()) && names.contains(&"main".to_owned()));
+        switch(&workspace, "feature", false, false).await.unwrap();
+        assert!(info(&workspace).await.stash.is_some());
+        restore(&workspace).await.unwrap();
+        let back = info(&workspace).await;
+        assert_eq!((back.changed.len(), back.stash), (1, None));
+        assert!(switch(&workspace, "-x", false, false).await.is_err());
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

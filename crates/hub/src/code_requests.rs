@@ -133,6 +133,59 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             });
             Ok(Response::Ack)
         }
+        Request::ListBranches { workspace_id } => {
+            let found = load(state, workspace_id).await?;
+            Ok(Response::Branches {
+                branches: workspace::branches(&found).await,
+            })
+        }
+        Request::SwitchBranch {
+            workspace_id,
+            name,
+            create,
+            stash,
+        } => {
+            let found = load(state, workspace_id).await?;
+            workspace::switch(&found, &name, create, stash)
+                .await
+                .map_err(|failure| bad_request(&failure))?;
+            state.publish(Event::FilesChanged {
+                workspace_id: found.id.clone(),
+                thread_id: None,
+                paths: Vec::new(),
+            });
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
+            })
+        }
+        Request::PullBranch { workspace_id } => {
+            let found = load(state, workspace_id).await?;
+            workspace::pull(&found)
+                .await
+                .map_err(|failure| bad_request(&failure))?;
+            state.publish(Event::FilesChanged {
+                workspace_id: found.id.clone(),
+                thread_id: None,
+                paths: Vec::new(),
+            });
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
+            })
+        }
+        Request::RestoreStash { workspace_id } => {
+            let found = load(state, workspace_id).await?;
+            workspace::restore(&found)
+                .await
+                .map_err(|failure| bad_request(&failure))?;
+            state.publish(Event::FilesChanged {
+                workspace_id: found.id.clone(),
+                thread_id: None,
+                paths: Vec::new(),
+            });
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
+            })
+        }
         Request::StopCommand { command_id } => {
             crate::commands::stop(state, &command_id);
             Ok(Response::Ack)

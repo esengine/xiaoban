@@ -9,4 +9,5 @@ export type GitInfo = {
   ahead: number;
   behind: number;
   changed: Array<ChangedFile>;
+  stash: string | null;
 };

@@ -1,6 +1,7 @@
 export type { Archived } from "./Archived.ts";
 export type { Attachment } from "./Attachment.ts";
 export type { AutonomyLevel } from "./AutonomyLevel.ts";
+export type { Branch } from "./Branch.ts";
 export type { CalendarEvent } from "./CalendarEvent.ts";
 export type { ChangeStatus } from "./ChangeStatus.ts";
 export type { ChangedFile } from "./ChangedFile.ts";

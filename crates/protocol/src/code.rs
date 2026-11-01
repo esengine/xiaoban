@@ -84,6 +84,21 @@ pub struct GitInfo {
     pub ahead: u32,
     pub behind: u32,
     pub changed: Vec<ChangedFile>,
+    #[serde(default)]
+    pub stash: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Branch {
+    pub name: String,
+    pub current: bool,
+    pub remote: bool,
+    pub upstream: Option<String>,
+    pub ahead: u32,
+    pub behind: u32,
+    #[ts(type = "number")]
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

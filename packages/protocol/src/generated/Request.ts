@@ -82,4 +82,8 @@ export type Request =
   | { type: "git_info"; workspaceId: string }
   | { type: "list_commands"; workspaceId: string }
   | { type: "run_command"; workspaceId: string; command: string }
-  | { type: "stop_command"; commandId: string };
+  | { type: "stop_command"; commandId: string }
+  | { type: "list_branches"; workspaceId: string }
+  | { type: "switch_branch"; workspaceId: string; name: string; create: boolean; stash: boolean }
+  | { type: "pull_branch"; workspaceId: string }
+  | { type: "restore_stash"; workspaceId: string };

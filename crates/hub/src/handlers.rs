@@ -159,7 +159,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::GitInfo { .. }
         | Request::ListCommands { .. }
         | Request::RunCommand { .. }
-        | Request::StopCommand { .. }) => crate::code_requests::handle(state, local, request).await,
+        | Request::StopCommand { .. }
+        | Request::ListBranches { .. }
+        | Request::SwitchBranch { .. }
+        | Request::PullBranch { .. }
+        | Request::RestoreStash { .. }) => crate::code_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

@@ -5852,8 +5852,8 @@ button.sent-files__image {
   max-width: 760px;
   width: 100%;
   box-sizing: border-box;
-  margin: 0 auto;
-  padding: 0 24px 6px;
+  margin: 0 auto -6px;
+  padding: 0 24px;
   font-size: 12px;
   color: var(--color-ink-mid);
 }
@@ -5862,7 +5862,14 @@ button.sent-files__image {
   display: none;
 }
 
+.branch-bar__anchor {
+  position: relative;
+}
+
 .branch-bar__branch {
+  cursor: pointer;
+  color: var(--color-ink-mid);
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -6174,4 +6181,206 @@ button.sent-files__image {
   .chevron {
     transition: none;
   }
+}
+
+.branch-bar__branch:hover,
+.branch-bar__branch[aria-expanded="true"] {
+  border-color: var(--color-line-strong);
+}
+
+.branch-bar__more {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--color-faint);
+}
+
+.branch-menu {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  bottom: calc(100% + 6px);
+  width: 320px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow:
+    0 12px 32px var(--color-scrim),
+    0 0 0 1px var(--color-line);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.branch-menu__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  margin: 2px 2px 6px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--color-ground);
+  color: var(--color-faint);
+}
+
+.branch-menu__search svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.branch-menu__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+  color: var(--color-ink);
+}
+
+.branch-menu__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.branch-menu__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.branch-menu__row:hover,
+.branch-menu__row[aria-current="true"] {
+  background: var(--color-accent-wash);
+}
+
+.branch-menu__check {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.branch-menu__check svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.branch-menu__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.branch-menu__name {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-menu__note {
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.branch-menu__divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--color-line-soft);
+}
+
+.branch-menu__action {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--color-ink-mid);
+  cursor: pointer;
+}
+
+.branch-menu__action[data-accent] {
+  color: var(--color-accent);
+}
+
+.branch-menu__action:hover {
+  background: var(--color-ground);
+}
+
+.branch-menu__new {
+  margin: 2px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.branch-menu__failure {
+  margin: 4px 10px;
+  font-size: 12px;
+  color: var(--color-danger-ink);
+}
+
+.branch-switch__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.branch-switch__choice {
+  height: 34px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.branch-switch__choice[data-primary] {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+
+.branch-switch__hint {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--color-faint);
 }

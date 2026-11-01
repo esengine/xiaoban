@@ -2,6 +2,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { ChangedFile } from "@xiaoban/protocol";
 import { useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { BranchMenu } from "./BranchMenu.tsx";
 import { showCode } from "./CodePanel.tsx";
 import { FileIcon } from "./FileTree.tsx";
 import { useChanges, useGit, useWorkspaceOf } from "./useCode.ts";
@@ -22,6 +23,8 @@ export function BranchBar({ threadId }: { threadId: string }) {
   const workspace = useWorkspaceOf(threadId);
   const git = useGit(workspace);
   const { files } = useChanges(threadId, workspace);
+  const store = useHub();
+  const [menu, setMenu] = useState(false);
   if (!workspace) return null;
   const repo = git?.repository ?? false;
   const changed = repo ? (git?.changed ?? []) : files;
@@ -30,10 +33,37 @@ export function BranchBar({ threadId }: { threadId: string }) {
   return (
     <div className="branch-bar">
       {repo && git?.branch && (
-        <span className="branch-bar__branch">
-          <BranchIcon />
-          {git.branch}
+        <span className="branch-bar__anchor">
+          <button
+            type="button"
+            className="branch-bar__branch"
+            aria-haspopup="dialog"
+            aria-expanded={menu}
+            onClick={() => setMenu(!menu)}
+          >
+            <BranchIcon />
+            {git.branch}
+            <svg className="branch-bar__more" aria-hidden="true" viewBox="0 0 16 16">
+              <path d="M4 6l4 4 4-4" />
+            </svg>
+          </button>
+          {menu && git && (
+            <BranchMenu workspace={workspace} git={git} onClose={() => setMenu(false)} />
+          )}
         </span>
+      )}
+      {repo && git?.stash && (
+        <>
+          <span className="branch-bar__dot" aria-hidden="true" />
+          <span>{t("branch-stashed")}</span>
+          <button
+            type="button"
+            className="code-link"
+            onClick={() => void store.restoreStash(workspace.id).catch(() => undefined)}
+          >
+            {t("branch-restore")}
+          </button>
+        </>
       )}
       {changed.length > 0 && (
         <>
