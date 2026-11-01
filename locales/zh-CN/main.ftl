@@ -2100,3 +2100,6 @@ island-answer-failed = 没交上，打开小伴再点一次
 export-phone-busy = 正在导出…
 export-phone-failed = 没导出成功，再试一次
 doc-meta-exportable = 约 { $chars } 字 · 可导出 Word / PDF
+html-view-title = 网页预览
+html-view-open = 打开查看
+html-view-gone = 这个预览已经关掉了，回到对话里再点一次「打开查看」

@@ -2115,3 +2115,6 @@ island-answer-failed = Couldn't send that; open Xiaoban and tap again
 export-phone-busy = Exporting…
 export-phone-failed = Export failed. Try again
 doc-meta-exportable = About { $chars } characters · export to Word / PDF
+html-view-title = Page preview
+html-view-open = Open preview
+html-view-gone = This preview was closed; tap "Open preview" in the chat again

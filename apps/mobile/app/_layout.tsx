@@ -33,6 +33,10 @@ export default function RootLayout() {
             name="consent"
             options={{ headerShown: false, presentation: "modal", title: t("consent-title") }}
           />
+          <Stack.Screen
+            name="html/[id]"
+            options={{ headerShown: false, title: t("html-view-title") }}
+          />
           <Stack.Screen name="models" options={{ headerShown: false, title: t("models-title") }} />
           <Stack.Screen
             name="notify-settings"
