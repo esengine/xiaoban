@@ -28,6 +28,7 @@ import type {
   GitInfo,
   Interpretation,
   Kitchen,
+  RecipeView,
   Ledger,
   LedgerYear,
   Location,
@@ -693,6 +694,21 @@ export class HubStore {
       "export_data",
     );
     return { name, mime, data };
+  }
+
+  async recipe(id: string): Promise<RecipeView> {
+    const { view } = await this.client.request({ type: "recipe", id }, "recipe");
+    this.#update((state) => ({ ...state, recipes: { ...state.recipes, [id]: view } }));
+    return view;
+  }
+
+  async cookRecipe(id: string): Promise<void> {
+    return this.#kitchenRequest({ type: "cook_recipe", id });
+  }
+
+  async recipeToShopping(id: string): Promise<void> {
+    const { view } = await this.client.request({ type: "recipe_to_shopping", id }, "recipe");
+    this.#update((state) => ({ ...state, recipes: { ...state.recipes, [id]: view } }));
   }
 
   async docSummary(id: string): Promise<DocSummary> {

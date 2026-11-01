@@ -176,4 +176,5 @@ pub enum Attachment {
     Doc { doc_id: String },
     Sheet { sheet_id: String },
     Deck { deck_id: String },
+    Recipe { recipe_id: String },
 }
