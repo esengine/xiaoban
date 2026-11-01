@@ -729,7 +729,7 @@ mod tests {
         let mut saved = Saved::default();
         let first = advance(&mut saved, vec![candidate(InsightKind::Takeout, "")], "2026-11-01", NOW).expect("first");
         assert!(resolve(&mut saved, &first.id, true).is_some());
-        assert!(saved.items.is_empty());
+        assert_eq!(saved.items, Vec::new());
         let later = NOW + 30 * DAY_MS;
         let next = advance(
             &mut saved,
@@ -749,7 +749,7 @@ mod tests {
         let mut saved = Saved::default();
         let first = advance(&mut saved, vec![candidate(InsightKind::Takeout, "")], "2026-11-01", NOW).expect("first");
         assert!(resolve(&mut saved, &first.id, false).is_some());
-        assert!(saved.muted.is_empty());
+        assert_eq!(saved.muted, Vec::new());
         assert!(advance(&mut saved, vec![candidate(InsightKind::Takeout, "")], "2026-11-02", NOW + DAY_MS).is_none());
         assert!(advance(&mut saved, vec![candidate(InsightKind::Takeout, "")], "2026-11-09", NOW + 8 * DAY_MS).is_some());
     }

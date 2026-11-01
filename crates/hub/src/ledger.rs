@@ -649,6 +649,34 @@ pub async fn take_import(state: &SharedState, thread_id: &str, paths: Vec<String
     (rest, Some(ContextNote { label: l.text(keys::LEDGER_IMPORT_LABEL), body: summary }))
 }
 
+async fn commit_import(state: &SharedState) {
+    let mut meta = meta(state).await;
+    if let Some(preview) = meta.import.take() {
+        let file = preview.file.clone();
+        let fallback = state.localizer.text(keys::LEDGER_OTHER);
+        let items: Vec<Expense> = preview
+            .rows
+            .into_iter()
+            .filter(|row| row.checked && row.cents > 0)
+            .map(|row| Expense {
+                id: uuid::Uuid::now_v7().to_string(),
+                name: if row.item.is_empty() || row.item == "/" { row.payee.clone() } else { row.item.clone() },
+                category: if row.category.is_empty() { fallback.clone() } else { row.category },
+                cents: row.cents,
+                at: row.at,
+                source: ExpenseSource::Import,
+                note: row.payee,
+            })
+            .collect();
+        let count = items.len();
+        add(state, items).await;
+        if count > 0 {
+            crate::insights::record_import(state, count, &file, thread(state).await).await;
+        }
+    }
+    save_meta(state, &meta).await;
+}
+
 pub async fn handle(state: &SharedState, request: Request) -> Result<Response, ProtocolError> {
     let month = match &request {
         Request::Ledger { month }
@@ -715,31 +743,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
             changed(state);
         }
         Request::CommitImport { .. } => {
-            let mut meta = meta(state).await;
-            if let Some(preview) = meta.import.take() {
-                let file = preview.file.clone();
-                let fallback = state.localizer.text(keys::LEDGER_OTHER);
-                let items: Vec<Expense> = preview
-                    .rows
-                    .into_iter()
-                    .filter(|row| row.checked && row.cents > 0)
-                    .map(|row| Expense {
-                        id: uuid::Uuid::now_v7().to_string(),
-                        name: if row.item.is_empty() || row.item == "/" { row.payee.clone() } else { row.item.clone() },
-                        category: if row.category.is_empty() { fallback.clone() } else { row.category },
-                        cents: row.cents,
-                        at: row.at,
-                        source: ExpenseSource::Import,
-                        note: row.payee,
-                    })
-                    .collect();
-                let count = items.len();
-                add(state, items).await;
-                if count > 0 {
-                    crate::insights::record_import(state, count, &file, thread(state).await).await;
-                }
-            }
-            save_meta(state, &meta).await;
+            commit_import(state).await;
             changed(state);
         }
         Request::CancelImport { .. } => {

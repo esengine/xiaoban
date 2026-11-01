@@ -4,6 +4,7 @@ import type {
   CommandRun,
   CompactPhase,
   ConfirmRequest,
+  DailyFeed,
   Deck,
   DeckSummary,
   Device,
@@ -101,6 +102,7 @@ export interface HubState {
   filesVersion: Readonly<Record<string, number>>;
   kitchen: Kitchen | null;
   ledger: Ledger | null;
+  dailyFeed: DailyFeed | null;
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
   recipes: Readonly<Record<string, RecipeView>>;
@@ -141,6 +143,7 @@ export const initialHubState: HubState = {
   filesVersion: {},
   kitchen: null,
   ledger: null,
+  dailyFeed: null,
   weather: null,
   docs: {},
   recipes: {},
@@ -451,6 +454,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "prep_due":
     case "ledger_changed":
     case "weather_alert":
+    case "daily_feed_changed":
+    case "insight_alert":
       return state;
     case "command_updated": {
       const list = state.commands[event.command.workspaceId] ?? [];
