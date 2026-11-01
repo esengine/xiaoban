@@ -71,7 +71,8 @@ impl HubTools<'_> {
             return error("could not prepare the sub-agents");
         };
         let workspace = crate::workspace::for_thread(self.state, self.thread_id).await;
-        let prefix = self.state.prefix_for(snapshot.as_deref(), workspace.as_ref());
+        let kitchen = crate::kitchen::is_kitchen(self.state, self.thread_id).await;
+        let prefix = self.state.prefix_for(snapshot.as_deref(), workspace.as_ref(), kitchen);
         let runs = args.tasks.into_iter().enumerate().map(|(index, task)| {
             let prefix = prefix.clone();
             async move {

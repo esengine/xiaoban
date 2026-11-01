@@ -114,4 +114,9 @@ export type Request =
   | { type: "restore_change"; threadId: string; path: string }
   | { type: "workspace_settings"; workspaceId: string }
   | { type: "remove_allowance"; workspaceId: string; kind: Allowance; value: string }
-  | { type: "set_editor"; workspaceId: string; editor: string };
+  | { type: "set_editor"; workspaceId: string; editor: string }
+  | { type: "kitchen" }
+  | { type: "select_dish"; name: string; selected: boolean }
+  | { type: "add_missing_to_shopping" }
+  | { type: "toggle_shopping"; name: string; done: boolean }
+  | { type: "clear_bought" };

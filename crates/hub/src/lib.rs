@@ -18,6 +18,7 @@ mod git_ops;
 mod github;
 mod handlers;
 mod interpret;
+mod kitchen;
 mod location;
 mod memory;
 mod model;

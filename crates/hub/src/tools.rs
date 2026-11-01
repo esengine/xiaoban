@@ -681,6 +681,10 @@ impl ToolRunner for HubTools<'_> {
                 | crate::code_tools::SEARCH_FILES
                 | crate::vcs_tools::GIT
                 | crate::vcs_tools::GH
+                | crate::kitchen::FRIDGE
+                | crate::kitchen::DISHES
+                | crate::kitchen::PREFERENCES
+                | crate::kitchen::SHOPPING
         )
     }
 
@@ -719,6 +723,7 @@ impl ToolRunner for HubTools<'_> {
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,
+                name if crate::kitchen::is_tool(name) => self.kitchen_tool(name, arguments).await,
                 name if crate::code_tools::is_code_tool(name) => {
                     self.run_code_tool(name, arguments).await
                 }

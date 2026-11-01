@@ -322,6 +322,8 @@ pub async fn start(
     state.store.thread(thread_id.clone()).await?;
     let files = ingest(state, paths).await?;
     let (turn_id, cancel) = claim(state, &thread_id)?;
+    crate::kitchen::photo(state, &thread_id, &files).await;
+    let kitchen_note = crate::kitchen::note(state, &thread_id).await;
 
     let (file_notes, images) = attachments(state, &files);
     let remembered = recalled(state, &text).await;
@@ -335,6 +337,7 @@ pub async fn start(
                 .into_iter()
                 .chain(history)
                 .chain(file_notes)
+                .chain(kitchen_note)
                 .chain(context)
                 .collect(),
         ),
@@ -496,11 +499,12 @@ pub async fn begin_epoch(
 ) -> Result<Epoch, StoreError> {
     let snapshot = fresh_snapshot(state).await?;
     let workspace = crate::workspace::for_thread(state, thread_id).await;
+    let kitchen = crate::kitchen::is_kitchen(state, thread_id).await;
     state
         .store
         .start_epoch(
             thread_id.to_owned(),
-            state.base_fingerprint_for(workspace.as_ref()),
+            state.base_fingerprint_for(workspace.as_ref(), kitchen),
             reason,
             snapshot,
             carried.iter().map(to_wire).collect(),
@@ -514,7 +518,8 @@ async fn current_epoch(
 ) -> Result<(Epoch, StablePrefix, Transcript), StoreError> {
     let workspace = crate::workspace::for_thread(state, thread_id).await;
     let workspace = workspace.as_ref();
-    let base = state.base_fingerprint_for(workspace);
+    let kitchen = crate::kitchen::is_kitchen(state, thread_id).await;
+    let base = state.base_fingerprint_for(workspace, kitchen);
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
         Some((mut epoch, entries)) if epoch.prefix_fingerprint == base => {
             if entries.is_empty() {
@@ -533,10 +538,10 @@ async fn current_epoch(
             {
                 let epoch =
                     begin_epoch(state, thread_id, EpochReason::Compacted, carried.clone()).await?;
-                let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace);
+                let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, kitchen);
                 return Ok((epoch, prefix, carried.into_iter().collect()));
             }
-            let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace);
+            let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, kitchen);
             return Ok((epoch, prefix, transcript));
         }
         Some((previous, entries)) => {
@@ -552,7 +557,7 @@ async fn current_epoch(
     };
     let carried: Vec<ChatMessage> = carried.entries().to_vec();
     let epoch = begin_epoch(state, thread_id, reason, carried.clone()).await?;
-    let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace);
+    let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, kitchen);
     Ok((epoch, prefix, carried.into_iter().collect()))
 }
 

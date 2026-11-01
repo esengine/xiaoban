@@ -115,6 +115,9 @@ pub enum Event {
     CommandUpdated {
         command: crate::CommandRun,
     },
+    KitchenUpdated {
+        kitchen: crate::Kitchen,
+    },
 }
 
 impl Event {
@@ -144,7 +147,8 @@ impl Event {
             | Self::AgentProgress { .. }
             | Self::WorkspaceUpdated { .. }
             | Self::WorkspaceRemoved { .. }
-            | Self::CommandUpdated { .. } => None,
+            | Self::CommandUpdated { .. }
+            | Self::KitchenUpdated { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),

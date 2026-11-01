@@ -49,6 +49,7 @@ pub struct HubState {
     pub code_tools: Vec<ToolSpec>,
     pub git_tools: Vec<ToolSpec>,
     pub gh_tools: Vec<ToolSpec>,
+    pub kitchen_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
@@ -64,7 +65,18 @@ impl HubState {
         &self,
         memory: Option<&str>,
         workspace: Option<&xiaoban_protocol::Workspace>,
+        kitchen: bool,
     ) -> StablePrefix {
+        if kitchen {
+            let system = format!(
+                "{}\n\n{}",
+                self.prompts.chat,
+                self.localizer.text(xiaoban_i18n::keys::PROMPT_KITCHEN)
+            );
+            let mut tools = self.tools.clone();
+            tools.extend(self.kitchen_tools.iter().cloned());
+            return StablePrefix::compose(&system, memory, tools);
+        }
         let Some(workspace) = workspace else {
             return self.prefix(memory);
         };
@@ -87,8 +99,12 @@ impl HubState {
         StablePrefix::compose(&system, memory, tools)
     }
 
-    pub fn base_fingerprint_for(&self, workspace: Option<&xiaoban_protocol::Workspace>) -> String {
-        self.prefix_for(None, workspace).fingerprint().to_owned()
+    pub fn base_fingerprint_for(
+        &self,
+        workspace: Option<&xiaoban_protocol::Workspace>,
+        kitchen: bool,
+    ) -> String {
+        self.prefix_for(None, workspace, kitchen).fingerprint().to_owned()
     }
 
     pub fn publish(&self, event: Event) {

@@ -1,6 +1,7 @@
 mod code;
 mod event;
 mod frame;
+mod kitchen;
 mod model;
 mod operate;
 mod relay;
@@ -10,6 +11,7 @@ mod trip;
 pub use code::*;
 pub use event::*;
 pub use frame::*;
+pub use kitchen::*;
 pub use model::*;
 pub use operate::*;
 pub use relay::*;

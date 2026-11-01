@@ -5,6 +5,7 @@ import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { Device } from "./Device.ts";
 import type { Failure } from "./Failure.ts";
+import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
@@ -47,4 +48,5 @@ export type Event =
   | { type: "workspace_updated"; workspace: Workspace }
   | { type: "workspace_removed"; workspaceId: string }
   | { type: "files_changed"; workspaceId: string; threadId: string | null; paths: Array<string> }
-  | { type: "command_updated"; command: CommandRun };
+  | { type: "command_updated"; command: CommandRun }
+  | { type: "kitchen_updated"; kitchen: Kitchen };

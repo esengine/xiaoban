@@ -282,6 +282,17 @@ pub enum Request {
         workspace_id: String,
         editor: String,
     },
+    Kitchen,
+    SelectDish {
+        name: String,
+        selected: bool,
+    },
+    AddMissingToShopping,
+    ToggleShopping {
+        name: String,
+        done: bool,
+    },
+    ClearBought,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -435,6 +446,9 @@ pub enum Response {
     },
     WorkspaceSettings {
         settings: crate::WorkspaceSettings,
+    },
+    Kitchen {
+        kitchen: crate::Kitchen,
     },
     Folder {
         path: String,

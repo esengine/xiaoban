@@ -78,6 +78,7 @@ impl Hub {
             code_tools: crate::code_tools::specs(&localizer),
             git_tools: vec![crate::vcs_tools::git_spec(&localizer)],
             gh_tools: vec![crate::vcs_tools::gh_spec(&localizer)],
+            kitchen_tools: crate::kitchen::specs(&localizer),
             code_reads: std::sync::Mutex::default(),
             running_commands: std::sync::Mutex::default(),
             github_cache: crate::github::Cache::default(),
