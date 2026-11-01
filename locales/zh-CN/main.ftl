@@ -1434,3 +1434,5 @@ weather-menu-here = 用现在的定位
 weather-menu-home-note = 提醒按这个地方发
 weather-menu-make-home = 设为家
 weather-menu-remove = 删掉这个地方
+tool-life-description = 读或改用户的生活页面：summary 看本月花了多少、今晚 / 这周吃什么、买菜清单、家里的天气；add_expense 记一笔支出；add_shopping 往买菜清单加东西。用户在这里随口说「午饭 38」「记一下买牛奶」时直接用它，不用让用户去别的页面。
+home-context-label = 用户的家（天气页设的；问天气没说地方就用这里）

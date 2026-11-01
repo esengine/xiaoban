@@ -80,6 +80,7 @@ impl Hub {
             gh_tools: vec![crate::vcs_tools::gh_spec(&localizer)],
             kitchen_tools: crate::kitchen::specs(&localizer),
             ledger_tools: crate::ledger::specs(&localizer),
+            life_tools: vec![crate::life::spec(&localizer)],
             code_reads: std::sync::Mutex::default(),
             running_commands: std::sync::Mutex::default(),
             github_cache: crate::github::Cache::default(),

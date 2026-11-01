@@ -499,6 +499,10 @@ fn report(l: &Localizer, place: &WeatherPlace, raw: &Raw) -> WeatherReport {
     }
 }
 
+pub async fn home(state: &SharedState) -> Option<WeatherPlace> {
+    saved(state).await.places.into_iter().next()
+}
+
 pub async fn view(state: &SharedState, place_id: Option<&str>) -> WeatherView {
     let saved = saved(state).await;
     let place = place_id

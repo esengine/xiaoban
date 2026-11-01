@@ -1443,3 +1443,5 @@ weather-menu-here = Use my location
 weather-menu-home-note = Reminders follow this place
 weather-menu-make-home = Make it home
 weather-menu-remove = Remove this place
+tool-life-description = Read or change the user's life pages: summary shows this month's spending, tonight's and this week's meals, the shopping list and home weather; add_expense records an expense; add_shopping adds to the shopping list. Use it directly when the user casually says "lunch 38" or "remember to buy milk" here, without sending them elsewhere.
+home-context-label = User's home (set on the weather page; use it for weather when no place is named)

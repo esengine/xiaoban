@@ -53,6 +53,7 @@ mod turns;
 mod weather;
 mod weather_page;
 mod presence;
+mod life;
 mod workspace;
 
 pub use apps::{AppEntry, Apps, NoApps};

@@ -326,6 +326,7 @@ pub async fn start(
     crate::kitchen::photo(state, &thread_id, &files).await;
     let kitchen_note = crate::kitchen::note(state, &thread_id).await;
     let ledger_note = crate::ledger::note(state, &thread_id).await;
+    let home_note = crate::life::home_note(state, &thread_id).await;
 
     let (file_notes, images) = attachments(state, &files);
     let remembered = recalled(state, &text).await;
@@ -341,6 +342,7 @@ pub async fn start(
                 .chain(file_notes)
                 .chain(kitchen_note)
                 .chain(ledger_note)
+                .chain(home_note)
                 .chain(import_note)
                 .chain(context)
                 .collect(),

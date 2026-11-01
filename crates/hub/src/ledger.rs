@@ -480,7 +480,7 @@ impl HubTools<'_> {
                         name: item.name,
                         category: item.category,
                         cents: cents(item.amount),
-                        at: parse_time(&item.time).unwrap_or_else(now_ms),
+                        at: parse_time(&item.time).filter(|at| *at <= now_ms() + 600_000).unwrap_or_else(now_ms),
                         source: if item.source.as_deref() == Some("receipt") { ExpenseSource::Receipt } else { ExpenseSource::Said },
                         note: item.note,
                     })
@@ -506,7 +506,7 @@ impl HubTools<'_> {
                 if let Some(category) = args.category {
                     entry.category = category;
                 }
-                if let Some(at) = args.time.as_deref().and_then(parse_time) {
+                if let Some(at) = args.time.as_deref().and_then(parse_time).filter(|at| *at <= now_ms() + 600_000) {
                     entry.at = at;
                 }
                 json!({ "saved": edit(state, entry).await })

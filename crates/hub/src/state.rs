@@ -52,6 +52,7 @@ pub struct HubState {
     pub gh_tools: Vec<ToolSpec>,
     pub kitchen_tools: Vec<ToolSpec>,
     pub ledger_tools: Vec<ToolSpec>,
+    pub life_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
@@ -76,10 +77,6 @@ pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
 }
 
 impl HubState {
-    pub fn prefix(&self, memory: Option<&str>) -> StablePrefix {
-        StablePrefix::compose(&self.prompts.chat, memory, self.tools.clone())
-    }
-
     pub fn prefix_for(
         &self,
         memory: Option<&str>,
@@ -98,7 +95,9 @@ impl HubState {
             return StablePrefix::compose(&system, memory, tools);
         }
         let Some(workspace) = workspace else {
-            return self.prefix(memory);
+            let mut tools = self.tools.clone();
+            tools.extend(self.life_tools.iter().cloned());
+            return StablePrefix::compose(&self.prompts.chat, memory, tools);
         };
         let system = format!(
             "{}\n\n{}",
