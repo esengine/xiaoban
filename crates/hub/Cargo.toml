@@ -13,6 +13,7 @@ path = "src/main.rs"
 anyhow.workspace = true
 axum.workspace = true
 base64 = "0.23.1"
+chacha20poly1305 = { version = "0.10", features = ["getrandom"] }
 calamine = { version = "0.37", default-features = false }
 encoding_rs = "0.8"
 docx-rs = "0.4"
@@ -39,6 +40,7 @@ tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
+x25519-dalek = { version = "2", features = ["getrandom", "static_secrets"] }
 xiaoban-agent.workspace = true
 xiaoban-i18n.workspace = true
 xiaoban-protocol.workspace = true

@@ -55,6 +55,7 @@ export type Request =
       api: ModelApi | null;
     }
   | { type: "select_model"; provider: ProviderId; model: string }
+  | { type: "share_provider_keys"; publicKey: string }
   | { type: "preferences" }
   | { type: "set_autonomy"; level: AutonomyLevel }
   | { type: "remember"; subject: string; value: string }

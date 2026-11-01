@@ -22,6 +22,7 @@ mod git_ops;
 mod github;
 mod handlers;
 mod interpret;
+mod key_share;
 mod kitchen;
 mod ledger;
 mod ledger_import;

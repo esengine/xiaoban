@@ -76,6 +76,9 @@ pub enum Request {
         provider: ProviderId,
         model: String,
     },
+    ShareProviderKeys {
+        public_key: String,
+    },
     Preferences,
     SetAutonomy {
         level: AutonomyLevel,
@@ -719,6 +722,12 @@ pub enum Response {
     },
     ContextUsage {
         usage: crate::ContextUsage,
+    },
+    ProviderKeys {
+        public_key: String,
+        nonce: String,
+        ciphertext: String,
+        model: Option<ModelInfo>,
     },
     Plan {
         plan: Option<crate::Plan>,

@@ -211,6 +211,13 @@ pub async fn configure(
     })
 }
 
+pub async fn secret(
+    state: &SharedState,
+    provider: ProviderId,
+) -> Result<Option<String>, ProtocolError> {
+    load_secret(&state.secrets, provider).await
+}
+
 pub async fn select(
     state: &SharedState,
     provider: ProviderId,

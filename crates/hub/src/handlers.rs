@@ -113,6 +113,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             }
             model::select(state, provider, model).await
         }
+        Request::ShareProviderKeys { public_key } => {
+            crate::key_share::share(state, &public_key).await
+        }
         Request::UsageSummary => usage(state).await,
         Request::Preferences => Ok(Response::Preferences {
             preferences: preferences::load(state).await?,

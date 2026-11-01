@@ -101,6 +101,13 @@ export type Response =
   | { type: "weather"; weather: WeatherView }
   | { type: "daily_layout"; layout: DailyLayout }
   | { type: "context_usage"; usage: ContextUsage }
+  | {
+      type: "provider_keys";
+      publicKey: string;
+      nonce: string;
+      ciphertext: string;
+      model: ModelInfo | null;
+    }
   | { type: "plan"; plan: Plan | null }
   | { type: "plans"; plans: Array<Plan> }
   | { type: "capabilities"; capabilities: Array<Capability> }
