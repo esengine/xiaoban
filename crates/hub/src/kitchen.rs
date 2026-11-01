@@ -30,7 +30,7 @@ pub async fn load(state: &SharedState) -> Kitchen {
         .flatten()
         .and_then(|text| serde_json::from_str(&text).ok())
         .unwrap_or_default();
-    kitchen.thread_id = state.store.setting_owned(THREAD_KEY.to_owned()).await.ok().flatten();
+    kitchen.thread_id = thread(state).await;
     kitchen
 }
 
@@ -48,7 +48,13 @@ pub async fn save(state: &SharedState, mut kitchen: Kitchen) -> Kitchen {
 }
 
 pub async fn thread(state: &SharedState) -> Option<String> {
-    state.store.setting_owned(THREAD_KEY.to_owned()).await.ok().flatten()
+    state
+        .store
+        .setting_owned(THREAD_KEY.to_owned())
+        .await
+        .ok()
+        .flatten()
+        .filter(|id| !id.is_empty())
 }
 
 pub async fn is_kitchen(state: &SharedState, thread_id: &str) -> bool {
@@ -196,8 +202,9 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
             "why": text(l, keys::TOOL_KITCHEN_DISH_WHY),
             "uses": strings(l, keys::TOOL_KITCHEN_DISH_USES),
             "missing": strings(l, keys::TOOL_KITCHEN_DISH_MISSING),
+            "photo_query": text(l, keys::TOOL_KITCHEN_DISH_PHOTO),
         },
-        "required": ["name", "minutes", "why", "uses", "missing"],
+        "required": ["name", "minutes", "why", "uses", "missing", "photo_query"],
         "additionalProperties": false,
     });
     vec![
@@ -251,8 +258,23 @@ struct FridgeArgs {
 }
 
 #[derive(Deserialize)]
+struct DishArg {
+    name: String,
+    #[serde(default)]
+    minutes: u32,
+    #[serde(default)]
+    why: String,
+    #[serde(default)]
+    uses: Vec<String>,
+    #[serde(default)]
+    missing: Vec<String>,
+    #[serde(default)]
+    photo_query: String,
+}
+
+#[derive(Deserialize)]
 struct DishesArgs {
-    dishes: Vec<Dish>,
+    dishes: Vec<DishArg>,
 }
 
 #[derive(Deserialize)]
@@ -298,7 +320,32 @@ impl HubTools<'_> {
                 let Ok(args) = serde_json::from_str::<DishesArgs>(arguments) else {
                     return error("arguments must be {dishes: [{name, minutes, why, uses, missing}]}");
                 };
-                kitchen.dishes = args.dishes.into_iter().take(MAX_DISHES).collect();
+                kitchen.dishes = args
+                    .dishes
+                    .into_iter()
+                    .take(MAX_DISHES)
+                    .map(|dish| Dish {
+                        name: dish.name,
+                        minutes: dish.minutes,
+                        why: dish.why,
+                        uses: dish.uses,
+                        missing: dish.missing,
+                        photo_query: dish.photo_query,
+                        ..Dish::default()
+                    })
+                    .collect();
+                let state = std::sync::Arc::clone(self.state);
+                let dishes = kitchen.dishes.clone();
+                tokio::spawn(async move {
+                    let pictured = crate::dish_photos::fill(&state, dishes).await;
+                    let mut latest = load(&state).await;
+                    for dish in &mut latest.dishes {
+                        if let Some(found) = pictured.iter().find(|item| item.name == dish.name) {
+                            dish.image.clone_from(&found.image);
+                        }
+                    }
+                    save(&state, latest).await;
+                });
             }
             PREFERENCES => {
                 let Ok(args) = serde_json::from_str::<PreferenceArgs>(arguments) else {
@@ -344,6 +391,13 @@ pub async fn handle(
         Request::AddMissingToShopping => add_missing(state).await,
         Request::ToggleShopping { name, done } => toggle_item(state, &name, done).await,
         Request::ClearBought => clear_bought(state).await,
+        Request::ResetKitchen => {
+            let _ = state.store.set_setting_owned(THREAD_KEY.to_owned(), String::new()).await;
+            let _ = state.store.set_setting_owned(KEY.to_owned(), String::new()).await;
+            let kitchen = load(state).await;
+            state.publish(Event::KitchenUpdated { kitchen: kitchen.clone() });
+            kitchen
+        }
         _ => load(state).await,
     };
     Ok(Response::Kitchen { kitchen })

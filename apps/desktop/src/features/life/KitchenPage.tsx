@@ -11,6 +11,23 @@ import { KitchenChat } from "./KitchenChat.tsx";
 
 const IMAGE = /\.(png|jpe?g|heic|webp|gif)$/i;
 
+export function DishCover({ name, image }: { name: string; image: string | null }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <span className="dish__cover" data-tone={toneOf(name)} aria-hidden="true">
+      {image && !broken && (
+        <img
+          src={image}
+          alt=""
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
+        />
+      )}
+    </span>
+  );
+}
+
 export function toneOf(name: string): number {
   let value = 0;
   for (const char of name) value = (value * 31 + (char.codePointAt(0) ?? 0)) % 997;
@@ -41,7 +58,7 @@ function DishCard({ dish, onToggle }: { dish: Dish; onToggle: () => void }) {
   const { t } = useI18n();
   return (
     <button type="button" className="dish" aria-pressed={dish.selected} onClick={onToggle}>
-      <span className="dish__cover" data-tone={toneOf(dish.name)} aria-hidden="true" />
+      <DishCover name={dish.name} image={dish.image} />
       <span className="dish__body">
         <b className="dish__name">{dish.name}</b>
         <span className="dish__meta">

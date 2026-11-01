@@ -7,4 +7,6 @@ export type Dish = {
   uses: Array<string>;
   missing: Array<string>;
   selected: boolean;
+  photoQuery: string;
+  image: string | null;
 };

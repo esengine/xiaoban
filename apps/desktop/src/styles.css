@@ -8427,3 +8427,16 @@ button.sent-files__image {
 .kitchen-chat__input input:focus {
   border-color: var(--color-accent);
 }
+
+.dish__cover {
+  position: relative;
+  overflow: hidden;
+}
+
+.dish__cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

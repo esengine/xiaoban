@@ -3,7 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
-import { toneOf } from "./KitchenPage.tsx";
+import { DishCover } from "./KitchenPage.tsx";
 
 function greetingKey(hour: number) {
   if (hour < 11) return "daily-morning" as const;
@@ -97,11 +97,7 @@ export function DailyPage({
                       className="daily__dish"
                       onClick={onOpenKitchen}
                     >
-                      <span
-                        className="dish__cover"
-                        data-tone={toneOf(dish.name)}
-                        aria-hidden="true"
-                      />
+                      <DishCover name={dish.name} image={dish.image} />
                       <b>{dish.name}</b>
                       <span>
                         {t("kitchen-minutes", { minutes: dish.minutes })}

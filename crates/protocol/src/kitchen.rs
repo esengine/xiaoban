@@ -17,6 +17,8 @@ pub struct Dish {
     pub uses: Vec<String>,
     pub missing: Vec<String>,
     pub selected: bool,
+    pub photo_query: String,
+    pub image: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]

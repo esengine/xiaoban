@@ -119,4 +119,5 @@ export type Request =
   | { type: "select_dish"; name: string; selected: boolean }
   | { type: "add_missing_to_shopping" }
   | { type: "toggle_shopping"; name: string; done: boolean }
-  | { type: "clear_bought" };
+  | { type: "clear_bought" }
+  | { type: "reset_kitchen" };

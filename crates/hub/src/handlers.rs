@@ -187,7 +187,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::SelectDish { .. }
         | Request::AddMissingToShopping
         | Request::ToggleShopping { .. }
-        | Request::ClearBought) => crate::kitchen::handle(state, request).await,
+        | Request::ClearBought
+        | Request::ResetKitchen) => crate::kitchen::handle(state, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

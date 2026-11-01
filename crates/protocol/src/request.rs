@@ -293,6 +293,7 @@ pub enum Request {
         done: bool,
     },
     ClearBought,
+    ResetKitchen,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

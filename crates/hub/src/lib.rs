@@ -11,6 +11,7 @@ mod conflicts;
 mod config;
 mod confirms;
 mod discovery;
+mod dish_photos;
 mod error;
 mod file_tools;
 mod files;
