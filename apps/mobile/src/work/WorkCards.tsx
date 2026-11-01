@@ -40,7 +40,7 @@ function CardShell({
   children,
   flush = false,
 }: {
-  width: number;
+  width: number | "100%";
   label: string;
   onPress: () => void;
   children: ReactNode;
@@ -65,7 +65,6 @@ function CardShell({
 
 export function NoteCard({ text }: { text: string }) {
   const { t } = useI18n();
-  const width = useCardWidth();
   const outline = markdownOutline(text);
   const title = outline.title ?? t("md-card-untitled");
   const shown = outline.sections.slice(0, 3);
@@ -80,7 +79,7 @@ export function NoteCard({ text }: { text: string }) {
     });
   };
   return (
-    <CardShell width={width} label={title} onPress={open}>
+    <CardShell width="100%" label={title} onPress={open}>
       <View style={styles.head}>
         <View style={[styles.tile, styles.tileMd]}>
           <Text style={[styles.tileText, styles.tileTextMd]}>{t("md-card-icon")}</Text>
