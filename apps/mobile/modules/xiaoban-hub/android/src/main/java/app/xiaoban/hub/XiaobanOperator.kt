@@ -11,12 +11,14 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import org.json.JSONArray
 import org.json.JSONObject
 
 object XiaobanOperator {
   private const val TAG = "XiaobanOperator"
-  private const val SETTLE_MS = 3000L
+  private const val SETTLE_MS = 10000L
+  private val SYSTEM_PROMPTS = setOf("android", "com.android.systemui", "com.miui.securitycenter", "com.lbe.security.miui", "com.android.permissioncontroller")
   private const val PAUSE_LIMIT_MS = 10 * 60 * 1000L
   private const val STOP_MEMORY_MS = 8000L
   private const val OWN_ACTION_MS = 1500L
@@ -29,6 +31,7 @@ object XiaobanOperator {
 
   private val lock = Object()
   private var nodes: List<AccessibilityNodeInfo> = emptyList()
+  private var labels: List<String> = emptyList()
   private var step = 0
   private var paused = false
   private var stoppedAt = 0L
@@ -127,21 +130,45 @@ object XiaobanOperator {
     return ok()
   }
 
-  private fun foreground(app: String): AccessibilityNodeInfo {
+  private fun windowOf(app: String): AccessibilityNodeInfo? {
     val service = service()
-    var root = service.rootInActiveWindow
-    if (root?.packageName?.toString() != app) {
-      val opened = open(app)
-      if (opened.has("error")) throw IllegalStateException(opened.getString("error"))
-      val deadline = SystemClock.uptimeMillis() + SETTLE_MS
-      while (SystemClock.uptimeMillis() < deadline) {
-        Thread.sleep(150)
-        root = service.rootInActiveWindow
-        if (root?.packageName?.toString() == app) break
-      }
+    service.rootInActiveWindow?.takeIf { it.packageName?.toString() == app }?.let { return it }
+    return runCatching {
+      service.windows
+        .filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+        .firstNotNullOfOrNull { window -> window.root?.takeIf { it.packageName?.toString() == app } }
+    }.getOrNull()
+  }
+
+  private fun foreground(app: String): AccessibilityNodeInfo {
+    windowOf(app)?.let { return it }
+    val opened = open(app)
+    if (opened.has("error")) throw IllegalStateException(opened.getString("error"))
+    val deadline = SystemClock.uptimeMillis() + SETTLE_MS
+    while (SystemClock.uptimeMillis() < deadline) {
+      Thread.sleep(200)
+      windowOf(app)?.let { return it }
     }
-    return root?.takeIf { it.packageName?.toString() == app }
-      ?: throw IllegalStateException("could not bring the app to the front; tell the user to open it")
+    val front = service().rootInActiveWindow?.packageName?.toString()
+    if (front != null && front in SYSTEM_PROMPTS) {
+      throw IllegalStateException("a system prompt is asking whether Xiaoban may open this app; ask the user to tap Allow (ideally choose to always allow), then look at the app again")
+    }
+    throw IllegalStateException("the app is still starting (splash screen or ad); wait a moment and call look_at_app again before giving up")
+  }
+
+  private fun relocate(stale: AccessibilityNodeInfo, label: String): AccessibilityNodeInfo? {
+    val app = stale.packageName?.toString() ?: return null
+    val root = windowOf(app) ?: return null
+    val queue = ArrayDeque(listOf(root))
+    while (queue.isNotEmpty()) {
+      val node = queue.removeFirst()
+      for (index in 0 until node.childCount) node.getChild(index)?.let { queue.addLast(it) }
+      if (!node.isVisibleToUser) continue
+      if (labelOf(node) == label && node.isEditable == stale.isEditable &&
+        (node.isClickable == stale.isClickable || node.isEditable)
+      ) return node
+    }
+    return null
   }
 
   private fun labelOf(node: AccessibilityNodeInfo): String {
@@ -166,7 +193,10 @@ object XiaobanOperator {
       val useful = node.isClickable || node.isEditable || node.isCheckable || labelOf(node).isNotEmpty()
       if (useful && (node.isEditable || labelOf(node).isNotEmpty())) found.add(node)
     }
-    synchronized(lock) { nodes = found }
+    synchronized(lock) {
+      nodes = found
+      labels = found.map { labelOf(it) }
+    }
     val elements = JSONArray()
     for (node in found) {
       val role = when {
@@ -229,9 +259,11 @@ object XiaobanOperator {
   private fun act(request: JSONObject): JSONObject {
     gate()?.let { return it }
     val index = request.getInt("index")
-    val node = synchronized(lock) { nodes.getOrNull(index) }
+    val remembered = synchronized(lock) { nodes.getOrNull(index) }
       ?: return failure("that element is gone; look at the app again")
-    if (!node.refresh()) return failure("the screen changed; look at the app again")
+    val known = synchronized(lock) { labels.getOrNull(index) } ?: ""
+    val node = if (remembered.refresh()) remembered else relocate(remembered, known)
+      ?: return failure("the page reloaded and that element is no longer on screen; call look_at_app again and continue, the app itself works fine")
     val label = labelOf(node)
     val press = request.optString("do") == "press"
     if (press && isHandover(label)) {
@@ -287,9 +319,38 @@ object XiaobanOperator {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
           focus?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id) == true
       }
-      else -> return failure("on a phone only back, home and enter are available")
+      "scroll down", "scroll up", "page down", "page up" -> {
+        val forward = combo.trim().lowercase().endsWith("down")
+        val target = scrollable(service.rootInActiveWindow)
+          ?: return failure("nothing on this screen can scroll")
+        lastAction = SystemClock.uptimeMillis()
+        target.performAction(
+          if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+        )
+      }
+      else -> return failure("on a phone the keys are: back, home, enter, scroll down, scroll up")
     }
     return if (done) ok() else failure("the phone did not accept that key")
+  }
+
+  private fun scrollable(root: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+    root ?: return null
+    var best: AccessibilityNodeInfo? = null
+    var area = 0
+    val queue = ArrayDeque(listOf(root))
+    val bounds = Rect()
+    while (queue.isNotEmpty()) {
+      val node = queue.removeFirst()
+      for (index in 0 until node.childCount) node.getChild(index)?.let { queue.addLast(it) }
+      if (!node.isScrollable || !node.isVisibleToUser) continue
+      node.getBoundsInScreen(bounds)
+      val size = bounds.width() * bounds.height()
+      if (size > area) {
+        area = size
+        best = node
+      }
+    }
+    return best
   }
 
   private fun type(value: String): JSONObject {
