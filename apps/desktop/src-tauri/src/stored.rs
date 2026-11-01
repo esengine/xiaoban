@@ -4,7 +4,7 @@ use tauri_plugin_opener::OpenerExt;
 
 fn existing(path: &str) -> Result<std::path::PathBuf, String> {
     let file = std::path::PathBuf::from(path);
-    if file.is_file() {
+    if file.exists() {
         Ok(file)
     } else {
         Err("the file is gone".to_owned())
@@ -95,4 +95,52 @@ pub async fn file_save_as(app: AppHandle, path: String, name: String) -> Result<
     })
     .await
     .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(folder) = app.dialog().file().blocking_pick_folder() else {
+            return Ok(None);
+        };
+        let folder = folder.into_path().map_err(|error| error.to_string())?;
+        Ok(Some(folder.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+const EDITORS: [&str; 5] = ["Cursor", "Visual Studio Code", "Zed", "Sublime Text", "Nova"];
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn open_in_editor(app: AppHandle, path: String) -> Result<(), String> {
+    let file = existing(&path)?;
+    if cfg!(target_os = "macos") {
+        for editor in EDITORS {
+            let bundle = format!("/Applications/{editor}.app");
+            if std::path::Path::new(&bundle).exists() {
+                let opened = std::process::Command::new("open")
+                    .arg("-a")
+                    .arg(&bundle)
+                    .arg(&file)
+                    .status();
+                if opened.is_ok_and(|status| status.success()) {
+                    return Ok(());
+                }
+            }
+        }
+    }
+    if cfg!(windows) {
+        let opened = std::process::Command::new("cmd")
+            .args(["/C", "code"])
+            .arg(&file)
+            .status();
+        if opened.is_ok_and(|status| status.success()) {
+            return Ok(());
+        }
+    }
+    app.opener()
+        .open_path(file.to_string_lossy(), None::<&str>)
+        .map_err(|error| error.to_string())
 }

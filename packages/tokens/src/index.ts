@@ -30,6 +30,16 @@ export const color = {
   memoryLikes: "#8E5BD1",
   memoryPlans: "#C9A227",
   memoryOther: "#8A90A0",
+  dangerSoft: "#FBE7E7",
+  diffAdded: "#E9F6EE",
+  diffRemoved: "#FCEDED",
+  diffAddedBar: "#6BBF8E",
+  changeInk: "#8A5A00",
+  changeSoft: "#FBF0D9",
+  codePick: "#DCE3FA",
+  panelSoft: "#FBFBFC",
+  terminalOk: "#6BBF8E",
+  terminalFail: "#F08A8A",
 } as const;
 
 export const dark = {

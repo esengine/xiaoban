@@ -1,9 +1,13 @@
 import type {
   AutonomyLevel,
+  CommandRun,
   ConfirmChoice,
   ContextNote,
   Device,
+  DirEntry,
   Failure,
+  FileDiff,
+  GitInfo,
   Interpretation,
   Location,
   Memory,
@@ -22,9 +26,10 @@ import type {
   Trip,
   TripCalendar,
   Usage,
+  Workspace,
 } from "@xiaoban/protocol";
 import type { HubClient } from "./client.ts";
-import { applyEvent, type HubState, initialHubState, tripKey } from "./state.ts";
+import { applyEvent, type HubState, initialHubState, tripKey, upsertWorkspace } from "./state.ts";
 
 const PAGE = 50;
 
@@ -366,9 +371,86 @@ export class HubStore {
     await this.client.request({ type: "add_note", turnId, text }, "ack");
   }
 
+  async refreshWorkspaces(): Promise<Workspace[]> {
+    const { workspaces } = await this.client.request({ type: "list_workspaces" }, "workspaces");
+    this.#update((state) => ({ ...state, workspaces }));
+    return workspaces;
+  }
+
+  async createWorkspace(path: string): Promise<Workspace> {
+    const { workspace } = await this.client.request(
+      { type: "create_workspace", path },
+      "workspace",
+    );
+    this.#update((state) => ({
+      ...state,
+      workspaces: upsertWorkspace(state.workspaces, workspace),
+    }));
+    return workspace;
+  }
+
+  async renameWorkspace(workspaceId: string, name: string): Promise<void> {
+    await this.client.request({ type: "rename_workspace", workspaceId, name }, "workspace");
+  }
+
+  async removeWorkspace(workspaceId: string): Promise<void> {
+    await this.client.request({ type: "remove_workspace", workspaceId }, "ack");
+  }
+
+  async listDir(workspaceId: string, path: string): Promise<DirEntry[]> {
+    const { entries } = await this.client.request({ type: "list_dir", workspaceId, path }, "dir");
+    return entries;
+  }
+
+  async readWorkspaceFile(
+    workspaceId: string,
+    path: string,
+  ): Promise<{ text: string; truncated: boolean; binary: boolean }> {
+    const { text, truncated, binary } = await this.client.request(
+      { type: "read_workspace_file", workspaceId, path },
+      "workspace_file",
+    );
+    return { text, truncated, binary };
+  }
+
+  async threadChanges(threadId: string): Promise<FileDiff[]> {
+    const { files } = await this.client.request({ type: "thread_changes", threadId }, "changes");
+    return files;
+  }
+
+  async revertChange(threadId: string, path: string, hunk: number | null): Promise<FileDiff[]> {
+    const { files } = await this.client.request(
+      { type: "revert_change", threadId, path, hunk },
+      "changes",
+    );
+    return files;
+  }
+
+  async gitInfo(workspaceId: string): Promise<GitInfo> {
+    const { git } = await this.client.request({ type: "git_info", workspaceId }, "git");
+    return git;
+  }
+
+  async loadCommands(workspaceId: string): Promise<CommandRun[]> {
+    const { commands } = await this.client.request(
+      { type: "list_commands", workspaceId },
+      "commands",
+    );
+    this.#update((state) => ({
+      ...state,
+      commands: { ...state.commands, [workspaceId]: commands },
+    }));
+    return commands;
+  }
+
+  async runCommand(workspaceId: string, command: string): Promise<void> {
+    await this.client.request({ type: "run_command", workspaceId, command }, "ack");
+  }
+
   #refreshInBackground(): void {
     Promise.all([
       this.refreshThreads(),
+      this.refreshWorkspaces(),
       this.refreshModel(),
       this.refreshPreferences(),
       this.refreshMemories(),

@@ -63,12 +63,99 @@ export function useConfirmText(confirm: ConfirmRequest) {
       ] satisfies Choice[],
     };
   }
+  if (kind.kind === "run_command") {
+    return {
+      title: t("confirm-run-title"),
+      hint: t("confirm-run-cwd", { cwd: kind.cwd }),
+      detail: kind.command,
+      choices: [
+        { choice: "once", label: t("confirm-run-once"), primary: true },
+        ...(kind.rule
+          ? [{ choice: "always" as const, label: t("confirm-run-always", { rule: kind.rule }) }]
+          : []),
+        { choice: "no", label: t("confirm-run-no") },
+      ] satisfies Choice[],
+    };
+  }
+  if (kind.kind === "read_outside") {
+    return {
+      title: t("confirm-read-title"),
+      hint: "",
+      detail: kind.path,
+      choices: [
+        { choice: "once", label: t("confirm-run-once"), primary: true },
+        { choice: "always", label: t("confirm-read-always", { folder: kind.folder }) },
+        { choice: "no", label: t("confirm-run-no") },
+      ] satisfies Choice[],
+    };
+  }
+  if (kind.kind === "write_outside") {
+    return {
+      title: t("confirm-write-title"),
+      hint: "",
+      detail: kind.path,
+      choices: [
+        { choice: "once", label: t("confirm-run-once"), primary: true },
+        { choice: "always", label: t("confirm-write-always", { folder: kind.folder }) },
+        { choice: "no", label: t("confirm-run-no") },
+      ] satisfies Choice[],
+    };
+  }
   return {
     title: t("confirm-permissions-title"),
     hint: t("confirm-permissions-hint"),
     detail: null,
     choices: [] satisfies Choice[],
   };
+}
+
+const CODE_KINDS = new Set(["run_command", "read_outside", "write_outside"]);
+
+function CodeConfirm({
+  confirm,
+  text,
+  sent,
+  answer,
+}: {
+  confirm: ConfirmRequest;
+  text: ReturnType<typeof useConfirmText>;
+  sent: boolean;
+  answer: (choice: ConfirmChoice) => void;
+}) {
+  const kind = confirm.kind;
+  return (
+    <fieldset className="code-confirm" aria-label={text.title}>
+      <legend className="code-confirm__head">{text.title}</legend>
+      <p className="code-confirm__detail">{text.detail}</p>
+      {text.hint && <p className="code-confirm__hint">{text.hint}</p>}
+      {kind.kind === "write_outside" && kind.preview.length > 0 && (
+        <div className="code-confirm__preview">
+          {kind.preview.map((line, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: preview lines have no identity
+            <div key={index} className="diff-line" data-kind={line.kind}>
+              <span className="diff-line__no">{line.old ?? line.new ?? ""}</span>
+              <span className="diff-line__sign">{line.kind === "added" ? "+" : "-"}</span>
+              <span className="diff-line__text">{line.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="code-confirm__choices">
+        {text.choices.map((item) => (
+          <button
+            key={item.choice}
+            type="button"
+            className="code-confirm__choice"
+            data-primary={item.primary || undefined}
+            disabled={sent}
+            onClick={() => answer(item.choice)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
 }
 
 export function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
@@ -79,6 +166,9 @@ export function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
     setSent(true);
     void store.answerConfirm(confirm.id, choice).catch(() => setSent(false));
   };
+  if (CODE_KINDS.has(confirm.kind.kind)) {
+    return <CodeConfirm confirm={confirm} text={text} sent={sent} answer={answer} />;
+  }
   return (
     <fieldset className="confirm-card" aria-label={text.title}>
       <div className="confirm-card__head">

@@ -34,7 +34,8 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         | FIND_APPS
         | crate::file_tools::FILE_SEARCH
         | crate::file_tools::HISTORY_SEARCH
-        | crate::thread_tools::FIND_THREADS => text(&args, "query"),
+        | crate::thread_tools::FIND_THREADS
+        | crate::code_tools::SEARCH_FILES => text(&args, "query"),
         crate::file_tools::RECALL => text(&args, "galaxy").or_else(|| text(&args, "query")),
         READ_PAGE => text(&args, "url").and_then(|url| site(&url)),
         WEATHER => text(&args, "place"),
@@ -45,6 +46,12 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
         crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
         crate::operate_tools::DO_STEPS => text(&args, "summary"),
+        crate::code_tools::LIST_DIR
+        | crate::code_tools::READ_FILE
+        | crate::code_tools::WRITE_FILE
+        | crate::code_tools::EDIT_FILE
+        | crate::code_tools::GIT_DIFF => text(&args, "path"),
+        crate::code_tools::RUN_COMMAND => text(&args, "command"),
         _ => None,
     }
 }

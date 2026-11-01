@@ -16,6 +16,7 @@ import {
 import { useHub } from "../../app/hub.tsx";
 import { DropZone, SentFiles } from "../attach/Attachments.tsx";
 import { useAttachments } from "../attach/useAttachments.ts";
+import { BranchBar, ChangeCard } from "../code/ChatBits.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
@@ -36,6 +37,7 @@ import {
 import { RichText } from "./RichText.tsx";
 import { SubthreadCards } from "./SubthreadCards.tsx";
 import { ThinkingMenu } from "./ThinkingMenu.tsx";
+import { overSidebar } from "./ThreadList.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
 import { type Row, toRows } from "./versions.ts";
 
@@ -317,7 +319,7 @@ export function ChatPane(props: Props) {
       else if (payload.type === "leave") setDragging(0);
       else if (payload.type === "drop") {
         setDragging(0);
-        void addPaths(payload.paths);
+        if (!overSidebar(payload.position)) void addPaths(payload.paths);
       }
     });
     return () => void stop.then((unlisten) => unlisten());
@@ -426,6 +428,9 @@ export function ChatPane(props: Props) {
     }
     if (attachment?.kind === "subthreads") {
       return <SubthreadCards threadIds={attachment.threadIds} onOpen={props.onOpenThread} />;
+    }
+    if (attachment?.kind === "changes") {
+      return <ChangeCard threadId={threadId} files={attachment.files} />;
     }
     if (attachment?.kind === "service_needed") {
       return <SearchCard threadId={threadId} answered={messages.at(-1)?.id !== message.id} />;
@@ -579,6 +584,7 @@ export function ChatPane(props: Props) {
         )}
         <li ref={end} className="chat__end" aria-hidden="true" />
       </ol>
+      <BranchBar threadId={threadId} />
       <Composer
         busy={Boolean(running)}
         quote={quote}

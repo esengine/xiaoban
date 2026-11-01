@@ -1,4 +1,4 @@
-import { isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
@@ -6,6 +6,7 @@ import type { Quote } from "@xiaoban/protocol";
 import { useCallback, useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
+import { CodePanel } from "../features/code/CodePanel.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
@@ -25,7 +26,7 @@ interface OpenTrip {
 function Home() {
   const { t } = useI18n();
   const store = useHub();
-  const { threads, status, preferences, confirms } = useHubState(store);
+  const { threads, status, preferences, confirms, workspaces } = useHubState(store);
   const consent = confirms.find((confirm) => confirm.kind.kind === "permissions");
   const panels = usePanels();
   const [selected, setSelected] = useState<string | null>(null);
@@ -51,22 +52,52 @@ function Home() {
   const setQuote = (threadId: string, quote: Quote | null) =>
     setQuotes(({ [threadId]: _old, ...rest }) => (quote ? { ...rest, [threadId]: quote } : rest));
 
-  const newThread = useCallback(async () => {
-    setTrip(null);
-    const thread = await store.createThread();
-    setSelected(thread.id);
-  }, [store]);
+  const newThread = useCallback(
+    async (workspaceId?: string) => {
+      setTrip(null);
+      const blank = threads.find(
+        (thread) =>
+          thread.id !== primaryId &&
+          !thread.parentId &&
+          thread.lastMessage === null &&
+          (thread.workspaceId ?? undefined) === workspaceId,
+      );
+      if (blank) {
+        setSelected(blank.id);
+        return;
+      }
+      const thread = await store.createThread(undefined, workspaceId);
+      setSelected(thread.id);
+    },
+    [store, threads, primaryId],
+  );
+
+  const addWorkspace = useCallback(async () => {
+    if (!isTauri()) return;
+    const path = await invoke<string | null>("pick_folder").catch(() => null);
+    if (!path) return;
+    const workspace = await store.createWorkspace(path);
+    await newThread(workspace.id);
+  }, [store, newThread]);
+
+  const activeWorkspace = threads.find((thread) => thread.id === activeId)?.workspaceId ?? null;
+  const codeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspace) ?? null;
+  const workspaceForShortcut = activeWorkspace ?? workspaces[0]?.id;
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n" && !event.shiftKey) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         event.preventDefault();
-        void newThread();
+        if (event.shiftKey) {
+          if (workspaceForShortcut) void newThread(workspaceForShortcut);
+        } else {
+          void newThread();
+        }
       }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [newThread]);
+  }, [newThread, workspaceForShortcut]);
 
   const newThreadWith = async (quote: Quote) => {
     const thread = await store.createThread();
@@ -107,7 +138,8 @@ function Home() {
           primaryId={primaryId}
           activeId={activeId}
           onSelect={setSelected}
-          onNew={() => void newThread()}
+          onNew={(workspaceId) => void newThread(workspaceId)}
+          onAddWorkspace={() => void addWorkspace()}
         />
       </div>
       {activeId ? (
@@ -128,9 +160,25 @@ function Home() {
       ) : (
         <main className="chat" aria-busy="true" />
       )}
-      <div className="panel panel--workspace" data-open={panels.workspace}>
-        <Workspace threadId={activeId} onOpenTrip={openTrip} />
-      </div>
+      {activeId && codeWorkspace ? (
+        <div className="panel panel--code" data-open={panels.workspace}>
+          <CodePanel
+            key={codeWorkspace.id}
+            threadId={activeId}
+            workspace={codeWorkspace}
+            onQuote={(text, focus) => {
+              setQuote(activeId, { text, from: null, at: null, messageId: null });
+              if (focus)
+                document.querySelector<HTMLInputElement>(".composer__field input")?.focus();
+            }}
+            onAsk={(text) => void store.send(activeId, text).catch(() => undefined)}
+          />
+        </div>
+      ) : (
+        <div className="panel panel--workspace" data-open={panels.workspace}>
+          <Workspace threadId={activeId} onOpenTrip={openTrip} />
+        </div>
+      )}
       {consent && <OperateConsent key={consent.id} confirm={consent} />}
     </div>
   );
