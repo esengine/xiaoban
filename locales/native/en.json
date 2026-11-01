@@ -2,6 +2,7 @@
   "CFBundleDisplayName": "Xiaoban",
   "NSCalendarsFullAccessUsageDescription": "Adds trips Xiaoban planned to a separate “Xiaoban trips” calendar.",
   "NSCalendarsUsageDescription": "Adds trips Xiaoban planned to a separate “Xiaoban trips” calendar.",
+  "NSCameraUsageDescription": "Only used to scan the pairing QR code on your computer. Nothing is recorded or saved.",
   "NSLocalNetworkUsageDescription": "Xiaoban looks for your home computer on the local network.",
   "NSLocationUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up.",
   "NSLocationWhenInUseUsageDescription": "Used to guess which city you are in, only when you ask Xiaoban to look it up.",

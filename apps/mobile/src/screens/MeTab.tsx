@@ -48,7 +48,7 @@ const LEVELS: {
 export function MeTab({ store }: { store: HubStore }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
-  const { unpair } = useHubContext();
+  const { unpair, paired, onComputer } = useHubContext();
   const { memories, preferences, threads, devices, hub, status } = useHubState(store);
 
   useEffect(() => {
@@ -154,31 +154,42 @@ export function MeTab({ store }: { store: HubStore }) {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t("me-connected")}</Text>
-        <View style={styles.device}>
-          <View
-            style={[
-              styles.dot,
-              { backgroundColor: status === "open" ? color.tripGreen : color.attention },
-            ]}
-          />
-          <View style={styles.flex}>
-            <Text style={styles.levelName}>{hub?.name ?? t("me-computer")}</Text>
-            <Text style={styles.sub}>
-              {status === "open" ? t("me-computer-online") : t("connection-waiting-for-hub")}
-            </Text>
-          </View>
-        </View>
-        {devices
-          .filter((device) => device.platform !== "desktop")
-          .map((device) => (
-            <View key={device.id} style={styles.device}>
-              <View style={[styles.dot, { backgroundColor: color.lineStrong }]} />
-              <Text style={styles.levelName}>{device.name}</Text>
+        {paired ? (
+          <>
+            <View style={styles.device}>
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: onComputer ? color.tripGreen : color.attention },
+                ]}
+              />
+              <View style={styles.flex}>
+                <Text style={styles.levelName}>
+                  {onComputer ? (hub?.name ?? t("me-computer")) : t("me-computer")}
+                </Text>
+                <Text style={styles.sub}>
+                  {onComputer ? t("me-computer-online") : t("connection-waiting-for-hub")}
+                </Text>
+              </View>
             </View>
-          ))}
-        <Pressable onPress={leave}>
-          <Text style={styles.danger}>{t("me-unpair")}</Text>
-        </Pressable>
+            {onComputer &&
+              devices
+                .filter((device) => device.platform !== "desktop")
+                .map((device) => (
+                  <View key={device.id} style={styles.device}>
+                    <View style={[styles.dot, { backgroundColor: color.lineStrong }]} />
+                    <Text style={styles.levelName}>{device.name}</Text>
+                  </View>
+                ))}
+            <Pressable onPress={leave}>
+              <Text style={styles.danger}>{t("me-unpair")}</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable onPress={() => router.push("/scan")} accessibilityRole="button">
+            <Text style={styles.link}>{t("me-connect-computer")}</Text>
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   );

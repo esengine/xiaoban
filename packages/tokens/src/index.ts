@@ -73,6 +73,9 @@ export const dark = {
   island: "#0B0C0F",
   attentionText: "#F3C9A1",
   islandRing: "#FFFFFF14",
+  scrim: "#00000055",
+  glass: "#FFFFFF26",
+  found: "#3FB37F",
 } as const;
 
 export const radius = {

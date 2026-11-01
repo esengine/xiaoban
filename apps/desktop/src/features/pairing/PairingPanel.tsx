@@ -1,3 +1,4 @@
+import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Device } from "@xiaoban/protocol";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,14 +27,20 @@ function formatCountdown(ms: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
-function pairingLink({ address, port, code }: Pairing): string {
-  const params = new URLSearchParams({ host: address ?? "", port: String(port), code });
+function pairingLink({ address, port, code }: Pairing, name: string | undefined): string {
+  const params = new URLSearchParams({
+    host: address ?? "",
+    port: String(port),
+    code,
+    ...(name ? { name } : {}),
+  });
   return `xiaoban://pair?${params.toString()}`;
 }
 
 export function PairingPanel({ onPaired }: { onPaired?: (device: Device) => void }) {
   const { t } = useI18n();
   const store = useHub();
+  const { hub } = useHubState(store);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [paired, setPaired] = useState<Device | null>(null);
   const notify = useRef(onPaired);
@@ -67,7 +74,7 @@ export function PairingPanel({ onPaired }: { onPaired?: (device: Device) => void
   );
 
   const qr = pairing?.address
-    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(pairingLink(pairing), { border: 1 }))}`
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(pairingLink(pairing, hub?.name), { border: 1 }))}`
     : null;
 
   return (

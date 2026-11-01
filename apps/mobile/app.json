@@ -25,6 +25,13 @@
       "expo-status-bar",
       "expo-localization",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Xiaoban uses the camera only to scan the pairing QR code on your computer.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 import { Mascot } from "../src/components/Mascot.tsx";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
 
@@ -57,9 +58,35 @@ export default function PairScreen() {
         <View style={styles.intro}>
           <Mascot />
           <Text style={styles.title} accessibilityRole="header">
-            {t("onboarding-hello")}
+            {t("pair-title")}
           </Text>
-          <Text style={styles.lead}>{t("pair-home-lead")}</Text>
+          <Text style={styles.lead}>{t("pair-scan-lead")}</Text>
+        </View>
+
+        <Pressable
+          style={styles.scan}
+          onPress={() => router.push("/scan")}
+          accessibilityRole="button"
+        >
+          <Svg
+            width={22}
+            height={22}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={color.ink}
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <Path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M4 12h16" />
+          </Svg>
+          <Text style={styles.scanText}>{t("pair-scan")}</Text>
+        </Pressable>
+
+        <View style={styles.divider}>
+          <View style={styles.rule} />
+          <Text style={styles.dividerText}>{t("pair-or-manual")}</Text>
+          <View style={styles.rule} />
         </View>
 
         <View style={styles.form}>
@@ -95,18 +122,19 @@ export default function PairScreen() {
               {t(error)}
             </Text>
           )}
+          <Pressable
+            style={[styles.submit, ready && styles.submitReady]}
+            disabled={!ready}
+            onPress={() => void submit()}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !ready, busy }}
+          >
+            {busy && <ActivityIndicator color={dark.text} />}
+            <Text style={[styles.submitText, ready && styles.submitTextReady]}>
+              {t(busy ? "pair-submitting" : "pair-submit")}
+            </Text>
+          </Pressable>
         </View>
-
-        <Pressable
-          style={[styles.submit, !ready && styles.disabled]}
-          disabled={!ready}
-          onPress={() => void submit()}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !ready, busy }}
-        >
-          {busy && <ActivityIndicator color={color.ink} />}
-          <Text style={styles.submitText}>{t(busy ? "pair-submitting" : "pair-submit")}</Text>
-        </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -121,8 +149,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: space.xl,
     paddingBottom: space.xl,
-    justifyContent: "space-between",
   },
+  scan: {
+    marginTop: 28,
+    height: 56,
+    borderRadius: radius.lg,
+    backgroundColor: color.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.sm,
+  },
+  scanText: { fontSize: 16, fontWeight: "500", color: color.ink },
+  divider: { marginTop: 26, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 10 },
+  rule: { flex: 1, height: 1, backgroundColor: dark.line },
+  dividerText: { fontSize: 12, color: dark.textMuted },
   intro: {
     paddingTop: 72,
     gap: space.lg,
@@ -138,7 +179,7 @@ const styles = StyleSheet.create({
     color: dark.textSoft,
   },
   form: {
-    gap: space.md,
+    gap: 10,
   },
   input: {
     height: 50,
@@ -161,20 +202,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   submit: {
-    height: 52,
-    borderRadius: radius.lg,
-    backgroundColor: color.surface,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: dark.lineStrong,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: space.sm,
   },
-  disabled: {
-    opacity: 0.5,
-  },
-  submitText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: color.ink,
-  },
+  submitReady: { borderColor: dark.text },
+  submitText: { fontSize: 15, color: dark.textMuted },
+  submitTextReady: { color: dark.text, fontWeight: "500" },
 });

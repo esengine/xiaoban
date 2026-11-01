@@ -30,6 +30,7 @@ interface HubContextValue {
   store: HubStore | null;
   local: HubStore | null;
   onComputer: boolean;
+  paired: boolean;
   pair: (address: string, code: string) => Promise<void>;
   unpair: () => Promise<void>;
   keySaved: (provider: ProviderId, key: string) => Promise<void>;
@@ -166,7 +167,9 @@ export function HubProvider({ children }: { children: ReactNode }) {
         : "ready";
 
   return (
-    <HubContext value={{ phase, store, local, onComputer, pair, unpair, keySaved }}>
+    <HubContext
+      value={{ phase, store, local, onComputer, paired: remote !== null, pair, unpair, keySaved }}
+    >
       {children}
     </HubContext>
   );

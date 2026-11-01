@@ -183,8 +183,8 @@ export default function SetupScreen() {
               ) : (
                 <View />
               )}
-              <Pressable onPress={() => router.push("/pair")}>
-                <Text style={styles.link}>{t("pair-title")}</Text>
+              <Pressable onPress={() => router.push("/scan")}>
+                <Text style={styles.link}>{t("setup-scan")}</Text>
               </Pressable>
             </View>
 
