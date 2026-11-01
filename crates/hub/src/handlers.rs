@@ -58,7 +58,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             files,
             threads,
         } => {
-            if !local && !files.is_empty() {
+            if !local && files.iter().any(|file| !state.files.is_upload(file)) {
                 return Err(bad_request("files can only be attached on this computer"));
             }
             let mut context = context;
@@ -112,6 +112,19 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 ));
             }
             model::select(state, provider, model).await
+        }
+        Request::UploadFile { name, data } => {
+            use base64::Engine;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(data.as_bytes())
+                .map_err(|_| bad_request("data must be base64"))?;
+            let path = state
+                .files
+                .upload(&name, &bytes)
+                .map_err(|failure| bad_request(&failure))?;
+            Ok(Response::Uploaded {
+                path: path.to_string_lossy().into_owned(),
+            })
         }
         Request::ShareProviderKeys { public_key } => {
             crate::key_share::share(state, &public_key).await

@@ -171,6 +171,36 @@ impl Files {
         self.dir.join(format!("{id}.{}", extension(name)))
     }
 
+    fn uploads(&self) -> PathBuf {
+        self.dir.with_file_name("uploads")
+    }
+
+    pub fn upload(&self, name: &str, bytes: &[u8]) -> Result<PathBuf, String> {
+        if bytes.len() as u64 > MAX_BYTES {
+            return Err(format!("{name} is larger than 20MB"));
+        }
+        let safe = Path::new(name)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.is_empty() && !name.starts_with('.'))
+            .unwrap_or("file");
+        let dir = self.uploads().join(uuid::Uuid::now_v7().to_string());
+        std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+        let path = dir.join(safe);
+        std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
+        Ok(path)
+    }
+
+    pub fn is_upload(&self, path: &str) -> bool {
+        let (Ok(path), Ok(root)) = (
+            std::fs::canonicalize(path),
+            std::fs::canonicalize(self.uploads()),
+        ) else {
+            return false;
+        };
+        path.starts_with(root)
+    }
+
     pub fn ingest(&self, source: &Path) -> Result<FileInfo, String> {
         let name = source
             .file_name()
@@ -372,6 +402,22 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("xiaoban-files-{}", uuid::Uuid::now_v7()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn only_uploaded_files_pass_the_upload_check() {
+        let dir = temp();
+        let files = Files::new(dir.join("store"));
+        let photo = files.upload("../../photo.jpg", b"jpeg").unwrap();
+        assert_eq!(photo.file_name().unwrap(), "photo.jpg");
+        assert!(files.is_upload(photo.to_str().unwrap()));
+        let elsewhere = dir.join("secret.txt");
+        std::fs::write(&elsewhere, "x").unwrap();
+        assert!(!files.is_upload(elsewhere.to_str().unwrap()));
+        let escape = photo.parent().unwrap().join("..").join("..").join("..").join("secret.txt");
+        assert!(!files.is_upload(escape.to_str().unwrap()));
+        assert!(files.upload("big.bin", &vec![0; usize::try_from(MAX_BYTES).unwrap() + 1]).is_err());
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

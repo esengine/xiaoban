@@ -79,6 +79,10 @@ pub enum Request {
     ShareProviderKeys {
         public_key: String,
     },
+    UploadFile {
+        name: String,
+        data: String,
+    },
     Preferences,
     SetAutonomy {
         level: AutonomyLevel,
@@ -722,6 +726,9 @@ pub enum Response {
     },
     ContextUsage {
         usage: crate::ContextUsage,
+    },
+    Uploaded {
+        path: String,
     },
     ProviderKeys {
         public_key: String,
