@@ -3,7 +3,14 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Credential } from "@xiaoban/protocol";
 import { createContext, type ReactNode, use, useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { hubUrl, loadSession, newDeviceId, type Session, saveSession } from "./session.ts";
+import {
+  clearSession,
+  hubUrl,
+  loadSession,
+  newDeviceId,
+  type Session,
+  saveSession,
+} from "./session.ts";
 
 type Phase = "loading" | "unpaired" | "ready";
 
@@ -11,6 +18,7 @@ interface HubContextValue {
   phase: Phase;
   store: HubStore | null;
   pair: (address: string, code: string) => Promise<void>;
+  unpair: () => Promise<void>;
 }
 
 export class MissingDeviceToken extends Error {
@@ -67,7 +75,14 @@ export function HubProvider({ children }: { children: ReactNode }) {
     [createStore],
   );
 
-  return <HubContext value={{ phase, store, pair }}>{children}</HubContext>;
+  const unpair = useCallback(async () => {
+    store?.client.close();
+    await clearSession();
+    setStore(null);
+    setPhase("unpaired");
+  }, [store]);
+
+  return <HubContext value={{ phase, store, pair, unpair }}>{children}</HubContext>;
 }
 
 export function useHubContext(): HubContextValue {

@@ -20,9 +20,9 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: color.ground },
           }}
         >
-          <Stack.Screen name="index" options={{ title: t("app-name") }} />
+          <Stack.Screen name="index" options={{ headerShown: false, title: t("app-name") }} />
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
-          <Stack.Screen name="thread/[id]" options={{ title: "" }} />
+          <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />
         </Stack>
       </HubProvider>
     </I18nProvider>

@@ -1,86 +1,39 @@
-import type { HubStore } from "@xiaoban/client";
-import { useHubState } from "@xiaoban/client/react";
-import { useI18n } from "@xiaoban/i18n/react";
-import type { Thread } from "@xiaoban/protocol";
-import { color, space } from "@xiaoban/tokens";
-import { Redirect, router } from "expo-router";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { ModelBadge } from "../src/components/ModelBadge.tsx";
+import { color } from "@xiaoban/tokens";
+import { Redirect } from "expo-router";
+import { useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
-import { shared } from "../src/theme.ts";
+import { ChatsTab } from "../src/screens/ChatsTab.tsx";
+import { DailyTab } from "../src/screens/DailyTab.tsx";
+import { MeTab } from "../src/screens/MeTab.tsx";
+import { SkillsTab } from "../src/screens/SkillsTab.tsx";
+import { type Tab, TabBar } from "../src/ui/TabBar.tsx";
+
+let remembered: Tab = "chats";
 
 export default function HomeScreen() {
   const { phase, store } = useHubContext();
-  if (phase === "loading") return <View style={shared.screen} />;
+  const [tab, setTab] = useState<Tab>(remembered);
+  if (phase === "loading") return <View style={styles.screen} />;
   if (phase === "unpaired" || !store) return <Redirect href="/pair" />;
-  return <ThreadList store={store} />;
-}
-
-function ThreadList({ store }: { store: HubStore }) {
-  const { t } = useI18n();
-  const { threads, status, model } = useHubState(store);
-
-  const create = async () => {
-    const thread = await store.createThread();
-    router.push({ pathname: "/thread/[id]", params: { id: thread.id } });
+  const change = (next: Tab) => {
+    remembered = next;
+    setTab(next);
   };
-
   return (
-    <View style={shared.screen}>
-      {status !== "open" && <Text style={styles.status}>{t("connection-waiting-for-hub")}</Text>}
-      {status === "open" && <ModelBadge model={model} />}
-      <FlatList<Thread>
-        data={threads}
-        keyExtractor={(thread) => thread.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.row}
-            accessibilityRole="button"
-            onPress={() => router.push({ pathname: "/thread/[id]", params: { id: item.id } })}
-          >
-            <Text style={styles.title}>{item.title ?? t("thread-untitled")}</Text>
-          </Pressable>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>{t("thread-empty")}</Text>}
-      />
-      <Pressable
-        style={[shared.primaryButton, styles.fab]}
-        onPress={create}
-        accessibilityRole="button"
-      >
-        <Text style={shared.primaryButtonText}>{t("thread-new")}</Text>
-      </Pressable>
+    <View style={styles.screen}>
+      <View style={styles.body}>
+        {tab === "chats" && <ChatsTab store={store} />}
+        {tab === "daily" && <DailyTab store={store} />}
+        {tab === "skills" && <SkillsTab store={store} />}
+        {tab === "me" && <MeTab store={store} />}
+      </View>
+      <TabBar current={tab} onChange={change} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  status: {
-    textAlign: "center",
-    fontSize: 12,
-    color: color.attentionInk,
-    paddingVertical: space.sm,
-  },
-  list: {
-    padding: space.lg,
-    gap: space.sm,
-  },
-  row: {
-    backgroundColor: color.surface,
-    borderRadius: 14,
-    padding: space.lg,
-  },
-  title: {
-    fontSize: 15,
-    color: color.ink,
-  },
-  empty: {
-    textAlign: "center",
-    color: color.muted,
-    marginTop: 80,
-  },
-  fab: {
-    margin: space.lg,
-  },
+  screen: { flex: 1, backgroundColor: color.ground },
+  body: { flex: 1 },
 });
