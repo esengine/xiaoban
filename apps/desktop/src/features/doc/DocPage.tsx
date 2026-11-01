@@ -594,6 +594,30 @@ export function DocPage({
             </div>
           )}
           <div ref={paper} className="doc-paper">
+            {!compare && current.marks.length >= 3 && (
+              <div className="doc-marks">
+                <span>{t("doc-marks-count", { count: current.marks.length })}</span>
+                <button
+                  type="button"
+                  className="code-link"
+                  onClick={() =>
+                    void store.resolveAllMarks(current.id, true).catch(() => undefined)
+                  }
+                >
+                  {t("doc-marks-keep-all")}
+                </button>
+                <button
+                  type="button"
+                  className="code-link"
+                  data-danger
+                  onClick={() =>
+                    void store.resolveAllMarks(current.id, false).catch(() => undefined)
+                  }
+                >
+                  {t("doc-marks-undo-all")}
+                </button>
+              </div>
+            )}
             {shown.map((block, index) => {
               number = block.kind === "number" ? number + 1 : 0;
               const changed = compare

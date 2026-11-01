@@ -11154,3 +11154,25 @@ button.sent-files__image {
     display: none;
   }
 }
+
+.doc-marks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-diff-added);
+  color: var(--color-success);
+  font-size: 12.5px;
+}
+
+.doc-marks > span {
+  flex: 1;
+}
+
+@media print {
+  .doc-marks {
+    display: none;
+  }
+}

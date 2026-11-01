@@ -371,6 +371,10 @@ pub enum Request {
         block_id: String,
         keep: bool,
     },
+    ResolveAllMarks {
+        id: String,
+        keep: bool,
+    },
     ResolveSuggestion {
         id: String,
         suggestion_id: String,

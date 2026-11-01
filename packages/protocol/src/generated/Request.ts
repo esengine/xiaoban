@@ -151,6 +151,7 @@ export type Request =
   | { type: "open_doc"; id: string }
   | { type: "set_doc_blocks"; id: string; blocks: Array<DocBlock> }
   | { type: "resolve_mark"; id: string; blockId: string; keep: boolean }
+  | { type: "resolve_all_marks"; id: string; keep: boolean }
   | { type: "resolve_suggestion"; id: string; suggestionId: string; accept: boolean }
   | { type: "restore_doc_version"; id: string; version: number }
   | { type: "doc_version_blocks"; id: string; version: number }

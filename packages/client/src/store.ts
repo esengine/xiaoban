@@ -560,6 +560,10 @@ export class HubStore {
     return this.#docRequest({ type: "resolve_mark", id, blockId, keep });
   }
 
+  resolveAllMarks(id: string, keep: boolean): Promise<Doc> {
+    return this.#docRequest({ type: "resolve_all_marks", id, keep });
+  }
+
   resolveSuggestion(id: string, suggestionId: string, accept: boolean): Promise<Doc> {
     return this.#docRequest({ type: "resolve_suggestion", id, suggestionId, accept });
   }

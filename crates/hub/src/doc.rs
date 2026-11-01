@@ -575,6 +575,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Resul
         | Request::OpenDoc { id }
         | Request::SetDocBlocks { id, .. }
         | Request::ResolveMark { id, .. }
+        | Request::ResolveAllMarks { id, .. }
         | Request::ResolveSuggestion { id, .. }
         | Request::RestoreDocVersion { id, .. }
         | Request::DocVersionBlocks { id, .. }
@@ -614,6 +615,17 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Resul
     Ok(Response::Doc { doc: change(state, &id, doc, request).await })
 }
 
+fn undo(doc: &mut Doc, mark: DocMark) {
+    match mark.before {
+        Some(before) => {
+            if let Some(block) = doc.blocks.iter_mut().find(|block| block.id == mark.block_id) {
+                block.text = before;
+            }
+        }
+        None => doc.blocks.retain(|block| block.id != mark.block_id),
+    }
+}
+
 async fn change(state: &SharedState, id: &str, mut doc: Doc, request: Request) -> Doc {
     match request {
         Request::SetDocBlocks { blocks, .. } => {
@@ -635,14 +647,16 @@ async fn change(state: &SharedState, id: &str, mut doc: Doc, request: Request) -
             if let Some(index) = doc.marks.iter().position(|mark| mark.block_id == block_id) {
                 let mark = doc.marks.remove(index);
                 if !keep {
-                    match mark.before {
-                        Some(before) => {
-                            if let Some(block) = doc.blocks.iter_mut().find(|block| block.id == block_id) {
-                                block.text = before;
-                            }
-                        }
-                        None => doc.blocks.retain(|block| block.id != block_id),
-                    }
+                    undo(&mut doc, mark);
+                }
+            }
+            save(state, &mut doc).await;
+        }
+        Request::ResolveAllMarks { keep, .. } => {
+            let marks = std::mem::take(&mut doc.marks);
+            if !keep {
+                for mark in marks {
+                    undo(&mut doc, mark);
                 }
             }
             save(state, &mut doc).await;

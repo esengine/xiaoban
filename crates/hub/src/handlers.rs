@@ -207,6 +207,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::OpenDoc { .. }
         | Request::SetDocBlocks { .. }
         | Request::ResolveMark { .. }
+        | Request::ResolveAllMarks { .. }
         | Request::ResolveSuggestion { .. }
         | Request::RestoreDocVersion { .. }
         | Request::DocVersionBlocks { .. }

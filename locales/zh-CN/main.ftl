@@ -1521,3 +1521,6 @@ doc-format-pdf = PDF（打印成 PDF）
 doc-format-md = Markdown
 doc-format-copy = 复制全文
 doc-export-note = 存到「下载」，导出后在访达里显示
+doc-marks-count = 小伴这次改了 { $count } 处（标绿的地方）
+doc-marks-keep-all = 全部保留
+doc-marks-undo-all = 全部撤回

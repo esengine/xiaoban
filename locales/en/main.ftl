@@ -1530,3 +1530,6 @@ doc-format-pdf = PDF (print to PDF)
 doc-format-md = Markdown
 doc-format-copy = Copy all text
 doc-export-note = Saved to Downloads and shown in Finder
+doc-marks-count = Xiaoban changed { $count } places (in green)
+doc-marks-keep-all = Keep all
+doc-marks-undo-all = Undo all
