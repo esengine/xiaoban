@@ -28,6 +28,8 @@ import type { Thread } from "./Thread.ts";
 import type { Trip } from "./Trip.ts";
 import type { TripCalendar } from "./TripCalendar.ts";
 import type { Usage } from "./Usage.ts";
+import type { WeatherPlace } from "./WeatherPlace.ts";
+import type { WeatherView } from "./WeatherView.ts";
 import type { Workspace } from "./Workspace.ts";
 import type { WorkspaceSettings } from "./WorkspaceSettings.ts";
 
@@ -83,5 +85,7 @@ export type Response =
   | { type: "kitchen"; kitchen: Kitchen }
   | { type: "ledger"; ledger: Ledger }
   | { type: "ledger_year"; year: LedgerYear }
+  | { type: "weather"; weather: WeatherView }
+  | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };

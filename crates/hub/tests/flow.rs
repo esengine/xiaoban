@@ -153,6 +153,7 @@ fn runtime_with(
             city: "北京市".into(),
             district: Some("朝阳区".into()),
         })),
+        presence: Arc::new(xiaoban_hub::NoPresence),
         weather: Arc::new(FixedWeather(Forecast {
             place: "杭州".into(),
             region: "中国 浙江".into(),

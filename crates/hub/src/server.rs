@@ -89,6 +89,7 @@ impl Hub {
             connector: runtime.connector,
             secrets: runtime.secrets,
             locator: runtime.locator,
+            presence: runtime.presence,
             weather: runtime.weather,
             router: runtime.router,
             apps: runtime.apps,
@@ -116,6 +117,7 @@ impl Hub {
         let shutdown = CancellationToken::new();
         crate::tidy::watch(Arc::clone(&state), shutdown.clone());
         crate::week::watch(Arc::clone(&state), shutdown.clone());
+        crate::weather_page::watch(Arc::clone(&state), shutdown.clone());
         {
             let state = Arc::clone(&state);
             tokio::spawn(async move { crate::cooking::rearm(&state).await });

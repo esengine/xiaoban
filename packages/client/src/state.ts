@@ -17,6 +17,7 @@ import type {
   StepResult,
   Thread,
   Trip,
+  WeatherView,
   Workspace,
 } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
@@ -85,6 +86,7 @@ export interface HubState {
   filesVersion: Readonly<Record<string, number>>;
   kitchen: Kitchen | null;
   ledger: Ledger | null;
+  weather: WeatherView | null;
 }
 
 export const initialHubState: HubState = {
@@ -112,6 +114,7 @@ export const initialHubState: HubState = {
   filesVersion: {},
   kitchen: null,
   ledger: null,
+  weather: null,
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -378,6 +381,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "timer_fired":
     case "prep_due":
     case "ledger_changed":
+    case "weather_alert":
       return state;
     case "command_updated": {
       const list = state.commands[event.command.workspaceId] ?? [];

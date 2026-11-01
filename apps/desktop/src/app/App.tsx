@@ -14,6 +14,7 @@ import { DailyPage } from "../features/life/DailyPage.tsx";
 import { KitchenPage } from "../features/life/KitchenPage.tsx";
 import { LedgerPage } from "../features/life/LedgerPage.tsx";
 import { TimerAlarm } from "../features/life/TimerAlarm.tsx";
+import { WeatherPage } from "../features/life/WeatherPage.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
@@ -40,9 +41,9 @@ function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
-  const [view, setView] = useState<"chat" | "daily" | "kitchen" | "week" | "cook" | "ledger">(
-    "chat",
-  );
+  const [view, setView] = useState<
+    "chat" | "daily" | "kitchen" | "week" | "cook" | "ledger" | "weather"
+  >("chat");
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
   const activeId = exists(selected) ? selected : (primaryId ?? threads[0]?.id ?? null);
@@ -136,12 +137,15 @@ function Home() {
             onBack={() => setView("daily")}
             onCook={() => setView("cook")}
           />
+        ) : view === "weather" ? (
+          <WeatherPage onBack={() => setView("daily")} />
         ) : view === "ledger" ? (
           <LedgerPage onBack={() => setView("daily")} onOpenWeek={() => setView("week")} />
         ) : (
           <DailyPage
             onOpenKitchen={() => setView("kitchen")}
             onOpenLedger={() => setView("ledger")}
+            onOpenWeather={() => setView("weather")}
             onTalk={() => {
               setView("chat");
               setSelected(primaryId);

@@ -5,6 +5,7 @@ mod island;
 mod location;
 mod operate;
 mod overlay;
+mod presence;
 mod stored;
 mod uploads;
 mod voice;

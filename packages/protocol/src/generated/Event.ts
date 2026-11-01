@@ -54,4 +54,5 @@ export type Event =
   | { type: "kitchen_updated"; kitchen: Kitchen }
   | { type: "timer_fired"; timer: CookTimer }
   | { type: "prep_due"; task: PrepTask }
-  | { type: "ledger_changed" };
+  | { type: "ledger_changed" }
+  | { type: "weather_alert"; title: string; body: string };

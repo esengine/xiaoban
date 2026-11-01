@@ -32,10 +32,11 @@ pub struct Coord {
 
 impl Eq for Coord {}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum Sky {
     Clear,
+    #[default]
     Cloudy,
     Overcast,
     Fog,

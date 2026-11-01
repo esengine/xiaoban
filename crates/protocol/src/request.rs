@@ -336,6 +336,22 @@ pub enum Request {
     LedgerYear {
         year: i32,
     },
+    Weather {
+        place_id: Option<String>,
+    },
+    SearchPlaces {
+        query: String,
+    },
+    AddPlace {
+        place: crate::WeatherPlace,
+    },
+    RemovePlace {
+        id: String,
+    },
+    SetWeatherRules {
+        rules: crate::WeatherRules,
+    },
+    LocateWeather,
     SetBudget {
         month: String,
         #[ts(type = "number | null")]
@@ -527,6 +543,12 @@ pub enum Response {
     },
     LedgerYear {
         year: crate::LedgerYear,
+    },
+    Weather {
+        weather: crate::WeatherView,
+    },
+    Places {
+        places: Vec<crate::WeatherPlace>,
     },
     Folder {
         path: String,

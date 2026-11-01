@@ -43,6 +43,10 @@ export function TimerAlarm() {
   useEffect(
     () =>
       store.client.onEvent((event) => {
+        if (event.type === "weather_alert") {
+          void notify(event.title, event.body);
+          return;
+        }
         if (event.type === "prep_due") {
           void notify(t("prep-due-title"), event.task.text);
           return;

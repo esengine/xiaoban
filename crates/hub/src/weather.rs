@@ -7,8 +7,8 @@ use xiaoban_i18n::Locale;
 use xiaoban_protocol::Sky;
 
 pub const MAX_DAYS: u8 = 16;
-const GEOCODING_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
-const FORECAST_URL: &str = "https://api.open-meteo.com/v1/forecast";
+pub(crate) const GEOCODING_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
+pub(crate) const FORECAST_URL: &str = "https://api.open-meteo.com/v1/forecast";
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -242,7 +242,7 @@ impl OpenMeteo {
     }
 }
 
-fn sky(code: u8) -> Sky {
+pub(crate) fn sky(code: u8) -> Sky {
     match code {
         0 | 1 => Sky::Clear,
         2 => Sky::Cloudy,

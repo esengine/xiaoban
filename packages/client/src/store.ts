@@ -36,6 +36,9 @@ import type {
   Trip,
   TripCalendar,
   Usage,
+  WeatherPlace,
+  WeatherRules,
+  WeatherView,
   Workspace,
   WorkspaceSettings,
 } from "@xiaoban/protocol";
@@ -515,6 +518,39 @@ export class HubStore {
 
   cancelImport(month: string): Promise<void> {
     return this.#ledgerRequest({ type: "cancel_import", month });
+  }
+
+  async loadWeather(placeId: string | null = null): Promise<WeatherView> {
+    const { weather } = await this.client.request({ type: "weather", placeId }, "weather");
+    this.#update((state) => ({ ...state, weather }));
+    return weather;
+  }
+
+  async #weatherRequest(request: Parameters<HubClient["request"]>[0]): Promise<WeatherView> {
+    const { weather } = await this.client.request(request, "weather");
+    this.#update((state) => ({ ...state, weather }));
+    return weather;
+  }
+
+  async searchPlaces(query: string): Promise<WeatherPlace[]> {
+    const { places } = await this.client.request({ type: "search_places", query }, "places");
+    return places;
+  }
+
+  addPlace(place: WeatherPlace): Promise<WeatherView> {
+    return this.#weatherRequest({ type: "add_place", place });
+  }
+
+  removePlace(id: string): Promise<WeatherView> {
+    return this.#weatherRequest({ type: "remove_place", id });
+  }
+
+  setWeatherRules(rules: WeatherRules): Promise<WeatherView> {
+    return this.#weatherRequest({ type: "set_weather_rules", rules });
+  }
+
+  locateWeather(): Promise<WeatherView> {
+    return this.#weatherRequest({ type: "locate_weather" });
   }
 
   async clearBought(): Promise<void> {

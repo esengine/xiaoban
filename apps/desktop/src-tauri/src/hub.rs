@@ -40,6 +40,7 @@ pub async fn start(
         connector: Arc::new(HttpConnector),
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         locator,
+        presence: Arc::new(crate::presence::SystemPresence),
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),
         apps: Arc::new(crate::apps::system()),

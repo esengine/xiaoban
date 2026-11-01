@@ -8,6 +8,7 @@ mod operate;
 mod relay;
 mod request;
 mod trip;
+mod weather;
 
 pub use code::*;
 pub use event::*;
@@ -19,5 +20,6 @@ pub use operate::*;
 pub use relay::*;
 pub use request::*;
 pub use trip::*;
+pub use weather::*;
 
 pub const PROTOCOL_VERSION: u32 = 1;

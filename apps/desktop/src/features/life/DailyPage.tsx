@@ -3,8 +3,66 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
+import { WeatherIcon } from "../trip/icons.tsx";
 import { DishCover } from "./KitchenPage.tsx";
 import { shadeOf, useMoney } from "./LedgerPage.tsx";
+import { NoPlace, TipIcon, useSkyText } from "./WeatherPage.tsx";
+
+function WeatherCard({ onOpen }: { onOpen: () => void }) {
+  const { t } = useI18n();
+  const store = useHub();
+  const { weather } = useHubState(store);
+  const skyText = useSkyText();
+  if (!weather) return null;
+  if (weather.places.length === 0) return <NoPlace compact />;
+  const report = weather.report;
+  const place = weather.places.find((item) => item.id === weather.placeId) ?? weather.places[0];
+  const today = report?.days[0];
+  const tip = report?.tips[0];
+  return (
+    <section className="life-card daily__weather">
+      <div className="life-card__head">
+        <b>{t("weather-title")}</b>
+        <span className="life-card__note">{place?.city}</span>
+        <span className="life-card__spacer" />
+        <button type="button" className="code-link" onClick={onOpen}>
+          {t("daily-open-weather")}
+        </button>
+      </div>
+      {report ? (
+        <>
+          <div className="daily__weather-now">
+            <span className="weather-hero__icon">
+              <WeatherIcon sky={report.now.sky} />
+            </span>
+            <div>
+              <b>{t("weather-degrees", { value: String(report.now.temp) })}</b>
+              <span className="life-card__note">
+                {today
+                  ? t("weather-sky-range", {
+                      sky: skyText(report.now.sky),
+                      low: String(today.low),
+                      high: String(today.high),
+                    })
+                  : skyText(report.now.sky)}
+              </span>
+            </div>
+          </div>
+          {tip && (
+            <p className="daily__weather-tip">
+              <TipIcon kind={tip.kind} />
+              {tip.title}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="life-card__hint">
+          {weather.failed ? t("weather-failed") : t("weather-loading")}
+        </p>
+      )}
+    </section>
+  );
+}
 
 function thisMonth() {
   const now = new Date();
@@ -72,10 +130,12 @@ function greetingKey(hour: number) {
 export function DailyPage({
   onOpenKitchen,
   onOpenLedger,
+  onOpenWeather,
   onTalk,
 }: {
   onOpenKitchen: () => void;
   onOpenLedger: () => void;
+  onOpenWeather: () => void;
   onTalk: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -85,6 +145,7 @@ export function DailyPage({
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
     void store.loadLedger(thisMonth()).catch(() => undefined);
+    void store.loadWeather().catch(() => undefined);
   }, [store]);
 
   const now = new Date();
@@ -183,6 +244,7 @@ export function DailyPage({
               </div>
             )}
           </section>
+          <WeatherCard onOpen={onOpenWeather} />
           <Spending onOpen={onOpenLedger} />
           <section className="life-card daily__more">
             <b>{t("daily-more-title")}</b>

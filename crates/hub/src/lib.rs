@@ -51,6 +51,8 @@ mod trip_requests;
 mod vcs_tools;
 mod turns;
 mod weather;
+mod weather_page;
+mod presence;
 mod workspace;
 
 pub use apps::{AppEntry, Apps, NoApps};
@@ -64,6 +66,7 @@ pub use runtime::HubRuntime;
 pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};
 pub use server::{Hub, HubHandle};
 pub use services::{DeepseekWeb, Hit, Page, ServiceError, Web};
+pub use presence::{NoPresence, Presence};
 pub use weather::{Day, FixedWeather, Forecast, Now, OpenMeteo, Weather, WeatherError};
 
 use xiaoban_i18n::{Locale, Localizer, keys};

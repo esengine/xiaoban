@@ -9,6 +9,8 @@ import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
 import type { ThinkingEffort } from "./ThinkingEffort.ts";
+import type { WeatherPlace } from "./WeatherPlace.ts";
+import type { WeatherRules } from "./WeatherRules.ts";
 
 export type Request =
   | { type: "list_threads" }
@@ -134,6 +136,12 @@ export type Request =
   | { type: "ledger"; month: string }
   | { type: "ledger_range"; from: string; to: string }
   | { type: "ledger_year"; year: number }
+  | { type: "weather"; placeId: string | null }
+  | { type: "search_places"; query: string }
+  | { type: "add_place"; place: WeatherPlace }
+  | { type: "remove_place"; id: string }
+  | { type: "set_weather_rules"; rules: WeatherRules }
+  | { type: "locate_weather" }
   | { type: "set_budget"; month: string; cents: number | null }
   | { type: "update_expense"; month: string; expense: Expense }
   | { type: "delete_expense"; month: string; id: string }

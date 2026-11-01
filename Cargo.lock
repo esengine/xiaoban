@@ -6676,6 +6676,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "windows-sys 0.61.2",
  "xiaoban-agent",
  "xiaoban-hub",
  "xiaoban-i18n",

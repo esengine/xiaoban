@@ -125,6 +125,10 @@ pub enum Event {
         task: crate::PrepTask,
     },
     LedgerChanged,
+    WeatherAlert {
+        title: String,
+        body: String,
+    },
 }
 
 impl Event {
@@ -158,7 +162,8 @@ impl Event {
             | Self::KitchenUpdated { .. }
             | Self::TimerFired { .. }
             | Self::PrepDue { .. }
-            | Self::LedgerChanged => None,
+            | Self::LedgerChanged
+            | Self::WeatherAlert { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),

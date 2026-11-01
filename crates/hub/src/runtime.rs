@@ -19,6 +19,7 @@ pub struct HubRuntime {
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
     pub locator: Arc<dyn Locator>,
+    pub presence: Arc<dyn crate::presence::Presence>,
     pub weather: Arc<dyn Weather>,
     pub router: Arc<dyn Router>,
     pub apps: Arc<dyn Apps>,

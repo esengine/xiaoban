@@ -113,6 +113,7 @@ async fn main() -> anyhow::Result<()> {
         connector: Arc::new(HttpConnector),
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         locator: Arc::new(NoLocator),
+        presence: Arc::new(xiaoban_hub::NoPresence),
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),
         apps: Arc::new(NoApps),
