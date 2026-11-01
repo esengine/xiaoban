@@ -7,7 +7,7 @@ import PptxGenJS from "pptxgenjs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { fileName } from "../doc/docFiles.ts";
-import { ICONS, type SlideTheme, themeOf } from "./SlideView.tsx";
+import { ICONS, type SlideTheme, themeOf } from "@xiaoban/slides";
 
 const IN = 96;
 const px = (value: number) => value / IN;

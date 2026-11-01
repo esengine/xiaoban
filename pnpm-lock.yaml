@@ -229,6 +229,9 @@ importers:
       '@xiaoban/provider-icons':
         specifier: workspace:*
         version: link:../../packages/provider-icons
+      '@xiaoban/slides':
+        specifier: workspace:*
+        version: link:../../packages/slides
       '@xiaoban/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -302,6 +305,9 @@ importers:
       '@xiaoban/provider-icons':
         specifier: workspace:*
         version: link:../../packages/provider-icons
+      '@xiaoban/slides':
+        specifier: workspace:*
+        version: link:../../packages/slides
       '@xiaoban/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -417,6 +423,28 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(terser@5.51.2))
+
+  packages/slides:
+    dependencies:
+      '@xiaoban/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@xiaoban/tokens':
+        specifier: workspace:*
+        version: link:../tokens
+      lucide-react:
+        specifier: ^1.66.0
+        version: 1.66.0(@types/react@19.3.0)(react@19.3.0)
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      react:
+        specifier: 'catalog:'
+        version: 19.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/tokens:
     devDependencies:

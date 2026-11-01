@@ -2,7 +2,7 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect } from "react";
 import { useHub } from "../../app/hub.tsx";
-import { SlideView } from "./SlideView.tsx";
+import { SlideView } from "@xiaoban/slides";
 
 export function DeckCard({
   deckId,

@@ -16,7 +16,7 @@ import { SideChat } from "../chat/SideChat.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { exportPngs, exportPptx } from "./deckExport.ts";
 import { Present } from "./Present.tsx";
-import { type Part, SlideView } from "./SlideView.tsx";
+import { type Part, SlideView } from "@xiaoban/slides";
 
 const LAYOUTS: SlideLayout[] = [
   "title",

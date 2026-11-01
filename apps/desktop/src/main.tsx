@@ -11,6 +11,7 @@ import { Island, IslandSlot } from "./features/island/Island.tsx";
 import { OperateOverlay } from "./features/overlay/OperateOverlay.tsx";
 import "./features/overlay/overlay.css";
 import "./features/island/island.css";
+import "@xiaoban/slides/slides.css";
 import "./styles.css";
 
 const translator = createTranslator(negotiateLocale(navigator.languages));

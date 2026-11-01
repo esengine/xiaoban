@@ -14,6 +14,7 @@
     "@xiaoban/i18n": "workspace:*",
     "@xiaoban/protocol": "workspace:*",
     "@xiaoban/provider-icons": "workspace:*",
+    "@xiaoban/slides": "workspace:*",
     "@xiaoban/tokens": "workspace:*",
     "expo": "^58.0.21",
     "expo-build-properties": "~58.0.12",
