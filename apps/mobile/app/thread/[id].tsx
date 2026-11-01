@@ -1,117 +1,130 @@
-import { activeModelName, confirmText, failureKey } from "@xiaoban/client";
+import { activeModelName, type Draft, type Settled } from "@xiaoban/client";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { ConfirmRequest } from "@xiaoban/protocol";
+import type { Message, Quote } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import * as Speech from "expo-speech";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  type HostInstance,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Bubble, bubbleStyles } from "../../src/chat/Bubble.tsx";
+import { Composer } from "../../src/chat/Composer.tsx";
+import { ConfirmCard } from "../../src/chat/ConfirmCard.tsx";
+import { BackgroundCard, DraftBubble } from "../../src/chat/DraftBubble.tsx";
+import { MessageItem } from "../../src/chat/MessageItem.tsx";
+import { type MenuActions, type MenuTarget, MessageMenu } from "../../src/chat/MessageMenu.tsx";
+import { plain } from "../../src/chat/plain.ts";
+import { isCancel, toGroups } from "../../src/chat/rows.ts";
+import { ThoughtToggle } from "../../src/chat/ThoughtToggle.tsx";
+import { MemoryChips, TraceSummary } from "../../src/chat/Trace.tsx";
 import { useHubStore } from "../../src/hub/HubProvider.tsx";
 import { Icon } from "../../src/ui/Icon.tsx";
 import { useWhen } from "../../src/ui/useWhen.ts";
 
 const GAP_MS = 30 * 60_000;
+const STICK_DISTANCE = 80;
 const SUGGESTIONS: readonly PlainMessageKey[] = [
   "home-suggestion-umbrella",
   "home-suggestion-expense",
   "home-suggestion-weekend",
 ];
 
-type Row =
-  | { key: string; kind: "time"; text: string }
-  | {
-      key: string;
-      kind: "message";
-      role: "user" | "assistant";
-      text: string;
-      pending: boolean;
-      failed: boolean;
-    };
-
-function Rich({ text, style }: { text: string; style: object }) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <Text style={style}>
-      {parts.map((part, index) =>
-        part.startsWith("**") && part.endsWith("**") ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: parts of one static string
-          <Text key={index} style={styles.bold}>
-            {part.slice(2, -2)}
-          </Text>
-        ) : (
-          part
-        ),
-      )}
-    </Text>
-  );
+interface Queued {
+  id: number;
+  text: string;
+  quote: Quote | null;
 }
 
-function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
-  const { t } = useI18n();
-  const store = useHubStore();
-  const [sent, setSent] = useState(false);
-  const text = confirmText(confirm, t);
+interface Regenerating {
+  root: string;
+  turnId: string | null;
+}
+
+type Row =
+  | { key: string; kind: "time"; text: string }
+  | { key: string; kind: "user"; message: Message }
+  | {
+      key: string;
+      kind: "answer";
+      root: string;
+      message: Message;
+      settled: Settled | undefined;
+    }
+  | { key: string; kind: "draft"; draft: Draft; question: string }
+  | { key: string; kind: "queued"; item: Queued };
+
+let counter = 0;
+
+function parseQuote(value: string | undefined): Quote | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Quote;
+    return typeof parsed.text === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function DraftItem({
+  draft,
+  question,
+  onRetry,
+  onBackground,
+}: {
+  draft: Draft;
+  question: string;
+  onRetry: () => void;
+  onBackground: () => void;
+}) {
+  if (draft.background && !draft.failure) return <BackgroundCard draft={draft} title={question} />;
   return (
-    <View style={styles.confirm}>
-      <Text style={styles.confirmBand}>{t("chat-confirm-band")}</Text>
-      <View style={styles.confirmBody}>
-        <Text style={styles.confirmTitle}>{text.title}</Text>
-        {text.detail ? <Text style={styles.confirmDetail}>{text.detail}</Text> : null}
-        {text.hint ? <Text style={styles.confirmDetail}>{text.hint}</Text> : null}
-      </View>
-      <View style={styles.confirmChoices}>
-        {text.choices.map((option) => (
-          <Pressable
-            key={option.choice}
-            disabled={sent}
-            style={[styles.choice, option.primary && styles.choicePrimary, sent && styles.dim]}
-            onPress={() => {
-              setSent(true);
-              void store.answerConfirm(confirm.id, option.choice).catch(() => setSent(false));
-            }}
-          >
-            <Text style={[styles.choiceText, option.primary && styles.choicePrimaryText]}>
-              {option.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+    <View style={styles.group}>
+      {draft.tools.length > 0 && draft.text !== "" && <TraceSummary trace={draft} />}
+      <DraftBubble draft={draft} onRetry={onRetry} onBackground={onBackground} />
+      <MemoryChips memories={draft.memories} />
     </View>
   );
 }
 
-const STICK_DISTANCE = 80;
-
 export default function ThreadScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { t } = useI18n();
+  const params = useLocalSearchParams<{ id: string; quote?: string }>();
+  const id = params.id;
+  const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
   const store = useHubStore();
   const state = useHubState(store);
   const when = useWhen();
-  const [text, setText] = useState("");
-  const [queued, setQueued] = useState<string[]>([]);
+  const [quote, setQuote] = useState<Quote | null>(() => parseQuote(params.quote));
+  const [queued, setQueued] = useState<Queued[]>([]);
+  const [menu, setMenu] = useState<MenuTarget | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
   const list = useRef<FlatList<Row>>(null);
   const stick = useRef(true);
   const primary = state.preferences?.primaryThreadId === id;
   const thread = state.threads.find((item) => item.id === id);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
   const drafts = draftsForThread(state, id);
-  const running = drafts.find((draft) => !draft.failure);
+  const running = drafts.find((draft) => !draft.failure && !draft.background);
+  const holding = state.compacting[id]?.kind === "started";
   const messages = state.messages[id] ?? [];
+  const groups = toGroups(messages);
+  const lastGroup = groups.at(-1);
+  const lastAnswer = lastGroup?.kind === "answer" ? lastGroup : null;
   const confirms = state.confirms.filter(
     (confirm) => confirm.threadId === id && confirm.kind.kind !== "permissions",
   );
@@ -131,49 +144,54 @@ export default function ThreadScreen() {
 
   const next = queued[0];
   useEffect(() => {
-    if (running || next === undefined) return;
+    if (running || holding || next === undefined) return;
     setQueued((items) => items.slice(1));
-    void store.send(id, next).catch(() => undefined);
-  }, [running, next, store, id]);
+    void store.send(id, next.text, { quote: next.quote }).catch(() => undefined);
+  }, [running, holding, next, store, id]);
+
+  useEffect(() => {
+    if (!regenerating?.turnId) return;
+    if (!drafts.some((draft) => draft.turnId === regenerating.turnId)) setRegenerating(null);
+  }, [drafts, regenerating]);
+
+  useEffect(() => () => void Speech.stop(), []);
+
+  const inPlace = (draft: Draft) =>
+    regenerating !== null &&
+    (regenerating.turnId === draft.turnId || (regenerating.turnId === null && !draft.failure));
+  const placed = drafts.find(inPlace) ?? null;
+  const trailing = drafts.filter((draft) => draft !== placed);
+  const questionFor = (draft: Draft) =>
+    messages
+      .filter((message) => message.role === "user" && message.createdAt <= draft.hubStartedAt)
+      .at(-1)?.text ?? "";
 
   const rows: Row[] = [];
   let last = 0;
-  for (const message of messages) {
-    if (message.createdAt - last > GAP_MS) {
-      rows.push({ key: `t-${message.id}`, kind: "time", text: when(message.createdAt) });
+  for (const group of groups) {
+    const message = group.kind === "user" ? group.message : group.versions.at(-1);
+    if (!message) continue;
+    const time = group.kind === "user" ? message.createdAt : (group.versions[0]?.createdAt ?? 0);
+    if (time - last > GAP_MS) rows.push({ key: `t-${message.id}`, kind: "time", text: when(time) });
+    last = time;
+    if (group.kind === "user") {
+      rows.push({ key: message.id, kind: "user", message });
+    } else if (placed && regenerating?.root === group.root) {
+      rows.push({ key: group.root, kind: "draft", draft: placed, question: questionFor(placed) });
+    } else {
+      rows.push({
+        key: group.root,
+        kind: "answer",
+        root: group.root,
+        message,
+        settled: state.settled[message.id],
+      });
     }
-    last = message.createdAt;
-    rows.push({
-      key: message.id,
-      kind: "message",
-      role: message.role,
-      text: message.text,
-      pending: false,
-      failed: false,
-    });
   }
-  for (const draft of drafts) {
-    rows.push({
-      key: draft.turnId,
-      kind: "message",
-      role: "assistant",
-      text: draft.failure
-        ? t("draft-failed", { reason: t(failureKey(draft.failure.kind)) })
-        : draft.text || t("draft-thinking"),
-      pending: !draft.failure && !draft.text,
-      failed: Boolean(draft.failure),
-    });
+  for (const draft of trailing) {
+    rows.push({ key: draft.turnId, kind: "draft", draft, question: questionFor(draft) });
   }
-  for (const [index, item] of queued.entries()) {
-    rows.push({
-      key: `q-${index}`,
-      kind: "message",
-      role: "user",
-      text: item,
-      pending: true,
-      failed: false,
-    });
-  }
+  for (const item of queued) rows.push({ key: `q-${item.id}`, kind: "queued", item });
 
   const subtitle = primary
     ? t("chat-sub-primary", { memories: state.memories.length })
@@ -181,13 +199,71 @@ export default function ThreadScreen() {
       ? activeModelName(state.model)
       : "";
 
-  const send = (value = text) => {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    setText("");
+  const send = (text: string, sentQuote: Quote | null = quote) => {
     stick.current = true;
-    if (running) setQueued((items) => [...items, trimmed]);
-    else void store.send(id, trimmed).catch(() => undefined);
+    if (running || holding) {
+      if (running && isCancel(text, t("composer-cancel-words"))) {
+        void store.cancel(running.turnId).catch(() => undefined);
+        return;
+      }
+      counter += 1;
+      setQueued((items) => [...items, { id: counter, text, quote: sentQuote }]);
+    } else {
+      void store.send(id, text, { quote: sentQuote }).catch(() => undefined);
+    }
+    setQuote(null);
+  };
+
+  const retry = (turnId: string) => {
+    store.dropDraft(turnId);
+    void store.retry(id).catch(() => undefined);
+  };
+
+  const regenerate = async (root: string) => {
+    setRegenerating({ root, turnId: null });
+    try {
+      const turnId = await store.retry(id);
+      setRegenerating({ root, turnId });
+    } catch {
+      setRegenerating(null);
+    }
+  };
+
+  const speak = (text: string) => {
+    void Speech.stop();
+    if (speaking) {
+      setSpeaking(false);
+      return;
+    }
+    setSpeaking(true);
+    const done = () => setSpeaking(false);
+    Speech.speak(plain(text), { language: locale, onDone: done, onStopped: done, onError: done });
+  };
+
+  const actions: MenuActions = {
+    onCopy: (text) => void Clipboard.setStringAsync(text).catch(() => undefined),
+    onQuote: setQuote,
+    onSpeak: speak,
+    onRegenerate: (root) => void regenerate(root),
+    onNewThreadWith: (picked) =>
+      void store
+        .createThread()
+        .then((created) =>
+          router.push({
+            pathname: "/thread/[id]",
+            params: { id: created.id, quote: JSON.stringify(picked) },
+          }),
+        )
+        .catch(() => undefined),
+    onLookUp: (picked) => send(t("look-up-message"), picked),
+  };
+
+  const openMenu = (message: Message, root: string | null, view: HostInstance | null) => {
+    if (!view) return;
+    view.measureInWindow((x, y, width, height) => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+      setMenu({ message, root, rect: { x, y, width, height } });
+    });
   };
 
   const more = () =>
@@ -205,6 +281,50 @@ export default function ThreadScreen() {
           ]),
       { text: t("dialog-cancel"), style: "cancel" as const },
     ]);
+
+  const renderRow = (row: Row) => {
+    switch (row.kind) {
+      case "time":
+        return <Text style={styles.time}>{row.text}</Text>;
+      case "user":
+        return (
+          <MessageItem
+            message={row.message}
+            onLongPress={(view) => openMenu(row.message, null, view)}
+          />
+        );
+      case "answer":
+        return (
+          <View style={styles.group}>
+            {row.settled && <TraceSummary trace={row.settled} />}
+            <MessageItem
+              message={row.message}
+              footer={
+                row.message.thinking ? <ThoughtToggle thinking={row.message.thinking} /> : null
+              }
+              onLongPress={(view) => openMenu(row.message, row.root, view)}
+            />
+            {row.settled && <MemoryChips memories={row.settled.memories} />}
+          </View>
+        );
+      case "draft":
+        return (
+          <DraftItem
+            draft={row.draft}
+            question={row.question}
+            onRetry={() => retry(row.draft.turnId)}
+            onBackground={() => void store.background(row.draft.turnId).catch(() => undefined)}
+          />
+        );
+      case "queued":
+        return (
+          <View style={[bubbleStyles.userShell, styles.queued]}>
+            <Bubble from="user" text={row.item.text} quote={row.item.quote} muted />
+            <Text style={styles.queuedNote}>{t("composer-queued")}</Text>
+          </View>
+        );
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior="padding">
@@ -237,6 +357,7 @@ export default function ThreadScreen() {
         data={rows}
         keyExtractor={(row) => row.key}
         contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
         onScroll={(event) => {
           const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
           stick.current =
@@ -255,23 +376,7 @@ export default function ThreadScreen() {
             </View>
           )
         }
-        renderItem={({ item }) =>
-          item.kind === "time" ? (
-            <Text style={styles.time}>{item.text}</Text>
-          ) : (
-            <View style={[styles.bubble, item.role === "user" ? styles.user : styles.assistant]}>
-              <Rich
-                text={item.text}
-                style={[
-                  styles.text,
-                  item.role === "user" && styles.userText,
-                  (item.pending || item.failed) && item.role === "assistant" && styles.pending,
-                  item.pending && item.role === "user" && styles.dim,
-                ]}
-              />
-            </View>
-          )
-        }
+        renderItem={({ item }) => renderRow(item)}
       />
       {messages.length === 0 && drafts.length === 0 && (
         <ScrollView
@@ -279,43 +384,34 @@ export default function ThreadScreen() {
           style={styles.suggestions}
           contentContainerStyle={styles.suggestionRow}
           showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {SUGGESTIONS.map((key) => (
-            <Pressable key={key} style={styles.suggestion} onPress={() => send(t(key))}>
+            <Pressable key={key} style={styles.suggestion} onPress={() => send(t(key), null)}>
               <Text style={styles.suggestionText}>{t(key)}</Text>
             </Pressable>
           ))}
         </ScrollView>
       )}
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 10) + 6 }]}>
-        <TextInput
-          style={styles.input}
-          placeholder={running ? t("composer-placeholder-busy") : t("chat-placeholder")}
-          placeholderTextColor={color.faint}
-          value={text}
-          onChangeText={setText}
-          onSubmitEditing={() => send()}
-          returnKeyType="send"
-          multiline={false}
-        />
-        {text.trim() ? (
-          <Pressable
-            style={styles.send}
-            accessibilityLabel={t("composer-send")}
-            onPress={() => send()}
-          >
-            <Icon name="send" color={color.surface} size={20} />
-          </Pressable>
-        ) : running ? (
-          <Pressable
-            style={styles.stop}
-            accessibilityLabel={t("composer-stop")}
-            onPress={() => void store.cancel(running.turnId)}
-          >
-            <View style={styles.stopSquare} />
-          </Pressable>
-        ) : null}
-      </View>
+      <Composer
+        threadId={id}
+        busy={Boolean(running) || holding}
+        stoppable={Boolean(running)}
+        quote={quote}
+        onClearQuote={() => setQuote(null)}
+        onSend={(text) => send(text)}
+        onStop={() => {
+          if (running) void store.cancel(running.turnId).catch(() => undefined);
+        }}
+      />
+      <MessageMenu
+        target={menu}
+        latest={menu?.root !== null && menu?.root === lastAnswer?.root}
+        running={Boolean(running)}
+        speaking={speaking}
+        actions={actions}
+        onClose={() => setMenu(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -338,67 +434,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: "700", color: color.ink },
   subtitle: { fontSize: 11, color: color.muted, marginTop: 1 },
   list: { paddingHorizontal: 14, paddingVertical: 12, gap: 12 },
+  group: { gap: 6 },
   footer: { gap: 12, marginTop: 12 },
   time: { alignSelf: "center", fontSize: 11, color: color.faint },
-  bubble: { paddingVertical: 10, paddingHorizontal: 14 },
-  user: {
-    alignSelf: "flex-end",
-    maxWidth: "78%",
-    backgroundColor: color.accent,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 4,
-  },
-  assistant: {
-    alignSelf: "flex-start",
-    maxWidth: "86%",
-    backgroundColor: color.surface,
-    paddingVertical: 11,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderBottomRightRadius: 18,
-    borderBottomLeftRadius: 4,
-  },
-  text: { fontSize: 14, lineHeight: 22, color: color.ink },
-  bold: { fontWeight: "700" },
-  userText: { color: color.surface },
-  pending: { color: color.muted },
-  dim: { opacity: 0.6 },
-  confirm: {
-    alignSelf: "flex-start",
-    width: "86%",
-    backgroundColor: color.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: color.attentionSoft,
-    overflow: "hidden",
-  },
-  confirmBand: {
-    backgroundColor: color.attentionSoft,
-    color: color.attentionInk,
-    fontSize: 12,
-    fontWeight: "500",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  confirmBody: { paddingHorizontal: 14, paddingVertical: 12, gap: 4 },
-  confirmTitle: { fontSize: 15, fontWeight: "500", color: color.ink },
-  confirmDetail: { fontSize: 12, color: color.muted, lineHeight: 18 },
-  confirmChoices: { flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingBottom: 12 },
-  choice: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: color.lineStrong,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  choicePrimary: { backgroundColor: color.ink, borderColor: color.ink },
-  choiceText: { fontSize: 14, color: color.ink },
-  choicePrimaryText: { color: color.surface, fontWeight: "500" },
+  queued: { alignItems: "flex-end", gap: 2 },
+  queuedNote: { fontSize: 11, color: color.faint },
   suggestions: { flexGrow: 0 },
   suggestionRow: { gap: 8, paddingHorizontal: 14, paddingVertical: 6 },
   suggestion: {
@@ -410,41 +450,4 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   suggestionText: { fontSize: 13, color: color.ink },
-  composer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    backgroundColor: color.surface,
-    borderTopWidth: 1,
-    borderTopColor: color.line,
-  },
-  input: {
-    flex: 1,
-    minWidth: 0,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: color.ground,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: color.ink,
-  },
-  send: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: color.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stop: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: color.ink,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stopSquare: { width: 12, height: 12, borderRadius: 3, backgroundColor: color.surface },
 });
