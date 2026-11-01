@@ -63,6 +63,13 @@ export function BranchBar({ threadId }: { threadId: string }) {
           )}
         </span>
       )}
+      {repo && git?.operation && (
+        <span className="branch-bar__merging">
+          {git.conflicts.length > 0
+            ? t("conflict-bar", { count: git.conflicts.length })
+            : t("conflict-bar-done")}
+        </span>
+      )}
       {repo && git?.stash && (
         <>
           <span className="branch-bar__dot" aria-hidden="true" />

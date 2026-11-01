@@ -4,8 +4,10 @@ import type { DirEntry, Workspace } from "@xiaoban/protocol";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
+import { ConfirmDialog } from "../dialog/ConfirmDialog.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { CommitDialog } from "./CommitDialog.tsx";
+import { ConflictView } from "./ConflictView.tsx";
 import { DiffView } from "./DiffView.tsx";
 import { FileTree, SideIcon } from "./FileTree.tsx";
 import { FileView } from "./FileView.tsx";
@@ -21,6 +23,7 @@ export function showCode(tab: "changes" | "terminal") {
 }
 
 type Tab =
+  | { kind: "conflict" }
   | { kind: "changes" }
   | { kind: "git" }
   | { kind: "terminal" }
@@ -123,10 +126,43 @@ export function CodePanel({
 
   const active = tab.kind === "file" ? tab.path : null;
   const changedCount = git?.repository ? git.changed.length : files.length;
+  const conflictCount = git?.conflicts.length ?? 0;
+  const merging = Boolean(git?.operation);
+  const [aborting, setAborting] = useState(false);
+  const [mergeFailure, setMergeFailure] = useState<string | null>(null);
+  const hadConflicts = useRef(false);
+  useEffect(() => {
+    if (conflictCount > 0 && !hadConflicts.current) setTab({ kind: "conflict" });
+    if (conflictCount === 0 && hadConflicts.current) {
+      setTab((current) => (current.kind === "conflict" ? { kind: "changes" } : current));
+    }
+    hadConflicts.current = conflictCount > 0;
+  }, [conflictCount]);
+  const finishMerge = () => {
+    setMergeFailure(null);
+    void store
+      .finishMerge(workspace.id)
+      .catch((error: unknown) =>
+        setMergeFailure(error instanceof Error ? error.message : String(error)),
+      );
+  };
 
   return (
     <section className="code-panel" aria-label={t("code-panel")}>
       <div className="code-panel__tabs" role="tablist">
+        {conflictCount > 0 && (
+          <button
+            type="button"
+            role="tab"
+            className="code-tab"
+            data-danger
+            aria-selected={tab.kind === "conflict"}
+            onClick={() => setTab({ kind: "conflict" })}
+          >
+            {t("conflict-tab")}
+            <span className="code-tab__count">{conflictCount}</span>
+          </button>
+        )}
         <button
           type="button"
           role="tab"
@@ -201,6 +237,7 @@ export function CodePanel({
           <FileTree
             workspace={workspace}
             changes={files}
+            conflicts={git?.conflicts ?? []}
             active={active}
             onOpen={openFile}
             onMenu={entryMenu}
@@ -220,6 +257,9 @@ export function CodePanel({
         <div className="code-panel__content">
           {tab.kind === "changes" && <DiffView files={files} onOpen={openFile} onRevert={revert} />}
           {tab.kind === "terminal" && <Terminal workspace={workspace} />}
+          {tab.kind === "conflict" && git && (
+            <ConflictView workspace={workspace} git={git} onAsk={onAsk} />
+          )}
           {tab.kind === "git" && (
             <GitTab workspace={workspace} git={git} onAsk={onAsk} onCommit={startCommit} />
           )}
@@ -235,36 +275,69 @@ export function CodePanel({
           )}
         </div>
       </div>
-      <div className="code-panel__status">
-        <span>
-          {!git?.repository
-            ? t("code-status-no-git")
-            : changedCount > 0
-              ? t("code-status-uncommitted", { count: changedCount })
-              : t("code-status-clean")}
-        </span>
-        {git?.repository && git.ahead > 0 && git.upstream && (
-          <span>{t("code-status-ahead", { count: git.ahead, upstream: git.upstream })}</span>
-        )}
-        <span className="code-panel__spacer" />
-        {prFailure && <span className="code-panel__failure">{prFailure}</span>}
-        {git?.repository && changedCount > 0 && (
-          <button type="button" className="code-status-button" onClick={() => startCommit()}>
-            {t("git-commit-open")}
+      {merging && git ? (
+        <div className="code-panel__status">
+          <span className="code-panel__conflicts" data-done={conflictCount === 0 || undefined}>
+            {conflictCount > 0
+              ? t("conflict-left", { count: conflictCount })
+              : t("conflict-all-done")}
+          </span>
+          <span className="code-panel__spacer" />
+          {mergeFailure && <span className="code-panel__failure">{mergeFailure}</span>}
+          <button type="button" className="code-status-button" onClick={() => setAborting(true)}>
+            {t("conflict-abort")}
           </button>
-        )}
-        {git?.repository && git.branch && (
           <button
             type="button"
             className="code-status-button"
-            data-primary
-            disabled={opening}
-            onClick={() => void openPullRequest()}
+            data-dark
+            disabled={conflictCount > 0}
+            onClick={finishMerge}
           >
-            {opening ? t("git-pr-opening") : t("git-pr")}
+            {t("conflict-finish")}
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="code-panel__status">
+          <span>
+            {!git?.repository
+              ? t("code-status-no-git")
+              : changedCount > 0
+                ? t("code-status-uncommitted", { count: changedCount })
+                : t("code-status-clean")}
+          </span>
+          {git?.repository && git.ahead > 0 && git.upstream && (
+            <span>{t("code-status-ahead", { count: git.ahead, upstream: git.upstream })}</span>
+          )}
+          <span className="code-panel__spacer" />
+          {prFailure && <span className="code-panel__failure">{prFailure}</span>}
+          {git?.repository && changedCount > 0 && (
+            <button type="button" className="code-status-button" onClick={() => startCommit()}>
+              {t("git-commit-open")}
+            </button>
+          )}
+          {git?.repository && git.branch && (
+            <button
+              type="button"
+              className="code-status-button"
+              data-primary
+              disabled={opening}
+              onClick={() => void openPullRequest()}
+            >
+              {opening ? t("git-pr-opening") : t("git-pr")}
+            </button>
+          )}
+        </div>
+      )}
+      {aborting && (
+        <ConfirmDialog
+          title={t("conflict-abort-title")}
+          body={t("conflict-abort-body")}
+          confirm={t("conflict-abort")}
+          onConfirm={() => void store.abortMerge(workspace.id).catch(() => undefined)}
+          onClose={() => setAborting(false)}
+        />
+      )}
       {committing && git && (
         <CommitDialog
           workspace={workspace}

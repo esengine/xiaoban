@@ -8,6 +8,7 @@ import { Chevron, FolderIcon } from "../chat/ThreadList.tsx";
 interface Props {
   workspace: Workspace;
   changes: FileDiff[];
+  conflicts?: string[];
   active: string | null;
   onOpen: (path: string) => void;
   onMenu: (event: MouseEvent, entry: DirEntry) => void;
@@ -53,7 +54,15 @@ export function SideIcon() {
   );
 }
 
-export function FileTree({ workspace, changes, active, onOpen, onMenu, onCollapse }: Props) {
+export function FileTree({
+  workspace,
+  changes,
+  conflicts = [],
+  active,
+  onOpen,
+  onMenu,
+  onCollapse,
+}: Props) {
   const { t } = useI18n();
   const store = useHub();
   const { filesVersion } = useHubState(store);
@@ -76,11 +85,12 @@ export function FileTree({ workspace, changes, active, onOpen, onMenu, onCollaps
     };
   }, [store, workspace.id, open, version]);
 
-  const marks = new Map<string, "changed" | "added">();
+  const marks = new Map<string, "changed" | "added" | "conflict">();
   for (const file of changes) {
     if (file.status === "deleted") continue;
     marks.set(file.path, file.status === "added" ? "added" : "changed");
   }
+  for (const path of conflicts) marks.set(path, "conflict");
   const needle = query.trim().toLowerCase();
 
   const toggle = (path: string) =>
@@ -152,7 +162,13 @@ export function FileTree({ workspace, changes, active, onOpen, onMenu, onCollaps
                 <span className="code-tree__name">{entry.name}</span>
                 {mark && (
                   <span className="code-tree__mark">
-                    {t(mark === "added" ? "code-mark-added" : "code-mark-changed")}
+                    {t(
+                      mark === "conflict"
+                        ? "conflict-mark"
+                        : mark === "added"
+                          ? "code-mark-added"
+                          : "code-mark-changed",
+                    )}
                   </span>
                 )}
               </button>

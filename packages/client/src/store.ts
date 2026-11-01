@@ -4,6 +4,8 @@ import type {
   CommandRun,
   CommitInfo,
   ConfirmChoice,
+  ConflictChoice,
+  ConflictFile,
   ContextNote,
   Device,
   DirEntry,
@@ -491,6 +493,35 @@ export class HubStore {
       "pull_request",
     );
     return url;
+  }
+
+  async conflicts(workspaceId: string): Promise<ConflictFile[]> {
+    const { files } = await this.client.request({ type: "conflicts", workspaceId }, "conflicts");
+    return files;
+  }
+
+  async resolveConflict(
+    workspaceId: string,
+    path: string,
+    index: number,
+    choice: ConflictChoice,
+    text: string | null = null,
+  ): Promise<ConflictFile[]> {
+    const { files } = await this.client.request(
+      { type: "resolve_conflict", workspaceId, path, index, choice, text },
+      "conflicts",
+    );
+    return files;
+  }
+
+  async finishMerge(workspaceId: string): Promise<GitInfo> {
+    const { git } = await this.client.request({ type: "finish_merge", workspaceId }, "git");
+    return git;
+  }
+
+  async abortMerge(workspaceId: string): Promise<GitInfo> {
+    const { git } = await this.client.request({ type: "abort_merge", workspaceId }, "git");
+    return git;
   }
 
   async threadChanges(threadId: string): Promise<FileDiff[]> {
