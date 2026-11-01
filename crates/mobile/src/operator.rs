@@ -51,6 +51,8 @@ struct Screen {
 struct Installed {
     id: String,
     name: String,
+    #[serde(default)]
+    aliases: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -166,7 +168,7 @@ impl Apps for PhoneApps {
                 .map(|app| AppEntry {
                     id: app.id,
                     name: app.name,
-                    aliases: Vec::new(),
+                    aliases: app.aliases,
                 })
                 .collect()
         })
@@ -224,7 +226,7 @@ mod tests {
                         { "role": "text field", "label": "Search", "value": "noodles" },
                     ],
                 }),
-                "apps" => json!({ "apps": [{ "id": "com.shop", "name": "Shop" }] }),
+                "apps" => json!({ "apps": [{ "id": "com.shop", "name": "Shop", "aliases": ["Old Shop"] }] }),
                 "locate" => json!({ "status": "found", "city": "Hangzhou", "district": null, "latitude": "30.2", "longitude": "120.1" }),
                 "act" if request["index"] == 0 => json!({ "error": "handed over to the user" }),
                 _ => json!({ "ok": true }),
@@ -247,6 +249,7 @@ mod tests {
         assert!(operator.act("com.shop".into(), 1, UiAction::SetText("x".into()), false).await.is_ok());
         let apps = PhoneApps::new(fake()).list().await;
         assert_eq!(apps[0].name, "Shop");
+        assert_eq!(apps[0].aliases, vec!["Old Shop".to_owned()]);
         assert!(matches!(
             PhoneLocator::new(fake()).locate().await,
             Location::Found { city, .. } if city == "Hangzhou"

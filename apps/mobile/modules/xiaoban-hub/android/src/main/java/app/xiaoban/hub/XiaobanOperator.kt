@@ -109,7 +109,11 @@ object XiaobanOperator {
       .distinctBy { it.first }
       .filter { (id, _) -> id != source.packageName && !blocked(id) }
       .sortedBy { it.second }
-      .forEach { (id, name) -> list.put(JSONObject().put("id", id).put("name", name)) }
+      .forEach { (id, name) ->
+        val entry = JSONObject().put("id", id).put("name", name)
+        strings.optJSONObject("aliases")?.optJSONArray(id)?.let { entry.put("aliases", it) }
+        list.put(entry)
+      }
     Log.i(TAG, "apps: ${list.length()}")
     return JSONObject().put("apps", list)
   }

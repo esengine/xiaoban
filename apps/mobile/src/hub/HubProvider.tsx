@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { Platform } from "react-native";
+import aliases from "../../../../locales/native/app-aliases.json";
 import handover from "../../../../locales/native/handover.json";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { fetchKeys, type Keys, loadKeys, saveKey } from "./keys.ts";
@@ -60,6 +61,7 @@ function operatorStrings(t: ReturnType<typeof useI18n>["t"]): string {
     "handover-ok": t("operate-handover-ok"),
     "handover-back": t("operate-handover-back"),
     handover,
+    aliases,
   });
 }
 

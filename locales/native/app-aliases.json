@@ -1,0 +1,21 @@
+{
+  "me.ele": ["饿了么", "Ele.me", "eleme", "淘宝闪购"],
+  "com.sankuai.meituan": ["美团", "Meituan"],
+  "com.sankuai.meituan.takeoutnew": ["美团外卖", "Meituan Waimai"],
+  "com.dianping.v1": ["大众点评", "Dianping"],
+  "com.taobao.taobao": ["淘宝", "Taobao"],
+  "com.tmall.wireless": ["天猫", "Tmall"],
+  "com.jingdong.app.mall": ["京东", "JD"],
+  "com.xunmeng.pinduoduo": ["拼多多", "Pinduoduo"],
+  "com.wudaokou.hippo": ["盒马", "Hema"],
+  "com.autonavi.minimap": ["高德地图", "高德", "Amap"],
+  "com.baidu.BaiduMap": ["百度地图", "Baidu Maps"],
+  "com.sdu.didi.psnger": ["滴滴出行", "滴滴", "DiDi"],
+  "ctrip.android.view": ["携程", "携程旅行", "Trip.com"],
+  "com.MobileTicket": ["铁路12306", "12306"],
+  "com.ss.android.ugc.aweme": ["抖音", "Douyin"],
+  "com.xingin.xhs": ["小红书", "RED", "Xiaohongshu"],
+  "com.taobao.idlefish": ["闲鱼", "Xianyu"],
+  "com.netease.cloudmusic": ["网易云音乐", "NetEase Music"],
+  "com.tencent.qqmusic": ["QQ音乐", "QQ Music"]
+}

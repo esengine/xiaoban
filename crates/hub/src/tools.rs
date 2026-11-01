@@ -551,6 +551,18 @@ impl<'a> HubTools<'a> {
             .into_iter()
             .map(|app| json!({ "id": app.id, "name": app.name }))
             .collect();
+        if found.is_empty() && !apps.is_empty() {
+            let installed: Vec<_> = apps
+                .iter()
+                .map(|app| json!({ "id": app.id, "name": app.name }))
+                .collect();
+            return json!({
+                "apps": [],
+                "hint": "no app matched; apps are often renamed (a delivery app may now show a new brand name), so look through every installed app below and pick the one the user means before saying it is not installed",
+                "installed": installed,
+            })
+            .to_string();
+        }
         json!({ "apps": found }).to_string()
     }
 
