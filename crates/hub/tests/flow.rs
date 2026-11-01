@@ -2503,6 +2503,9 @@ async fn floor_plans_version_every_change_and_take_measurements() {
         .await
         .unwrap_err();
     assert_eq!(missing.code, ErrorCode::NotFound);
+    hub.shutdown().await;
+}
+
 fn costed_trip_call(costs: &serde_json::Value) -> ModelChunk {
     tool_call(
         "save_trip",
