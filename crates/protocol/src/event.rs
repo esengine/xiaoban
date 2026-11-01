@@ -24,6 +24,8 @@ pub enum Event {
     TurnStarted {
         thread_id: String,
         turn_id: String,
+        #[ts(type = "number")]
+        started_at: i64,
     },
     Thinking {
         turn_id: String,

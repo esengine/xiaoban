@@ -121,6 +121,7 @@ fn launch(
     state.publish(Event::TurnStarted {
         thread_id: thread_id.clone(),
         turn_id: turn_id.clone(),
+        started_at: xiaoban_store::now_ms(),
     });
     tokio::spawn(run(Arc::clone(state), thread_id, turn_id, job, cancel));
 }

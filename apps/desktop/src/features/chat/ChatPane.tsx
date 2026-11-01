@@ -146,7 +146,11 @@ function ThoughtToggle({ thinking }: { thinking: Thinking }) {
           : t("reply-thought", { seconds: thinking.seconds })}
         {open ? " ⌃" : " ⌄"}
       </button>
-      {open && <span className="reply-meta__reasoning">{thinking.text}</span>}
+      {open && (
+        <div className="reply-meta__reasoning">
+          <RichText text={thinking.text} />
+        </div>
+      )}
     </>
   );
 }
@@ -222,7 +226,7 @@ export function ChatPane(props: Props) {
   const trailing = drafts.filter((draft) => draft !== placed);
   const questionFor = (draft: Draft) =>
     messages
-      .filter((message) => message.role === "user" && message.createdAt <= draft.startedAt)
+      .filter((message) => message.role === "user" && message.createdAt <= draft.hubStartedAt)
       .at(-1)?.text ?? "";
   const delivered =
     running && running !== placed && running.text === "" && running.tools.length === 0 && lastUser

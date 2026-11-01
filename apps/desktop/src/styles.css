@@ -4003,7 +4003,6 @@ button.sent-files__image {
   color: var(--color-ink-mid);
   font-size: 12px;
   line-height: 1.7;
-  white-space: pre-wrap;
   animation: fade-in var(--motion-standard) var(--ease-standard) both;
 }
 
@@ -4739,8 +4738,13 @@ button.sent-files__image {
   font-size: 12px;
   line-height: 1.7;
   color: var(--color-ink-mid);
-  white-space: pre-wrap;
   user-select: text;
+}
+
+.reasoning__box .rich__heading,
+.reply-meta__reasoning .rich__heading {
+  margin: 10px 0 4px;
+  font-size: 13px;
 }
 
 .archive-divider {

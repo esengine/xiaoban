@@ -48,6 +48,7 @@ export interface Draft extends TurnTrace {
   threadId: string;
   text: string;
   startedAt: number;
+  hubStartedAt: number;
   failure: Failure | null;
 }
 
@@ -235,6 +236,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
             threadId: event.threadId,
             text: "",
             startedAt: now,
+            hubStartedAt: event.startedAt,
             failure: null,
             tools: [],
             steps: [],
@@ -318,7 +320,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           ? {
               ...state.settled,
               [event.message.id]: {
-                durationMs: Math.max(0, now - draft.startedAt),
+                durationMs: Math.max(0, event.message.createdAt - draft.hubStartedAt),
                 tools: draft.tools,
                 steps: draft.steps,
                 memories: draft.memories,

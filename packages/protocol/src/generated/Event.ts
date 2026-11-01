@@ -15,7 +15,7 @@ export type Event =
   | { type: "thread_updated"; thread: Thread }
   | { type: "thread_deleted"; threadId: string }
   | { type: "message_created"; message: Message }
-  | { type: "turn_started"; threadId: string; turnId: string }
+  | { type: "turn_started"; threadId: string; turnId: string; startedAt: number }
   | { type: "thinking"; turnId: string }
   | { type: "text_delta"; turnId: string; delta: string }
   | { type: "reasoning_delta"; turnId: string; delta: string }

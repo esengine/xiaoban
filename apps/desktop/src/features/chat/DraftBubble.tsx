@@ -51,7 +51,7 @@ function Reasoning({ draft }: { draft: Draft }) {
       </span>
       {open && (
         <div ref={box} className="reasoning__box">
-          {draft.reasoning}
+          <RichText text={draft.reasoning ?? ""} />
         </div>
       )}
     </li>

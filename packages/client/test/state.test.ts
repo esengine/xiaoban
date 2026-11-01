@@ -27,7 +27,11 @@ const reply: Message = {
 describe("applyEvent", () => {
   it("streams a draft and replaces it with the completed message", () => {
     let state = applyEvent(initialHubState, { type: "thread_updated", thread });
-    state = applyEvent(state, { type: "turn_started", threadId: "t1", turnId: "u1" }, 10);
+    state = applyEvent(
+      state,
+      { type: "turn_started", threadId: "t1", turnId: "u1", startedAt: 1 },
+      10,
+    );
     state = applyEvent(state, { type: "text_delta", turnId: "u1", delta: "7:40" });
     state = applyEvent(state, { type: "text_delta", turnId: "u1", delta: " 出门" });
     expect(state.drafts.u1?.text).toBe("7:40 出门");
@@ -40,10 +44,16 @@ describe("applyEvent", () => {
     });
     expect(state.drafts).toEqual({});
     expect(state.messages.t1).toEqual([reply]);
+    expect(state.settled[reply.id]?.durationMs).toBe(reply.createdAt - 1);
   });
 
   it("keeps failed drafts so the UI can offer a retry", () => {
-    let state = applyEvent(initialHubState, { type: "turn_started", threadId: "t1", turnId: "u1" });
+    let state = applyEvent(initialHubState, {
+      type: "turn_started",
+      threadId: "t1",
+      turnId: "u1",
+      startedAt: 10,
+    });
     state = applyEvent(state, {
       type: "turn_failed",
       turnId: "u1",
@@ -104,7 +114,7 @@ describe("applyEvent", () => {
     };
     let state = applyEvent(
       initialHubState,
-      { type: "turn_started", threadId: "t1", turnId: "u1" },
+      { type: "turn_started", threadId: "t1", turnId: "u1", startedAt: 10 },
       10,
     );
     state = applyEvent(state, {
@@ -126,7 +136,7 @@ describe("applyEvent", () => {
       {
         type: "turn_completed",
         turnId: "u1",
-        message: reply,
+        message: { ...reply, createdAt: 1810 },
         usage: { inputTokens: 1, outputTokens: 2, cachedTokens: 0 },
       },
       1810,
