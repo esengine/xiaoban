@@ -58,6 +58,7 @@
         }
       ],
       "./plugins/with-short-object-paths.js",
+      "./plugins/with-release-signing.js",
       "expo-sharing"
     ],
     "experiments": {
