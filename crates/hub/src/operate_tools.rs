@@ -197,6 +197,7 @@ impl HubTools<'_> {
     }
 
     async fn ensure(&self, app_id: &str) -> Result<AppEntry, String> {
+        self.price_app_guard(app_id)?;
         let apps = self.state.apps.list().await;
         let app = apps
             .into_iter()
@@ -244,7 +245,10 @@ impl HubTools<'_> {
             Err(failure) => return failure,
         };
         self.before_acting().await;
-        let result = self.state.operator.snapshot(app.id).await;
+        let result = self.state.operator.snapshot(app.id.clone()).await;
+        if let Ok(snapshot) = &result {
+            self.record_screen(&app.id, snapshot);
+        }
         match result {
             Ok(snapshot) if snapshot.elements.is_empty() => error(
                 "this app exposes no buttons or fields to Xiaoban (it may be drawn in a way the system cannot read); do not guess, tell the user which steps they need to do themselves",
@@ -309,7 +313,10 @@ impl HubTools<'_> {
     async fn screen(&self, app_id: &str) -> Value {
         tokio::time::sleep(SETTLE).await;
         match self.state.operator.snapshot(app_id.to_owned()).await {
-            Ok(snapshot) => serde_json::to_value(&snapshot).unwrap_or(Value::Null),
+            Ok(snapshot) => {
+                self.record_screen(app_id, &snapshot);
+                serde_json::to_value(&snapshot).unwrap_or(Value::Null)
+            }
             Err(failure) => json!({ "error": failure }),
         }
     }
@@ -318,6 +325,11 @@ impl HubTools<'_> {
         self.before_acting().await;
         if self.cancel.is_cancelled() {
             return Err("stopped by the user".to_owned());
+        }
+        match &step {
+            Step::Click { element } => self.price_step_guard(&app.id, *element, false)?,
+            Step::Type { element, .. } => self.price_step_guard(&app.id, *element, true)?,
+            Step::Keys { .. } | Step::Text { .. } => {}
         }
         match step {
             Step::Click { element } => self.act(app, element, UiAction::Press).await,

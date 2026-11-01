@@ -18,6 +18,7 @@ pub enum ConfirmKind {
     OpenSubthreads { titles: Vec<String>, reason: String },
     BorrowMouse { app: String },
     Action { title: String, detail: String },
+    PriceCheck { app: String, item: String, detail: String, phone: bool },
     Permissions,
     RunCommand { command: String, cwd: String, rule: String },
     ReadOutside { path: String, folder: String },

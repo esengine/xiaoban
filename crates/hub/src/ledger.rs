@@ -447,6 +447,25 @@ async fn edit(state: &SharedState, updated: Expense) -> bool {
     true
 }
 
+pub(crate) async fn record(state: &SharedState, expense: Expense) -> String {
+    let id = expense.id.clone();
+    add(state, vec![expense]).await;
+    changed(state);
+    id
+}
+
+pub(crate) async fn in_months(state: &SharedState, months: &[String]) -> Vec<Expense> {
+    let mut all = Vec::new();
+    for month in months {
+        all.extend(entries(state, month).await);
+    }
+    all
+}
+
+pub(crate) fn this_month() -> String {
+    current_month()
+}
+
 async fn add(state: &SharedState, items: Vec<Expense>) -> Vec<String> {
     let mut by_month: BTreeMap<String, Vec<Expense>> = BTreeMap::new();
     let mut ids = Vec::new();

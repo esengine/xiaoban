@@ -37,6 +37,7 @@ object XiaobanOperator {
   private var stoppedAt = 0L
   private var handover: Handover? = null
   @Volatile private var lastAction = 0L
+  @Volatile private var status: String? = null
   @Volatile var touched = false
 
   private class Handover(val labels: List<String>, val packages: Set<String>, val words: List<String>)
@@ -63,6 +64,7 @@ object XiaobanOperator {
         "act" -> act(request)
         "keys" -> keys(request.getString("keys"))
         "type" -> type(request.getString("text"))
+        "status" -> status(request.optString("title"))
         "locate" -> PhoneLocation.locate(context ?: service())
         "notify" -> XiaobanNotices.notify(context ?: service(), request)
         "withdraw" -> XiaobanNotices.withdraw(context ?: service(), request.getString("id"))
@@ -245,12 +247,19 @@ object XiaobanOperator {
 
   fun stop() = synchronized(lock) {
     paused = false
+    status = null
     stoppedAt = SystemClock.uptimeMillis()
     lock.notifyAll()
     OperatorOverlay.hide()
   }
 
   fun idle() = synchronized(lock) { step = 0 }
+
+  private fun status(title: String): JSONObject {
+    status = title.ifBlank { null }
+    status?.let { OperatorOverlay.working(it, "") }
+    return ok()
+  }
 
   fun userActed() {
     if (step == 0 || paused) return
@@ -279,7 +288,7 @@ object XiaobanOperator {
     }
     step += 1
     OperatorOverlay.working(
-      text("working", "n" to step.toString()),
+      status ?: text("working", "n" to step.toString()),
       text(if (press) "working-press" else "working-fill", "label" to label),
     )
     val bounds = Rect().also { node.getBoundsInScreen(it) }

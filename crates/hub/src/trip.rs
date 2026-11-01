@@ -3,12 +3,18 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use xiaoban_protocol::{
-    DayWeather, PlaceDetail, Review, SourceLink, TravelMode, Trip, TripDay, TripLeg, TripStop,
+    Coord, CostCategory, CostLine, DayWeather, PlaceDetail, Price, PriceSource, Review, Saving,
+    SourceLink, StayOption, TravelMode, Trip, TripCosts, TripDay, TripLeg, TripStop,
 };
 use xiaoban_store::StoreError;
 
+use crate::price::{Evidence, PriceDraft};
 use crate::state::SharedState;
 use crate::weather::{Day, MAX_DAYS};
+
+const MAX_LINES: usize = 40;
+const MAX_STAYS: usize = 3;
+const MAX_SAVINGS: usize = 4;
 
 #[derive(Debug, Deserialize)]
 pub struct TripDraft {
@@ -17,9 +23,42 @@ pub struct TripDraft {
     party: String,
     needs: Option<String>,
     reminder: Option<String>,
-    cost: Option<String>,
+    costs: Option<CostsDraft>,
     update: Option<bool>,
     days: Vec<DayDraft>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct CostsDraft {
+    lines: Option<Vec<LineDraft>>,
+    stays: Option<Vec<StayDraft>>,
+    people: Option<f64>,
+    budget: Option<f64>,
+    savings: Option<Vec<SavingDraft>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LineDraft {
+    category: CostCategory,
+    #[serde(flatten)]
+    price: PriceDraft,
+}
+
+#[derive(Debug, Deserialize)]
+struct StayDraft {
+    name: String,
+    note: Option<String>,
+    chosen: Option<bool>,
+    #[serde(flatten)]
+    price: PriceDraft,
+}
+
+#[derive(Debug, Deserialize)]
+struct SavingDraft {
+    title: String,
+    detail: Option<String>,
+    category: CostCategory,
+    saves: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -188,11 +227,202 @@ async fn route_stops(state: &SharedState, city: &str, stops: &mut [TripStop]) {
     }
 }
 
+fn meters(from: Coord, to: Coord) -> u32 {
+    let radius = 6_371_000.0_f64;
+    let (lat1, lat2) = (from.lat.to_radians(), to.lat.to_radians());
+    let dlat = lat2 - lat1;
+    let dlng = (to.lng - from.lng).to_radians();
+    let a = (dlat / 2.0).sin().powi(2) + lat1.cos() * lat2.cos() * (dlng / 2.0).sin().powi(2);
+    let distance = 2.0 * radius * a.sqrt().asin();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let rounded = distance.round().clamp(0.0, f64::from(u32::MAX)) as u32;
+    rounded
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn people(value: Option<f64>) -> Option<u32> {
+    value
+        .filter(|value| value.is_finite() && *value >= 1.0 && *value <= 99.0)
+        .map(|value| value.round() as u32)
+}
+
+fn is_user(price: &Price) -> bool {
+    matches!(price.source, PriceSource::User)
+}
+
+fn voided(price: &Price) -> bool {
+    matches!(price.source, PriceSource::None { voided: true, .. })
+}
+
+struct Checked {
+    costs: TripCosts,
+    voided: Vec<String>,
+}
+
+fn check_lines(
+    lines: Vec<LineDraft>,
+    evidence: &Evidence,
+    earlier: Option<&TripCosts>,
+    known: &[&Price],
+    now: i64,
+    dropped: &mut Vec<String>,
+) -> Vec<CostLine> {
+    lines
+        .into_iter()
+        .take(MAX_LINES)
+        .map(|line| {
+            let mut price = crate::price::check(&line.price, evidence, known, now);
+            if price.known().is_none()
+                && let Some(mine) = earlier.and_then(|costs| {
+                    costs.lines.iter().find(|old| {
+                        old.category == line.category
+                            && is_user(&old.price)
+                            && same_place(&old.price.label, &price.label)
+                    })
+                })
+            {
+                price = mine.price.clone();
+            }
+            if voided(&price) {
+                dropped.push(price.label.clone());
+            }
+            CostLine {
+                category: line.category,
+                price,
+            }
+        })
+        .filter(|line| !line.price.label.is_empty())
+        .collect()
+}
+
+async fn check_costs(
+    state: &SharedState,
+    city: &str,
+    draft: CostsDraft,
+    evidence: &Evidence,
+    earlier: Option<&TripCosts>,
+    first: Option<Coord>,
+) -> Checked {
+    let now = xiaoban_store::now_ms();
+    let known: Vec<&Price> = earlier
+        .map(|costs| {
+            costs
+                .lines
+                .iter()
+                .map(|line| &line.price)
+                .chain(costs.stays.iter().map(|stay| &stay.price))
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut dropped = Vec::new();
+    let lines = check_lines(
+        draft.lines.unwrap_or_default(),
+        evidence,
+        earlier,
+        &known,
+        now,
+        &mut dropped,
+    );
+    let mut stays = Vec::new();
+    let mut picked = None;
+    for (index, stay) in draft
+        .stays
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|stay| !stay.name.trim().is_empty())
+        .take(MAX_STAYS)
+        .enumerate()
+    {
+        let name = stay.name.trim().to_owned();
+        let mut price_draft = stay.price;
+        if price_draft.label.trim().is_empty() {
+            price_draft.label.clone_from(&name);
+        }
+        let mut price = crate::price::check(&price_draft, evidence, &known, now);
+        let old = earlier.and_then(|costs| costs.stays.iter().find(|old| same_place(&old.name, &name)));
+        if price.known().is_none()
+            && let Some(old) = old.filter(|old| is_user(&old.price))
+        {
+            price = old.price.clone();
+        }
+        if voided(&price) {
+            dropped.push(name.clone());
+        }
+        if stay.chosen == Some(true) && picked.is_none() {
+            picked = Some(index);
+        }
+        let location = state.router.locate(city.to_owned(), name.clone()).await;
+        stays.push(StayOption {
+            meters: location.zip(first).map(|(at, first)| meters(at, first)),
+            location,
+            note: filled(stay.note),
+            chosen: old.is_some_and(|old| old.chosen),
+            price,
+            name,
+        });
+    }
+    let chosen = picked
+        .or_else(|| stays.iter().position(|stay| stay.chosen))
+        .or_else(|| stays.iter().position(|stay| stay.price.known().is_some()))
+        .or_else(|| (!stays.is_empty()).then_some(0));
+    for (index, stay) in stays.iter_mut().enumerate() {
+        stay.chosen = Some(index) == chosen;
+    }
+    let savings = draft
+        .savings
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|saving| !saving.title.trim().is_empty())
+        .take(MAX_SAVINGS)
+        .map(|saving| Saving {
+            title: unmarked(&saving.title),
+            detail: filled(saving.detail).unwrap_or_default(),
+            category: saving.category,
+            saves_cents: saving.saves.and_then(crate::price::cents).filter(|cents| *cents > 0),
+        })
+        .collect();
+    Checked {
+        costs: TripCosts {
+            lines,
+            stays,
+            people: people(draft.people),
+            budget_cents: draft.budget.and_then(crate::price::cents).filter(|cents| *cents > 0),
+            savings,
+        },
+        voided: dropped,
+    }
+}
+
+fn cost_report(costs: &TripCosts, dropped: &[String]) -> Value {
+    let missing: Vec<&str> = costs
+        .lines
+        .iter()
+        .map(|line| &line.price)
+        .chain(costs.stays.iter().map(|stay| &stay.price))
+        .filter(|price| price.known().is_none())
+        .map(|price| price.label.as_str())
+        .collect();
+    #[allow(clippy::cast_precision_loss)]
+    let total = costs.total_cents() as f64 / 100.0;
+    let mut report = json!({
+        "total_counted": total,
+        "without_price": missing,
+        "dropped": dropped,
+    });
+    if !dropped.is_empty() {
+        report["why_dropped"] = json!(
+            "these prices were removed: their link was not returned by web_search in this reply, or the amount was not on a screen you read in an app in this reply. Do not repeat those numbers; tell the user they are not checked yet and offer to check them in an app"
+        );
+    }
+    report
+}
+
 pub async fn save(
     state: &SharedState,
     thread_id: &str,
     draft: TripDraft,
     verified: bool,
+    evidence: &Evidence,
 ) -> Result<(Trip, Value), StoreError> {
     let city = draft.city.trim().to_owned();
     let (weather, timezone) = forecast(state, &city).await;
@@ -226,15 +456,40 @@ pub async fn save(
             stops,
         });
     }
-    let existing = if draft.update.unwrap_or(false) {
+    let earlier = if draft.update.unwrap_or(false) {
         state
             .store
             .latest_trip_in_thread(thread_id.to_owned())
             .await?
-            .map(|trip| trip.id)
     } else {
         None
     };
+    let existing = earlier.as_ref().map(|trip| trip.id.clone());
+    let first = days
+        .first()
+        .and_then(|day| day.stops.first())
+        .and_then(|stop| stop.location);
+    let checked = match draft.costs {
+        Some(costs) => Some(
+            check_costs(
+                state,
+                &city,
+                costs,
+                evidence,
+                earlier.as_ref().and_then(|trip| trip.costs.as_ref()),
+                first,
+            )
+            .await,
+        ),
+        None => None,
+    };
+    let dropped = checked
+        .as_ref()
+        .map(|checked| checked.voided.clone())
+        .unwrap_or_default();
+    let costs = checked
+        .map(|checked| checked.costs)
+        .or_else(|| earlier.and_then(|trip| trip.costs));
     let trip = state
         .store
         .save_trip(
@@ -249,7 +504,7 @@ pub async fn save(
                 party: draft.party.trim().to_owned(),
                 needs: filled(draft.needs),
                 reminder: filled(draft.reminder),
-                cost: filled(draft.cost),
+                costs,
                 verified,
                 days,
                 created_at: 0,
@@ -261,13 +516,16 @@ pub async fn save(
         .iter()
         .map(|day| json!({ "date": day.date, "weather": weather.get(&day.date) }))
         .collect();
-    let report = json!({
+    let mut report = json!({
         "saved": true,
         "version": trip.version,
         "verified": trip.verified,
         "forecast": forecast,
         "display": "the app shows this trip as a card under your reply; reply in one or two sentences and do not list the itinerary again",
     });
+    if let Some(costs) = &trip.costs {
+        report["costs"] = cost_report(costs, &dropped);
+    }
     Ok((trip, report))
 }
 
@@ -287,7 +545,7 @@ mod tests {
     #[test]
     fn drafts_accept_nulls_and_fractional_minutes() {
         let draft: TripDraft = serde_json::from_str(
-            r#"{"title":"杭州","city":"杭州","party":"3 人","needs":null,"reminder":null,"cost":null,"update":null,
+            r#"{"title":"杭州","city":"杭州","party":"3 人","needs":null,"reminder":null,"costs":null,"update":null,
                 "days":[{"date":"2026-11-14","change":null,"stops":[
                   {"name":"断桥","time":"09:00","note":"人少","next":{"mode":"walk","minutes":15.0},
                    "detail":{"why":"湖景","suits":null,"duration":null,"quiet":null,"tickets":null,"tickets_source":null,"reviews":null}},

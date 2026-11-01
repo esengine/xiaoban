@@ -2308,3 +2308,330 @@ async fn recipes_attach_a_card_and_cook_only_when_asked() {
     assert_eq!(missing.code, ErrorCode::NotFound);
     hub.shutdown().await;
 }
+
+fn costed_trip_call(costs: &serde_json::Value) -> ModelChunk {
+    tool_call(
+        "save_trip",
+        &serde_json::json!({
+            "title": "杭州 · 1 天",
+            "city": "杭州",
+            "party": "2 大 1 小",
+            "costs": costs,
+            "days": [{
+                "date": "2026-11-01",
+                "stops": [{ "name": "断桥", "time": "09:00", "note": "人少" }]
+            }]
+        }),
+    )
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn trip_prices_keep_only_what_this_reply_really_found() {
+    use xiaoban_protocol::{CostCategory, PriceSource};
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![search_call()],
+        vec![costed_trip_call(&serde_json::json!({
+            "people": 3,
+            "budget": 3000,
+            "lines": [
+                { "category": "tickets", "label": "灵隐寺", "amount": 75, "source": "web", "url": "https://example.com/", "site": "官网" },
+                { "category": "tickets", "label": "西湖游船", "amount": 55, "source": "web", "url": "https://made-up.example/boat", "site": "官网" },
+                { "category": "transport", "label": "高铁往返", "amount": 366, "source": "app", "app": "12306" },
+                { "category": "food", "label": "吃的", "amount": 1080, "source": "estimate", "basis": "按点评人均" },
+                { "category": "other", "label": "停车", "source": "none", "reason": "没搜到" }
+            ],
+            "stays": [
+                { "name": "西湖边亲子酒店", "note": "有儿童房", "unit_amount": 680, "quantity": 2, "per": "晚", "source": "web", "url": "https://example.com", "site": "官网" },
+                { "name": "灵隐民宿", "unit_amount": 560, "quantity": 2, "source": "app", "app": "携程" }
+            ],
+            "savings": [{ "title": "换便宜的住处", "detail": "地铁 2 站", "category": "stay", "saves": 400 }]
+        }))],
+        vec![ModelChunk::Text("排好了".into())],
+    ]));
+    let mut runtime = runtime(provider.clone());
+    runtime.router = Arc::new(FakeRouter);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "算算杭州一天要花多少", Vec::new()).await;
+
+    let saved = latest_message_with(&mut client, &thread, is_trip).await;
+    let trip = trip_of(&mut client, &saved).await;
+    let costs = trip.costs.clone().unwrap();
+    let line = |index: usize| &costs.lines[index].price;
+    assert_eq!(line(0).cents, Some(7_500));
+    assert!(matches!(line(0).source, PriceSource::Web { .. }));
+    assert!(line(0).checked_at.is_some());
+    assert_eq!(line(1).cents, None);
+    assert!(matches!(line(1).source, PriceSource::None { voided: true, .. }));
+    assert_eq!(line(2).cents, None);
+    assert!(matches!(line(2).source, PriceSource::None { voided: true, .. }));
+    assert_eq!(line(3).cents, Some(108_000));
+    assert!(matches!(line(3).source, PriceSource::Estimate { .. }));
+    assert!(matches!(line(4).source, PriceSource::None { voided: false, .. }));
+    assert_eq!(costs.stays[0].price.cents, Some(136_000));
+    assert!(costs.stays[0].chosen);
+    assert!(costs.stays[0].meters.is_some());
+    assert_eq!(costs.stays[1].price.cents, None);
+    assert_eq!(costs.budget_cents, Some(300_000));
+    assert_eq!(costs.people, Some(3));
+    assert_eq!(costs.category_cents(CostCategory::Stay), (136_000, false));
+    assert_eq!(costs.total_cents(), 7_500 + 108_000 + 136_000);
+    let report = provider.requests()[2].messages.last().unwrap().content.clone();
+    assert!(report.contains("西湖游船"));
+    assert!(report.contains("why_dropped"));
+
+    let Response::Trip { trip: filled, .. } = client
+        .request(Request::FillTripPrice {
+            trip_id: trip.id.clone(),
+            line: Some(4),
+            stay: None,
+            cents: 3_000,
+        })
+        .await
+    else {
+        panic!("expected trip");
+    };
+    let filled_costs = filled.costs.unwrap();
+    assert_eq!(filled.version, trip.version);
+    assert_eq!(filled_costs.lines[4].price.cents, Some(3_000));
+    assert_eq!(filled_costs.lines[4].price.source, PriceSource::User);
+
+    let Response::Trip { trip: chosen, .. } = client
+        .request(Request::ChooseTripStay {
+            trip_id: trip.id.clone(),
+            stay: 1,
+        })
+        .await
+    else {
+        panic!("expected trip");
+    };
+    let chosen_costs = chosen.costs.unwrap();
+    assert!(!chosen_costs.stays[0].chosen);
+    assert!(chosen_costs.stays[1].chosen);
+    assert_eq!(chosen_costs.category_cents(CostCategory::Stay), (0, true));
+
+    let Response::Ack = client
+        .request(Request::AddTripExpense {
+            trip_id: trip.id.clone(),
+            name: "午饭".into(),
+            cents: 12_600,
+        })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    let Response::TripSpending { category, entries } = client
+        .request(Request::TripSpending {
+            trip_id: trip.id.clone(),
+        })
+        .await
+    else {
+        panic!("expected spending");
+    };
+    assert_eq!(category, "杭州之行");
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].cents, 12_600);
+    hub.shutdown().await;
+}
+
+#[derive(Debug, Default)]
+struct TravelApps;
+
+impl Apps for TravelApps {
+    fn list(&self) -> BoxFuture<'static, Vec<AppEntry>> {
+        Box::pin(async {
+            vec![
+                AppEntry {
+                    id: "ctrip.android.view".into(),
+                    name: "携程旅行".into(),
+                    aliases: vec!["携程".into()],
+                },
+                AppEntry {
+                    id: "com.eg.android.AlipayGphone".into(),
+                    name: "支付宝".into(),
+                    aliases: Vec::new(),
+                },
+            ]
+        })
+    }
+
+    fn open(&self, _: String) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async { Ok(()) })
+    }
+}
+
+#[derive(Debug, Default)]
+struct HotelScreen {
+    actions: std::sync::Mutex<Vec<String>>,
+    titles: std::sync::Mutex<Vec<Option<String>>>,
+}
+
+impl Operator for HotelScreen {
+    fn permissions(&self) -> OperatePermissions {
+        OperatePermissions { control: true }
+    }
+
+    fn snapshot(&self, app_id: String) -> BoxFuture<'static, Result<Snapshot, String>> {
+        self.actions.lock().unwrap().push(format!("look {app_id}"));
+        let element = |index: u32, role: &str, label: &str| UiElement {
+            index,
+            role: role.into(),
+            label: label.into(),
+            value: None,
+            disabled: false,
+        };
+        let elements = vec![
+            element(0, "text field", "目的地/酒店/关键词"),
+            element(1, "text", "西湖边亲子酒店 ¥680起"),
+            element(2, "button", "立即预订"),
+            element(3, "text field", "手机号"),
+        ];
+        Box::pin(async move {
+            Ok(Snapshot {
+                app: "携程旅行".into(),
+                window: None,
+                elements,
+                truncated: false,
+            })
+        })
+    }
+
+    fn act(
+        &self,
+        app_id: String,
+        index: u32,
+        action: UiAction,
+        _: bool,
+    ) -> BoxFuture<'static, Result<(), ActFailure>> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("{action:?} {index} {app_id}"));
+        Box::pin(async { Ok(()) })
+    }
+
+    fn keys(&self, _: String, _: String) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn type_into(&self, _: String, _: String) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn is_phone(&self) -> bool {
+        true
+    }
+
+    fn status(&self, title: Option<String>) {
+        self.titles.lock().unwrap().push(title);
+    }
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn phone_price_checks_are_read_only_and_only_keep_prices_on_screen() {
+    use xiaoban_protocol::PriceSource;
+    let screen = Arc::new(HotelScreen::default());
+    let app = "ctrip.android.view";
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "check_price_in_app",
+            &serde_json::json!({ "app": "com.eg.android.AlipayGphone", "name": "支付宝", "item": "住宿", "detail": "看看" }),
+        )],
+        vec![tool_call(
+            "check_price_in_app",
+            &serde_json::json!({ "app": app, "name": "携程", "item": "住宿", "detail": "网页上没搜到当天价" }),
+        )],
+        vec![tool_call("look_at_app", &serde_json::json!({ "app": app, "name": "携程" }))],
+        vec![tool_call(
+            "type_text",
+            &serde_json::json!({ "app": app, "element": 0, "label": "搜索", "text": "西湖 亲子" }),
+        )],
+        vec![tool_call(
+            "click",
+            &serde_json::json!({ "app": app, "element": 2, "label": "立即预订" }),
+        )],
+        vec![tool_call(
+            "type_text",
+            &serde_json::json!({ "app": app, "element": 3, "label": "手机号", "text": "13800000000" }),
+        )],
+        vec![tool_call(
+            "note_app_price",
+            &serde_json::json!({ "label": "某民宿", "amount": 560 }),
+        )],
+        vec![tool_call(
+            "note_app_price",
+            &serde_json::json!({ "label": "西湖边亲子酒店", "amount": 680 }),
+        )],
+        vec![costed_trip_call(&serde_json::json!({
+            "stays": [
+                { "name": "西湖边亲子酒店", "unit_amount": 680, "quantity": 2, "per": "晚", "source": "app", "app": "携程", "applies_to": "11/14–16" },
+                { "name": "灵隐民宿", "unit_amount": 560, "quantity": 2, "per": "晚", "source": "app", "app": "携程" }
+            ]
+        }))],
+        vec![ModelChunk::Text("查到了".into())],
+    ]));
+    let mut runtime = runtime(provider.clone());
+    runtime.apps = Arc::new(TravelApps);
+    runtime.operator = screen.clone();
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "用手机去携程查住宿价".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let mut answers: Vec<Answer> = vec![(
+        |kind| matches!(kind, ConfirmKind::PriceCheck { app, phone: true, .. } if app == "携程旅行"),
+        ConfirmChoice::Yes,
+    )];
+    answer_confirms(&mut client, &thread, &mut answers, 1).await;
+    assert_eq!(answers.len(), 0);
+
+    let requests = provider.requests();
+    let result = |index: usize| requests[index].messages.last().unwrap().content.clone();
+    assert!(result(1).contains("payment or banking"));
+    assert!(result(2).contains("read-only price check is on"));
+    assert!(result(4).contains("done"));
+    assert!(result(5).contains("never presses"));
+    assert!(result(6).contains("never types"));
+    assert!(result(7).contains("not on any screen"));
+    assert!(result(8).contains("\"noted\":1"));
+    let actions = screen.actions.lock().unwrap().clone();
+    assert!(actions.iter().any(|action| action.starts_with("SetText(\"西湖 亲子\") 0")));
+    assert!(!actions.iter().any(|action| action.starts_with("Press 2")));
+    assert!(!actions.iter().any(|action| action.contains(" 3 ")));
+    let titles = screen.titles.lock().unwrap().clone();
+    assert!(titles.iter().flatten().any(|title| title.contains("1/3")));
+    for _ in 0..100 {
+        if screen.titles.lock().unwrap().last() == Some(&None) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(screen.titles.lock().unwrap().last(), Some(&None));
+
+    let saved = latest_message_with(&mut client, &thread, is_trip).await;
+    let trip = trip_of(&mut client, &saved).await;
+    let costs = trip.costs.unwrap();
+    assert_eq!(costs.stays[0].price.cents, Some(136_000));
+    assert_eq!(
+        costs.stays[0].price.source,
+        PriceSource::App { app: "携程".into() }
+    );
+    assert_eq!(costs.stays[0].price.applies_to.as_deref(), Some("11/14–16"));
+    assert_eq!(costs.stays[1].price.cents, None);
+    assert!(matches!(costs.stays[1].price.source, PriceSource::None { voided: true, .. }));
+    hub.shutdown().await;
+}
