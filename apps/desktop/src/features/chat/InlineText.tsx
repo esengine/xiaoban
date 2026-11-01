@@ -1,5 +1,5 @@
+import { keyLabel } from "@xiaoban/client";
 import { createElement, type ReactNode } from "react";
-import { keyLabel } from "./inlineTags.ts";
 
 const TAG = /<(\/?)(sup|sub|kbd|mark|u|ins|del)>|<br\s*\/?>/gi;
 

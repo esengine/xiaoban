@@ -1,3 +1,4 @@
+import { keyLabel, remarkInlineTags } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import { type ComponentProps, memo, type ReactNode, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
@@ -6,7 +7,6 @@ import { openExternal } from "../../lib/external.ts";
 import { remarkGithubRefs } from "../code/githubRefs.ts";
 import { RefChip } from "../code/RefChip.tsx";
 import { useImageViewer } from "../viewer/ImageViewer.tsx";
-import { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 
 function textOf(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);

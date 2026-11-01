@@ -1,9 +1,9 @@
+import { keyLabel, remarkInlineTags } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Message, Quote } from "@xiaoban/protocol";
 import { memo, type ReactNode, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 
 const HIGHLIGHT = "quote-source";
 const GONE_MS = 2_000;

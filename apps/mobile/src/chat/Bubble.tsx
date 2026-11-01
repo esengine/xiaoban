@@ -2,6 +2,7 @@ import type { Quote } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
 import type { ReactNode } from "react";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import { Markdown } from "./Markdown.tsx";
 import { QuoteChip } from "./QuoteChip.tsx";
 import { Rich } from "./Rich.tsx";
 
@@ -26,11 +27,18 @@ export function Bubble({
   return (
     <View style={[styles.bubble, user ? styles.user : styles.assistant, style]}>
       {quote ? <QuoteChip quote={quote} tone={user ? "blue" : "light"} /> : null}
-      <Rich
-        text={text}
-        style={[styles.text, user && styles.userText, muted && styles.muted]}
-        trailing={trailing}
-      />
+      {user || muted ? (
+        <Rich
+          text={text}
+          style={[styles.text, user && styles.userText, muted && styles.muted]}
+          trailing={trailing}
+        />
+      ) : (
+        <>
+          <Markdown text={text} />
+          {trailing}
+        </>
+      )}
       {footer}
     </View>
   );

@@ -1,6 +1,7 @@
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 export type IconName =
+  | "copy"
   | "plus"
   | "chat"
   | "sun"
@@ -70,6 +71,12 @@ export function Icon({
         </>
       )}
       {name === "plus" && <Path {...common} d="M12 5v14M5 12h14" />}
+      {name === "copy" && (
+        <>
+          <Path {...common} d="M9 9h10v10H9z" />
+          <Path {...common} d="M5 15V5h10" />
+        </>
+      )}
       {name === "plusCircle" && (
         <>
           <Circle {...common} cx={12} cy={12} r={9} />
