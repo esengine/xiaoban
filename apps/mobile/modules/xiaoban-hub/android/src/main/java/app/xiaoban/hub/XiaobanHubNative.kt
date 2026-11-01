@@ -12,5 +12,8 @@ object XiaobanHubNative {
   external fun stop()
 
   @JvmStatic
+  external fun deliver(answer: String): String
+
+  @JvmStatic
   fun call(request: String): String = XiaobanOperator.handle(request)
 }

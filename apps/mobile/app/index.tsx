@@ -3,6 +3,7 @@ import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { askLocationOnce } from "../src/hub/askLocation.ts";
+import { askNotifyOnce } from "../src/hub/askNotify.ts";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
 import { ChatsTab } from "../src/screens/ChatsTab.tsx";
 import { DailyTab } from "../src/screens/DailyTab.tsx";
@@ -16,7 +17,11 @@ export default function HomeScreen() {
   const { phase, store } = useHubContext();
   const [tab, setTab] = useState<Tab>(remembered);
   useEffect(() => {
-    if (phase === "ready") void askLocationOnce().catch(() => undefined);
+    if (phase !== "ready") return;
+    void askLocationOnce()
+      .catch(() => undefined)
+      .then(() => askNotifyOnce())
+      .catch(() => undefined);
   }, [phase]);
   if (phase === "loading") return <View style={styles.screen} />;
   if (phase === "setup") return <Redirect href="/setup" />;

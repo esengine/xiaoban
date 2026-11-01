@@ -16,8 +16,38 @@ class XiaobanHubModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("XiaobanHub")
 
+    Events("onNoticeAnswer")
+
     OnCreate {
       XiaobanOperator.context = appContext.reactContext?.applicationContext
+      XiaobanNotices.listener = { answer -> sendEvent("onNoticeAnswer", mapOf("answer" to answer)) }
+    }
+
+    OnDestroy {
+      XiaobanNotices.listener = null
+    }
+
+    OnActivityEntersForeground {
+      XiaobanNotices.foreground = true
+    }
+
+    OnActivityEntersBackground {
+      XiaobanNotices.foreground = false
+    }
+
+    Function("notify") { request: String ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      XiaobanNotices.notify(context.applicationContext, JSONObject(request)).toString()
+    }
+
+    Function("setForeground") { active: Boolean ->
+      XiaobanNotices.foreground = active
+    }
+
+    Function("withdrawNotice") { id: String ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      XiaobanNotices.withdraw(context.applicationContext, id)
+      Unit
     }
 
     AsyncFunction("start") { locale: String, secrets: String, name: String ->

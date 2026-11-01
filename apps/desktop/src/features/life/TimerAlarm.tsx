@@ -43,21 +43,13 @@ export function TimerAlarm() {
   useEffect(
     () =>
       store.client.onEvent((event) => {
-        if (event.type === "weather_alert") {
-          void notify(event.title, event.body);
-          return;
-        }
-        if (event.type === "prep_due") {
-          void notify(t("prep-due-title"), event.task.text);
-          return;
-        }
-        if (event.type !== "timer_fired") return;
-        void notify(
-          t("timer-done-title", { label: event.timer.label }),
-          event.timer.after || t("timer-done-body"),
-        );
+        if (event.type !== "notify") return;
+        const { notice } = event;
+        if (notice.level !== "now") return;
+        if (notice.category !== "remind" && document.hasFocus()) return;
+        void notify(notice.title, notice.body);
       }),
-    [store, t],
+    [store],
   );
 
   const active = ringing.length > 0;

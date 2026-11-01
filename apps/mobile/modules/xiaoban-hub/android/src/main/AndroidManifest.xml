@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <queries>
     <intent>
       <action android:name="android.intent.action.MAIN" />
@@ -19,5 +20,12 @@
         android:name="android.accessibilityservice"
         android:resource="@xml/xiaoban_operator" />
     </service>
+    <receiver
+      android:name="app.xiaoban.hub.XiaobanNoticeReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="app.xiaoban.hub.NOTICE_ANSWER" />
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>

@@ -442,6 +442,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       return { ...state, sheets: { ...state.sheets, [event.summary.id]: event.summary } };
     case "doc_updated":
       return { ...state, docs: { ...state.docs, [event.summary.id]: event.summary } };
+    case "notify":
+    case "notice_withdrawn":
     case "timer_fired":
     case "prep_due":
     case "ledger_changed":

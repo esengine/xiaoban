@@ -764,25 +764,25 @@ async fn check(state: &SharedState) {
         let mut alerts = Vec::new();
         if want_today {
             saved.sent.insert("today".to_owned(), today.clone());
-            alerts.extend(today_alert(l, &found));
+            alerts.extend(today_alert(l, &found).map(|(title, body)| (title, body, true)));
         }
         if want_cold && let Some(tip) = cold_tip(l, &found) {
             saved.sent.insert("cold".to_owned(), today.clone());
-            alerts.push((tip.title, tip.detail));
+            alerts.push((tip.title, tip.detail, false));
         }
         if want_rain
             && let Some((episode, title, body)) = rain_alert(l, &found, now)
             && !saved.sent.contains_key(&episode)
         {
             saved.sent.insert(episode, today.clone());
-            alerts.push((title, body));
+            alerts.push((title, body, false));
         }
         if want_air && let Some(tip) = air_tip(l, &found) {
             saved.sent.insert("air".to_owned(), today.clone());
-            alerts.push((tip.title, tip.detail));
+            alerts.push((tip.title, tip.detail, false));
         }
-        for (title, body) in alerts {
-            state.publish(Event::WeatherAlert { title, body });
+        for (title, body, morning) in alerts {
+            state.publish(Event::WeatherAlert { title, body, morning });
         }
     }
     save(state, &saved).await;

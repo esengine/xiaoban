@@ -8,7 +8,7 @@ use axum::routing::get;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
-use xiaoban_protocol::HubInfo;
+use xiaoban_protocol::{Event, HubInfo, ProtocolError, Request};
 use xiaoban_store::Store;
 
 use crate::state::{HubState, SharedState};
@@ -23,8 +23,29 @@ pub struct Hub;
 pub struct HubHandle {
     pub addr: SocketAddr,
     pub info: HubInfo,
+    state: SharedState,
     shutdown: CancellationToken,
     task: tokio::task::JoinHandle<()>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LocalLink {
+    state: SharedState,
+    shutdown: CancellationToken,
+}
+
+impl LocalLink {
+    pub fn events(&self) -> broadcast::Receiver<Event> {
+        self.state.events.subscribe()
+    }
+
+    pub async fn request(&self, request: Request) -> Result<xiaoban_protocol::Response, ProtocolError> {
+        crate::handlers::handle(&self.state, true, request).await
+    }
+
+    pub async fn closed(&self) {
+        self.shutdown.cancelled().await;
+    }
 }
 
 impl HubHandle {
@@ -35,6 +56,13 @@ impl HubHandle {
             self.addr.ip().to_string()
         };
         format!("ws://{host}:{}/ws", self.addr.port())
+    }
+
+    pub fn link(&self) -> LocalLink {
+        LocalLink {
+            state: Arc::clone(&self.state),
+            shutdown: self.shutdown.clone(),
+        }
     }
 
     pub async fn shutdown(self) {
@@ -126,7 +154,9 @@ impl Hub {
         crate::capability::restore(&state).await;
         let shutdown = CancellationToken::new();
         watch(&state, &shutdown);
-        let app = Router::new().route("/ws", get(upgrade)).with_state(state);
+        let app = Router::new()
+            .route("/ws", get(upgrade))
+            .with_state(Arc::clone(&state));
         let signal = shutdown.clone();
         let task = tokio::spawn(async move {
             let serve = axum::serve(
@@ -146,6 +176,7 @@ impl Hub {
         Ok(HubHandle {
             addr,
             info,
+            state,
             shutdown,
             task,
         })
@@ -164,6 +195,7 @@ fn watch(state: &SharedState, shutdown: &CancellationToken) {
     crate::tidy::watch(Arc::clone(state), shutdown.clone());
     crate::week::watch(Arc::clone(state), shutdown.clone());
     crate::weather_page::watch(Arc::clone(state), shutdown.clone());
+    crate::notify::watch(Arc::clone(state), shutdown.clone());
     let owned = Arc::clone(state);
     let stop = shutdown.clone();
     tokio::spawn(async move {

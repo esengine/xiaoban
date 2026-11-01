@@ -36,6 +36,7 @@ import type {
   Message,
   ModelApi,
   ModelInfo,
+  NotifySettings,
   OperatePermissions,
   Plan,
   PlanAction,
@@ -813,6 +814,19 @@ export class HubStore {
 
   async setAutoCompact(percent: number | null): Promise<void> {
     await this.client.request({ type: "set_auto_compact", percent }, "ack");
+  }
+
+  async notifySettings(): Promise<NotifySettings> {
+    const { settings } = await this.client.request({ type: "notify_settings" }, "notify_settings");
+    return settings;
+  }
+
+  async setNotifySettings(settings: NotifySettings): Promise<NotifySettings> {
+    const result = await this.client.request(
+      { type: "set_notify_settings", settings },
+      "notify_settings",
+    );
+    return result.settings;
   }
 
   async dailyLayout(): Promise<DailyLayout> {

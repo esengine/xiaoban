@@ -4,6 +4,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { HubProvider } from "../src/hub/HubProvider.tsx";
 import { Island } from "../src/hub/Island.tsx";
+import { Notices } from "../src/hub/Notices.tsx";
 import { translator } from "../src/i18n.ts";
 
 const { t } = translator;
@@ -13,6 +14,7 @@ export default function RootLayout() {
     <I18nProvider translator={translator}>
       <HubProvider>
         <Island />
+        <Notices />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
@@ -32,6 +34,10 @@ export default function RootLayout() {
             options={{ headerShown: false, presentation: "modal", title: t("consent-title") }}
           />
           <Stack.Screen name="models" options={{ headerShown: false, title: t("models-title") }} />
+          <Stack.Screen
+            name="notify-settings"
+            options={{ headerShown: false, title: t("notify-settings-title") }}
+          />
           <Stack.Screen name="scan" options={{ headerShown: false, title: t("scan-title") }} />
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />

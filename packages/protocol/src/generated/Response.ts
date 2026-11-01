@@ -29,6 +29,7 @@ import type { Memory } from "./Memory.ts";
 import type { MemoryGalaxy } from "./MemoryGalaxy.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
+import type { NotifySettings } from "./NotifySettings.ts";
 import type { OperatePermissions } from "./OperatePermissions.ts";
 import type { Plan } from "./Plan.ts";
 import type { Preferences } from "./Preferences.ts";
@@ -99,6 +100,7 @@ export type Response =
   | { type: "ledger"; ledger: Ledger }
   | { type: "ledger_year"; year: LedgerYear }
   | { type: "weather"; weather: WeatherView }
+  | { type: "notify_settings"; settings: NotifySettings }
   | { type: "daily_layout"; layout: DailyLayout }
   | { type: "context_usage"; usage: ContextUsage }
   | { type: "uploaded"; path: string }

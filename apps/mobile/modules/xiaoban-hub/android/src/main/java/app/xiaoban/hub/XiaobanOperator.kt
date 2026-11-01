@@ -64,6 +64,8 @@ object XiaobanOperator {
         "keys" -> keys(request.getString("keys"))
         "type" -> type(request.getString("text"))
         "locate" -> PhoneLocation.locate(context ?: service())
+        "notify" -> XiaobanNotices.notify(context ?: service(), request)
+        "withdraw" -> XiaobanNotices.withdraw(context ?: service(), request.getString("id"))
         else -> failure("unknown request")
       }.also { reply -> if (reply.has("error")) Log.w(TAG, "$op: ${reply.optString("error")}") }.toString()
     } catch (error: Exception) {
