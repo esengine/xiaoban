@@ -39,6 +39,8 @@ export const color = {
   codePick: "#DCE3FA",
   panelSoft: "#FBFBFC",
   synKeyword: "#7A3E9D",
+  merged: "#5B3FC4",
+  mergedSoft: "#EFEBFC",
 } as const;
 
 export const dark = {

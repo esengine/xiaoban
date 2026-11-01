@@ -8,6 +8,7 @@ import type { DirEntry } from "./DirEntry.ts";
 import type { Failure } from "./Failure.ts";
 import type { FileDiff } from "./FileDiff.ts";
 import type { GitInfo } from "./GitInfo.ts";
+import type { GithubRef } from "./GithubRef.ts";
 import type { Interpretation } from "./Interpretation.ts";
 import type { Location } from "./Location.ts";
 import type { Memory } from "./Memory.ts";
@@ -66,4 +67,6 @@ export type Response =
   | { type: "commands"; commands: Array<CommandRun> }
   | { type: "command"; command: CommandRun }
   | { type: "branches"; branches: Array<Branch> }
+  | { type: "github_refs"; refs: Array<GithubRef> }
+  | { type: "pins"; pinned: Array<number>; hidden: Array<number> }
   | { type: "workspace_image"; url: string; bytes: number };

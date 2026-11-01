@@ -101,6 +101,48 @@ pub struct Branch {
     pub updated_at: i64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum RefState {
+    Open,
+    Draft,
+    Merged,
+    Closed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum CheckOutcome {
+    Passed,
+    Failed,
+    Pending,
+    Skipped,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct RefCheck {
+    pub name: String,
+    pub outcome: CheckOutcome,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GithubRef {
+    pub number: u32,
+    pub pull: bool,
+    pub repo: String,
+    pub state: RefState,
+    pub title: String,
+    pub author: String,
+    pub url: String,
+    pub head: Option<String>,
+    pub base: Option<String>,
+    pub files: Option<u32>,
+    pub comments: u32,
+    pub checks: Vec<RefCheck>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandRun {

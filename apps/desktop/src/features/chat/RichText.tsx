@@ -3,6 +3,8 @@ import { type ComponentProps, memo, type ReactNode, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { openExternal } from "../../lib/external.ts";
+import { remarkGithubRefs } from "../code/githubRefs.ts";
+import { RefChip } from "../code/RefChip.tsx";
 import { useImageViewer } from "../viewer/ImageViewer.tsx";
 import { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 
@@ -167,6 +169,21 @@ const components: Components = {
     </div>
   ),
   img: ({ src, alt }) => <ReplyImage src={typeof src === "string" ? src : ""} alt={alt ?? ""} />,
+  ...({
+    "gh-ref": ({
+      number,
+      original,
+      children,
+    }: {
+      number?: string;
+      original?: string;
+      children?: ReactNode;
+    }) => (
+      <RefChip number={number ?? ""} original={original ?? ""}>
+        {children}
+      </RefChip>
+    ),
+  } as Components),
   kbd: ({ children }) => (
     <kbd className="rich__kbd">{typeof children === "string" ? keyLabel(children) : children}</kbd>
   ),
@@ -177,7 +194,7 @@ export const RichText = memo(function RichText({ text }: { text: string }) {
   return (
     <div className="rich">
       <Markdown
-        remarkPlugins={[remarkGfm, remarkInlineTags]}
+        remarkPlugins={[remarkGfm, remarkInlineTags, remarkGithubRefs]}
         remarkRehypeOptions={{
           footnoteLabel: t("rich-footnotes"),
           footnoteBackLabel: t("rich-footnote-back"),

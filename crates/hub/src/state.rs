@@ -48,6 +48,7 @@ pub struct HubState {
     pub git_tools: Vec<ToolSpec>,
     pub gh_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
+    pub github_cache: crate::github::Cache,
     pub code_reads: std::sync::Mutex<std::collections::HashMap<(String, std::path::PathBuf), String>>,
 }
 

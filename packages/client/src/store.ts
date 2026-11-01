@@ -8,6 +8,7 @@ import type {
   DirEntry,
   Failure,
   FileDiff,
+  GithubRef,
   GitInfo,
   Interpretation,
   Location,
@@ -420,6 +421,28 @@ export class HubStore {
       "workspace_image",
     );
     return { url, bytes };
+  }
+
+  async githubRefs(workspaceId: string, numbers: number[]): Promise<GithubRef[]> {
+    const { refs } = await this.client.request(
+      { type: "github_refs", workspaceId, numbers },
+      "github_refs",
+    );
+    return refs;
+  }
+
+  async threadPins(threadId: string): Promise<{ pinned: number[]; hidden: number[] }> {
+    const { pinned, hidden } = await this.client.request({ type: "thread_pins", threadId }, "pins");
+    return { pinned, hidden };
+  }
+
+  async pinRef(
+    threadId: string,
+    number: number,
+    pinned: boolean,
+  ): Promise<{ pinned: number[]; hidden: number[] }> {
+    const result = await this.client.request({ type: "pin_ref", threadId, number, pinned }, "pins");
+    return { pinned: result.pinned, hidden: result.hidden };
   }
 
   async threadChanges(threadId: string): Promise<FileDiff[]> {

@@ -207,6 +207,18 @@ pub enum Request {
         workspace_id: String,
         path: String,
     },
+    GithubRefs {
+        workspace_id: String,
+        numbers: Vec<u32>,
+    },
+    ThreadPins {
+        thread_id: String,
+    },
+    PinRef {
+        thread_id: String,
+        number: u32,
+        pinned: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -338,6 +350,13 @@ pub enum Response {
     },
     Branches {
         branches: Vec<crate::Branch>,
+    },
+    GithubRefs {
+        refs: Vec<crate::GithubRef>,
+    },
+    Pins {
+        pinned: Vec<u32>,
+        hidden: Vec<u32>,
     },
     WorkspaceImage {
         url: String,

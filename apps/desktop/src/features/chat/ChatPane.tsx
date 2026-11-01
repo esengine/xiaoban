@@ -10,6 +10,7 @@ import {
   type ReactNode,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -17,6 +18,10 @@ import { useHub } from "../../app/hub.tsx";
 import { DropZone, SentFiles } from "../attach/Attachments.tsx";
 import { useAttachments } from "../attach/useAttachments.ts";
 import { BranchBar, ChangeCard } from "../code/ChatBits.tsx";
+import { refsIn } from "../code/githubRefs.ts";
+import { Pins } from "../code/Pins.tsx";
+import { RefsContext, type RefsValue } from "../code/RefChip.tsx";
+import { useWorkspaceOf } from "../code/useCode.ts";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
@@ -198,6 +203,48 @@ export function ChatPane(props: Props) {
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
   const running = drafts.find((draft) => !draft.failure && !draft.background);
   const [queued, setQueued] = useState<Queued[]>([]);
+  const workspace = useWorkspaceOf(threadId);
+  const [pins, setPins] = useState<{ pinned: number[]; hidden: number[] }>({
+    pinned: [],
+    hidden: [],
+  });
+  useEffect(() => {
+    if (!workspace) return;
+    void store
+      .threadPins(threadId)
+      .then(setPins)
+      .catch(() => undefined);
+  }, [store, threadId, workspace]);
+  const refsValue = useMemo<RefsValue | null>(
+    () =>
+      workspace
+        ? {
+            workspaceId: workspace.id,
+            threadId,
+            pinned: pins.pinned,
+            onPin: (number, on) =>
+              void store
+                .pinRef(threadId, number, on)
+                .then(setPins)
+                .catch(() => undefined),
+            onAsk: (text) => void store.send(threadId, text).catch(() => undefined),
+          }
+        : null,
+    [workspace, threadId, pins.pinned, store],
+  );
+  const pinItems = useMemo(() => {
+    if (!workspace) return [];
+    const seen = new Map<number, string | null>();
+    for (const number of pins.pinned) seen.set(number, null);
+    for (const message of messages) {
+      for (const link of refsIn(message.text).links) {
+        if (!seen.has(link.number)) seen.set(link.number, link.repo);
+      }
+    }
+    return [...seen.entries()]
+      .filter(([number]) => !pins.hidden.includes(number))
+      .map(([number, repo]) => ({ number, repo }));
+  }, [workspace, pins, messages]);
   const waitingHere = queued.filter((item) => item.threadId === threadId);
   const nextQueued = waitingHere[0];
   useEffect(() => {
@@ -494,126 +541,133 @@ export function ChatPane(props: Props) {
   };
 
   return (
-    <main className="chat">
-      <header className="chat__header">
-        <PanelToggle side="list" open={props.listOpen} onToggle={props.onToggleList} />
-        <div className="chat__heading">
-          <h1 className="chat__title">{title}</h1>
-          <p className="chat__subtitle">
-            {state.status === "open" ? (
-              <>
-                {primary && t("chat-subtitle-lead")}
-                <ThinkingMenu threadId={threadId} model={model} />
-              </>
-            ) : (
-              subtitle
-            )}
-          </p>
-        </div>
-        <PanelToggle
-          side="workspace"
-          open={props.workspaceOpen}
-          onToggle={props.onToggleWorkspace}
-        />
-      </header>
-      <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>
-        {showLoading && (
-          <li className="older-loading" aria-live="polite">
-            <span className="older-loading__dot" aria-hidden="true" />
-            {t("archive-loading")}
-          </li>
-        )}
-        {archived && folded && (
-          <li className="archive-divider">
-            <span>{t("archive-folded", { count: archived.count })}</span>
-            <button type="button" onClick={() => unfold(true)}>
-              {t("archive-expand")}
-            </button>
-          </li>
-        )}
-        {archived && !folded && (
-          <li className="archived-block">
-            <ol className="archived-block__list">
-              {rows.filter((row) => rowTime(row) < archived.before).map(renderRow)}
-            </ol>
-          </li>
-        )}
-        {archived && !folded && (
-          <li className="archive-divider">
-            <span>{t("archive-above")}</span>
-            <button type="button" onClick={() => unfold(false)}>
-              {t("archive-collapse")}
-            </button>
-          </li>
-        )}
-        {rows.filter((row) => !archived || rowTime(row) >= archived.before).map(renderRow)}
-        {trailing.map((draft) => (
-          <DraftItem
-            key={draft.turnId}
-            draft={draft}
-            question={questionFor(draft)}
-            onRetry={() => retry(draft.turnId)}
+    <RefsContext value={refsValue}>
+      <main className="chat">
+        <header className="chat__header">
+          <PanelToggle side="list" open={props.listOpen} onToggle={props.onToggleList} />
+          <div className="chat__heading">
+            <h1 className="chat__title">{title}</h1>
+            <p className="chat__subtitle">
+              {state.status === "open" ? (
+                <>
+                  {primary && t("chat-subtitle-lead")}
+                  <ThinkingMenu threadId={threadId} model={model} />
+                </>
+              ) : (
+                subtitle
+              )}
+            </p>
+          </div>
+          <PanelToggle
+            side="workspace"
+            open={props.workspaceOpen}
+            onToggle={props.onToggleWorkspace}
           />
-        ))}
-        {waitingHere.map((item) => (
-          <li key={item.id} className="bubble bubble--user bubble--queued">
-            <InlineText text={item.text} />
-            <span className="bubble__queued">{t("composer-queued")}</span>
-          </li>
-        ))}
-        {state.confirms
-          .filter((confirm) => confirm.threadId === threadId && confirm.kind.kind !== "permissions")
-          .map((confirm) => (
-            <li key={confirm.id} className="bubble bubble--assistant bubble--confirm">
-              <ConfirmCard confirm={confirm} />
+        </header>
+        <Pins items={pinItems} />
+        <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>
+          {showLoading && (
+            <li className="older-loading" aria-live="polite">
+              <span className="older-loading__dot" aria-hidden="true" />
+              {t("archive-loading")}
+            </li>
+          )}
+          {archived && folded && (
+            <li className="archive-divider">
+              <span>{t("archive-folded", { count: archived.count })}</span>
+              <button type="button" onClick={() => unfold(true)}>
+                {t("archive-expand")}
+              </button>
+            </li>
+          )}
+          {archived && !folded && (
+            <li className="archived-block">
+              <ol className="archived-block__list">
+                {rows.filter((row) => rowTime(row) < archived.before).map(renderRow)}
+              </ol>
+            </li>
+          )}
+          {archived && !folded && (
+            <li className="archive-divider">
+              <span>{t("archive-above")}</span>
+              <button type="button" onClick={() => unfold(false)}>
+                {t("archive-collapse")}
+              </button>
+            </li>
+          )}
+          {rows.filter((row) => !archived || rowTime(row) >= archived.before).map(renderRow)}
+          {trailing.map((draft) => (
+            <DraftItem
+              key={draft.turnId}
+              draft={draft}
+              question={questionFor(draft)}
+              onRetry={() => retry(draft.turnId)}
+            />
+          ))}
+          {waitingHere.map((item) => (
+            <li key={item.id} className="bubble bubble--user bubble--queued">
+              <InlineText text={item.text} />
+              <span className="bubble__queued">{t("composer-queued")}</span>
             </li>
           ))}
-        {fresh && messages.length > 0 && (
-          <li className="suggestions">
-            {SUGGESTIONS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                className="suggestion"
-                onClick={() => void send(t(key))}
-              >
-                {t(key)}
-              </button>
+          {state.confirms
+            .filter(
+              (confirm) => confirm.threadId === threadId && confirm.kind.kind !== "permissions",
+            )
+            .map((confirm) => (
+              <li key={confirm.id} className="bubble bubble--assistant bubble--confirm">
+                <ConfirmCard confirm={confirm} />
+              </li>
             ))}
-          </li>
-        )}
-        <li ref={end} className="chat__end" aria-hidden="true" />
-      </ol>
-      <BranchBar threadId={threadId} />
-      <Composer
-        busy={Boolean(running)}
-        quote={quote}
-        onClearQuote={() => quoteWith(null)}
-        attachments={attachments}
-        threadId={threadId}
-        onSend={async (text, threadRefs) => {
-          const files = attachments.ready.map((file) => file.path);
-          if (running) {
-            if (isCancel(text, t("composer-cancel-words"))) {
-              await store.cancel(running.turnId);
-              return;
+          {fresh && messages.length > 0 && (
+            <li className="suggestions">
+              {SUGGESTIONS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="suggestion"
+                  onClick={() => void send(t(key))}
+                >
+                  {t(key)}
+                </button>
+              ))}
+            </li>
+          )}
+          <li ref={end} className="chat__end" aria-hidden="true" />
+        </ol>
+        <BranchBar threadId={threadId} />
+        <Composer
+          busy={Boolean(running)}
+          quote={quote}
+          onClearQuote={() => quoteWith(null)}
+          attachments={attachments}
+          threadId={threadId}
+          onSend={async (text, threadRefs) => {
+            const files = attachments.ready.map((file) => file.path);
+            if (running) {
+              if (isCancel(text, t("composer-cancel-words"))) {
+                await store.cancel(running.turnId);
+                return;
+              }
+              counter += 1;
+              setQueued((list) => [
+                ...list,
+                { id: counter, threadId, text, quote, files, threads: threadRefs },
+              ]);
+            } else {
+              await send(text, quote, files, threadRefs);
             }
-            counter += 1;
-            setQueued((list) => [
-              ...list,
-              { id: counter, threadId, text, quote, files, threads: threadRefs },
-            ]);
-          } else {
-            await send(text, quote, files, threadRefs);
-          }
-          quoteWith(null);
-          attachments.clear();
-        }}
-        onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
-      />
-      {dragging > 0 && <DropZone count={dragging} />}
-      {searchDialog && <SearchDialog threadId={threadId} onClose={() => setSearchDialog(false)} />}
-    </main>
+            quoteWith(null);
+            attachments.clear();
+          }}
+          onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
+        />
+        {dragging > 0 && <DropZone count={dragging} />}
+        {searchDialog && (
+          <SearchDialog threadId={threadId} onClose={() => setSearchDialog(false)} />
+        )}
+      </main>
+    </RefsContext>
   );
 }
 

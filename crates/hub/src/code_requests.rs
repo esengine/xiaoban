@@ -194,6 +194,27 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             }
             image(&target.path)
         }
+        Request::GithubRefs {
+            workspace_id,
+            numbers,
+        } => {
+            let found = load(state, workspace_id).await?;
+            Ok(Response::GithubRefs {
+                refs: crate::github::lookup(state, &found, numbers).await,
+            })
+        }
+        Request::ThreadPins { thread_id } => {
+            let (pinned, hidden) = crate::github::pins(state, &thread_id).await;
+            Ok(Response::Pins { pinned, hidden })
+        }
+        Request::PinRef {
+            thread_id,
+            number,
+            pinned,
+        } => {
+            let (pinned, hidden) = crate::github::pin(state, &thread_id, number, pinned).await;
+            Ok(Response::Pins { pinned, hidden })
+        }
         Request::StopCommand { command_id } => {
             crate::commands::stop(state, &command_id);
             Ok(Response::Ack)

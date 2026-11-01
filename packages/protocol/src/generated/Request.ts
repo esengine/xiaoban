@@ -87,4 +87,7 @@ export type Request =
   | { type: "switch_branch"; workspaceId: string; name: string; create: boolean; stash: boolean }
   | { type: "pull_branch"; workspaceId: string }
   | { type: "restore_stash"; workspaceId: string }
-  | { type: "workspace_image"; workspaceId: string; path: string };
+  | { type: "workspace_image"; workspaceId: string; path: string }
+  | { type: "github_refs"; workspaceId: string; numbers: Array<number> }
+  | { type: "thread_pins"; threadId: string }
+  | { type: "pin_ref"; threadId: string; number: number; pinned: boolean };
