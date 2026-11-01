@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import { type HostInstance, Pressable, View } from "react-native";
 import { EventCard } from "../calendar/EventCard.tsx";
+import { FloorCard } from "../floor/FloorCard.tsx";
 import { RecipeCard } from "../life/RecipeCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { DeckCard, DocCard, SheetCard } from "../work/WorkCards.tsx";
@@ -26,6 +27,8 @@ function AttachmentCard({ message, last }: { message: Message; last: boolean }) 
       return <RecipeCard recipeId={attachment.recipeId} />;
     case "event":
       return <EventCard event={attachment.event} />;
+    case "floor_plan":
+      return <FloorCard planId={attachment.planId} />;
     case "subthreads":
       return <SubthreadCards threadIds={attachment.threadIds} />;
     case "service_needed":

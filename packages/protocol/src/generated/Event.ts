@@ -10,6 +10,7 @@ import type { DeckSummary } from "./DeckSummary.ts";
 import type { Device } from "./Device.ts";
 import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
+import type { FloorPlan } from "./FloorPlan.ts";
 import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
@@ -81,6 +82,7 @@ export type Event =
   | { type: "prep_due"; task: PrepTask }
   | { type: "ledger_changed" }
   | { type: "doc_updated"; summary: DocSummary }
+  | { type: "floor_plan_updated"; plan: FloorPlan }
   | { type: "sheet_updated"; summary: WorkbookSummary }
   | { type: "deck_updated"; summary: DeckSummary }
   | { type: "weather_alert"; title: string; body: string; morning: boolean }

@@ -24,6 +24,7 @@ import type {
   Expense,
   Failure,
   FileDiff,
+  FloorPlan,
   FoundImage,
   GithubRef,
   GitInfo,
@@ -718,6 +719,40 @@ export class HubStore {
   async recipeToShopping(id: string): Promise<void> {
     const { view } = await this.client.request({ type: "recipe_to_shopping", id }, "recipe");
     this.#update((state) => ({ ...state, recipes: { ...state.recipes, [id]: view } }));
+  }
+
+  #floor(plan: FloorPlan): FloorPlan {
+    this.#update((state) => ({ ...state, floorPlans: { ...state.floorPlans, [plan.id]: plan } }));
+    return plan;
+  }
+
+  async floorPlan(id: string): Promise<FloorPlan> {
+    const { plan } = await this.client.request({ type: "floor_plan", id }, "floor_plan");
+    return this.#floor(plan);
+  }
+
+  async setFloorScheme(id: string, scheme: string): Promise<FloorPlan> {
+    const { plan } = await this.client.request(
+      { type: "set_floor_scheme", id, scheme },
+      "floor_plan",
+    );
+    return this.#floor(plan);
+  }
+
+  async restoreFloorVersion(id: string, scheme: string, version: number): Promise<FloorPlan> {
+    const { plan } = await this.client.request(
+      { type: "restore_floor_version", id, scheme, version },
+      "floor_plan",
+    );
+    return this.#floor(plan);
+  }
+
+  async measureFloor(id: string, measureId: string, millimeters: number): Promise<FloorPlan> {
+    const { plan } = await this.client.request(
+      { type: "measure_floor", id, measureId, millimeters: Math.round(millimeters) },
+      "floor_plan",
+    );
+    return this.#floor(plan);
   }
 
   async docSummary(id: string): Promise<DocSummary> {

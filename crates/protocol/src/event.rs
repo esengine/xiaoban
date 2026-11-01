@@ -152,6 +152,9 @@ pub enum Event {
     DocUpdated {
         summary: crate::DocSummary,
     },
+    FloorPlanUpdated {
+        plan: crate::FloorPlan,
+    },
     SheetUpdated {
         summary: crate::WorkbookSummary,
     },
@@ -209,6 +212,7 @@ impl Event {
             | Self::PrepDue { .. }
             | Self::LedgerChanged
             | Self::DocUpdated { .. }
+            | Self::FloorPlanUpdated { .. }
             | Self::SheetUpdated { .. }
             | Self::DeckUpdated { .. }
             | Self::WeatherAlert { .. }

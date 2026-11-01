@@ -39,6 +39,7 @@ export const color = {
   changeInk: "#8A5A00",
   changeSoft: "#FBF0D9",
   codePick: "#DCE3FA",
+  floorPickItem: "#B9C6F2",
   panelSoft: "#FBFBFC",
   neutralSoft: "#ECEDF0",
   purpleSoft: "#F3E8F6",

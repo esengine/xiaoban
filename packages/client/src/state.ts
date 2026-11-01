@@ -11,6 +11,7 @@ import type {
   DocSummary,
   Event,
   Failure,
+  FloorPlan,
   HubInfo,
   Kitchen,
   Ledger,
@@ -104,6 +105,7 @@ export interface HubState {
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
   recipes: Readonly<Record<string, RecipeView>>;
+  floorPlans: Readonly<Record<string, FloorPlan>>;
   doc: Doc | null;
   sheets: Readonly<Record<string, WorkbookSummary>>;
   sheet: Workbook | null;
@@ -144,6 +146,7 @@ export const initialHubState: HubState = {
   weather: null,
   docs: {},
   recipes: {},
+  floorPlans: {},
   doc: null,
   sheets: {},
   sheet: null,
@@ -445,6 +448,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       return { ...state, sheets: { ...state.sheets, [event.summary.id]: event.summary } };
     case "doc_updated":
       return { ...state, docs: { ...state.docs, [event.summary.id]: event.summary } };
+    case "floor_plan_updated":
+      return { ...state, floorPlans: { ...state.floorPlans, [event.plan.id]: event.plan } };
     case "notify":
     case "notice_withdrawn":
     case "timer_fired":

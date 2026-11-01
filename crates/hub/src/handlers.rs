@@ -229,6 +229,10 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         request @ (Request::Recipe { .. }
         | Request::CookRecipe { .. }
         | Request::RecipeToShopping { .. }) => crate::recipes::handle(state, request).await,
+        request @ (Request::FloorPlan { .. }
+        | Request::SetFloorScheme { .. }
+        | Request::RestoreFloorVersion { .. }
+        | Request::MeasureFloor { .. }) => crate::floorplan::handle(state, request).await,
         Request::LocateWeather | Request::LocatePlace if !local => Err(ProtocolError::new(
             ErrorCode::Unauthorized,
             "only the hub's own machine can be located",

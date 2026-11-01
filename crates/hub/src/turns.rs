@@ -331,6 +331,7 @@ pub async fn start(
     let sheet_note = crate::sheet::note(state, &thread_id).await;
     let deck_note = crate::slides::note(state, &thread_id).await;
     let plan_note = crate::plan::note(state, &thread_id).await;
+    let floor_note = crate::floorplan::note(state, &thread_id).await;
     let skills_note = crate::capability::note(state);
 
     let (file_notes, images) = attachments(state, &files);
@@ -352,6 +353,7 @@ pub async fn start(
                 .chain(sheet_note)
                 .chain(deck_note)
                 .chain(plan_note)
+                .chain(floor_note)
                 .chain(skills_note)
                 .chain(import_note)
                 .chain(context)

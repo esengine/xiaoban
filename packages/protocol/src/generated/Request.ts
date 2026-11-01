@@ -153,6 +153,10 @@ export type Request =
   | { type: "recipe"; id: string }
   | { type: "cook_recipe"; id: string }
   | { type: "recipe_to_shopping"; id: string }
+  | { type: "floor_plan"; id: string }
+  | { type: "set_floor_scheme"; id: string; scheme: string }
+  | { type: "restore_floor_version"; id: string; scheme: string; version: number }
+  | { type: "measure_floor"; id: string; measureId: string; millimeters: number }
   | { type: "ledger"; month: string }
   | { type: "ledger_range"; from: string; to: string }
   | { type: "ledger_year"; year: number }

@@ -10,6 +10,7 @@ import { CodePanel } from "../features/code/CodePanel.tsx";
 import { NewWorkspace } from "../features/code/NewWorkspace.tsx";
 import { useCodeWidth } from "../features/code/useCodeWidth.ts";
 import { DocPage } from "../features/doc/DocPage.tsx";
+import { FloorWorkbench } from "../features/floor/FloorWorkbench.tsx";
 import { CookPage } from "../features/life/CookPage.tsx";
 import { DailyPage } from "../features/life/DailyPage.tsx";
 import { KitchenPage } from "../features/life/KitchenPage.tsx";
@@ -46,6 +47,11 @@ function Home() {
   const [trip, setTrip] = useState<OpenTrip | null>(null);
   const [docView, setDocView] = useState<{ docId: string; print: boolean } | null>(null);
   const [sheetView, setSheetView] = useState<string | null>(null);
+  const [floorView, setFloorView] = useState<{
+    planId: string;
+    threadId: string;
+    check: boolean;
+  } | null>(null);
   const [deckView, setDeckView] = useState<{
     deckId: string;
     action: "present" | "pptx" | "pdf" | null;
@@ -208,6 +214,35 @@ function Home() {
     );
   }
 
+  if (floorView) {
+    const thread = threads.find((candidate) => candidate.id === floorView.threadId);
+    return (
+      <div className="shell">
+        <Rail
+          onNavigate={(next) => {
+            setFloorView(null);
+            navigate(next);
+          }}
+        />
+        <FloorWorkbench
+          key={floorView.planId}
+          planId={floorView.planId}
+          check={floorView.check}
+          threadTitle={
+            floorView.threadId === primaryId
+              ? t("app-name")
+              : (thread?.title ?? t("thread-untitled"))
+          }
+          onBack={() => {
+            setSelected(floorView.threadId);
+            setFloorView(null);
+          }}
+        />
+        {consent && <OperateConsent key={consent.id} confirm={consent} />}
+      </div>
+    );
+  }
+
   if (docView) {
     return (
       <div className="shell">
@@ -292,6 +327,7 @@ function Home() {
           onOpenDoc={(docId, print) => setDocView({ docId, print: Boolean(print) })}
           onOpenSheet={setSheetView}
           onOpenDeck={(deckId, action) => setDeckView({ deckId, action: action ?? null })}
+          onOpenFloor={(planId, check) => setFloorView({ planId, threadId: activeId, check })}
           onCook={() => {
             setTrip(null);
             setCookReturn("chat");

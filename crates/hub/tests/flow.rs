@@ -2370,3 +2370,138 @@ async fn recipes_attach_a_card_and_cook_only_when_asked() {
     assert_eq!(missing.code, ErrorCode::NotFound);
     hub.shutdown().await;
 }
+
+fn is_floor_plan(attachment: &Attachment) -> bool {
+    matches!(attachment, Attachment::FloorPlan { .. })
+}
+
+fn floor_layout(plan: &xiaoban_protocol::FloorPlan) -> &xiaoban_protocol::FloorLayout {
+    let scheme = plan
+        .schemes
+        .iter()
+        .find(|scheme| scheme.id == plan.scheme)
+        .unwrap();
+    &scheme.versions.last().unwrap().layout
+}
+
+async fn floor_plan(client: &mut TestClient, request: Request) -> xiaoban_protocol::FloorPlan {
+    let Response::FloorPlan { plan } = client.request(request).await else {
+        panic!("expected floor plan");
+    };
+    plan
+}
+
+fn floor_provider() -> ScriptedProvider {
+    ScriptedProvider::sequence([
+        vec![tool_call(
+            "floorplan_save",
+            &serde_json::json!({
+                "title": "新家",
+                "kind": "两室一厅",
+                "area": 60,
+                "rooms": [
+                    {
+                        "name": "客厅",
+                        "rect": { "x": 0, "y": 0, "w": 6, "h": 4.5 },
+                        "facing": "south",
+                        "furniture": [{ "name": "沙发", "x": 1, "y": 3.5, "w": 2.4, "h": 0.9 }],
+                        "advice": "沙发背靠北墙",
+                        "ideas": ["沙发换到东墙"],
+                    },
+                    { "name": "主卧", "rect": { "x": 6, "y": 0, "w": 4.2, "h": 3.7 } },
+                ],
+                "unclear": [{
+                    "room": "主卧",
+                    "label": "主卧东墙",
+                    "x1": 10.2, "y1": 0, "x2": 10.2, "y2": 3.7,
+                    "estimate": 3.7,
+                    "note": "被水印挡住了",
+                }],
+            }),
+        )],
+        vec![ModelChunk::Text("认出来了".into())],
+        vec![tool_call(
+            "floorplan_edit",
+            &serde_json::json!({
+                "note": "加一面书墙",
+                "rooms": [{
+                    "name": "客厅",
+                    "furniture": [
+                        { "name": "沙发", "x": 1, "y": 3.5, "w": 2.4, "h": 0.9 },
+                        { "name": "书墙", "x": 0, "y": 0, "w": 3, "h": 0.4 },
+                    ],
+                }],
+            }),
+        )],
+        vec![ModelChunk::Text("加好了".into())],
+    ])
+}
+
+#[tokio::test]
+async fn floor_plans_version_every_change_and_take_measurements() {
+    let provider = floor_provider();
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "这是我家户型", Vec::new()).await;
+
+    let message = latest_message_with(&mut client, &thread, is_floor_plan).await;
+    let Some(Attachment::FloorPlan { plan_id }) = message.attachment else {
+        panic!("expected a floor plan card");
+    };
+    let plan = floor_plan(&mut client, Request::FloorPlan { id: plan_id.clone() }).await;
+    assert_eq!(plan.thread_id, thread);
+    assert_eq!(plan.scheme, "A");
+    let layout = floor_layout(&plan);
+    assert_eq!(layout.rooms.len(), 2);
+    assert!((layout.rooms[0].area - 27.0).abs() < 1e-9);
+    assert_eq!(layout.rooms[0].items[0].name, "沙发");
+    assert_eq!(layout.measures.len(), 1);
+    assert!(layout.measures[0].value.is_none());
+    assert!((layout.measures[0].estimate - 3.7).abs() < 1e-9);
+
+    converse(&mut client, &thread, "客厅加一面书墙", Vec::new()).await;
+    let plan = floor_plan(&mut client, Request::FloorPlan { id: plan_id.clone() }).await;
+    let versions = &plan.schemes[0].versions;
+    assert_eq!(versions.len(), 2);
+    assert_eq!(versions[1].note, "加一面书墙");
+    assert_eq!(floor_layout(&plan).rooms[0].items.len(), 2);
+    assert_eq!(floor_layout(&plan).rooms[0].advice, "沙发背靠北墙");
+
+    let plan = floor_plan(
+        &mut client,
+        Request::RestoreFloorVersion {
+            id: plan_id.clone(),
+            scheme: "A".into(),
+            version: 1,
+        },
+    )
+    .await;
+    assert_eq!(plan.schemes[0].versions.len(), 3);
+    assert!(plan.schemes[0].versions[2].by_user);
+    assert_eq!(floor_layout(&plan).rooms[0].items.len(), 1);
+
+    let measure_id = floor_layout(&plan).measures[0].id.clone();
+    let plan = floor_plan(
+        &mut client,
+        Request::MeasureFloor {
+            id: plan_id.clone(),
+            measure_id,
+            millimeters: 3750,
+        },
+    )
+    .await;
+    let layout = floor_layout(&plan);
+    assert_eq!(plan.schemes[0].versions.len(), 4);
+    assert!(layout.measures[0].value.is_some_and(|value| (value - 3.75).abs() < 1e-9));
+    assert!((layout.rooms[1].area - 15.75).abs() < 1e-9);
+
+    let missing = client
+        .try_request(Request::FloorPlan { id: "nope".into() })
+        .await
+        .unwrap_err();
+    assert_eq!(missing.code, ErrorCode::NotFound);
+    hub.shutdown().await;
+}

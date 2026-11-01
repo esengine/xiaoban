@@ -23,6 +23,7 @@ import { Pins } from "../code/Pins.tsx";
 import { RefsContext, type RefsValue } from "../code/RefChip.tsx";
 import { useWorkspaceOf } from "../code/useCode.ts";
 import { DocCard, WritingDocs } from "../doc/DocCard.tsx";
+import { FloorCard } from "../floor/FloorCard.tsx";
 import { RecipeCard } from "../life/RecipeCard.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
@@ -85,6 +86,7 @@ interface Props {
   onOpenDeck?: (deckId: string, action?: "present" | "pptx" | "pdf") => void;
   onOpenThread?: (threadId: string) => void;
   onCook?: () => void;
+  onOpenFloor?: (planId: string, check: boolean) => void;
 }
 
 const nothing = () => undefined;
@@ -226,6 +228,7 @@ export function ChatPane(full: Props) {
     onOpenDeck: nothing,
     onOpenThread: nothing,
     onCook: nothing,
+    onOpenFloor: nothing,
     ...full,
   };
   const { threadId, primary, side } = props;
@@ -534,6 +537,9 @@ export function ChatPane(full: Props) {
     }
     if (attachment?.kind === "recipe") {
       return <RecipeCard recipeId={attachment.recipeId} onCook={props.onCook} />;
+    }
+    if (attachment?.kind === "floor_plan") {
+      return <FloorCard planId={attachment.planId} onOpen={props.onOpenFloor} />;
     }
     if (attachment?.kind === "subthreads") {
       return <SubthreadCards threadIds={attachment.threadIds} onOpen={props.onOpenThread} />;

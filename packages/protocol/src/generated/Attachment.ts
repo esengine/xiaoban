@@ -13,4 +13,5 @@ export type Attachment =
   | { kind: "sheet"; sheetId: string }
   | { kind: "deck"; deckId: string }
   | { kind: "recipe"; recipeId: string }
-  | { kind: "event"; event: EventDraft };
+  | { kind: "event"; event: EventDraft }
+  | { kind: "floor_plan"; planId: string };

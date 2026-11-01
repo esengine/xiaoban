@@ -12,6 +12,7 @@ mod commands;
 mod conflicts;
 mod cooking;
 mod recipes;
+mod floorplan;
 mod week;
 mod config;
 mod confirms;

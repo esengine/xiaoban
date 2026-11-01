@@ -180,4 +180,5 @@ pub enum Attachment {
     Deck { deck_id: String },
     Recipe { recipe_id: String },
     Event { event: crate::EventDraft },
+    FloorPlan { plan_id: String },
 }

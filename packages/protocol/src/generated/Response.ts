@@ -17,6 +17,7 @@ import type { DocBlock } from "./DocBlock.ts";
 import type { DocSummary } from "./DocSummary.ts";
 import type { Failure } from "./Failure.ts";
 import type { FileDiff } from "./FileDiff.ts";
+import type { FloorPlan } from "./FloorPlan.ts";
 import type { FoundImage } from "./FoundImage.ts";
 import type { GitInfo } from "./GitInfo.ts";
 import type { GithubRef } from "./GithubRef.ts";
@@ -99,6 +100,7 @@ export type Response =
   | { type: "workspace_settings"; settings: WorkspaceSettings }
   | { type: "kitchen"; kitchen: Kitchen }
   | { type: "recipe"; view: RecipeView }
+  | { type: "floor_plan"; plan: FloorPlan }
   | { type: "ledger"; ledger: Ledger }
   | { type: "ledger_year"; year: LedgerYear }
   | { type: "weather"; weather: WeatherView }
