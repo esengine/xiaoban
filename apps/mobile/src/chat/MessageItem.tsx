@@ -2,6 +2,7 @@ import type { Message } from "@xiaoban/protocol";
 import type { ReactNode } from "react";
 import { useRef } from "react";
 import { type HostInstance, Pressable, View } from "react-native";
+import { TripCard } from "../trip/TripCard.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
 
 export function MessageItem({
@@ -24,6 +25,9 @@ export function MessageItem({
       <Pressable delayLongPress={350} onLongPress={() => onLongPress(ref.current)}>
         <Bubble from={message.role} text={message.text} quote={message.quote} footer={footer} />
       </Pressable>
+      {message.attachment?.kind === "trip" ? (
+        <TripCard tripId={message.attachment.tripId} version={message.attachment.version} />
+      ) : null}
     </View>
   );
 }

@@ -1989,3 +1989,25 @@ models-kept = { $reason }. Your previous settings are still in use
 consent-open-hint = On the page that opens, switch on "Xiaoban assistant", then come back and Xiaoban continues where it left off
 consent-toast-detail = Switch on "Xiaoban assistant", then come back to Xiaoban
 consent-toast-list = Under downloaded apps, find "Xiaoban assistant", switch it on, then come back to Xiaoban
+trip-context-day-label = The user is looking at
+trip-say-thinking = Checking routes and times for { $day }…
+trip-say-failed = Couldn't change it. Try again later
+trip-say-open = View in chat
+trip-say-day-placeholder = About { $day }, e.g. add a kids' park in the afternoon
+trip-map-title = { $city } · { $days ->
+    [one] { $days } day
+   *[other] { $days } days
+}
+trip-share-family = Send to family group
+trip-navigate = Navigate in a maps app
+trip-taxi = Get a ride
+trip-live-title = On the road · { $day }
+trip-live-back = Back to plan
+trip-live-next = Next · { $time }
+trip-live-minutes = { $minutes } min
+trip-live-minutes-estimated = about { $minutes } min
+trip-live-done = That's everything for today
+trip-live-placeholder = Ask Xiaoban, e.g. a noodle place nearby kids can eat at
+trip-weather-short = { $sky } { $high }°
+trip-sheet-expand = Expand plan
+trip-sheet-collapse = Collapse plan
