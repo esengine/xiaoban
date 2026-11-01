@@ -1,8 +1,9 @@
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
+import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { keepMarkdown, markdownOutline } from "../chat/htmlPages.ts";
 import { useHubStore } from "../hub/HubProvider.tsx";
@@ -69,16 +70,27 @@ export function NoteCard({ text }: { text: string }) {
   const title = outline.title ?? t("md-card-untitled");
   const shown = outline.sections.slice(0, 3);
   const more = outline.sections.length - shown.length;
+  const [copied, setCopied] = useState(false);
   const open = () =>
     router.push({ pathname: "/md/[id]", params: { id: keepMarkdown(text), title } });
+  const copy = () => {
+    void Clipboard.setStringAsync(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
   return (
     <CardShell width={width} label={title} onPress={open}>
       <View style={styles.head}>
-        <Tile label={t("doc-icon")} tone="doc" />
+        <View style={[styles.tile, styles.tileMd]}>
+          <Text style={[styles.tileText, styles.tileTextMd]}>{t("md-card-icon")}</Text>
+        </View>
         <Text style={[styles.title, styles.headText]} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.open}>{t("doc-open")}</Text>
+        <Pressable style={styles.copyChip} hitSlop={6} accessibilityRole="button" onPress={copy}>
+          <Text style={styles.copyChipText}>{t(copied ? "md-view-copied" : "md-card-copy")}</Text>
+        </Pressable>
       </View>
       {shown.length > 0 ? (
         <View style={styles.indent}>
@@ -317,6 +329,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  tileMd: { backgroundColor: color.ground },
+  tileTextMd: { fontSize: 10, color: color.inkMid },
+  copyChip: {
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: color.lineStrong,
+    justifyContent: "center",
+  },
+  copyChipText: { fontSize: 12, color: color.ink },
   tileSheet: { backgroundColor: color.diffAdded },
   tileText: { fontSize: 12, fontWeight: "700", color: color.accentStrong },
   tileTextSheet: { color: color.success },
