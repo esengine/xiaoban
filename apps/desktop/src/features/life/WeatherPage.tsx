@@ -12,6 +12,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useHub } from "../../app/hub.tsx";
 import { WeatherIcon } from "../trip/icons.tsx";
+import { AddPlace, PlaceMenu, placeName } from "./WeatherPlaces.tsx";
 
 const HOUR_WIDTH = 38;
 const CHART_HEIGHT = 212;
@@ -348,125 +349,6 @@ function Rules({ view }: { view: WeatherView }) {
   );
 }
 
-export function AddPlace({ anchor, onClose }: { anchor: HTMLElement; onClose: () => void }) {
-  const { t } = useI18n();
-  const store = useHub();
-  const box = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState("");
-  const [found, setFound] = useState<WeatherPlace[]>([]);
-  const [picked, setPicked] = useState<WeatherPlace | null>(null);
-  const [label, setLabel] = useState("");
-  const [place, setPlace] = useState({ left: 0, top: 0 });
-
-  useLayoutEffect(() => {
-    const rect = anchor.getBoundingClientRect();
-    const width = box.current?.offsetWidth ?? 360;
-    setPlace({
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
-      top: rect.bottom + 6,
-    });
-  }, [anchor]);
-
-  useEffect(() => {
-    const away = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (!box.current?.contains(target) && !anchor.contains(target)) onClose();
-    };
-    const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", key);
-    return () => {
-      document.removeEventListener("mousedown", away);
-      document.removeEventListener("keydown", key);
-    };
-  }, [anchor, onClose]);
-
-  useEffect(() => {
-    const value = query.trim();
-    if (!value) {
-      setFound([]);
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void store
-        .searchPlaces(value)
-        .then(setFound)
-        .catch(() => undefined);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [store, query]);
-
-  const add = () => {
-    if (!picked) return;
-    void store
-      .addPlace({ ...picked, label: label.trim() })
-      .then(() => store.loadWeather(picked.id))
-      .catch(() => undefined);
-    onClose();
-  };
-
-  return createPortal(
-    <div
-      ref={box}
-      className="weather-add"
-      role="dialog"
-      aria-label={t("weather-add")}
-      style={place}
-    >
-      <b>{t("weather-add")}</b>
-      <input
-        // biome-ignore lint/a11y/noAutofocus: the popover exists to type a city
-        autoFocus
-        className="weather-add__input"
-        value={query}
-        placeholder={t("weather-city-placeholder")}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setPicked(null);
-        }}
-      />
-      {found.length > 0 && (
-        <div className="weather-add__list">
-          {found.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="weather-add__item"
-              aria-pressed={picked?.id === item.id}
-              onClick={() => {
-                setPicked(item);
-                setLabel(item.city);
-              }}
-            >
-              {item.city}
-              <span>{item.region}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {picked && (
-        <div className="weather-add__name">
-          <span>{t("weather-add-label")}</span>
-          <input
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.nativeEvent.isComposing) add();
-            }}
-          />
-          <button type="button" className="code-status-button" data-dark onClick={add}>
-            {t("weather-add-go")}
-          </button>
-        </div>
-      )}
-      <span className="life-card__note">{t("weather-add-note")}</span>
-    </div>,
-    document.body,
-  );
-}
-
 export function NoPlace({ compact = false }: { compact?: boolean }) {
   const { t } = useI18n();
   const store = useHub();
@@ -520,6 +402,7 @@ export function WeatherPage({ onBack }: { onBack: () => void }) {
   const store = useHub();
   const { weather } = useHubState(store);
   const [adding, setAdding] = useState<HTMLElement | null>(null);
+  const [menu, setMenu] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     void store.loadWeather().catch(() => undefined);
@@ -548,11 +431,14 @@ export function WeatherPage({ onBack }: { onBack: () => void }) {
                 role="tab"
                 className="code-tab"
                 aria-selected={weather.placeId === place.id}
-                onClick={() => void store.loadWeather(place.id).catch(() => undefined)}
+                onClick={(event) => {
+                  if (weather.placeId === place.id) setMenu(menu ? null : event.currentTarget);
+                  else void store.loadWeather(place.id).catch(() => undefined);
+                }}
               >
-                {place.label && place.label !== place.city
-                  ? t("weather-place", { city: place.city, label: place.label })
-                  : place.city}
+                {weather.placeId === place.id
+                  ? t("weather-place-active", { name: placeName(place) })
+                  : placeName(place)}
               </button>
             ))}
             {weather.places.length < 5 && (
@@ -595,6 +481,18 @@ export function WeatherPage({ onBack }: { onBack: () => void }) {
         ) : null}
       </div>
       {adding && <AddPlace anchor={adding} onClose={() => setAdding(null)} />}
+      {menu &&
+        weather?.places
+          .filter((place) => place.id === weather.placeId)
+          .map((place) => (
+            <PlaceMenu
+              key={place.id}
+              anchor={menu}
+              place={place}
+              home={weather.places[0]?.id === place.id}
+              onClose={() => setMenu(null)}
+            />
+          ))}
     </main>
   );
 }

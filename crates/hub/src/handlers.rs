@@ -198,7 +198,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::SetFridgeItem { .. }
         | Request::RemoveFridgeItem { .. }
         | Request::WeekItemGone { .. }) => crate::kitchen::handle(state, request).await,
-        Request::LocateWeather if !local => Err(ProtocolError::new(
+        Request::LocateWeather | Request::LocatePlace if !local => Err(ProtocolError::new(
             ErrorCode::Unauthorized,
             "only the hub's own machine can be located",
         )),
@@ -207,7 +207,10 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::AddPlace { .. }
         | Request::RemovePlace { .. }
         | Request::SetWeatherRules { .. }
-        | Request::LocateWeather) => crate::weather_page::handle(state, request).await,
+        | Request::LocateWeather
+        | Request::LocatePlace
+        | Request::UpdatePlace { .. }
+        | Request::SetHomePlace { .. }) => crate::weather_page::handle(state, request).await,
         request @ (Request::Ledger { .. }
         | Request::LedgerRange { .. }
         | Request::LedgerYear { .. }

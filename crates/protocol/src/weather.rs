@@ -9,7 +9,9 @@ pub struct WeatherPlace {
     pub id: String,
     pub label: String,
     pub city: String,
+    pub district: String,
     pub region: String,
+    pub located: bool,
     pub latitude: String,
     pub longitude: String,
 }

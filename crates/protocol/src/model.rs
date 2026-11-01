@@ -403,6 +403,10 @@ pub enum Location {
     Found {
         city: String,
         district: Option<String>,
+        #[serde(default)]
+        latitude: Option<String>,
+        #[serde(default)]
+        longitude: Option<String>,
     },
     Denied,
     Unavailable,

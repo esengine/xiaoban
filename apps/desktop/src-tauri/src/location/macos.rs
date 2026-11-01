@@ -134,7 +134,7 @@ fn text(value: Option<Retained<NSString>>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-fn describe(placemark: &CLPlacemark) -> Option<Location> {
+fn describe(placemark: &CLPlacemark, latitude: f64, longitude: f64) -> Option<Location> {
     let (locality, area, district) = unsafe {
         (
             placemark.locality(),
@@ -146,15 +146,18 @@ fn describe(placemark: &CLPlacemark) -> Option<Location> {
     Some(Location::Found {
         city,
         district: text(district),
+        latitude: latitude.is_finite().then(|| format!("{latitude:.5}")),
+        longitude: longitude.is_finite().then(|| format!("{longitude:.5}")),
     })
 }
 
 fn geocode(location: &CLLocation) {
     let geocoder = unsafe { CLGeocoder::new() };
-    let completion = RcBlock::new(|placemarks: *mut NSArray<CLPlacemark>, _: *mut NSError| {
+    let coordinate = unsafe { location.coordinate() };
+    let completion = RcBlock::new(move |placemarks: *mut NSArray<CLPlacemark>, _: *mut NSError| {
         let found = unsafe { placemarks.as_ref() }
             .and_then(NSArray::firstObject)
-            .and_then(|placemark| describe(&placemark));
+            .and_then(|placemark| describe(&placemark, coordinate.latitude, coordinate.longitude));
         finish(&found.unwrap_or(Location::Unavailable));
     });
     unsafe {

@@ -15,6 +15,8 @@ use crate::state::SharedState;
 
 const KEY: &str = "weather";
 const AIR_URL: &str = "https://air-quality-api.open-meteo.com/v1/air-quality";
+const PLACES_URL: &str = "https://nominatim.openstreetmap.org/search";
+const AGENT: &str = concat!("Xiaoban/", env!("CARGO_PKG_VERSION"), " (desktop weather; local app)");
 const MAX_PLACES: usize = 5;
 const FRESH_MS: i64 = 30 * 60 * 1000;
 const CHECK_EVERY: Duration = Duration::from_secs(60);
@@ -105,10 +107,80 @@ struct FoundPlace {
     admin2: String,
 }
 
+#[derive(Deserialize)]
+struct OsmPlace {
+    lat: String,
+    lon: String,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    display_name: String,
+    #[serde(default)]
+    address: BTreeMap<String, String>,
+}
+
+fn pick(address: &BTreeMap<String, String>, keys: &[&str]) -> String {
+    keys.iter().find_map(|key| address.get(*key).cloned()).unwrap_or_default()
+}
+
+async fn search_osm(language: &str, query: &str) -> Option<Vec<WeatherPlace>> {
+    let found: Vec<OsmPlace> = client()
+        .get(PLACES_URL)
+        .header(reqwest::header::USER_AGENT, AGENT)
+        .query(&[
+            ("q", query),
+            ("format", "jsonv2"),
+            ("limit", "6"),
+            ("addressdetails", "1"),
+            ("accept-language", language),
+        ])
+        .send()
+        .await
+        .ok()?
+        .error_for_status()
+        .ok()?
+        .json()
+        .await
+        .ok()?;
+    Some(
+        found
+            .into_iter()
+            .filter_map(|place| {
+                let latitude = place.lat.parse::<f64>().ok()?;
+                let longitude = place.lon.parse::<f64>().ok()?;
+                let city = pick(&place.address, &["city", "municipality", "state", "province", "town", "county"]);
+                let district = pick(&place.address, &["city_district", "district", "suburb", "county", "borough", "town"]);
+                let district = if district == city { String::new() } else { district };
+                let name = if place.name.is_empty() { district.clone() } else { place.name.clone() };
+                let region = place
+                    .display_name
+                    .split(", ")
+                    .skip(1)
+                    .filter(|part| !part.chars().all(|c| c.is_ascii_digit()))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Some(WeatherPlace {
+                    id: format!("{latitude:.3},{longitude:.3}"),
+                    label: String::new(),
+                    city: if city.is_empty() { name.clone() } else { city },
+                    district: if name == district || district.is_empty() { district } else { name },
+                    region,
+                    latitude: format!("{latitude:.5}"),
+                    longitude: format!("{longitude:.5}"),
+                    located: false,
+                })
+            })
+            .collect(),
+    )
+}
+
 pub async fn search(language: &str, query: &str) -> Vec<WeatherPlace> {
     let query = query.trim();
     if query.is_empty() {
         return Vec::new();
+    }
+    if let Some(found) = search_osm(language, query).await.filter(|found| !found.is_empty()) {
+        return found;
     }
     let Ok(response) = client()
         .get(crate::weather::GEOCODING_URL)
@@ -138,6 +210,7 @@ pub async fn search(language: &str, query: &str) -> Vec<WeatherPlace> {
                 region,
                 latitude: format!("{:.4}", place.latitude),
                 longitude: format!("{:.4}", place.longitude),
+                ..WeatherPlace::default()
             }
         })
         .collect()
@@ -456,13 +529,46 @@ fn language(state: &SharedState) -> &'static str {
     }
 }
 
+async fn located(state: &SharedState) -> Result<WeatherPlace, ProtocolError> {
+    let Location::Found { city, district, latitude, longitude } = state.locator.locate().await else {
+        return Err(ProtocolError::new(ErrorCode::NotFound, "location unavailable"));
+    };
+    if let (Some(latitude), Some(longitude)) = (latitude, longitude)
+        && let (Ok(lat), Ok(lon)) = (latitude.parse::<f64>(), longitude.parse::<f64>())
+    {
+        return Ok(WeatherPlace {
+            id: format!("{lat:.3},{lon:.3}"),
+            label: String::new(),
+            region: [city.clone(), district.clone().unwrap_or_default()].join(" ").trim().to_owned(),
+            city,
+            district: district.unwrap_or_default(),
+            latitude,
+            longitude,
+            located: true,
+        });
+    }
+    let query = [district.clone().unwrap_or_default(), city.clone()].join(" ");
+    search(language(state), query.trim())
+        .await
+        .into_iter()
+        .next()
+        .map(|place| WeatherPlace { located: true, ..place })
+        .ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "city not found"))
+}
+
 async fn add(state: &SharedState, mut place: WeatherPlace) {
     let mut saved = saved(state).await;
     if place.latitude.parse::<f64>().is_err() || place.longitude.parse::<f64>().is_err() {
         return;
     }
     if place.label.trim().is_empty() {
-        place.label = if saved.places.is_empty() { state.localizer.text(keys::WEATHER_HOME) } else { place.city.clone() };
+        place.label = if saved.places.is_empty() {
+            state.localizer.text(keys::WEATHER_HOME)
+        } else if place.district.is_empty() {
+            place.city.clone()
+        } else {
+            place.district.clone()
+        };
     }
     place.label = place.label.trim().chars().take(12).collect();
     saved.places.retain(|known| known.id != place.id);
@@ -498,15 +604,40 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
             None
         }
         Request::LocateWeather => {
-            let Location::Found { city, .. } = state.locator.locate().await else {
-                return Err(ProtocolError::new(ErrorCode::NotFound, "location unavailable"));
-            };
-            let found = search(language(state), &city).await.into_iter().next();
-            let Some(place) = found else {
-                return Err(ProtocolError::new(ErrorCode::NotFound, "city not found"));
-            };
+            let place = located(state).await?;
             let id = place.id.clone();
             add(state, place).await;
+            Some(id)
+        }
+        Request::LocatePlace => {
+            return Ok(Response::Places {
+                places: vec![located(state).await?],
+            });
+        }
+        Request::UpdatePlace { id, label, location } => {
+            let mut saved = saved(state).await;
+            let mut selected = id.clone();
+            if let Some(place) = saved.places.iter_mut().find(|place| place.id == id) {
+                if let Some(label) = label.map(|label| label.trim().chars().take(12).collect::<String>())
+                    && !label.is_empty()
+                {
+                    place.label = label;
+                }
+                if let Some(next) = location.filter(|next| next.latitude.parse::<f64>().is_ok() && next.longitude.parse::<f64>().is_ok()) {
+                    selected.clone_from(&next.id);
+                    *place = WeatherPlace { label: place.label.clone(), ..next };
+                }
+            }
+            save(state, &saved).await;
+            Some(selected)
+        }
+        Request::SetHomePlace { id } => {
+            let mut saved = saved(state).await;
+            if let Some(index) = saved.places.iter().position(|place| place.id == id) {
+                let place = saved.places.remove(index);
+                saved.places.insert(0, place);
+            }
+            save(state, &saved).await;
             Some(id)
         }
         _ => None,

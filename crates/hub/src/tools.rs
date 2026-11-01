@@ -571,7 +571,7 @@ impl<'a> HubTools<'a> {
 
     async fn locate(&self) -> String {
         match self.state.locator.locate().await {
-            Location::Found { city, district } => {
+            Location::Found { city, district, .. } => {
                 json!({ "city": city, "district": district }).to_string()
             }
             Location::Denied => {

@@ -553,6 +553,23 @@ export class HubStore {
     return this.#weatherRequest({ type: "locate_weather" });
   }
 
+  async locatePlace(): Promise<WeatherPlace | null> {
+    const { places } = await this.client.request({ type: "locate_place" }, "places");
+    return places[0] ?? null;
+  }
+
+  updatePlace(
+    id: string,
+    label: string | null,
+    location: WeatherPlace | null,
+  ): Promise<WeatherView> {
+    return this.#weatherRequest({ type: "update_place", id, label, location });
+  }
+
+  setHomePlace(id: string): Promise<WeatherView> {
+    return this.#weatherRequest({ type: "set_home_place", id });
+  }
+
   async clearBought(): Promise<void> {
     const { kitchen } = await this.client.request({ type: "clear_bought" }, "kitchen");
     this.#update((state) => ({ ...state, kitchen }));

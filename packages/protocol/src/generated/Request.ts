@@ -142,6 +142,9 @@ export type Request =
   | { type: "remove_place"; id: string }
   | { type: "set_weather_rules"; rules: WeatherRules }
   | { type: "locate_weather" }
+  | { type: "locate_place" }
+  | { type: "update_place"; id: string; label: string | null; location: WeatherPlace | null }
+  | { type: "set_home_place"; id: string }
   | { type: "set_budget"; month: string; cents: number | null }
   | { type: "update_expense"; month: string; expense: Expense }
   | { type: "delete_expense"; month: string; id: string }

@@ -352,6 +352,15 @@ pub enum Request {
         rules: crate::WeatherRules,
     },
     LocateWeather,
+    LocatePlace,
+    UpdatePlace {
+        id: String,
+        label: Option<String>,
+        location: Option<crate::WeatherPlace>,
+    },
+    SetHomePlace {
+        id: String,
+    },
     SetBudget {
         month: String,
         #[ts(type = "number | null")]

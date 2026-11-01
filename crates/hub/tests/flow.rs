@@ -152,6 +152,8 @@ fn runtime_with(
         locator: Arc::new(FixedLocator(Location::Found {
             city: "北京市".into(),
             district: Some("朝阳区".into()),
+            latitude: None,
+            longitude: None,
         })),
         presence: Arc::new(xiaoban_hub::NoPresence),
         weather: Arc::new(FixedWeather(Forecast {
@@ -932,6 +934,8 @@ async fn onboarding_answers_are_read_by_the_model_before_being_remembered() {
         Location::Found {
             city: "北京市".into(),
             district: Some("朝阳区".into()),
+            latitude: None,
+            longitude: None,
         }
     );
 

@@ -4,7 +4,9 @@ export type WeatherPlace = {
   id: string;
   label: string;
   city: string;
+  district: string;
   region: string;
+  located: boolean;
   latitude: string;
   longitude: string;
 };
