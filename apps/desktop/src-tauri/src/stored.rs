@@ -112,33 +112,61 @@ pub async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
 
 const EDITORS: [&str; 5] = ["Cursor", "Visual Studio Code", "Zed", "Sublime Text", "Nova"];
 
-#[tauri::command]
-#[allow(clippy::needless_pass_by_value)]
-pub fn open_in_editor(app: AppHandle, path: String) -> Result<(), String> {
-    let file = existing(&path)?;
+fn installed() -> Vec<&'static str> {
     if cfg!(target_os = "macos") {
-        for editor in EDITORS {
-            let bundle = format!("/Applications/{editor}.app");
-            if std::path::Path::new(&bundle).exists() {
-                let opened = std::process::Command::new("open")
-                    .arg("-a")
-                    .arg(&bundle)
-                    .arg(&file)
-                    .status();
-                if opened.is_ok_and(|status| status.success()) {
-                    return Ok(());
-                }
-            }
-        }
+        return EDITORS
+            .into_iter()
+            .filter(|editor| std::path::Path::new(&format!("/Applications/{editor}.app")).exists())
+            .collect();
     }
     if cfg!(windows) {
-        let opened = std::process::Command::new("cmd")
+        let found = std::process::Command::new("where")
+            .arg("code")
+            .output()
+            .is_ok_and(|output| output.status.success());
+        return if found { vec!["Visual Studio Code"] } else { Vec::new() };
+    }
+    Vec::new()
+}
+
+#[tauri::command]
+pub fn list_editors() -> Vec<String> {
+    installed().into_iter().map(str::to_owned).collect()
+}
+
+fn launch(editor: &str, file: &std::path::Path) -> bool {
+    if cfg!(target_os = "macos") {
+        let bundle = format!("/Applications/{editor}.app");
+        return std::path::Path::new(&bundle).exists()
+            && std::process::Command::new("open")
+                .arg("-a")
+                .arg(&bundle)
+                .arg(file)
+                .status()
+                .is_ok_and(|status| status.success());
+    }
+    if cfg!(windows) && editor == "Visual Studio Code" {
+        return std::process::Command::new("cmd")
             .args(["/C", "code"])
-            .arg(&file)
-            .status();
-        if opened.is_ok_and(|status| status.success()) {
-            return Ok(());
-        }
+            .arg(file)
+            .status()
+            .is_ok_and(|status| status.success());
+    }
+    false
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+pub fn open_in_editor(app: AppHandle, path: String, editor: Option<String>) -> Result<(), String> {
+    let file = existing(&path)?;
+    let choice = editor.unwrap_or_else(|| "auto".to_owned());
+    let opened = match choice.as_str() {
+        "system" => false,
+        "auto" => installed().into_iter().any(|name| launch(name, &file)),
+        name => launch(name, &file),
+    };
+    if opened {
+        return Ok(());
     }
     app.opener()
         .open_path(file.to_string_lossy(), None::<&str>)

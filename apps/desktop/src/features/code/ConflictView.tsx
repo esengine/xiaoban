@@ -1,4 +1,3 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type {
@@ -10,6 +9,7 @@ import type {
 } from "@xiaoban/protocol";
 import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { openInEditor } from "./editor.ts";
 import { highlightLine } from "./highlight.ts";
 
 function Side({
@@ -179,12 +179,9 @@ export function ConflictView({
                     }),
                   )
                 }
-                onEditor={() => {
-                  if (isTauri())
-                    void invoke("open_in_editor", { path: `${workspace.path}/${file.path}` }).catch(
-                      () => undefined,
-                    );
-                }}
+                onEditor={() =>
+                  void openInEditor(store, workspace.id, `${workspace.path}/${file.path}`)
+                }
               />
             );
           }),

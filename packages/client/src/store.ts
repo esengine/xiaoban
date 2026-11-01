@@ -1,4 +1,5 @@
 import type {
+  Allowance,
   AutonomyLevel,
   Branch,
   CommandRun,
@@ -32,6 +33,7 @@ import type {
   TripCalendar,
   Usage,
   Workspace,
+  WorkspaceSettings,
 } from "@xiaoban/protocol";
 import type { HubClient } from "./client.ts";
 import { applyEvent, type HubState, initialHubState, tripKey, upsertWorkspace } from "./state.ts";
@@ -550,6 +552,34 @@ export class HubStore {
       "changes",
     );
     return files;
+  }
+
+  async workspaceSettings(workspaceId: string): Promise<WorkspaceSettings> {
+    const { settings } = await this.client.request(
+      { type: "workspace_settings", workspaceId },
+      "workspace_settings",
+    );
+    return settings;
+  }
+
+  async removeAllowance(
+    workspaceId: string,
+    kind: Allowance,
+    value: string,
+  ): Promise<WorkspaceSettings> {
+    const { settings } = await this.client.request(
+      { type: "remove_allowance", workspaceId, kind, value },
+      "workspace_settings",
+    );
+    return settings;
+  }
+
+  async setEditor(workspaceId: string, editor: string): Promise<WorkspaceSettings> {
+    const { settings } = await this.client.request(
+      { type: "set_editor", workspaceId, editor },
+      "workspace_settings",
+    );
+    return settings;
   }
 
   async gitInfo(workspaceId: string): Promise<GitInfo> {

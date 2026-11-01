@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { openInEditor } from "../code/editor.ts";
+import { WorkspaceSettingsDialog } from "../code/WorkspaceSettings.tsx";
 import { ConfirmDialog } from "../dialog/ConfirmDialog.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { plain } from "./plain.ts";
@@ -195,6 +197,8 @@ export function ThreadList({
   );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [renamingWorkspace, setRenamingWorkspace] = useState<string | null>(null);
+  const [settingsFor, setSettingsFor] = useState<Workspace | null>(null);
+  const [removingWorkspace, setRemovingWorkspace] = useState<Workspace | null>(null);
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]));
   }, [collapsed]);
@@ -288,10 +292,14 @@ export function ThreadList({
         label: MAC ? t("file-menu-reveal-mac") : t("file-menu-reveal-windows"),
         onSelect: () => native("file_reveal", workspace.path),
       },
-      { label: t("code-open-editor"), onSelect: () => native("open_in_editor", workspace.path) },
+      {
+        label: t("code-open-editor"),
+        onSelect: () => void openInEditor(store, workspace.id, workspace.path),
+      },
       "separator",
+      { label: t("workspace-settings"), onSelect: () => setSettingsFor(workspace) },
       { label: t("menu-rename"), onSelect: () => setRenamingWorkspace(workspace.id) },
-      { label: t("workspace-remove"), onSelect: () => void store.removeWorkspace(workspace.id) },
+      { label: t("workspace-remove"), onSelect: () => setRemovingWorkspace(workspace) },
     ]);
   const finishWorkspaceRename = (workspace: Workspace, value: string) => {
     setRenamingWorkspace(null);
@@ -533,6 +541,18 @@ export function ThreadList({
         <ul className="threads__list">{otherRows.map((item) => row(item))}</ul>
       </div>
       {!needle && threads.length <= 1 && <p className="threads__hint">{t("thread-list-hint")}</p>}
+      {removingWorkspace && (
+        <ConfirmDialog
+          title={t("workspace-remove-title", { name: removingWorkspace.name })}
+          body={t("workspace-remove-body")}
+          confirm={t("workspace-remove")}
+          onConfirm={() => void store.removeWorkspace(removingWorkspace.id)}
+          onClose={() => setRemovingWorkspace(null)}
+        />
+      )}
+      {settingsFor && (
+        <WorkspaceSettingsDialog workspace={settingsFor} onClose={() => setSettingsFor(null)} />
+      )}
       {deleting && (
         <ConfirmDialog
           title={t("delete-thread-title", { title: titleOf(deleting) })}

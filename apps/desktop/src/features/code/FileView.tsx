@@ -5,6 +5,7 @@ import type { FileDiff, Workspace } from "@xiaoban/protocol";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { useImageViewer } from "../viewer/ImageViewer.tsx";
+import { openInEditor } from "./editor.ts";
 import { highlightLines } from "./highlight.ts";
 import { MarkdownPreview } from "./MarkdownPreview.tsx";
 
@@ -74,6 +75,7 @@ function Bar({
   extra?: ReactNode;
 }) {
   const { t } = useI18n();
+  const store = useHub();
   return (
     <div className="code-file__bar">
       <span className="code-file__path">{path.split("/").join(" / ")}</span>
@@ -83,7 +85,7 @@ function Bar({
       <button
         type="button"
         className="code-link"
-        onClick={() => native("open_in_editor", `${workspace.path}/${path}`)}
+        onClick={() => void openInEditor(store, workspace.id, `${workspace.path}/${path}`)}
       >
         {t("code-open-editor")}
       </button>

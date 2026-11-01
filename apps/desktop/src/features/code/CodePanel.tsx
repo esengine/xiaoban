@@ -9,6 +9,7 @@ import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { CommitDialog } from "./CommitDialog.tsx";
 import { ConflictView } from "./ConflictView.tsx";
 import { DiffView } from "./DiffView.tsx";
+import { openInEditor } from "./editor.ts";
 import { FileTree, SideIcon } from "./FileTree.tsx";
 import { FileView } from "./FileView.tsx";
 import { GitTab } from "./GitTab.tsx";
@@ -107,7 +108,7 @@ export function CodePanel({
         : [{ label: t("code-open"), shortcut: "↩", onSelect: () => openFile(entry.path) }]),
       {
         label: t("code-open-editor"),
-        onSelect: () => native("open_in_editor", absolute(entry.path)),
+        onSelect: () => void openInEditor(store, workspace.id, absolute(entry.path)),
       },
       {
         label: MAC ? t("file-menu-reveal-mac") : t("file-menu-reveal-windows"),
@@ -227,7 +228,9 @@ export function CodePanel({
           className="code-icon-button code-icon-button--line"
           aria-label={t("code-open-editor")}
           title={t("code-open-editor")}
-          onClick={() => native("open_in_editor", active ? absolute(active) : workspace.path)}
+          onClick={() =>
+            void openInEditor(store, workspace.id, active ? absolute(active) : workspace.path)
+          }
         >
           <OutIcon />
         </button>

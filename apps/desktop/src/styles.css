@@ -7703,3 +7703,114 @@ button.sent-files__image {
 .md-image-missing {
   color: var(--color-faint);
 }
+
+.ws-settings {
+  width: 480px;
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.ws-settings__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ws-settings__section {
+  padding: 14px 0;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.ws-settings__head + .ws-settings__section {
+  margin-top: 8px;
+}
+
+.ws-settings__section h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-mid);
+}
+
+.ws-settings__input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.ws-settings__input:focus {
+  border-color: var(--color-accent);
+}
+
+.ws-settings__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ws-settings__row [data-mono],
+.ws-settings__list [data-mono] {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-settings__hint {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--color-faint);
+}
+
+.ws-settings__none {
+  margin: 0;
+  padding: 4px 0;
+  font-size: 12.5px;
+  color: var(--color-faint);
+}
+
+.ws-settings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-settings__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-ground);
+}
+
+.ws-settings__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.ws-settings__danger {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-danger-ink);
+  cursor: pointer;
+}

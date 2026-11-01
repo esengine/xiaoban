@@ -54,6 +54,7 @@ pub fn run() {
             stored::file_save_as,
             stored::pick_folder,
             stored::open_in_editor,
+            stored::list_editors,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,

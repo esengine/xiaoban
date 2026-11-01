@@ -1,3 +1,4 @@
+export type { Allowance } from "./Allowance.ts";
 export type { Archived } from "./Archived.ts";
 export type { Attachment } from "./Attachment.ts";
 export type { AutonomyLevel } from "./AutonomyLevel.ts";
@@ -76,4 +77,5 @@ export type { TripLeg } from "./TripLeg.ts";
 export type { TripStop } from "./TripStop.ts";
 export type { Usage } from "./Usage.ts";
 export type { Workspace } from "./Workspace.ts";
+export type { WorkspaceSettings } from "./WorkspaceSettings.ts";
 export { PROTOCOL_VERSION } from "./version.ts";

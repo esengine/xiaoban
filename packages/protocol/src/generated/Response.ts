@@ -26,6 +26,7 @@ import type { Trip } from "./Trip.ts";
 import type { TripCalendar } from "./TripCalendar.ts";
 import type { Usage } from "./Usage.ts";
 import type { Workspace } from "./Workspace.ts";
+import type { WorkspaceSettings } from "./WorkspaceSettings.ts";
 
 export type Response =
   | { type: "ack" }
@@ -75,5 +76,6 @@ export type Response =
   | { type: "commit_draft"; message: string | null }
   | { type: "pull_request"; url: string }
   | { type: "conflicts"; files: Array<ConflictFile> }
+  | { type: "workspace_settings"; settings: WorkspaceSettings }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };

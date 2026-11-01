@@ -22,8 +22,8 @@ const LIST_LIMIT: usize = 500;
 const HITS: usize = 200;
 const SEARCH_BYTES: u64 = 1_000_000;
 const PREVIEW_LINES: usize = 14;
-const READ_FOLDERS: &str = "workspace.read.";
-const WRITE_FOLDERS: &str = "workspace.write.";
+pub const READ_FOLDERS: &str = "workspace.read.";
+pub const WRITE_FOLDERS: &str = "workspace.write.";
 
 fn text(l: &Localizer, key: Key) -> Value {
     json!({ "type": "string", "description": l.text(key) })

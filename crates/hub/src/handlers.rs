@@ -179,7 +179,10 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::FinishMerge { .. }
         | Request::AbortMerge { .. }
         | Request::InspectFolder { .. }
-        | Request::RestoreChange { .. }) => crate::code_requests::handle(state, local, request).await,
+        | Request::RestoreChange { .. }
+        | Request::WorkspaceSettings { .. }
+        | Request::RemoveAllowance { .. }
+        | Request::SetEditor { .. }) => crate::code_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

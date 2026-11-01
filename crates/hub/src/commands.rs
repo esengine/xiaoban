@@ -59,7 +59,7 @@ pub fn allowed_by(rules: &[String], command: &str) -> bool {
             .any(|rule| command == rule || command.starts_with(&format!("{rule} ")))
 }
 
-fn rules_key(workspace_id: &str) -> String {
+pub fn rules_key(workspace_id: &str) -> String {
     format!("workspace.allow.{workspace_id}")
 }
 

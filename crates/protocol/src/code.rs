@@ -175,6 +175,23 @@ pub struct GithubRef {
     pub checks: Vec<RefCheck>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum Allowance {
+    Command,
+    Read,
+    Write,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSettings {
+    pub commands: Vec<String>,
+    pub read: Vec<String>,
+    pub write: Vec<String>,
+    pub editor: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct CommitInfo {

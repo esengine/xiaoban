@@ -105,6 +105,40 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 files: crate::changes::thread_changes(state, &thread_id).await,
             })
         }
+        Request::WorkspaceSettings { workspace_id } => Ok(Response::WorkspaceSettings {
+            settings: settings(state, &workspace_id).await,
+        }),
+        Request::RemoveAllowance {
+            workspace_id,
+            kind,
+            value,
+        } => {
+            only_here(local)?;
+            let key = key_for(kind, &workspace_id);
+            let mut list = list(state, key.clone()).await;
+            let wanted = workspace::real(&workspace::expand(&value)).to_string_lossy().into_owned();
+            list.retain(|item| item != &value && item != &wanted);
+            let _ = state
+                .store
+                .set_setting_owned(key, serde_json::to_string(&list).unwrap_or_default())
+                .await;
+            Ok(Response::WorkspaceSettings {
+                settings: settings(state, &workspace_id).await,
+            })
+        }
+        Request::SetEditor {
+            workspace_id,
+            editor,
+        } => {
+            only_here(local)?;
+            let _ = state
+                .store
+                .set_setting_owned(format!("{EDITOR_KEY}{workspace_id}"), editor)
+                .await;
+            Ok(Response::WorkspaceSettings {
+                settings: settings(state, &workspace_id).await,
+            })
+        }
         Request::GitInfo { workspace_id } => {
             let found = load(state, workspace_id).await?;
             Ok(Response::Git {
@@ -430,5 +464,48 @@ async fn git_request(state: &SharedState, local: bool, request: Request) -> Hand
             })
         }
         _ => Err(bad_request("not a git request")),
+    }
+}
+
+const EDITOR_KEY: &str = "workspace.editor.";
+
+fn key_for(kind: xiaoban_protocol::Allowance, workspace_id: &str) -> String {
+    match kind {
+        xiaoban_protocol::Allowance::Command => crate::commands::rules_key(workspace_id),
+        xiaoban_protocol::Allowance::Read => format!("{}{workspace_id}", crate::code_tools::READ_FOLDERS),
+        xiaoban_protocol::Allowance::Write => format!("{}{workspace_id}", crate::code_tools::WRITE_FOLDERS),
+    }
+}
+
+async fn list(state: &SharedState, key: String) -> Vec<String> {
+    state
+        .store
+        .setting_owned(key)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|value| serde_json::from_str(&value).ok())
+        .unwrap_or_default()
+}
+
+async fn settings(state: &SharedState, workspace_id: &str) -> xiaoban_protocol::WorkspaceSettings {
+    use xiaoban_protocol::Allowance;
+    let pretty = |items: Vec<String>| -> Vec<String> {
+        items
+            .into_iter()
+            .map(|item| workspace::pretty(Path::new(&item)))
+            .collect()
+    };
+    xiaoban_protocol::WorkspaceSettings {
+        commands: list(state, key_for(Allowance::Command, workspace_id)).await,
+        read: pretty(list(state, key_for(Allowance::Read, workspace_id)).await),
+        write: pretty(list(state, key_for(Allowance::Write, workspace_id)).await),
+        editor: state
+            .store
+            .setting_owned(format!("{EDITOR_KEY}{workspace_id}"))
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "auto".to_owned()),
     }
 }

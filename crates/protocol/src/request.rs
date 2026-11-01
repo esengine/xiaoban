@@ -270,6 +270,18 @@ pub enum Request {
         thread_id: String,
         path: String,
     },
+    WorkspaceSettings {
+        workspace_id: String,
+    },
+    RemoveAllowance {
+        workspace_id: String,
+        kind: crate::Allowance,
+        value: String,
+    },
+    SetEditor {
+        workspace_id: String,
+        editor: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -420,6 +432,9 @@ pub enum Response {
     },
     Conflicts {
         files: Vec<crate::ConflictFile>,
+    },
+    WorkspaceSettings {
+        settings: crate::WorkspaceSettings,
     },
     Folder {
         path: String,
