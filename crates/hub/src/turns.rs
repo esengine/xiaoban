@@ -495,11 +495,12 @@ pub async fn begin_epoch(
     carried: Vec<ChatMessage>,
 ) -> Result<Epoch, StoreError> {
     let snapshot = fresh_snapshot(state).await?;
+    let workspace = crate::workspace::for_thread(state, thread_id).await;
     state
         .store
         .start_epoch(
             thread_id.to_owned(),
-            state.base_fingerprint(),
+            state.base_fingerprint_for(workspace.as_ref()),
             reason,
             snapshot,
             carried.iter().map(to_wire).collect(),
@@ -511,7 +512,9 @@ async fn current_epoch(
     state: &SharedState,
     thread_id: &str,
 ) -> Result<(Epoch, StablePrefix, Transcript), StoreError> {
-    let base = state.base_fingerprint();
+    let workspace = crate::workspace::for_thread(state, thread_id).await;
+    let workspace = workspace.as_ref();
+    let base = state.base_fingerprint_for(workspace);
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
         Some((mut epoch, entries)) if epoch.prefix_fingerprint == base => {
             if entries.is_empty() {
@@ -530,10 +533,10 @@ async fn current_epoch(
             {
                 let epoch =
                     begin_epoch(state, thread_id, EpochReason::Compacted, carried.clone()).await?;
-                let prefix = state.prefix(epoch.memory_snapshot.as_deref());
+                let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace);
                 return Ok((epoch, prefix, carried.into_iter().collect()));
             }
-            let prefix = state.prefix(epoch.memory_snapshot.as_deref());
+            let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace);
             return Ok((epoch, prefix, transcript));
         }
         Some((previous, entries)) => {
@@ -549,7 +552,7 @@ async fn current_epoch(
     };
     let carried: Vec<ChatMessage> = carried.entries().to_vec();
     let epoch = begin_epoch(state, thread_id, reason, carried.clone()).await?;
-    let prefix = state.prefix(epoch.memory_snapshot.as_deref());
+    let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace);
     Ok((epoch, prefix, carried.into_iter().collect()))
 }
 
@@ -687,7 +690,10 @@ async fn drive(
             thread_id.to_owned(),
             NewMessage::assistant(outcome.text)
                 .replacing(replaces)
-                .attaching(tools.attachment())
+                .attaching({
+                    tools.finish_changes().await;
+                    tools.attachment()
+                })
                 .thinking(thinking),
         )
         .await

@@ -25,7 +25,10 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         Request::ListThreads => Ok(Response::Threads {
             threads: state.store.list_threads().await?,
         }),
-        Request::CreateThread { title } => create_thread(state, title.as_deref()).await,
+        Request::CreateThread {
+            title,
+            workspace_id,
+        } => create_thread(state, title.as_deref(), workspace_id).await,
         Request::ListMessages {
             thread_id,
             before,
@@ -145,6 +148,17 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::DeclineService { .. }
         | Request::GetTrip { .. }
         | Request::TripCalendar { .. }) => trip_requests::handle(state, local, request).await,
+        request @ (Request::ListWorkspaces
+        | Request::CreateWorkspace { .. }
+        | Request::RenameWorkspace { .. }
+        | Request::RemoveWorkspace { .. }
+        | Request::ListDir { .. }
+        | Request::ReadWorkspaceFile { .. }
+        | Request::ThreadChanges { .. }
+        | Request::RevertChange { .. }
+        | Request::GitInfo { .. }
+        | Request::ListCommands { .. }
+        | Request::RunCommand { .. }) => crate::code_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
@@ -152,8 +166,20 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
     }
 }
 
-async fn create_thread(state: &SharedState, title: Option<&str>) -> Handled {
-    let thread = state.store.create_thread(title.and_then(trimmed)).await?;
+async fn create_thread(
+    state: &SharedState,
+    title: Option<&str>,
+    workspace_id: Option<String>,
+) -> Handled {
+    let title = title.and_then(trimmed);
+    let thread = match workspace_id {
+        Some(id) => {
+            let workspace = state.store.touch_workspace(id.clone()).await?;
+            state.publish(Event::WorkspaceUpdated { workspace });
+            state.store.create_workspace_thread(title, id).await?
+        }
+        None => state.store.create_thread(title).await?,
+    };
     state.publish(Event::ThreadUpdated {
         thread: thread.clone(),
     });

@@ -19,6 +19,8 @@ pub enum Request {
     ListThreads,
     CreateThread {
         title: Option<String>,
+        #[serde(default)]
+        workspace_id: Option<String>,
     },
     ListMessages {
         thread_id: String,
@@ -143,6 +145,44 @@ pub enum Request {
         thread_id: String,
         effort: crate::ThinkingEffort,
     },
+    ListWorkspaces,
+    CreateWorkspace {
+        path: String,
+    },
+    RenameWorkspace {
+        workspace_id: String,
+        name: String,
+    },
+    RemoveWorkspace {
+        workspace_id: String,
+    },
+    ListDir {
+        workspace_id: String,
+        path: String,
+    },
+    ReadWorkspaceFile {
+        workspace_id: String,
+        path: String,
+    },
+    ThreadChanges {
+        thread_id: String,
+    },
+    RevertChange {
+        thread_id: String,
+        path: String,
+        #[serde(default)]
+        hunk: Option<u32>,
+    },
+    GitInfo {
+        workspace_id: String,
+    },
+    ListCommands {
+        workspace_id: String,
+    },
+    RunCommand {
+        workspace_id: String,
+        command: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -245,6 +285,32 @@ pub enum Response {
     },
     OperateStatus {
         permissions: OperatePermissions,
+    },
+    Workspaces {
+        workspaces: Vec<crate::Workspace>,
+    },
+    Workspace {
+        workspace: crate::Workspace,
+    },
+    Dir {
+        entries: Vec<crate::DirEntry>,
+    },
+    WorkspaceFile {
+        text: String,
+        truncated: bool,
+        binary: bool,
+    },
+    Changes {
+        files: Vec<crate::FileDiff>,
+    },
+    Git {
+        git: crate::GitInfo,
+    },
+    Commands {
+        commands: Vec<crate::CommandRun>,
+    },
+    Command {
+        command: crate::CommandRun,
     },
 }
 

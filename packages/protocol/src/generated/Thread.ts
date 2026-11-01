@@ -7,6 +7,7 @@ export type Thread = {
   parentId: string | null;
   lastMessage: string | null;
   thinking: ThinkingEffort;
+  workspaceId: string | null;
   createdAt: number;
   updatedAt: number;
 };

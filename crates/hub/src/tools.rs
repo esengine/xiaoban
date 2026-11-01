@@ -367,6 +367,7 @@ pub struct HubTools<'a> {
     pub(crate) allowed_once: Mutex<Vec<String>>,
     pub(crate) mouse_once: Mutex<Vec<String>>,
     pub(crate) sub_agent: bool,
+    pub(crate) touched: Mutex<std::collections::BTreeMap<std::path::PathBuf, Option<Vec<u8>>>>,
     attachment: Mutex<Option<Attachment>>,
 }
 
@@ -385,6 +386,7 @@ impl<'a> HubTools<'a> {
             allowed_once: Mutex::new(Vec::new()),
             mouse_once: Mutex::new(Vec::new()),
             sub_agent: false,
+            touched: Mutex::new(std::collections::BTreeMap::new()),
             attachment: Mutex::new(None),
         }
     }
@@ -671,6 +673,15 @@ impl ToolRunner for HubTools<'_> {
                 | crate::subthreads::OPEN_SUBTHREADS
                 | crate::subthreads::MESSAGE_SUBTHREAD
                 | crate::operate_tools::CONFIRM
+                | crate::code_tools::WRITE_FILE
+                | crate::code_tools::EDIT_FILE
+                | crate::code_tools::RUN_COMMAND
+                | crate::code_tools::READ_FILE
+                | crate::code_tools::LIST_DIR
+                | crate::code_tools::SEARCH_FILES
+                | crate::code_tools::GIT_STATUS
+                | crate::code_tools::GIT_DIFF
+                | crate::code_tools::GIT_LOG
         )
     }
 
@@ -709,6 +720,9 @@ impl ToolRunner for HubTools<'_> {
                 WEB_SEARCH => self.web_search(arguments).await,
                 SAVE_TRIP => self.save_trip(arguments).await,
                 SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,
+                name if crate::code_tools::is_code_tool(name) => {
+                    self.run_code_tool(name, arguments).await
+                }
                 other => error(&format!("unknown tool {other}")),
             }
         })

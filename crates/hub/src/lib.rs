@@ -3,6 +3,10 @@ mod apps;
 mod archive;
 mod auth;
 mod calendar;
+mod changes;
+mod code_requests;
+mod code_tools;
+mod commands;
 mod config;
 mod confirms;
 mod discovery;
@@ -37,6 +41,7 @@ mod trip;
 mod trip_requests;
 mod turns;
 mod weather;
+mod workspace;
 
 pub use apps::{AppEntry, Apps, NoApps};
 pub use config::HubConfig;

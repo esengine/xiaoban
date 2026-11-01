@@ -101,6 +101,20 @@ pub enum Event {
         paused: bool,
         by_user: bool,
     },
+    WorkspaceUpdated {
+        workspace: crate::Workspace,
+    },
+    WorkspaceRemoved {
+        workspace_id: String,
+    },
+    FilesChanged {
+        workspace_id: String,
+        thread_id: Option<String>,
+        paths: Vec<String>,
+    },
+    CommandUpdated {
+        command: crate::CommandRun,
+    },
 }
 
 impl Event {
@@ -127,7 +141,11 @@ impl Event {
             | Self::ConfirmResolved { .. }
             | Self::TurnPaused { .. }
             | Self::TurnBackgrounded { .. }
-            | Self::AgentProgress { .. } => None,
+            | Self::AgentProgress { .. }
+            | Self::WorkspaceUpdated { .. }
+            | Self::WorkspaceRemoved { .. }
+            | Self::CommandUpdated { .. } => None,
+            Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),
         }

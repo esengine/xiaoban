@@ -153,6 +153,36 @@ ALTER TABLE threads ADD COLUMN parent_id TEXT REFERENCES threads(id) ON DELETE C
 ALTER TABLE threads ADD COLUMN thinking TEXT NOT NULL DEFAULT 'auto';
 ALTER TABLE messages ADD COLUMN thinking TEXT;
 ",
+    r"
+CREATE TABLE workspaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    active_at INTEGER NOT NULL
+);
+ALTER TABLE threads ADD COLUMN workspace_id TEXT;
+CREATE TABLE file_baselines (
+    thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    path TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    content BLOB,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (thread_id, path)
+);
+CREATE TABLE commands (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    thread_id TEXT,
+    command TEXT NOT NULL,
+    by_user INTEGER NOT NULL,
+    exit_code INTEGER,
+    output TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    duration_ms INTEGER
+);
+CREATE INDEX commands_by_workspace ON commands(workspace_id, started_at);
+",
 ];
 
 pub fn apply(conn: &mut Connection) -> Result<()> {

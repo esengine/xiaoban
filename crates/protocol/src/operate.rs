@@ -19,6 +19,9 @@ pub enum ConfirmKind {
     BorrowMouse { app: String },
     Action { title: String, detail: String },
     Permissions,
+    RunCommand { command: String, cwd: String, rule: String },
+    ReadOutside { path: String, folder: String },
+    WriteOutside { path: String, folder: String, preview: Vec<crate::DiffLine> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

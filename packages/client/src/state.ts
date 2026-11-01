@@ -1,5 +1,6 @@
 import type {
   Archived,
+  CommandRun,
   ConfirmRequest,
   Device,
   Event,
@@ -14,6 +15,7 @@ import type {
   StepResult,
   Thread,
   Trip,
+  Workspace,
 } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
 
@@ -76,6 +78,9 @@ export interface HubState {
   latestTrip: Readonly<Record<string, number>>;
   services: ServiceStatus[];
   confirms: ConfirmRequest[];
+  workspaces: Workspace[];
+  commands: Readonly<Record<string, CommandRun[]>>;
+  filesVersion: Readonly<Record<string, number>>;
 }
 
 export const initialHubState: HubState = {
@@ -98,6 +103,9 @@ export const initialHubState: HubState = {
   latestTrip: {},
   services: [],
   confirms: [],
+  workspaces: [],
+  commands: {},
+  filesVersion: {},
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -344,7 +352,41 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
         drafts: { ...state.drafts, [event.turnId]: { ...draft, failure: event.failure } },
       };
     }
+    case "workspace_updated":
+      return { ...state, workspaces: upsertWorkspace(state.workspaces, event.workspace) };
+    case "workspace_removed":
+      return {
+        ...state,
+        workspaces: state.workspaces.filter((workspace) => workspace.id !== event.workspaceId),
+      };
+    case "files_changed":
+      return {
+        ...state,
+        filesVersion: {
+          ...state.filesVersion,
+          [event.workspaceId]: (state.filesVersion[event.workspaceId] ?? 0) + 1,
+        },
+      };
+    case "command_updated": {
+      const list = state.commands[event.command.workspaceId] ?? [];
+      const others = list.filter((run) => run.id !== event.command.id);
+      return {
+        ...state,
+        commands: {
+          ...state.commands,
+          [event.command.workspaceId]: [...others, event.command].sort(
+            (a, b) => a.startedAt - b.startedAt,
+          ),
+        },
+      };
+    }
   }
+}
+
+export function upsertWorkspace(list: Workspace[], workspace: Workspace): Workspace[] {
+  return [...list.filter((item) => item.id !== workspace.id), workspace].sort(
+    (a, b) => b.activeAt - a.activeAt,
+  );
 }
 
 export function draftsForThread(state: HubState, threadId: string): Draft[] {

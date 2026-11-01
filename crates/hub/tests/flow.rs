@@ -206,6 +206,7 @@ async fn local_client_sends_a_message_and_receives_streamed_reply() {
     let Response::Thread { thread } = client
         .request(Request::CreateThread {
             title: Some("出门".into()),
+            workspace_id: None,
         })
         .await
     else {
@@ -338,7 +339,7 @@ async fn converse(client: &mut TestClient, thread_id: &str, text: &str, context:
 }
 
 async fn new_thread(client: &mut TestClient) -> String {
-    let Response::Thread { thread } = client.request(Request::CreateThread { title: None }).await
+    let Response::Thread { thread } = client.request(Request::CreateThread { title: None, workspace_id: None }).await
     else {
         panic!("expected thread");
     };

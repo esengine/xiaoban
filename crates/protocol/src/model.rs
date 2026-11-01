@@ -11,6 +11,8 @@ pub struct Thread {
     pub last_message: Option<String>,
     #[serde(default)]
     pub thinking: ThinkingEffort,
+    #[serde(default)]
+    pub workspace_id: Option<String>,
     #[ts(type = "number")]
     pub created_at: i64,
     #[ts(type = "number")]

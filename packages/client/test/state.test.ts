@@ -8,6 +8,7 @@ const thread: Thread = {
   parentId: null,
   lastMessage: null,
   thinking: "auto",
+  workspaceId: null,
   createdAt: 1,
   updatedAt: 1,
 };

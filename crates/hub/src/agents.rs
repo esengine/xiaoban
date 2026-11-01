@@ -70,7 +70,8 @@ impl HubTools<'_> {
         let Ok(snapshot) = crate::turns::fresh_snapshot(self.state).await else {
             return error("could not prepare the sub-agents");
         };
-        let prefix = self.state.prefix(snapshot.as_deref());
+        let workspace = crate::workspace::for_thread(self.state, self.thread_id).await;
+        let prefix = self.state.prefix_for(snapshot.as_deref(), workspace.as_ref());
         let runs = args.tasks.into_iter().enumerate().map(|(index, task)| {
             let prefix = prefix.clone();
             async move {

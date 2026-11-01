@@ -1,0 +1,649 @@
+use std::path::{Path, PathBuf};
+
+use serde::Deserialize;
+use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
+use xiaoban_agent::ToolSpec;
+use xiaoban_i18n::{Key, Localizer, keys};
+use xiaoban_protocol::{ConfirmChoice, ConfirmKind, DiffKind, DiffLine, Event, Workspace};
+
+use crate::tools::HubTools;
+use crate::workspace::{self, Target};
+
+pub const LIST_DIR: &str = "list_dir";
+pub const READ_FILE: &str = "read_file";
+pub const SEARCH_FILES: &str = "search_files";
+pub const WRITE_FILE: &str = "write_file";
+pub const EDIT_FILE: &str = "edit_file";
+pub const RUN_COMMAND: &str = "run_command";
+pub const GIT_STATUS: &str = "git_status";
+pub const GIT_DIFF: &str = "git_diff";
+pub const GIT_LOG: &str = "git_log";
+
+const READ_LINES: usize = 2_000;
+const LIST_LIMIT: usize = 500;
+const HITS: usize = 200;
+const SEARCH_BYTES: u64 = 1_000_000;
+const GIT_CHARS: usize = 20_000;
+const PREVIEW_LINES: usize = 14;
+const READ_FOLDERS: &str = "workspace.read.";
+const WRITE_FOLDERS: &str = "workspace.write.";
+
+fn text(l: &Localizer, key: Key) -> Value {
+    json!({ "type": "string", "description": l.text(key) })
+}
+
+fn spec(name: &str, description: String, properties: &Value, required: &[&str]) -> ToolSpec {
+    ToolSpec {
+        name: name.to_owned(),
+        description,
+        parameters: json!({
+            "type": "object",
+            "properties": properties,
+            "required": required,
+            "additionalProperties": false,
+        }),
+    }
+}
+
+pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
+    vec![
+        spec(
+            LIST_DIR,
+            l.text(keys::TOOL_LIST_DIR_DESCRIPTION),
+            &json!({
+                "path": text(l, keys::TOOL_CODE_PATH),
+                "depth": { "type": "integer", "minimum": 1, "maximum": 3, "description": l.text(keys::TOOL_LIST_DIR_DEPTH) },
+            }),
+            &[],
+        ),
+        spec(
+            READ_FILE,
+            l.text(keys::TOOL_READ_FILE_DESCRIPTION),
+            &json!({
+                "path": text(l, keys::TOOL_CODE_PATH),
+                "from": { "type": "integer", "minimum": 1, "description": l.text(keys::TOOL_READ_FILE_FROM) },
+                "to": { "type": "integer", "minimum": 1, "description": l.text(keys::TOOL_READ_FILE_TO) },
+            }),
+            &["path"],
+        ),
+        spec(
+            SEARCH_FILES,
+            l.text(keys::TOOL_SEARCH_FILES_DESCRIPTION),
+            &json!({
+                "query": text(l, keys::TOOL_SEARCH_FILES_QUERY),
+                "path": text(l, keys::TOOL_CODE_PATH),
+                "names": { "type": "boolean", "description": l.text(keys::TOOL_SEARCH_FILES_NAMES) },
+            }),
+            &["query"],
+        ),
+        spec(
+            WRITE_FILE,
+            l.text(keys::TOOL_WRITE_FILE_DESCRIPTION),
+            &json!({
+                "path": text(l, keys::TOOL_CODE_PATH),
+                "content": text(l, keys::TOOL_WRITE_FILE_CONTENT),
+            }),
+            &["path", "content"],
+        ),
+        spec(
+            EDIT_FILE,
+            l.text(keys::TOOL_EDIT_FILE_DESCRIPTION),
+            &json!({
+                "path": text(l, keys::TOOL_CODE_PATH),
+                "old": text(l, keys::TOOL_EDIT_FILE_OLD),
+                "new": text(l, keys::TOOL_EDIT_FILE_NEW),
+                "all": { "type": "boolean", "description": l.text(keys::TOOL_EDIT_FILE_ALL) },
+            }),
+            &["path", "old", "new"],
+        ),
+        spec(
+            RUN_COMMAND,
+            l.text(keys::TOOL_RUN_COMMAND_DESCRIPTION),
+            &json!({
+                "command": text(l, keys::TOOL_RUN_COMMAND_COMMAND),
+                "reason": text(l, keys::TOOL_RUN_COMMAND_REASON),
+            }),
+            &["command", "reason"],
+        ),
+    ]
+}
+
+pub fn git_specs(l: &Localizer) -> Vec<ToolSpec> {
+    vec![
+        spec(GIT_STATUS, l.text(keys::TOOL_GIT_STATUS_DESCRIPTION), &json!({}), &[]),
+        spec(
+            GIT_DIFF,
+            l.text(keys::TOOL_GIT_DIFF_DESCRIPTION),
+            &json!({
+                "path": text(l, keys::TOOL_CODE_PATH),
+                "staged": { "type": "boolean", "description": l.text(keys::TOOL_GIT_DIFF_STAGED) },
+            }),
+            &[],
+        ),
+        spec(
+            GIT_LOG,
+            l.text(keys::TOOL_GIT_LOG_DESCRIPTION),
+            &json!({ "count": { "type": "integer", "minimum": 1, "maximum": 100, "description": l.text(keys::TOOL_GIT_LOG_COUNT) } }),
+            &[],
+        ),
+    ]
+}
+
+pub fn is_code_tool(name: &str) -> bool {
+    matches!(
+        name,
+        LIST_DIR | READ_FILE | SEARCH_FILES | WRITE_FILE | EDIT_FILE | RUN_COMMAND | GIT_STATUS | GIT_DIFF | GIT_LOG
+    )
+}
+
+fn error(message: &str) -> String {
+    json!({ "error": message }).to_string()
+}
+
+pub fn digest(bytes: &[u8]) -> String {
+    hex::encode(&Sha256::digest(bytes)[..12])
+}
+
+#[derive(Deserialize)]
+struct PathArgs {
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    depth: Option<usize>,
+}
+
+#[derive(Deserialize)]
+struct ReadArgs {
+    path: String,
+    #[serde(default)]
+    from: Option<usize>,
+    #[serde(default)]
+    to: Option<usize>,
+}
+
+#[derive(Deserialize)]
+struct SearchArgs {
+    query: String,
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    names: bool,
+}
+
+#[derive(Deserialize)]
+struct WriteArgs {
+    path: String,
+    content: String,
+}
+
+#[derive(Deserialize)]
+struct EditArgs {
+    path: String,
+    old: String,
+    new: String,
+    #[serde(default)]
+    all: bool,
+}
+
+#[derive(Deserialize)]
+struct CommandArgs {
+    command: String,
+}
+
+#[derive(Deserialize)]
+struct DiffArgs {
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    staged: bool,
+}
+
+#[derive(Deserialize)]
+struct LogArgs {
+    #[serde(default)]
+    count: Option<u32>,
+}
+
+fn walk(root: &Path, depth: Option<usize>) -> ignore::Walk {
+    let mut builder = ignore::WalkBuilder::new(root);
+    builder
+        .hidden(false)
+        .git_ignore(true)
+        .git_global(false)
+        .parents(true)
+        .require_git(false)
+        .filter_entry(|entry| entry.file_name() != ".git")
+        .max_depth(depth);
+    builder.build()
+}
+
+fn preview(old: &str, new: &str) -> Vec<DiffLine> {
+    crate::changes::hunks(old, new)
+        .0
+        .into_iter()
+        .flat_map(|hunk| hunk.lines)
+        .filter(|line| line.kind != DiffKind::Same)
+        .take(PREVIEW_LINES)
+        .collect()
+}
+
+fn clip(text: &str, limit: usize) -> (String, bool) {
+    if text.chars().count() <= limit {
+        (text.to_owned(), false)
+    } else {
+        (text.chars().take(limit).collect(), true)
+    }
+}
+
+impl HubTools<'_> {
+    async fn workspace(&self) -> Result<Workspace, String> {
+        workspace::for_thread(self.state, self.thread_id)
+            .await
+            .ok_or_else(|| error("this conversation has no workspace; these tools only work in a workspace conversation"))
+    }
+
+    fn reads_key(&self, path: &Path) -> (String, PathBuf) {
+        (self.thread_id.to_owned(), path.to_path_buf())
+    }
+
+    fn remember_read(&self, path: &Path, bytes: &[u8]) {
+        self.state
+            .code_reads
+            .lock()
+            .unwrap()
+            .insert(self.reads_key(path), digest(bytes));
+    }
+
+    fn known(&self, path: &Path) -> Option<String> {
+        self.state.code_reads.lock().unwrap().get(&self.reads_key(path)).cloned()
+    }
+
+    async fn folders(&self, prefix: &str, workspace: &Workspace) -> Vec<String> {
+        self.state
+            .store
+            .setting_owned(format!("{prefix}{}", workspace.id))
+            .await
+            .ok()
+            .flatten()
+            .and_then(|value| serde_json::from_str(&value).ok())
+            .unwrap_or_default()
+    }
+
+    async fn add_folder(&self, prefix: &str, workspace: &Workspace, folder: &Path) {
+        let mut folders = self.folders(prefix, workspace).await;
+        let folder = folder.to_string_lossy().into_owned();
+        if !folders.contains(&folder) {
+            folders.push(folder);
+            let _ = self
+                .state
+                .store
+                .set_setting_owned(format!("{prefix}{}", workspace.id), serde_json::to_string(&folders).unwrap_or_default())
+                .await;
+        }
+    }
+
+    async fn within(&self, prefix: &str, workspace: &Workspace, path: &Path) -> bool {
+        self.folders(prefix, workspace).await.iter().any(|folder| path.starts_with(folder))
+    }
+
+    fn folder_of(path: &Path) -> PathBuf {
+        if path.is_dir() {
+            path.to_path_buf()
+        } else {
+            path.parent().map_or_else(|| path.to_path_buf(), Path::to_path_buf)
+        }
+    }
+
+    async fn may_read(&self, workspace: &Workspace, target: &Target) -> Result<(), String> {
+        if target.inside {
+            return Ok(());
+        }
+        let shown = target.path.to_string_lossy().into_owned();
+        if self.within(READ_FOLDERS, workspace, &target.path).await
+            || self.within(WRITE_FOLDERS, workspace, &target.path).await
+            || self.allowed_once.lock().unwrap().contains(&shown)
+        {
+            return Ok(());
+        }
+        let folder = Self::folder_of(&target.path);
+        match self
+            .ask(ConfirmKind::ReadOutside {
+                path: workspace::shown(workspace, &target.path),
+                folder: workspace::shown(workspace, &folder),
+            })
+            .await
+        {
+            ConfirmChoice::Always => {
+                self.add_folder(READ_FOLDERS, workspace, &folder).await;
+                Ok(())
+            }
+            ConfirmChoice::Once | ConfirmChoice::Yes => {
+                self.allowed_once.lock().unwrap().push(shown);
+                Ok(())
+            }
+            _ => Err(error(
+                "the user did not allow reading outside the workspace; work with what is inside or ask them",
+            )),
+        }
+    }
+
+    async fn may_write(&self, workspace: &Workspace, target: &Target, old: &str, new: &str) -> Result<(), String> {
+        if target.inside || self.within(WRITE_FOLDERS, workspace, &target.path).await {
+            return Ok(());
+        }
+        let folder = Self::folder_of(&target.path);
+        match self
+            .ask(ConfirmKind::WriteOutside {
+                path: workspace::shown(workspace, &target.path),
+                folder: workspace::shown(workspace, &folder),
+                preview: preview(old, new),
+            })
+            .await
+        {
+            ConfirmChoice::Always => {
+                self.add_folder(WRITE_FOLDERS, workspace, &folder).await;
+                Ok(())
+            }
+            ConfirmChoice::Once | ConfirmChoice::Yes => Ok(()),
+            _ => Err(error(
+                "the user did not allow changing a file outside the workspace; tell them the change instead",
+            )),
+        }
+    }
+
+    async fn save(&self, workspace: &Workspace, path: &Path, before: Option<Vec<u8>>, content: &[u8]) -> Result<(), String> {
+        let key = path.to_string_lossy().into_owned();
+        self.touched
+            .lock()
+            .unwrap()
+            .entry(path.to_path_buf())
+            .or_insert_with(|| before.clone());
+        self.state
+            .store
+            .keep_baseline(self.thread_id.to_owned(), workspace.id.clone(), key, before)
+            .await
+            .map_err(|failure| error(&failure.to_string()))?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|failure| error(&failure.to_string()))?;
+        }
+        std::fs::write(path, content).map_err(|failure| error(&failure.to_string()))?;
+        self.remember_read(path, content);
+        self.state.publish(Event::FilesChanged {
+            workspace_id: workspace.id.clone(),
+            thread_id: Some(self.thread_id.to_owned()),
+            paths: vec![workspace::shown(workspace, path)],
+        });
+        Ok(())
+    }
+
+    fn stale(&self, path: &Path, bytes: &[u8]) -> bool {
+        self.known(path).is_some_and(|known| known != digest(bytes))
+    }
+
+    pub(crate) async fn finish_changes(&self) {
+        let touched: Vec<(PathBuf, Option<Vec<u8>>)> = std::mem::take(&mut *self.touched.lock().unwrap()).into_iter().collect();
+        if touched.is_empty() {
+            return;
+        }
+        let Ok(workspace) = self.workspace().await else {
+            return;
+        };
+        let files: Vec<_> = touched
+            .into_iter()
+            .filter_map(|(path, before)| {
+                let now = std::fs::read(&path).ok();
+                crate::changes::summary(workspace::shown(&workspace, &path), before.as_deref(), now.as_deref())
+            })
+            .collect();
+        if !files.is_empty() {
+            self.attach(xiaoban_protocol::Attachment::Changes { files });
+        }
+    }
+
+    pub(crate) async fn run_code_tool(&self, name: &str, arguments: &str) -> String {
+        let workspace = match self.workspace().await {
+            Ok(workspace) => workspace,
+            Err(failure) => return failure,
+        };
+        let result = match name {
+            LIST_DIR => self.list_dir(&workspace, arguments).await,
+            READ_FILE => self.read_file(&workspace, arguments).await,
+            SEARCH_FILES => self.search_files(&workspace, arguments).await,
+            WRITE_FILE => self.write_file(&workspace, arguments).await,
+            EDIT_FILE => self.edit_file(&workspace, arguments).await,
+            RUN_COMMAND => self.run_command(&workspace, arguments).await,
+            GIT_STATUS | GIT_DIFF | GIT_LOG => self.git_tool(&workspace, name, arguments).await,
+            _ => Err(error("unknown tool")),
+        };
+        result.unwrap_or_else(|failure| failure)
+    }
+
+    async fn list_dir(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: PathArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {path?, depth?}"))?;
+        let target = workspace::resolve(workspace, args.path.as_deref().unwrap_or("."));
+        self.may_read(workspace, &target).await?;
+        let depth = args.depth.unwrap_or(1).clamp(1, 3);
+        let root = target.path.clone();
+        let shown_root = workspace.clone();
+        let lines = tokio::task::spawn_blocking(move || {
+            walk(&root, Some(depth))
+                .filter_map(Result::ok)
+                .filter(|entry| entry.depth() > 0)
+                .take(LIST_LIMIT)
+                .map(|entry| {
+                    let mut name = workspace::shown(&shown_root, entry.path());
+                    if entry.file_type().is_some_and(|kind| kind.is_dir()) {
+                        name.push('/');
+                    }
+                    name
+                })
+                .collect::<Vec<_>>()
+        })
+        .await
+        .unwrap_or_default();
+        Ok(json!({ "entries": lines, "limited": lines.len() >= LIST_LIMIT }).to_string())
+    }
+
+    async fn read_file(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: ReadArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {path, from?, to?}"))?;
+        let target = workspace::resolve(workspace, &args.path);
+        self.may_read(workspace, &target).await?;
+        let bytes = std::fs::read(&target.path).map_err(|failure| error(&failure.to_string()))?;
+        if crate::changes::binary(&bytes) {
+            return Err(error("binary file; cannot show it as text"));
+        }
+        self.remember_read(&target.path, &bytes);
+        let content = String::from_utf8_lossy(&bytes);
+        let lines: Vec<&str> = content.split_inclusive('\n').collect();
+        let total = lines.len();
+        let from = args.from.unwrap_or(1).max(1);
+        let to = args.to.unwrap_or(from + READ_LINES - 1).min(total).min(from + READ_LINES - 1);
+        let body: String = lines.iter().skip(from - 1).take(to.saturating_sub(from - 1)).copied().collect();
+        Ok(json!({
+            "path": workspace::shown(workspace, &target.path),
+            "from": from,
+            "to": to,
+            "total_lines": total,
+            "content": body,
+        })
+        .to_string())
+    }
+
+    async fn search_files(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: SearchArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {query, path?, names?}"))?;
+        if args.query.trim().is_empty() {
+            return Err(error("query must not be empty"));
+        }
+        let target = workspace::resolve(workspace, args.path.as_deref().unwrap_or("."));
+        self.may_read(workspace, &target).await?;
+        let root = target.path.clone();
+        let shown_root = workspace.clone();
+        let hits = tokio::task::spawn_blocking(move || {
+            let mut hits = Vec::new();
+            let needle = args.query.to_lowercase();
+            let pattern = regex::Regex::new(&args.query).unwrap_or_else(|_| regex::Regex::new(&regex::escape(&args.query)).expect("escaped pattern"));
+            for entry in walk(&root, None).filter_map(Result::ok) {
+                if hits.len() >= HITS {
+                    break;
+                }
+                let is_file = entry.file_type().is_some_and(|kind| kind.is_file());
+                let shown = workspace::shown(&shown_root, entry.path());
+                if args.names {
+                    if entry.file_name().to_string_lossy().to_lowercase().contains(&needle) {
+                        hits.push(json!({ "path": shown }));
+                    }
+                    continue;
+                }
+                if !is_file || entry.metadata().map_or(true, |meta| meta.len() > SEARCH_BYTES) {
+                    continue;
+                }
+                let Ok(bytes) = std::fs::read(entry.path()) else { continue };
+                if crate::changes::binary(&bytes) {
+                    continue;
+                }
+                let content = String::from_utf8_lossy(&bytes);
+                for (index, line) in content.lines().enumerate() {
+                    if pattern.is_match(line) {
+                        hits.push(json!({ "path": shown, "line": index + 1, "text": line.chars().take(200).collect::<String>() }));
+                        if hits.len() >= HITS {
+                            break;
+                        }
+                    }
+                }
+            }
+            hits
+        })
+        .await
+        .unwrap_or_default();
+        Ok(json!({ "hits": hits, "limited": hits.len() >= HITS }).to_string())
+    }
+
+    async fn write_file(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: WriteArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {path, content}"))?;
+        let target = workspace::resolve(workspace, &args.path);
+        if target.path.is_dir() {
+            return Err(error("that path is a folder"));
+        }
+        let before = std::fs::read(&target.path).ok();
+        if let Some(bytes) = &before {
+            match self.known(&target.path) {
+                None => return Err(error("read the file before overwriting it, or use edit_file")),
+                Some(_) if self.stale(&target.path, bytes) => {
+                    return Err(error("the file changed since you read it (the user may have edited it); read it again before writing"));
+                }
+                Some(_) => {}
+            }
+        }
+        let old = before.as_deref().map(String::from_utf8_lossy).unwrap_or_default().into_owned();
+        self.may_write(workspace, &target, &old, &args.content).await?;
+        self.save(workspace, &target.path, before, args.content.as_bytes()).await?;
+        Ok(json!({ "written": workspace::shown(workspace, &target.path), "lines": args.content.lines().count() }).to_string())
+    }
+
+    async fn edit_file(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: EditArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {path, old, new, all?}"))?;
+        if args.old.is_empty() {
+            return Err(error("old must not be empty; use write_file to create a file"));
+        }
+        let target = workspace::resolve(workspace, &args.path);
+        let bytes = std::fs::read(&target.path).map_err(|_| error("file not found; use write_file to create it"))?;
+        if crate::changes::binary(&bytes) {
+            return Err(error("binary file; cannot edit it as text"));
+        }
+        if self.stale(&target.path, &bytes) {
+            return Err(error("the file changed since you read it (the user may have edited it); read it again, then edit"));
+        }
+        let content = String::from_utf8_lossy(&bytes).into_owned();
+        let count = content.matches(&args.old).count();
+        if count == 0 {
+            return Err(error("old text not found; read the file and copy the text exactly, including whitespace"));
+        }
+        if count > 1 && !args.all {
+            return Err(error(&format!("old text appears {count} times; include more surrounding lines so it is unique, or set all to true")));
+        }
+        let updated = if args.all {
+            content.replace(&args.old, &args.new)
+        } else {
+            content.replacen(&args.old, &args.new, 1)
+        };
+        self.may_write(workspace, &target, &content, &updated).await?;
+        self.save(workspace, &target.path, Some(bytes), updated.as_bytes()).await?;
+        Ok(json!({ "edited": workspace::shown(workspace, &target.path), "replacements": if args.all { count } else { 1 } }).to_string())
+    }
+
+    async fn run_command(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: CommandArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {command, reason}"))?;
+        let command = args.command.trim().to_owned();
+        if command.is_empty() {
+            return Err(error("command must not be empty"));
+        }
+        let rules = crate::commands::rules(self.state, &workspace.id).await;
+        if !crate::commands::allowed_by(&rules, &command) {
+            let rule = if crate::commands::chained(&command) {
+                String::new()
+            } else {
+                crate::commands::rule(&command)
+            };
+            match self
+                .ask(ConfirmKind::RunCommand {
+                    command: command.clone(),
+                    cwd: workspace::pretty(&workspace::root(workspace)),
+                    rule: rule.clone(),
+                })
+                .await
+            {
+                ConfirmChoice::Always if !rule.is_empty() => {
+                    crate::commands::allow(self.state, &workspace.id, rule).await;
+                }
+                ConfirmChoice::Once | ConfirmChoice::Yes | ConfirmChoice::Always => {}
+                _ => {
+                    return Err(error(
+                        "the user did not allow running this command; do not retry it. Tell them the exact command so they can run it themselves",
+                    ));
+                }
+            }
+        }
+        crate::pauses::wait_while_paused(self.state, self.turn_id, &self.cancel).await;
+        let finished = crate::commands::run(self.state, workspace, Some(self.thread_id), &command, false, &self.cancel)
+            .await
+            .map_err(|failure| error(&failure))?;
+        Ok(crate::commands::for_model(&finished))
+    }
+
+    async fn git_tool(&self, workspace: &Workspace, name: &str, arguments: &str) -> Result<String, String> {
+        let dir = workspace::root(workspace);
+        if workspace::git_binary().is_none() {
+            return Err(error("git is not installed on this computer"));
+        }
+        if !workspace::is_repository(&dir).await {
+            return Err(error("this folder is not a git repository"));
+        }
+        let output = match name {
+            GIT_STATUS => workspace::git(&dir, &["status", "--short", "--branch"]).await,
+            GIT_DIFF => {
+                let args: DiffArgs = serde_json::from_str(arguments).unwrap_or(DiffArgs { path: None, staged: false });
+                let mut list = vec!["diff"];
+                if args.staged {
+                    list.push("--staged");
+                }
+                let path;
+                if let Some(given) = &args.path {
+                    path = workspace::resolve(workspace, given).path.to_string_lossy().into_owned();
+                    list.push("--");
+                    list.push(&path);
+                }
+                workspace::git(&dir, &list).await
+            }
+            _ => {
+                let args: LogArgs = serde_json::from_str(arguments).unwrap_or(LogArgs { count: None });
+                let count = args.count.unwrap_or(20).clamp(1, 100).to_string();
+                workspace::git(&dir, &["log", "--oneline", "--decorate", "-n", &count]).await
+            }
+        };
+        let output = output.ok_or_else(|| error("git did not answer"))?;
+        let body = if output.ok { output.stdout } else { output.stderr };
+        let (body, truncated) = clip(&body, GIT_CHARS);
+        Ok(json!({ "ok": output.ok, "output": body, "truncated": truncated }).to_string())
+    }
+}

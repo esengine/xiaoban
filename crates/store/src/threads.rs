@@ -6,7 +6,7 @@ use crate::{Result, Store, StoreError, new_id, now_ms};
 const SELECT: &str = "SELECT id, title, created_at, updated_at,
     (SELECT text FROM messages WHERE messages.thread_id = threads.id
      ORDER BY created_at DESC, rowid DESC LIMIT 1),
-    parent_id, thinking
+    parent_id, thinking, workspace_id
     FROM threads";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
@@ -18,6 +18,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
         last_message: row.get(4)?,
         parent_id: row.get(5)?,
         thinking: ThinkingEffort::parse(&row.get::<_, String>(6)?).unwrap_or_default(),
+        workspace_id: row.get(7)?,
     })
 }
 
@@ -37,25 +38,56 @@ impl Store {
         title: Option<String>,
         parent_id: Option<String>,
     ) -> Result<Thread> {
+        self.insert_thread(title, parent_id, None).await
+    }
+
+    pub async fn create_workspace_thread(
+        &self,
+        title: Option<String>,
+        workspace_id: String,
+    ) -> Result<Thread> {
+        self.insert_thread(title, None, Some(workspace_id)).await
+    }
+
+    async fn insert_thread(
+        &self,
+        title: Option<String>,
+        parent_id: Option<String>,
+        workspace_id: Option<String>,
+    ) -> Result<Thread> {
         self.with(move |conn| {
             let now = now_ms();
+            let workspace_id = match (&workspace_id, &parent_id) {
+                (Some(_), _) => workspace_id,
+                (None, Some(parent)) => conn
+                    .query_row(
+                        "SELECT workspace_id FROM threads WHERE id = ?1",
+                        [parent],
+                        |row| row.get(0),
+                    )
+                    .optional()?
+                    .flatten(),
+                (None, None) => None,
+            };
             let thread = Thread {
                 id: new_id(),
                 title,
                 parent_id,
                 last_message: None,
                 thinking: ThinkingEffort::Auto,
+                workspace_id,
                 created_at: now,
                 updated_at: now,
             };
             conn.execute(
-                "INSERT INTO threads (id, title, created_at, updated_at, parent_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO threads (id, title, created_at, updated_at, parent_id, workspace_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     thread.id,
                     thread.title,
                     thread.created_at,
                     thread.updated_at,
-                    thread.parent_id
+                    thread.parent_id,
+                    thread.workspace_id
                 ],
             )?;
             Ok(thread)

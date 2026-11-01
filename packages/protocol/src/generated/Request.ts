@@ -9,7 +9,7 @@ import type { ThinkingEffort } from "./ThinkingEffort.ts";
 
 export type Request =
   | { type: "list_threads" }
-  | { type: "create_thread"; title: string | null }
+  | { type: "create_thread"; title: string | null; workspaceId: string | null }
   | { type: "list_messages"; threadId: string; before: number | null; limit: number | null }
   | {
       type: "send_message";
@@ -70,4 +70,15 @@ export type Request =
   | { type: "tidy_memories" }
   | { type: "file_data"; fileId: string }
   | { type: "file_path"; fileId: string; name: string }
-  | { type: "set_thinking"; threadId: string; effort: ThinkingEffort };
+  | { type: "set_thinking"; threadId: string; effort: ThinkingEffort }
+  | { type: "list_workspaces" }
+  | { type: "create_workspace"; path: string }
+  | { type: "rename_workspace"; workspaceId: string; name: string }
+  | { type: "remove_workspace"; workspaceId: string }
+  | { type: "list_dir"; workspaceId: string; path: string }
+  | { type: "read_workspace_file"; workspaceId: string; path: string }
+  | { type: "thread_changes"; threadId: string }
+  | { type: "revert_change"; threadId: string; path: string; hunk: number | null }
+  | { type: "git_info"; workspaceId: string }
+  | { type: "list_commands"; workspaceId: string }
+  | { type: "run_command"; workspaceId: string; command: string };

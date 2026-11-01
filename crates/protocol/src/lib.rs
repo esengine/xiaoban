@@ -1,3 +1,4 @@
+mod code;
 mod event;
 mod frame;
 mod model;
@@ -6,6 +7,7 @@ mod relay;
 mod request;
 mod trip;
 
+pub use code::*;
 pub use event::*;
 pub use frame::*;
 pub use model::*;

@@ -9,6 +9,7 @@ mod threads;
 mod transcript;
 mod trips;
 mod usage;
+mod workspaces;
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -22,6 +23,7 @@ pub use memories::NewMemory;
 pub use messages::NewMessage;
 pub use transcript::{Epoch, EpochReason};
 pub use usage::UsageTotals;
+pub use workspaces::Baseline;
 
 pub type Result<T> = std::result::Result<T, StoreError>;
 

@@ -162,9 +162,9 @@ export class HubStore {
     return { model: active, failure };
   }
 
-  async createThread(title?: string): Promise<Thread> {
+  async createThread(title?: string, workspaceId?: string): Promise<Thread> {
     const { thread } = await this.client.request(
-      { type: "create_thread", title: title ?? null },
+      { type: "create_thread", title: title ?? null, workspaceId: workspaceId ?? null },
       "thread",
     );
     return thread;

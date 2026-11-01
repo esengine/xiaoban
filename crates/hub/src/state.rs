@@ -44,6 +44,9 @@ pub struct HubState {
     pub pairing: Pairing,
     pub turns: Turns,
     pub active: RwLock<Active>,
+    pub code_tools: Vec<ToolSpec>,
+    pub git_tools: Vec<ToolSpec>,
+    pub code_reads: std::sync::Mutex<std::collections::HashMap<(String, std::path::PathBuf), String>>,
 }
 
 impl HubState {
@@ -51,8 +54,32 @@ impl HubState {
         StablePrefix::compose(&self.prompts.chat, memory, self.tools.clone())
     }
 
-    pub fn base_fingerprint(&self) -> String {
-        self.prefix(None).fingerprint().to_owned()
+    pub fn prefix_for(
+        &self,
+        memory: Option<&str>,
+        workspace: Option<&xiaoban_protocol::Workspace>,
+    ) -> StablePrefix {
+        let Some(workspace) = workspace else {
+            return self.prefix(memory);
+        };
+        let system = format!(
+            "{}\n\n{}",
+            self.prompts.chat,
+            self.localizer.format(
+                xiaoban_i18n::keys::PROMPT_WORKSPACE,
+                &[("name", &workspace.name), ("path", &workspace.path)],
+            )
+        );
+        let mut tools = self.tools.clone();
+        tools.extend(self.code_tools.iter().cloned());
+        if crate::workspace::git_binary().is_some() {
+            tools.extend(self.git_tools.iter().cloned());
+        }
+        StablePrefix::compose(&system, memory, tools)
+    }
+
+    pub fn base_fingerprint_for(&self, workspace: Option<&xiaoban_protocol::Workspace>) -> String {
+        self.prefix_for(None, workspace).fingerprint().to_owned()
     }
 
     pub fn publish(&self, event: Event) {
