@@ -19,6 +19,7 @@ object XiaobanOperator {
   private const val SETTLE_MS = 3000L
   private const val PAUSE_LIMIT_MS = 10 * 60 * 1000L
   private const val STOP_MEMORY_MS = 8000L
+  private const val OWN_ACTION_MS = 1500L
 
   @Volatile
   var context: Context? = null
@@ -32,6 +33,7 @@ object XiaobanOperator {
   private var paused = false
   private var stoppedAt = 0L
   private var handover: Handover? = null
+  @Volatile private var lastAction = 0L
 
   private class Handover(val labels: List<String>, val packages: Set<String>, val words: List<String>)
 
@@ -213,6 +215,12 @@ object XiaobanOperator {
 
   fun idle() = synchronized(lock) { step = 0 }
 
+  fun userActed() {
+    if (step == 0 || paused) return
+    if (SystemClock.uptimeMillis() - lastAction < OWN_ACTION_MS) return
+    pause()
+  }
+
   private fun act(request: JSONObject): JSONObject {
     gate()?.let { return it }
     val index = request.getInt("index")
@@ -237,8 +245,10 @@ object XiaobanOperator {
     )
     val bounds = Rect().also { node.getBoundsInScreen(it) }
     OperatorOverlay.highlight(bounds)
+    lastAction = SystemClock.uptimeMillis()
     Thread.sleep(350)
     gate()?.let { return it }
+    lastAction = SystemClock.uptimeMillis()
     val done = if (press) press(node, bounds) else {
       val arguments = Bundle().apply {
         putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, request.optString("text"))
@@ -262,6 +272,7 @@ object XiaobanOperator {
 
   private fun keys(combo: String): JSONObject {
     gate()?.let { return it }
+    lastAction = SystemClock.uptimeMillis()
     val service = service()
     val done = when (combo.trim().lowercase()) {
       "back", "escape", "esc" -> service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
@@ -278,6 +289,7 @@ object XiaobanOperator {
 
   private fun type(value: String): JSONObject {
     gate()?.let { return it }
+    lastAction = SystemClock.uptimeMillis()
     val focus = service().rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
       ?: return failure("no text field is focused; use type_text on a field instead")
     if (focus.isPassword) return failure("Xiaoban never types into password fields; ask the user to do it")

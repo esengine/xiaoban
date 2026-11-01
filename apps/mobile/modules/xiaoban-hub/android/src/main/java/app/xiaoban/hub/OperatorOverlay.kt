@@ -19,7 +19,6 @@ import android.view.animation.OvershootInterpolator
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -146,14 +145,6 @@ object OperatorOverlay {
     val holder = frame ?: FrameLayout(service).also { created ->
       val padding = dp(service, 10f).toInt()
       created.setPadding(padding, 0, padding, 0)
-      created.setOnTouchListener { _, event ->
-        if (event.action == MotionEvent.ACTION_OUTSIDE && mode == Mode.Working &&
-          SystemClock.uptimeMillis() > ignoreUntil
-        ) {
-          XiaobanOperator.pause()
-        }
-        false
-      }
       val top = service.resources.getIdentifier("status_bar_height", "dimen", "android")
         .takeIf { it > 0 }?.let { service.resources.getDimensionPixelSize(it) } ?: 0
       val params = WindowManager.LayoutParams(
@@ -162,7 +153,6 @@ object OperatorOverlay {
         WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
           WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-          WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
           WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
         PixelFormat.TRANSLUCENT,
       ).apply {

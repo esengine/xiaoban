@@ -9,7 +9,13 @@ class XiaobanOperatorService : AccessibilityService() {
     current = this
   }
 
-  override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+  override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+    val kind = event?.eventType ?: return
+    val human = kind == AccessibilityEvent.TYPE_VIEW_CLICKED ||
+      kind == AccessibilityEvent.TYPE_VIEW_LONG_CLICKED ||
+      kind == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+    if (human && event.packageName?.toString() != packageName) XiaobanOperator.userActed()
+  }
 
   override fun onInterrupt() {}
 
