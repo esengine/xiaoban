@@ -243,6 +243,8 @@ mod tests {
                 .unwrap();
         };
         run(&["init", "-q", "-b", "main"]);
+        run(&["config", "user.name", "test"]);
+        run(&["config", "user.email", "test@example.com"]);
         std::fs::write(dir.join("a.txt"), "one\n").unwrap();
         run(&["add", "."]);
         run(&["commit", "-qm", "init"]);
