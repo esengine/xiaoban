@@ -45,6 +45,11 @@ export const color = {
   dish2: "#B98352",
   dish3: "#D9A23A",
   dish4: "#8E7BC9",
+  ledger0: "#1E2B6E",
+  ledger1: "#3451D1",
+  ledger2: "#6B82DB",
+  ledger3: "#9AAAE6",
+  ledger4: "#C9D2F2",
   mergedSoft: "#EFEBFC",
 } as const;
 

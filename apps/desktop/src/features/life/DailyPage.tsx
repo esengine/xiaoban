@@ -4,6 +4,64 @@ import { useEffect } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { DishCover } from "./KitchenPage.tsx";
+import { shadeOf, useMoney } from "./LedgerPage.tsx";
+
+function thisMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function Spending({ onOpen }: { onOpen: () => void }) {
+  const { t } = useI18n();
+  const store = useHub();
+  const { ledger } = useHubState(store);
+  const money = useMoney();
+  if (!ledger || ledger.month !== thisMonth()) return null;
+  const spent = ledger.entries.reduce((sum, entry) => sum + entry.cents, 0);
+  const sums = new Map<string, number>();
+  for (const entry of ledger.entries)
+    sums.set(entry.category, (sums.get(entry.category) ?? 0) + entry.cents);
+  const top = [...sums].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const max = Math.max(1, ...top.map(([, cents]) => cents));
+  const budget = ledger.budgetCents;
+  return (
+    <section className="life-card daily__money">
+      <div className="life-card__head">
+        <b>{t("daily-money")}</b>
+        <span className="life-card__spacer" />
+        <button type="button" className="code-link" onClick={onOpen}>
+          {t("daily-open-ledger")}
+        </button>
+      </div>
+      {ledger.entries.length === 0 ? (
+        <p className="life-card__hint">{t("daily-money-empty")}</p>
+      ) : (
+        <>
+          <div className="daily__money-total">
+            <b>{money(spent)}</b>
+            {budget ? <span>{t("daily-money-budget", { amount: money(budget) })}</span> : null}
+          </div>
+          {budget ? (
+            <span className="ledger-bar" data-over={spent > budget || undefined}>
+              <span style={{ width: `${Math.min(100, (spent / budget) * 100)}%` }} />
+            </span>
+          ) : null}
+          <div className="ledger-cats">
+            {top.map(([category, cents], rank) => (
+              <div key={category} className="ledger-cat" data-static>
+                <span className="ledger-cat__name">{category}</span>
+                <span className="ledger-cat__bar">
+                  <span style={{ width: `${(cents / max) * 100}%`, background: shadeOf(rank) }} />
+                </span>
+                <span className="ledger-cat__amount">{money(cents)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
 
 function greetingKey(hour: number) {
   if (hour < 11) return "daily-morning" as const;
@@ -13,9 +71,11 @@ function greetingKey(hour: number) {
 
 export function DailyPage({
   onOpenKitchen,
+  onOpenLedger,
   onTalk,
 }: {
   onOpenKitchen: () => void;
+  onOpenLedger: () => void;
   onTalk: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -24,6 +84,7 @@ export function DailyPage({
 
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
+    void store.loadLedger(thisMonth()).catch(() => undefined);
   }, [store]);
 
   const now = new Date();
@@ -122,6 +183,7 @@ export function DailyPage({
               </div>
             )}
           </section>
+          <Spending onOpen={onOpenLedger} />
           <section className="life-card daily__more">
             <b>{t("daily-more-title")}</b>
             <p>{t("daily-more-body")}</p>

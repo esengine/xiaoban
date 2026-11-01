@@ -53,4 +53,5 @@ export type Event =
   | { type: "command_updated"; command: CommandRun }
   | { type: "kitchen_updated"; kitchen: Kitchen }
   | { type: "timer_fired"; timer: CookTimer }
-  | { type: "prep_due"; task: PrepTask };
+  | { type: "prep_due"; task: PrepTask }
+  | { type: "ledger_changed" };

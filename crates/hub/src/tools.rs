@@ -686,6 +686,12 @@ impl ToolRunner for HubTools<'_> {
                 | crate::kitchen::PREFERENCES
                 | crate::kitchen::SHOPPING
                 | crate::cooking::STEPS
+                | crate::week::PLAN
+                | crate::ledger::ADD
+                | crate::ledger::EDIT
+                | crate::ledger::REMOVE
+                | crate::ledger::BUDGET
+                | crate::ledger::SORT
         )
     }
 
@@ -725,6 +731,7 @@ impl ToolRunner for HubTools<'_> {
                 SAVE_TRIP => self.save_trip(arguments).await,
                 SAVE_PLACE_DETAIL => self.save_place_detail(arguments).await,
                 name if crate::kitchen::is_tool(name) => self.kitchen_tool(name, arguments).await,
+                name if crate::ledger::is_tool(name) => self.ledger_tool(name, arguments).await,
                 name if crate::code_tools::is_code_tool(name) => {
                     self.run_code_tool(name, arguments).await
                 }

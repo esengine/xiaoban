@@ -12,6 +12,7 @@ import { useCodeWidth } from "../features/code/useCodeWidth.ts";
 import { CookPage } from "../features/life/CookPage.tsx";
 import { DailyPage } from "../features/life/DailyPage.tsx";
 import { KitchenPage } from "../features/life/KitchenPage.tsx";
+import { LedgerPage } from "../features/life/LedgerPage.tsx";
 import { TimerAlarm } from "../features/life/TimerAlarm.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
@@ -39,7 +40,9 @@ function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
-  const [view, setView] = useState<"chat" | "daily" | "kitchen" | "cook">("chat");
+  const [view, setView] = useState<"chat" | "daily" | "kitchen" | "week" | "cook" | "ledger">(
+    "chat",
+  );
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
   const activeId = exists(selected) ? selected : (primaryId ?? threads[0]?.id ?? null);
@@ -126,11 +129,19 @@ function Home() {
         <Rail current="daily" onNavigate={navigate} />
         {view === "cook" ? (
           <CookPage onBack={() => setView("kitchen")} />
-        ) : view === "kitchen" ? (
-          <KitchenPage onBack={() => setView("daily")} onCook={() => setView("cook")} />
+        ) : view === "kitchen" || view === "week" ? (
+          <KitchenPage
+            key={view}
+            initialTab={view === "week" ? "week" : "tonight"}
+            onBack={() => setView("daily")}
+            onCook={() => setView("cook")}
+          />
+        ) : view === "ledger" ? (
+          <LedgerPage onBack={() => setView("daily")} onOpenWeek={() => setView("week")} />
         ) : (
           <DailyPage
             onOpenKitchen={() => setView("kitchen")}
+            onOpenLedger={() => setView("ledger")}
             onTalk={() => {
               setView("chat");
               setSelected(primaryId);

@@ -6691,6 +6691,7 @@ dependencies = [
  "base64 0.23.1",
  "calamine",
  "clap",
+ "encoding_rs",
  "futures-util",
  "hex",
  "if-addrs",

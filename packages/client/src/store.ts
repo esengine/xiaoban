@@ -10,12 +10,14 @@ import type {
   ContextNote,
   Device,
   DirEntry,
+  Expense,
   Failure,
   FileDiff,
   GithubRef,
   GitInfo,
   Interpretation,
   Kitchen,
+  Ledger,
   Location,
   Memory,
   MemoryGalaxy,
@@ -48,7 +50,13 @@ export class HubStore {
 
   constructor(client: HubClient) {
     this.client = client;
-    client.onEvent((event) => this.#update((state) => applyEvent(state, event)));
+    client.onEvent((event) => {
+      this.#update((state) => applyEvent(state, event));
+      if (event.type === "ledger_changed") {
+        const month = this.#state.ledger?.month;
+        if (month) void this.loadLedger(month).catch(() => undefined);
+      }
+    });
     client.onStatus((status) => this.#update((state) => ({ ...state, status })));
     client.onWelcome(({ hub }) => {
       this.#update((state) => ({ ...state, hub }));
@@ -445,6 +453,45 @@ export class HubStore {
 
   weekItemGone(start: string, name: string): Promise<void> {
     return this.#kitchenRequest({ type: "week_item_gone", start, name });
+  }
+
+  async loadLedger(month: string): Promise<Ledger> {
+    const { ledger } = await this.client.request({ type: "ledger", month }, "ledger");
+    this.#update((state) => ({ ...state, ledger }));
+    return ledger;
+  }
+
+  async #ledgerRequest(request: Parameters<HubClient["request"]>[0]): Promise<void> {
+    const { ledger } = await this.client.request(request, "ledger");
+    this.#update((state) => ({ ...state, ledger }));
+  }
+
+  setBudget(month: string, cents: number | null): Promise<void> {
+    return this.#ledgerRequest({ type: "set_budget", month, cents });
+  }
+
+  updateExpense(month: string, expense: Expense): Promise<void> {
+    return this.#ledgerRequest({ type: "update_expense", month, expense });
+  }
+
+  deleteExpense(month: string, id: string): Promise<void> {
+    return this.#ledgerRequest({ type: "delete_expense", month, id });
+  }
+
+  muteInsight(month: string, key: string): Promise<void> {
+    return this.#ledgerRequest({ type: "mute_insight", month, key });
+  }
+
+  setImportRow(month: string, id: string, checked: boolean, category: string): Promise<void> {
+    return this.#ledgerRequest({ type: "set_import_row", month, id, checked, category });
+  }
+
+  commitImport(month: string): Promise<void> {
+    return this.#ledgerRequest({ type: "commit_import", month });
+  }
+
+  cancelImport(month: string): Promise<void> {
+    return this.#ledgerRequest({ type: "cancel_import", month });
   }
 
   async clearBought(): Promise<void> {

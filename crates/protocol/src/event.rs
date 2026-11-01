@@ -124,6 +124,7 @@ pub enum Event {
     PrepDue {
         task: crate::PrepTask,
     },
+    LedgerChanged,
 }
 
 impl Event {
@@ -156,7 +157,8 @@ impl Event {
             | Self::CommandUpdated { .. }
             | Self::KitchenUpdated { .. }
             | Self::TimerFired { .. }
-            | Self::PrepDue { .. } => None,
+            | Self::PrepDue { .. }
+            | Self::LedgerChanged => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),

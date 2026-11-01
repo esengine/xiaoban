@@ -326,6 +326,38 @@ pub enum Request {
         start: String,
         name: String,
     },
+    Ledger {
+        month: String,
+    },
+    SetBudget {
+        month: String,
+        #[ts(type = "number | null")]
+        cents: Option<i64>,
+    },
+    UpdateExpense {
+        month: String,
+        expense: crate::Expense,
+    },
+    DeleteExpense {
+        month: String,
+        id: String,
+    },
+    MuteInsight {
+        month: String,
+        key: String,
+    },
+    SetImportRow {
+        month: String,
+        id: String,
+        checked: bool,
+        category: String,
+    },
+    CommitImport {
+        month: String,
+    },
+    CancelImport {
+        month: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -482,6 +514,9 @@ pub enum Response {
     },
     Kitchen {
         kitchen: crate::Kitchen,
+    },
+    Ledger {
+        ledger: crate::Ledger,
     },
     Folder {
         path: String,

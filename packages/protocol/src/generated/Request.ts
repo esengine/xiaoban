@@ -4,6 +4,7 @@ import type { AutonomyLevel } from "./AutonomyLevel.ts";
 import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConflictChoice } from "./ConflictChoice.ts";
 import type { ContextNote } from "./ContextNote.ts";
+import type { Expense } from "./Expense.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
@@ -129,4 +130,12 @@ export type Request =
   | { type: "week_to_shopping"; start: string }
   | { type: "set_fridge_item"; name: string; amount: string }
   | { type: "remove_fridge_item"; name: string; shop: boolean }
-  | { type: "week_item_gone"; start: string; name: string };
+  | { type: "week_item_gone"; start: string; name: string }
+  | { type: "ledger"; month: string }
+  | { type: "set_budget"; month: string; cents: number | null }
+  | { type: "update_expense"; month: string; expense: Expense }
+  | { type: "delete_expense"; month: string; id: string }
+  | { type: "mute_insight"; month: string; key: string }
+  | { type: "set_import_row"; month: string; id: string; checked: boolean; category: string }
+  | { type: "commit_import"; month: string }
+  | { type: "cancel_import"; month: string };

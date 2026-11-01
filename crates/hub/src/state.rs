@@ -50,10 +50,28 @@ pub struct HubState {
     pub git_tools: Vec<ToolSpec>,
     pub gh_tools: Vec<ToolSpec>,
     pub kitchen_tools: Vec<ToolSpec>,
+    pub ledger_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
     pub code_reads: std::sync::Mutex<std::collections::HashMap<(String, std::path::PathBuf), String>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scene {
+    Chat,
+    Kitchen,
+    Ledger,
+}
+
+pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
+    if crate::kitchen::is_kitchen(state, thread_id).await {
+        Scene::Kitchen
+    } else if crate::ledger::is_ledger(state, thread_id).await {
+        Scene::Ledger
+    } else {
+        Scene::Chat
+    }
 }
 
 impl HubState {
@@ -65,16 +83,17 @@ impl HubState {
         &self,
         memory: Option<&str>,
         workspace: Option<&xiaoban_protocol::Workspace>,
-        kitchen: bool,
+        scene: Scene,
     ) -> StablePrefix {
-        if kitchen {
-            let system = format!(
-                "{}\n\n{}",
-                self.prompts.chat,
-                self.localizer.text(xiaoban_i18n::keys::PROMPT_KITCHEN)
-            );
+        let special = match scene {
+            Scene::Kitchen => Some((xiaoban_i18n::keys::PROMPT_KITCHEN, &self.kitchen_tools)),
+            Scene::Ledger => Some((xiaoban_i18n::keys::PROMPT_LEDGER, &self.ledger_tools)),
+            Scene::Chat => None,
+        };
+        if let Some((prompt, extra)) = special {
+            let system = format!("{}\n\n{}", self.prompts.chat, self.localizer.text(prompt));
             let mut tools = self.tools.clone();
-            tools.extend(self.kitchen_tools.iter().cloned());
+            tools.extend(extra.iter().cloned());
             return StablePrefix::compose(&system, memory, tools);
         }
         let Some(workspace) = workspace else {
@@ -102,9 +121,9 @@ impl HubState {
     pub fn base_fingerprint_for(
         &self,
         workspace: Option<&xiaoban_protocol::Workspace>,
-        kitchen: bool,
+        scene: Scene,
     ) -> String {
-        self.prefix_for(None, workspace, kitchen).fingerprint().to_owned()
+        self.prefix_for(None, workspace, scene).fingerprint().to_owned()
     }
 
     pub fn publish(&self, event: Event) {

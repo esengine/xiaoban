@@ -6,19 +6,32 @@ import { MicIcon } from "../chat/Composer.tsx";
 import { RichText } from "../chat/RichText.tsx";
 import { useVoice } from "../voice/useVoice.ts";
 
-export function KitchenChat({ threadId }: { threadId: string }) {
+export type ChatLabels = {
+  title: string;
+  note: string;
+  hint: string;
+  placeholder: string;
+};
+
+export function KitchenChat({ threadId, labels }: { threadId: string; labels?: ChatLabels }) {
   const { t } = useI18n();
   const store = useHub();
   const state = useHubState(store);
   const messages = state.messages[threadId] ?? [];
   const drafts = draftsForThread(state, threadId);
   const running = drafts.find((draft) => !draft.failure);
-  const [text, setText] = useState("");
+  const text = labels ?? {
+    title: t("kitchen-chat"),
+    note: t("kitchen-chat-note"),
+    hint: t("kitchen-chat-hint"),
+    placeholder: t("kitchen-chat-placeholder"),
+  };
+  const [draft, setDraft] = useState("");
   const end = useRef<HTMLDivElement>(null);
   const holding = useRef(false);
   const { locale } = useI18n();
   const voice = useVoice(locale, (spoken) => {
-    setText((current) => (current.trim() ? `${current.trimEnd()} ${spoken}` : spoken));
+    setDraft((current) => (current.trim() ? `${current.trimEnd()} ${spoken}` : spoken));
   });
   const { state: listen, start, finish, cancel } = voice;
   const listening = listen.phase === "listening" || listen.phase === "finishing";
@@ -61,22 +74,20 @@ export function KitchenChat({ threadId }: { threadId: string }) {
   }, [messages.length, lastDraftText]);
 
   const send = () => {
-    const value = text.trim();
+    const value = draft.trim();
     if (!value || running) return;
-    setText("");
+    setDraft("");
     void store.send(threadId, value).catch(() => undefined);
   };
 
   return (
-    <aside className="kitchen-chat" aria-label={t("kitchen-chat")}>
+    <aside className="kitchen-chat" aria-label={text.title}>
       <div className="kitchen-chat__head">
-        <b>{t("kitchen-chat")}</b>
-        <span>{t("kitchen-chat-note")}</span>
+        <b>{text.title}</b>
+        <span>{text.note}</span>
       </div>
       <div className="kitchen-chat__list">
-        {messages.length === 0 && !running && (
-          <p className="kitchen-chat__hint">{t("kitchen-chat-hint")}</p>
-        )}
+        {messages.length === 0 && !running && <p className="kitchen-chat__hint">{text.hint}</p>}
         {messages.map((message) => (
           <div key={message.id} className="kitchen-chat__bubble" data-role={message.role}>
             {message.role === "assistant" ? <RichText text={message.text} /> : message.text}
@@ -91,11 +102,11 @@ export function KitchenChat({ threadId }: { threadId: string }) {
       </div>
       <div className="kitchen-chat__bar">
         <label className="kitchen-chat__input">
-          <span className="visually-hidden">{t("kitchen-chat")}</span>
+          <span className="visually-hidden">{text.title}</span>
           <input
-            value={listening && "text" in listen && listen.text ? listen.text : text}
-            placeholder={listening ? t("kitchen-listening") : t("kitchen-chat-placeholder")}
-            onChange={(event) => setText(event.target.value)}
+            value={listening && "text" in listen && listen.text ? listen.text : draft}
+            placeholder={listening ? t("kitchen-listening") : text.placeholder}
+            onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.nativeEvent.isComposing) send();
             }}

@@ -318,11 +318,19 @@ function Shopping({ kitchen }: { kitchen: Kitchen }) {
   );
 }
 
-export function KitchenPage({ onBack, onCook }: { onBack: () => void; onCook: () => void }) {
+export function KitchenPage({
+  onBack,
+  onCook,
+  initialTab = "tonight",
+}: {
+  onBack: () => void;
+  onCook: () => void;
+  initialTab?: "tonight" | "week" | "shopping";
+}) {
   const { t } = useI18n();
   const store = useHub();
   const { kitchen } = useHubState(store);
-  const [tab, setTab] = useState<"tonight" | "week" | "shopping">("tonight");
+  const [tab, setTab] = useState<"tonight" | "week" | "shopping">(initialTab);
   const threadId = kitchen?.threadId ?? null;
 
   useEffect(() => {
