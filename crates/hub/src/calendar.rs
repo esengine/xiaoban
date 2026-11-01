@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use jiff::civil::{Date, Time};
 use jiff::tz::TimeZone;
 use jiff::{Timestamp, ToSpan};
-use xiaoban_protocol::{CalendarEvent, Trip, TripCalendar};
+use xiaoban_protocol::{CalendarEvent, EventDraft, Trip, TripCalendar};
 
 const DEFAULT_MINUTES: i64 = 60;
 const PRODUCT: &str = "-//Xiaoban//Trip//EN";
@@ -54,6 +54,7 @@ fn events(trip: &Trip, zone: &TimeZone) -> Vec<CalendarEvent> {
                 end: end.as_millisecond(),
                 location: format!("{} {}", trip.city, stop.name),
                 notes: stop.note.clone(),
+                reminder: None,
             });
         }
     }
@@ -87,7 +88,7 @@ fn fold(line: &str, out: &mut String) {
     out.push_str("\r\n");
 }
 
-fn ics(trip: &Trip, events: &[CalendarEvent], sequence: u32) -> String {
+fn ics(name: &str, events: &[CalendarEvent], sequence: u32) -> String {
     let mut out = String::new();
     let now = stamp(Timestamp::now().as_millisecond());
     for line in [
@@ -96,12 +97,21 @@ fn ics(trip: &Trip, events: &[CalendarEvent], sequence: u32) -> String {
         &format!("PRODID:{PRODUCT}"),
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        &format!("X-WR-CALNAME:{}", escape(&trip.title)),
+        &format!("X-WR-CALNAME:{}", escape(name)),
     ] {
         fold(line, &mut out);
     }
     for event in events {
-        for line in [
+        let alarm = event.reminder.map_or_else(Vec::new, |minutes| {
+            vec![
+                "BEGIN:VALARM".to_owned(),
+                "ACTION:DISPLAY".to_owned(),
+                format!("DESCRIPTION:{}", escape(&event.title)),
+                format!("TRIGGER:-PT{minutes}M"),
+                "END:VALARM".to_owned(),
+            ]
+        });
+        let lines = [
             "BEGIN:VEVENT".to_owned(),
             format!("UID:{}", event.uid),
             format!("SEQUENCE:{sequence}"),
@@ -111,10 +121,11 @@ fn ics(trip: &Trip, events: &[CalendarEvent], sequence: u32) -> String {
             format!("SUMMARY:{}", escape(&event.title)),
             format!("LOCATION:{}", escape(&event.location)),
             format!("DESCRIPTION:{}", escape(&event.notes)),
-            "END:VEVENT".to_owned(),
-        ] {
-            fold(&line, &mut out);
+        ];
+        for line in lines.iter().chain(&alarm) {
+            fold(line, &mut out);
         }
+        fold("END:VEVENT", &mut out);
     }
     let _ = write!(out, "END:VCALENDAR\r\n");
     out
@@ -125,7 +136,24 @@ pub fn build(trip: &Trip) -> TripCalendar {
     let events = events(trip, &zone);
     TripCalendar {
         trip_id: trip.id.clone(),
-        ics: ics(trip, &events, trip.version),
+        ics: ics(&trip.title, &events, trip.version),
+        events,
+    }
+}
+
+pub fn single(draft: &EventDraft) -> TripCalendar {
+    let events = vec![CalendarEvent {
+        uid: draft.id.clone(),
+        title: draft.title.clone(),
+        start: draft.start,
+        end: draft.end.max(draft.start),
+        location: draft.location.clone(),
+        notes: draft.notes.clone(),
+        reminder: draft.reminder,
+    }];
+    TripCalendar {
+        trip_id: draft.id.trim_end_matches("@xiaoban").to_owned(),
+        ics: ics(&draft.title, &events, 0),
         events,
     }
 }
@@ -200,5 +228,23 @@ mod tests {
         assert!(text.contains("备注\\, 有逗号"));
         assert!(text.ends_with("END:VCALENDAR\r\n"));
         assert!(text.lines().all(|line| line.len() <= 75));
+    }
+
+    #[test]
+    fn a_single_event_carries_its_reminder() {
+        let calendar = single(&EventDraft {
+            id: "e1@xiaoban".into(),
+            title: "打疫苗".into(),
+            start: 1_000,
+            end: 2_000,
+            location: "社区卫生服务中心".into(),
+            notes: String::new(),
+            reminder: Some(60),
+        });
+        assert_eq!(calendar.trip_id, "e1");
+        assert_eq!(calendar.events[0].reminder, Some(60));
+        assert!(calendar.ics.contains("BEGIN:VALARM\r\nACTION:DISPLAY\r\n"));
+        assert!(calendar.ics.contains("TRIGGER:-PT60M\r\n"));
+        assert!(calendar.ics.contains("END:VALARM\r\nEND:VEVENT\r\n"));
     }
 }

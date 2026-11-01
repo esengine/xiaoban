@@ -31,7 +31,8 @@ import { ChatBar, goBack } from "../life/LifeUI.tsx";
 import { Icon } from "../ui/Icon.tsx";
 import { useKeyboard } from "../ui/useKeyboard.ts";
 import { ReplyCard } from "./ReplyCard.tsx";
-import { ChevronIcon, NavigateIcon, OutIcon, ShareIcon } from "./TripIcons.tsx";
+import { TripCalendarSheet, useTripFollow } from "./TripCalendarSheet.tsx";
+import { CalendarIcon, ChevronIcon, NavigateIcon, OutIcon, ShareIcon } from "./TripIcons.tsx";
 import { TripMap } from "./TripMap.tsx";
 import {
   dayInk,
@@ -70,12 +71,21 @@ export function TripMapScreen({
   const opened = useRef(false);
   const dayIndex = trip ? Math.max(0, Math.min(day, trip.days.length - 1)) : 0;
   const { say, reply, busy, dismiss } = useTripSay(store, trip, dayIndex);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const clock = trip ? tripClock(trip, now) : null;
   const today = trip && clock ? todayIndex(trip, clock) : -1;
   const latest = trip ? (state.latestTrip[trip.id] ?? trip.version) : 0;
   const old = trip ? trip.version < latest : false;
   const live = !old && today >= 0;
+  useTripFollow(store, trip, Boolean(trip) && !old);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3_000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     if (!trip || opened.current) return;
@@ -206,6 +216,16 @@ export function TripMapScreen({
               </Text>
             ) : null}
           </View>
+          {old ? null : (
+            <Pressable
+              style={styles.float}
+              accessibilityRole="button"
+              accessibilityLabel={t("trip-calendar-button")}
+              onPress={() => setCalendarOpen(true)}
+            >
+              <CalendarIcon color={color.accent} />
+            </Pressable>
+          )}
           <Pressable
             style={styles.float}
             accessibilityRole="button"
@@ -235,6 +255,13 @@ export function TripMapScreen({
             </Text>
             <ChevronIcon color={color.surface} />
           </Pressable>
+        ) : null}
+        {notice ? (
+          <View style={styles.notice}>
+            <Text style={styles.noticeText} numberOfLines={2}>
+              {notice}
+            </Text>
+          </View>
         ) : null}
       </View>
       <View style={styles.spacer} pointerEvents="none" />
@@ -301,6 +328,13 @@ export function TripMapScreen({
           )}
         </View>
       </Animated.View>
+      <TripCalendarSheet
+        store={store}
+        trip={trip}
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        onDone={setNotice}
+      />
     </View>
   );
 }
@@ -498,6 +532,15 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.accentBright },
   liveText: { fontSize: 13, fontWeight: "500", color: color.surface },
+  notice: {
+    alignSelf: "flex-start",
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: color.ink,
+    ...floatShadow,
+  },
+  noticeText: { fontSize: 13, color: color.surface },
   spacer: { flex: 1 },
   reply: { position: "absolute", left: 14, right: 14, bottom: "100%", marginBottom: 10 },
   sheet: {

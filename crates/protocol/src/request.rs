@@ -118,6 +118,9 @@ pub enum Request {
         trip_id: String,
         version: Option<u32>,
     },
+    EventCalendar {
+        event: crate::EventDraft,
+    },
     AnswerConfirm {
         confirm_id: String,
         choice: ConfirmChoice,

@@ -1,4 +1,4 @@
-import Svg, { Circle, Path } from "react-native-svg";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 const stroke = (color: string, width = 1.8) => ({
   fill: "none",
@@ -36,6 +36,23 @@ export function ChevronIcon({ color, size = 14 }: { color: string; size?: number
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path {...stroke(color, 2.2)} d="M9 5l7 7-7 7" />
+    </Svg>
+  );
+}
+
+export function CalendarIcon({ color, size = 18 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect {...stroke(color, 2)} x={3} y={5} width={18} height={16} rx={3} />
+      <Path {...stroke(color, 2)} d="M3 10h18M8 3v4M16 3v4" />
+    </Svg>
+  );
+}
+
+export function TickIcon({ color, size = 14 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path {...stroke(color, 3)} d="M5 12l5 5 9-10" />
     </Svg>
   );
 }

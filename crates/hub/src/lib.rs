@@ -1,3 +1,4 @@
+mod agenda;
 mod agents;
 mod apps;
 mod archive;
@@ -67,6 +68,7 @@ mod slides;
 mod sheet_formula;
 mod workspace;
 
+pub use agenda::{Agenda, AgendaError, FixedAgenda, NoAgenda};
 pub use apps::{AppEntry, Apps, NoApps};
 pub use config::HubConfig;
 pub use error::HubError;

@@ -1,3 +1,4 @@
+export { clockOf, dayKey, reminderText, whenText } from "./calendar.ts";
 export type { ConnectionStatus, HubClientOptions, Welcome } from "./client.ts";
 export { HubClient, HubRequestError } from "./client.ts";
 export { type ConfirmOption, confirmText } from "./confirmText.ts";

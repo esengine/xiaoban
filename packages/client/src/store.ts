@@ -20,6 +20,7 @@ import type {
   DocBlock,
   DocFormat,
   DocSummary,
+  EventDraft,
   Expense,
   Failure,
   FileDiff,
@@ -373,6 +374,14 @@ export class HubStore {
   async tripCalendar(tripId: string, version: number | null): Promise<TripCalendar> {
     const { calendar } = await this.client.request(
       { type: "trip_calendar", tripId, version },
+      "trip_calendar",
+    );
+    return calendar;
+  }
+
+  async eventCalendar(event: EventDraft): Promise<TripCalendar> {
+    const { calendar } = await this.client.request(
+      { type: "event_calendar", event },
       "trip_calendar",
     );
     return calendar;

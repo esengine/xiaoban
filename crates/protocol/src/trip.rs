@@ -151,6 +151,8 @@ pub struct CalendarEvent {
     pub end: i64,
     pub location: String,
     pub notes: String,
+    #[serde(default)]
+    pub reminder: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -176,4 +178,5 @@ pub enum Attachment {
     Doc { doc_id: String },
     Sheet { sheet_id: String },
     Deck { deck_id: String },
+    Event { event: crate::EventDraft },
 }

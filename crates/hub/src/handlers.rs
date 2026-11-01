@@ -174,7 +174,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::ConfigureService { .. }
         | Request::DeclineService { .. }
         | Request::GetTrip { .. }
-        | Request::TripCalendar { .. }) => trip_requests::handle(state, local, request).await,
+        | Request::TripCalendar { .. }
+        | Request::EventCalendar { .. }) => trip_requests::handle(state, local, request).await,
         request @ (Request::ListWorkspaces
         | Request::CreateWorkspace { .. }
         | Request::RenameWorkspace { .. }

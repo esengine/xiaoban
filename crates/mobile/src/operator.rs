@@ -5,9 +5,9 @@ use futures_util::future::BoxFuture;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use xiaoban_hub::{
-    ActFailure, AppEntry, Apps, Locator, MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement,
+    ActFailure, Agenda, AgendaError, AppEntry, Apps, Locator, MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement,
 };
-use xiaoban_protocol::{Location, OperatePermissions};
+use xiaoban_protocol::{AgendaItem, Location, OperatePermissions};
 
 pub type Bridge = Arc<dyn Fn(String) -> Result<String, String> + Send + Sync>;
 
@@ -210,6 +210,49 @@ impl Locator for PhoneLocator {
     }
 }
 
+#[derive(Clone)]
+pub struct PhoneAgenda {
+    bridge: Bridge,
+}
+
+impl PhoneAgenda {
+    pub fn new(bridge: Bridge) -> Self {
+        Self { bridge }
+    }
+}
+
+impl fmt::Debug for PhoneAgenda {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("PhoneAgenda")
+    }
+}
+
+#[derive(Deserialize)]
+struct AgendaReply {
+    #[serde(default)]
+    status: String,
+    #[serde(default)]
+    events: Vec<AgendaItem>,
+}
+
+impl Agenda for PhoneAgenda {
+    fn events(&self, from: i64, to: i64) -> BoxFuture<'static, Result<Vec<AgendaItem>, AgendaError>> {
+        let reply = call(&self.bridge, json!({ "op": "calendar", "from": from, "to": to }));
+        Box::pin(async move {
+            let reply: AgendaReply = reply
+                .await
+                .ok()
+                .and_then(|value| serde_json::from_value(value).ok())
+                .ok_or(AgendaError::Unavailable)?;
+            match reply.status.as_str() {
+                "denied" => Err(AgendaError::Denied),
+                "ok" => Ok(reply.events),
+                _ => Err(AgendaError::Unavailable),
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,6 +270,10 @@ mod tests {
                     ],
                 }),
                 "apps" => json!({ "apps": [{ "id": "com.shop", "name": "Shop", "aliases": ["Old Shop"] }] }),
+                "calendar" => json!({
+                    "status": "ok",
+                    "events": [{ "title": "家长会", "start": request["from"], "end": request["to"], "allDay": false, "location": "", "calendar": "我的日历" }],
+                }),
                 "locate" => json!({ "status": "found", "city": "Hangzhou", "district": null, "latitude": "30.2", "longitude": "120.1" }),
                 "act" if request["index"] == 0 => json!({ "error": "handed over to the user" }),
                 _ => json!({ "ok": true }),
@@ -254,5 +301,8 @@ mod tests {
             PhoneLocator::new(fake()).locate().await,
             Location::Found { city, .. } if city == "Hangzhou"
         ));
+        let events = PhoneAgenda::new(fake()).events(1, 2).await.unwrap();
+        assert_eq!(events[0].title, "家长会");
+        assert_eq!((events[0].start, events[0].end), (1, 2));
     }
 }

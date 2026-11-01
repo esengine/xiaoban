@@ -32,6 +32,7 @@ pub struct HubState {
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
     pub locator: Arc<dyn crate::location::Locator>,
+    pub agenda: Arc<dyn crate::agenda::Agenda>,
     pub presence: Arc<dyn crate::presence::Presence>,
     pub weather: Arc<dyn crate::weather::Weather>,
     pub router: Arc<dyn crate::router::Router>,

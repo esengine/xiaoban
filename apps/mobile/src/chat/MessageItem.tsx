@@ -2,6 +2,7 @@ import type { Message } from "@xiaoban/protocol";
 import type { ReactNode } from "react";
 import { useRef } from "react";
 import { type HostInstance, Pressable, View } from "react-native";
+import { EventCard } from "../calendar/EventCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { DeckCard, DocCard, SheetCard } from "../work/WorkCards.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
@@ -20,6 +21,8 @@ function AttachmentCard({ message, last }: { message: Message; last: boolean }) 
       return <SheetCard sheetId={attachment.sheetId} />;
     case "deck":
       return <DeckCard deckId={attachment.deckId} />;
+    case "event":
+      return <EventCard event={attachment.event} />;
     case "subthreads":
       return <SubthreadCards threadIds={attachment.threadIds} />;
     case "service_needed":

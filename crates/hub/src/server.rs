@@ -126,6 +126,7 @@ impl Hub {
             connector: runtime.connector,
             secrets: runtime.secrets,
             locator: runtime.locator,
+            agenda: runtime.agenda,
             presence: runtime.presence,
             weather: runtime.weather,
             router: runtime.router,

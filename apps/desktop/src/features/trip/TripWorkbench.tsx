@@ -1,10 +1,10 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Trip, TripDay } from "@xiaoban/protocol";
 import { type FormEvent, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
+import { CALENDAR_APP, CALENDAR_SETTINGS, syncCalendar } from "./calendarSync.ts";
 import {
   amapFood,
   amapPlace,
@@ -21,12 +21,6 @@ import { CalendarIcon, CopyIcon, OutIcon, WeatherIcon } from "./icons.tsx";
 import { PlaceDetail, type StopRef } from "./PlaceDetail.tsx";
 import { useTrip } from "./TripCard.tsx";
 import { useToast } from "./useToast.tsx";
-
-type CalendarOutcome = { added: number } | { handed: number } | "denied" | "failed";
-
-const CALENDAR_APP = "ical://";
-const CALENDAR_SETTINGS =
-  "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars";
 
 interface Props {
   tripId: string;
@@ -84,14 +78,10 @@ export function TripWorkbench(props: Props) {
     show({ text: t("trip-toast-copied") });
   };
   const sync = async () => {
-    const outcome = isTauri()
-      ? await store
-          .tripCalendar(trip.id, trip.version)
-          .then((calendar) =>
-            invoke<CalendarOutcome>("calendar_sync", { calendar, name: t("trip-calendar-name") }),
-          )
-          .catch((): CalendarOutcome => "failed")
-      : "failed";
+    const outcome = await syncCalendar(
+      () => store.tripCalendar(trip.id, trip.version),
+      t("trip-calendar-name"),
+    );
     if (outcome === "denied") {
       show({
         text: t("trip-toast-calendar-denied"),

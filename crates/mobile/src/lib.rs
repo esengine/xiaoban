@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use xiaoban_agent::HttpConnector;
 use xiaoban_hub::{
-    Apps, DeepseekWeb, Hub, HubConfig, HubHandle, HubRuntime, Locator, MemorySecrets, NoApps, NoLocator,
-    NoOperator, NoPresence, NoRouter, OpenMeteo, Operator, Prompts, SecretStore,
+    Agenda, Apps, DeepseekWeb, Hub, HubConfig, HubHandle, HubRuntime, Locator, MemorySecrets, NoApps, NoLocator,
+    NoAgenda, NoOperator, NoPresence, NoRouter, OpenMeteo, Operator, Prompts, SecretStore,
 };
 use xiaoban_i18n::{Locale, Localizer};
 use xiaoban_protocol::ProviderId;
@@ -18,14 +18,27 @@ static BRIDGE: OnceLock<operator::Bridge> = OnceLock::new();
 mod notices;
 mod operator;
 
-fn hands() -> (Arc<dyn Operator>, Arc<dyn Apps>, Arc<dyn Locator>) {
+struct Hands {
+    operator: Arc<dyn Operator>,
+    apps: Arc<dyn Apps>,
+    locator: Arc<dyn Locator>,
+    agenda: Arc<dyn Agenda>,
+}
+
+fn hands() -> Hands {
     match BRIDGE.get() {
-        Some(bridge) => (
-            Arc::new(operator::PhoneOperator::new(bridge.clone())),
-            Arc::new(operator::PhoneApps::new(bridge.clone())),
-            Arc::new(operator::PhoneLocator::new(bridge.clone())),
-        ),
-        None => (Arc::new(NoOperator), Arc::new(NoApps), Arc::new(NoLocator)),
+        Some(bridge) => Hands {
+            operator: Arc::new(operator::PhoneOperator::new(bridge.clone())),
+            apps: Arc::new(operator::PhoneApps::new(bridge.clone())),
+            locator: Arc::new(operator::PhoneLocator::new(bridge.clone())),
+            agenda: Arc::new(operator::PhoneAgenda::new(bridge.clone())),
+        },
+        None => Hands {
+            operator: Arc::new(NoOperator),
+            apps: Arc::new(NoApps),
+            locator: Arc::new(NoLocator),
+            agenda: Arc::new(NoAgenda),
+        },
     }
 }
 
@@ -58,13 +71,14 @@ fn secrets_from(json: &str) -> Arc<MemorySecrets> {
 }
 
 fn runtime_config(locale: Locale, secrets_json: &str) -> HubRuntime {
-    let (operator, apps, locator) = hands();
+    let Hands { operator, apps, locator, agenda } = hands();
     HubRuntime {
         locale,
         prompts: Prompts::for_phone(locale),
         connector: Arc::new(HttpConnector),
         secrets: secrets_from(secrets_json),
         locator,
+        agenda,
         presence: Arc::new(NoPresence),
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),

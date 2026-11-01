@@ -8,6 +8,7 @@ import type { ContextNote } from "./ContextNote.ts";
 import type { DailyLayout } from "./DailyLayout.ts";
 import type { DocBlock } from "./DocBlock.ts";
 import type { DocFormat } from "./DocFormat.ts";
+import type { EventDraft } from "./EventDraft.ts";
 import type { Expense } from "./Expense.ts";
 import type { ModelApi } from "./ModelApi.ts";
 import type { NotifySettings } from "./NotifySettings.ts";
@@ -76,6 +77,7 @@ export type Request =
   | { type: "decline_service"; service: ServiceId; threadId: string }
   | { type: "get_trip"; tripId: string; version: number | null }
   | { type: "trip_calendar"; tripId: string; version: number | null }
+  | { type: "event_calendar"; event: EventDraft }
   | { type: "answer_confirm"; confirmId: string; choice: ConfirmChoice }
   | { type: "pending_confirms" }
   | { type: "operate_status" }

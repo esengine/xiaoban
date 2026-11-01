@@ -7,4 +7,5 @@ export type CalendarEvent = {
   end: number;
   location: string;
   notes: string;
+  reminder: number | null;
 };
