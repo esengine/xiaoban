@@ -13319,3 +13319,82 @@ button.sent-files__image {
   gap: 12px;
   align-items: start;
 }
+
+.daily__insight + .daily__insight {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.daily__insight p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--color-ink);
+}
+
+.daily__insight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.daily__done-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.daily__done-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--color-line-soft);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.daily__done-row:disabled {
+  cursor: default;
+}
+
+.daily__done-row:not(:disabled):hover .daily__done-text {
+  color: var(--color-accent);
+}
+
+.daily__done-time {
+  flex: none;
+  width: 40px;
+  color: var(--color-faded);
+}
+
+.daily__done-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.daily__done-text small {
+  font-size: 12px;
+  color: var(--color-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily__done-state {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-success);
+}
+
+.daily__done-state[data-running] {
+  color: var(--color-accent);
+}

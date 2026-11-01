@@ -28,8 +28,10 @@ function useAgo() {
   const when = useWhen();
   return (time: number) => {
     const gap = Date.now() - time;
-    if (gap >= MINUTE && gap < HOUR) return t("time-minutes-ago", { count: Math.floor(gap / MINUTE) });
-    if (gap >= HOUR && gap < 12 * HOUR) return t("time-hours-ago", { count: Math.floor(gap / HOUR) });
+    if (gap >= MINUTE && gap < HOUR)
+      return t("time-minutes-ago", { count: Math.floor(gap / MINUTE) });
+    if (gap >= HOUR && gap < 12 * HOUR)
+      return t("time-hours-ago", { count: Math.floor(gap / HOUR) });
     return when(time);
   };
 }

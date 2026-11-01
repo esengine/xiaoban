@@ -899,10 +899,7 @@ export class HubStore {
           }
         : state,
     );
-    const { feed } = await this.client.request(
-      { type: "resolve_insight", id, mute },
-      "daily_feed",
-    );
+    const { feed } = await this.client.request({ type: "resolve_insight", id, mute }, "daily_feed");
     this.#update((state) => ({ ...state, dailyFeed: feed }));
     return feed;
   }

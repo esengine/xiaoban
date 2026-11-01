@@ -8,8 +8,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { moneyFormat } from "../ui/format.ts";
 import { monthDate, monthKey, parseDay, spanDays } from "./dates.ts";
 import { LedgerPicker, type LedgerQuery } from "./LedgerPicker.tsx";
-import { LedgerNoticed } from "./Noticed.tsx";
 import { ChatBar, Checkbox, DarkButton, LifeHeader, life, Sheet, SwipeRow } from "./LifeUI.tsx";
+import { LedgerNoticed } from "./Noticed.tsx";
 
 const SHADES = [color.ledger0, color.ledger1, color.ledger2, color.ledger3, color.ledger4] as const;
 const DEFAULT_CATEGORIES = [

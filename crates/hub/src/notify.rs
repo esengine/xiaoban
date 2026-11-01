@@ -463,7 +463,6 @@ async fn draft_for(
             choices: Vec::new(),
             reply: false,
         }),
-        Event::InsightAlert { insight } => Some(insight_draft(l, insight)),
         _ => None,
     }
 }
@@ -524,7 +523,11 @@ pub fn watch(state: SharedState, shutdown: CancellationToken) {
             };
             match event {
                 Ok(event) => {
-                    if let Some(draft) = draft_for(&state, &mut turns, event).await {
+                    let draft = match event {
+                        Event::InsightAlert { insight } => Some(insight_draft(&state.localizer, insight)),
+                        event => draft_for(&state, &mut turns, event).await,
+                    };
+                    if let Some(draft) = draft {
                         raise(&state, draft, &shutdown).await;
                     }
                 }

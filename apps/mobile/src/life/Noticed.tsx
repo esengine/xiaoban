@@ -12,21 +12,25 @@ import { useWhen } from "../ui/useWhen.ts";
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
-const PAGES: Record<Exclude<InsightPage, "thread">, "/kitchen" | "/week" | "/ledger" | "/weather"> =
-  {
-    kitchen: "/kitchen",
-    week: "/week",
-    ledger: "/ledger",
-    weather: "/weather",
-  };
+const PAGES: Record<
+  Exclude<InsightPage, "thread">,
+  "/kitchen" | "/week" | "/ledger" | "/weather"
+> = {
+  kitchen: "/kitchen",
+  week: "/week",
+  ledger: "/ledger",
+  weather: "/weather",
+};
 
 export function useAgo() {
   const { t } = useI18n();
   const when = useWhen();
   return (time: number) => {
     const gap = Date.now() - time;
-    if (gap >= MINUTE && gap < HOUR) return t("time-minutes-ago", { count: Math.floor(gap / MINUTE) });
-    if (gap >= HOUR && gap < 12 * HOUR) return t("time-hours-ago", { count: Math.floor(gap / HOUR) });
+    if (gap >= MINUTE && gap < HOUR)
+      return t("time-minutes-ago", { count: Math.floor(gap / MINUTE) });
+    if (gap >= HOUR && gap < 12 * HOUR)
+      return t("time-hours-ago", { count: Math.floor(gap / HOUR) });
     return when(time);
   };
 }
@@ -137,14 +141,22 @@ export function DoneCard({ items }: { items: DoneItem[] }) {
 export function LedgerNoticed({ store, insight }: { store: HubStore; insight: Insight }) {
   const { t } = useI18n();
   const act = useInsightAct(store);
+  const body = (
+    <>
+      <Text style={styles.ledgerTag}>{t("insight-tag")}</Text>
+      <Text style={styles.ledgerText}>{insight.text}</Text>
+    </>
+  );
+  if (insight.action.kind === "open" && insight.action.page === "ledger") {
+    return <View style={styles.ledger}>{body}</View>;
+  }
   return (
     <Pressable
       style={({ pressed }) => [styles.ledger, pressed && styles.pressedLight]}
       accessibilityRole="button"
       onPress={() => act(insight)}
     >
-      <Text style={styles.ledgerTag}>{t("insight-tag")}</Text>
-      <Text style={styles.ledgerText}>{insight.text}</Text>
+      {body}
     </Pressable>
   );
 }

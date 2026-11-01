@@ -10,6 +10,7 @@ import { WeatherIcon } from "../trip/icons.tsx";
 import { DailyArranged } from "./DailyArrange.tsx";
 import { DishCover } from "./KitchenPage.tsx";
 import { shadeOf, useMoney } from "./LedgerPage.tsx";
+import { DoneCard, type InsightNav, MutedTray, NoticedCard } from "./Noticed.tsx";
 import { NoPlace, TipIcon, useSkyText } from "./WeatherPage.tsx";
 
 function WeatherCard({ onOpen }: { onOpen: () => void }) {
@@ -133,12 +134,14 @@ function greetingKey(hour: number) {
 
 export function DailyPage({
   onOpenKitchen,
+  onOpenWeek,
   onOpenLedger,
   onOpenWeather,
   onTalk,
   onOpenThread,
 }: {
   onOpenKitchen: () => void;
+  onOpenWeek: () => void;
   onOpenLedger: () => void;
   onOpenWeather: () => void;
   onTalk: () => void;
@@ -146,13 +149,21 @@ export function DailyPage({
 }) {
   const { t, locale } = useI18n();
   const store = useHub();
-  const { confirms, kitchen, memories } = useHubState(store);
+  const { confirms, kitchen, memories, dailyFeed } = useHubState(store);
+  const nav: InsightNav = {
+    onOpenThread,
+    onOpenPage: (page) =>
+      ({ kitchen: onOpenKitchen, week: onOpenWeek, ledger: onOpenLedger, weather: onOpenWeather })[
+        page
+      ](),
+  };
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
     void store.loadLedger(thisMonth()).catch(() => undefined);
     void store.loadWeather().catch(() => undefined);
+    void store.loadDailyFeed().catch(() => undefined);
   }, [store]);
 
   const now = new Date();
@@ -304,6 +315,24 @@ export function DailyPage({
               node: <Plans onOpen={onOpenThread} />,
             },
             {
+              id: "noticed",
+              title: t("insight-tag"),
+              wide: false,
+              node:
+                dailyFeed && dailyFeed.insights.length > 0 ? (
+                  <NoticedCard insights={dailyFeed.insights.slice(0, 2)} nav={nav} />
+                ) : null,
+            },
+            {
+              id: "done",
+              title: t("daily-done"),
+              wide: false,
+              node:
+                dailyFeed && dailyFeed.done.length > 0 ? (
+                  <DoneCard items={dailyFeed.done} onOpen={onOpenThread} />
+                ) : null,
+            },
+            {
               id: "more",
               title: t("daily-more-title"),
               wide: false,
@@ -316,6 +345,7 @@ export function DailyPage({
             },
           ]}
         />
+        {editing && <MutedTray />}
       </div>
     </main>
   );
