@@ -118,6 +118,9 @@ pub enum Event {
     KitchenUpdated {
         kitchen: crate::Kitchen,
     },
+    TimerFired {
+        timer: crate::CookTimer,
+    },
 }
 
 impl Event {
@@ -148,7 +151,8 @@ impl Event {
             | Self::WorkspaceUpdated { .. }
             | Self::WorkspaceRemoved { .. }
             | Self::CommandUpdated { .. }
-            | Self::KitchenUpdated { .. } => None,
+            | Self::KitchenUpdated { .. }
+            | Self::TimerFired { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
             Self::ThreadArchived { thread_id, .. } => Some(thread_id),

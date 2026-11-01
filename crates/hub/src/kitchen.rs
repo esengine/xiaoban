@@ -18,7 +18,7 @@ pub const PREFERENCES: &str = "kitchen_preferences";
 pub const SHOPPING: &str = "shopping_add";
 
 pub fn is_tool(name: &str) -> bool {
-    matches!(name, FRIDGE | DISHES | PREFERENCES | SHOPPING)
+    matches!(name, FRIDGE | DISHES | PREFERENCES | SHOPPING | crate::cooking::STEPS)
 }
 
 pub async fn load(state: &SharedState) -> Kitchen {
@@ -94,6 +94,11 @@ pub async fn note(state: &SharedState, thread_id: &str) -> Option<ContextNote> {
         "max_minutes": kitchen.max_minutes,
         "dishes": kitchen.dishes.iter().map(|dish| json!({ "name": dish.name, "selected": dish.selected })).collect::<Vec<_>>(),
         "shopping": kitchen.shopping.iter().filter(|item| !item.done).map(|item| &item.name).collect::<Vec<_>>(),
+        "cooking": kitchen.cook.as_ref().map(|cook| json!({
+            "dishes": cook.dishes,
+            "current_step": cook.current + 1,
+            "step": cook.steps.get(cook.current as usize).map(|step| &step.text),
+        })),
     });
     Some(ContextNote {
         label: state.localizer.text(keys::KITCHEN_CONTEXT_LABEL),
@@ -208,6 +213,7 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
         "additionalProperties": false,
     });
     vec![
+        crate::cooking::spec(l),
         spec(
             FRIDGE,
             l.text(keys::TOOL_KITCHEN_FRIDGE_DESCRIPTION),
@@ -295,6 +301,9 @@ fn error(message: &str) -> String {
 
 impl HubTools<'_> {
     pub(crate) async fn kitchen_tool(&self, name: &str, arguments: &str) -> String {
+        if name == crate::cooking::STEPS {
+            return self.cook_steps(arguments).await;
+        }
         let mut kitchen = load(self.state).await;
         match name {
             FRIDGE => {
@@ -391,6 +400,16 @@ pub async fn handle(
         Request::AddMissingToShopping => add_missing(state).await,
         Request::ToggleShopping { name, done } => toggle_item(state, &name, done).await,
         Request::ClearBought => clear_bought(state).await,
+        Request::CookGo { step } => crate::cooking::go(state, step).await,
+        Request::StartTimer {
+            step,
+            label,
+            after,
+            seconds,
+        } => crate::cooking::start_timer(state, step, label, after, seconds).await,
+        Request::ExtendTimer { id, seconds } => crate::cooking::extend(state, &id, seconds).await,
+        Request::DismissTimer { id } => crate::cooking::dismiss(state, &id).await,
+        Request::FinishCooking => crate::cooking::finish(state).await,
         Request::ResetKitchen => {
             let _ = state.store.set_setting_owned(THREAD_KEY.to_owned(), String::new()).await;
             let _ = state.store.set_setting_owned(KEY.to_owned(), String::new()).await;

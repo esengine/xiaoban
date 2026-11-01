@@ -30,6 +30,52 @@ pub struct ShoppingItem {
     pub done: bool,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum Heat {
+    High,
+    Medium,
+    Low,
+    #[default]
+    None,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CookStep {
+    pub dish: String,
+    pub text: String,
+    pub tip: String,
+    pub heat: Heat,
+    pub seconds: u32,
+    pub after: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CookSession {
+    pub dishes: Vec<String>,
+    pub servings: u32,
+    pub minutes: u32,
+    pub steps: Vec<CookStep>,
+    pub current: u32,
+    #[ts(type = "number")]
+    pub started_at: i64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CookTimer {
+    pub id: String,
+    pub label: String,
+    pub after: String,
+    pub step: Option<u32>,
+    pub seconds: u32,
+    #[ts(type = "number")]
+    pub ends_at: i64,
+    pub fired: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Kitchen {
@@ -43,6 +89,8 @@ pub struct Kitchen {
     pub max_minutes: u32,
     pub dishes: Vec<Dish>,
     pub shopping: Vec<ShoppingItem>,
+    pub cook: Option<CookSession>,
+    pub timers: Vec<CookTimer>,
 }
 
 impl Default for Kitchen {
@@ -57,6 +105,8 @@ impl Default for Kitchen {
             max_minutes: 30,
             dishes: Vec::new(),
             shopping: Vec::new(),
+            cook: None,
+            timers: Vec::new(),
         }
     }
 }

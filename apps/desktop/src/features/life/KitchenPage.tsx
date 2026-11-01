@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Dish, Kitchen } from "@xiaoban/protocol";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { recency } from "../chat/time.ts";
 import { KitchenChat } from "./KitchenChat.tsx";
@@ -85,9 +85,11 @@ function DishCard({ dish, onToggle }: { dish: Dish; onToggle: () => void }) {
 function Tonight({
   kitchen,
   onSay,
+  onCook,
 }: {
   kitchen: Kitchen;
   onSay: (text: string, files?: string[]) => void;
+  onCook: () => void;
 }) {
   const { t, locale } = useI18n();
   const store = useHub();
@@ -252,15 +254,17 @@ function Tonight({
               type="button"
               className="code-status-button"
               data-dark
-              onClick={() =>
-                onSay(
-                  t("kitchen-start", {
-                    dishes: picked.map((dish) => dish.name).join(t("kitchen-plus")),
-                  }),
-                )
-              }
+              onClick={() => {
+                if (!kitchen.cook)
+                  onSay(
+                    t("kitchen-start", {
+                      dishes: picked.map((dish) => dish.name).join(t("kitchen-plus")),
+                    }),
+                  );
+                onCook();
+              }}
             >
-              {t("kitchen-start-button")}
+              {kitchen.cook ? t("kitchen-resume-cook") : t("kitchen-start-button")}
             </button>
           </div>
         )}
@@ -317,7 +321,7 @@ function Shopping({ kitchen }: { kitchen: Kitchen }) {
   );
 }
 
-export function KitchenPage({ onBack }: { onBack: () => void }) {
+export function KitchenPage({ onBack, onCook }: { onBack: () => void; onCook: () => void }) {
   const { t } = useI18n();
   const store = useHub();
   const { kitchen } = useHubState(store);
@@ -327,6 +331,14 @@ export function KitchenPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
   }, [store]);
+
+  const startedAt = kitchen?.cook?.startedAt ?? null;
+  const seen = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (kitchen === null) return;
+    if (seen.current !== undefined && startedAt !== null && startedAt !== seen.current) onCook();
+    seen.current = startedAt;
+  }, [kitchen, startedAt, onCook]);
 
   const say = (text: string, files: string[] = []) => {
     if (threadId) void store.send(threadId, text, { files }).catch(() => undefined);
@@ -379,7 +391,7 @@ export function KitchenPage({ onBack }: { onBack: () => void }) {
         <div className="kitchen__content">
           {kitchen &&
             (tab === "tonight" ? (
-              <Tonight kitchen={kitchen} onSay={say} />
+              <Tonight kitchen={kitchen} onSay={say} onCook={onCook} />
             ) : (
               <Shopping kitchen={kitchen} />
             ))}

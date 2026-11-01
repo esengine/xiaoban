@@ -685,6 +685,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::kitchen::DISHES
                 | crate::kitchen::PREFERENCES
                 | crate::kitchen::SHOPPING
+                | crate::cooking::STEPS
         )
     }
 

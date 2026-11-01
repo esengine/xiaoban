@@ -294,6 +294,23 @@ pub enum Request {
     },
     ClearBought,
     ResetKitchen,
+    CookGo {
+        step: u32,
+    },
+    StartTimer {
+        step: Option<u32>,
+        label: String,
+        after: String,
+        seconds: u32,
+    },
+    ExtendTimer {
+        id: String,
+        seconds: u32,
+    },
+    DismissTimer {
+        id: String,
+    },
+    FinishCooking,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

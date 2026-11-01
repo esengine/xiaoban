@@ -3,6 +3,7 @@ import type { Archived } from "./Archived.ts";
 import type { CommandRun } from "./CommandRun.ts";
 import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
+import type { CookTimer } from "./CookTimer.ts";
 import type { Device } from "./Device.ts";
 import type { Failure } from "./Failure.ts";
 import type { Kitchen } from "./Kitchen.ts";
@@ -49,4 +50,5 @@ export type Event =
   | { type: "workspace_removed"; workspaceId: string }
   | { type: "files_changed"; workspaceId: string; threadId: string | null; paths: Array<string> }
   | { type: "command_updated"; command: CommandRun }
-  | { type: "kitchen_updated"; kitchen: Kitchen };
+  | { type: "kitchen_updated"; kitchen: Kitchen }
+  | { type: "timer_fired"; timer: CookTimer };

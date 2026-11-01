@@ -114,6 +114,10 @@ impl Hub {
 
         let shutdown = CancellationToken::new();
         crate::tidy::watch(Arc::clone(&state), shutdown.clone());
+        {
+            let state = Arc::clone(&state);
+            tokio::spawn(async move { crate::cooking::rearm(&state).await });
+        }
         let app = Router::new().route("/ws", get(upgrade)).with_state(state);
         let signal = shutdown.clone();
         let task = tokio::spawn(async move {

@@ -120,4 +120,9 @@ export type Request =
   | { type: "add_missing_to_shopping" }
   | { type: "toggle_shopping"; name: string; done: boolean }
   | { type: "clear_bought" }
-  | { type: "reset_kitchen" };
+  | { type: "reset_kitchen" }
+  | { type: "cook_go"; step: number }
+  | { type: "start_timer"; step: number | null; label: string; after: string; seconds: number }
+  | { type: "extend_timer"; id: string; seconds: number }
+  | { type: "dismiss_timer"; id: string }
+  | { type: "finish_cooking" };

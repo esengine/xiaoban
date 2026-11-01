@@ -21,6 +21,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let running = tauri::async_runtime::block_on(hub::start(
@@ -55,6 +56,7 @@ pub fn run() {
             stored::pick_folder,
             stored::open_in_editor,
             stored::list_editors,
+            stored::keep_awake,
             voice::voice_available,
             voice::voice_start,
             voice::voice_stop,

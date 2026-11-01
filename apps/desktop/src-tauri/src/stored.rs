@@ -172,3 +172,21 @@ pub fn open_in_editor(app: AppHandle, path: String, editor: Option<String>) -> R
         .open_path(file.to_string_lossy(), None::<&str>)
         .map_err(|error| error.to_string())
 }
+
+static AWAKE: std::sync::Mutex<Option<std::process::Child>> = std::sync::Mutex::new(None);
+
+#[tauri::command]
+pub fn keep_awake(on: bool) {
+    let mut slot = AWAKE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(mut child) = slot.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    if on && cfg!(target_os = "macos") {
+        *slot = std::process::Command::new("caffeinate")
+            .args(["-d", "-w"])
+            .arg(std::process::id().to_string())
+            .spawn()
+            .ok();
+    }
+}

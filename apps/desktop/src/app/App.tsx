@@ -9,8 +9,10 @@ import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { CodePanel } from "../features/code/CodePanel.tsx";
 import { NewWorkspace } from "../features/code/NewWorkspace.tsx";
 import { useCodeWidth } from "../features/code/useCodeWidth.ts";
+import { CookPage } from "../features/life/CookPage.tsx";
 import { DailyPage } from "../features/life/DailyPage.tsx";
 import { KitchenPage } from "../features/life/KitchenPage.tsx";
+import { TimerAlarm } from "../features/life/TimerAlarm.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
@@ -37,7 +39,7 @@ function Home() {
   const [selected, setSelected] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
-  const [view, setView] = useState<"chat" | "daily" | "kitchen">("chat");
+  const [view, setView] = useState<"chat" | "daily" | "kitchen" | "cook">("chat");
   const primaryId = preferences?.primaryThreadId ?? null;
   const exists = (id: string | null) => id !== null && threads.some((thread) => thread.id === id);
   const activeId = exists(selected) ? selected : (primaryId ?? threads[0]?.id ?? null);
@@ -122,8 +124,10 @@ function Home() {
     return (
       <div className="shell">
         <Rail current="daily" onNavigate={navigate} />
-        {view === "kitchen" ? (
-          <KitchenPage onBack={() => setView("daily")} />
+        {view === "cook" ? (
+          <CookPage onBack={() => setView("kitchen")} />
+        ) : view === "kitchen" ? (
+          <KitchenPage onBack={() => setView("daily")} onCook={() => setView("cook")} />
         ) : (
           <DailyPage
             onOpenKitchen={() => setView("kitchen")}
@@ -266,7 +270,10 @@ export function App() {
     <ContextMenuProvider>
       <ImageViewerProvider>
         {preferences.onboarded ? (
-          <Home />
+          <>
+            <Home />
+            <TimerAlarm />
+          </>
         ) : (
           <Onboarding startAt={model ? 1 : 0} onFinish={() => {}} />
         )}

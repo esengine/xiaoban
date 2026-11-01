@@ -406,6 +406,31 @@ export class HubStore {
     this.#update((state) => ({ ...state, kitchen }));
   }
 
+  async #kitchenRequest(request: Parameters<HubClient["request"]>[0]): Promise<void> {
+    const { kitchen } = await this.client.request(request, "kitchen");
+    this.#update((state) => ({ ...state, kitchen }));
+  }
+
+  cookGo(step: number): Promise<void> {
+    return this.#kitchenRequest({ type: "cook_go", step });
+  }
+
+  startTimer(step: number | null, label: string, after: string, seconds: number): Promise<void> {
+    return this.#kitchenRequest({ type: "start_timer", step, label, after, seconds });
+  }
+
+  extendTimer(id: string, seconds: number): Promise<void> {
+    return this.#kitchenRequest({ type: "extend_timer", id, seconds });
+  }
+
+  dismissTimer(id: string): Promise<void> {
+    return this.#kitchenRequest({ type: "dismiss_timer", id });
+  }
+
+  finishCooking(): Promise<void> {
+    return this.#kitchenRequest({ type: "finish_cooking" });
+  }
+
   async clearBought(): Promise<void> {
     const { kitchen } = await this.client.request({ type: "clear_bought" }, "kitchen");
     this.#update((state) => ({ ...state, kitchen }));
