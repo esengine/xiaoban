@@ -35,6 +35,15 @@ export function parseVersion(value: string | string[] | undefined): number | nul
 
 export const openLink = (url: string) => void Linking.openURL(url).catch(() => undefined);
 
+export async function openFirst(urls: string[]): Promise<void> {
+  for (const url of urls) {
+    try {
+      await Linking.openURL(url);
+      return;
+    } catch {}
+  }
+}
+
 export function useShareTrip() {
   const { t } = useI18n();
   return (trip: Trip) => void Share.share({ message: familyText(t, trip) }).catch(() => undefined);

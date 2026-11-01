@@ -1,6 +1,6 @@
 import {
-  amapFood,
-  amapGo,
+  foodLinks,
+  goLinks,
   type HubStore,
   modeText,
   nextStopIndex,
@@ -20,7 +20,15 @@ import { Icon } from "../ui/Icon.tsx";
 import { ReplyCard } from "./ReplyCard.tsx";
 import { DotIcon } from "./TripIcons.tsx";
 import { TripMap } from "./TripMap.tsx";
-import { dayInk, openLink, useNow, useShareTrip, useTrip, useTripSay } from "./useTrip.ts";
+import {
+  dayInk,
+  openFirst,
+  openLink,
+  useNow,
+  useShareTrip,
+  useTrip,
+  useTripSay,
+} from "./useTrip.ts";
 
 const MAP = 206;
 
@@ -168,14 +176,14 @@ function NextCard({
         <Pressable
           style={styles.nextButton}
           accessibilityRole="button"
-          onPress={() => openLink(amapGo(trip, next, "taxi"))}
+          onPress={() => void openFirst(goLinks(trip, next, "taxi"))}
         >
           <Text style={styles.nextButtonText}>{t("trip-taxi")}</Text>
         </Pressable>
         <Pressable
           style={[styles.nextButton, styles.nextButtonLight]}
           accessibilityRole="button"
-          onPress={() => openLink(amapGo(trip, next, leg?.mode ?? "taxi"))}
+          onPress={() => void openFirst(goLinks(trip, next, leg?.mode ?? "taxi"))}
         >
           <Text style={styles.nextButtonDarkText}>{t("trip-navigate")}</Text>
         </Pressable>
@@ -236,7 +244,7 @@ function Quick({ trip, day, focus }: { trip: Trip; day: TripDay | null; focus: T
           key: "food",
           label: t("trip-nearby-food"),
           sub: focus.name,
-          run: () => openLink(amapFood(t, trip, focus)),
+          run: () => void openFirst(foodLinks(t, trip, focus)),
         }
       : null,
     {

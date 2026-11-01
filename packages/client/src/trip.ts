@@ -147,6 +147,46 @@ export function amapGo(trip: Trip, to: TripStop, mode: TravelMode): string {
   return amapUrl("navigation", { to: point(to), mode: AMAP_MODES[mode] });
 }
 
+const query = (params: Record<string, string>): string =>
+  Object.entries(params)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+
+const NATIVE_MODES: Record<TravelMode, { amap: string; baidu: string; tencent: string }> = {
+  taxi: { amap: "0", baidu: "driving", tencent: "drive" },
+  transit: { amap: "1", baidu: "transit", tencent: "bus" },
+  walk: { amap: "2", baidu: "walking", tencent: "walk" },
+};
+
+function searchLinks(keyword: string, city: string, web: string): string[] {
+  return [
+    `amapuri://poi?${query({ sourceApplication: "xiaoban", keywords: keyword })}`,
+    `baidumap://map/place/search?${query({ query: keyword, region: city, src: "xiaoban" })}`,
+    `qqmap://map/search?${query({ keyword, region: city, referer: "xiaoban" })}`,
+    `geo:0,0?q=${encodeURIComponent(`${keyword} ${city}`)}`,
+    web,
+  ];
+}
+
+export const placeLinks = (trip: Trip, stop: TripStop): string[] =>
+  searchLinks(stop.name, trip.city, amapPlace(trip, stop));
+
+export const foodLinks = (t: T, trip: Trip, stop: TripStop): string[] =>
+  searchLinks(t("trip-amap-food", { place: stop.name }), trip.city, amapFood(t, trip, stop));
+
+export function goLinks(trip: Trip, to: TripStop, mode: TravelMode): string[] {
+  const at = to.location;
+  if (!at) return placeLinks(trip, to);
+  const modes = NATIVE_MODES[mode];
+  return [
+    `amapuri://route/plan/?${query({ sourceApplication: "xiaoban", dlat: `${at.lat}`, dlon: `${at.lng}`, dname: to.name, dev: "0", t: modes.amap })}`,
+    `baidumap://map/direction?${query({ destination: `name:${to.name}|latlng:${at.lat},${at.lng}`, coord_type: "gcj02", mode: modes.baidu, src: "xiaoban" })}`,
+    `qqmap://map/routeplan?${query({ type: modes.tencent, to: to.name, tocoord: `${at.lat},${at.lng}`, referer: "xiaoban" })}`,
+    `geo:${at.lat},${at.lng}?q=${encodeURIComponent(`${at.lat},${at.lng}(${to.name})`)}`,
+    amapGo(trip, to, mode),
+  ];
+}
+
 export function familyText(t: T, trip: Trip): string {
   const lines = [`${trip.title} · ${range(t, trip)}`];
   trip.days.forEach((day, index) => {

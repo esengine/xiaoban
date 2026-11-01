@@ -1,11 +1,10 @@
 import {
-  amapFood,
-  amapGo,
-  amapPlace,
-  amapRoute,
+  foodLinks,
+  goLinks,
   type HubStore,
   legText,
   monthDay,
+  placeLinks,
   skyText,
   todayIndex,
   tripClock,
@@ -34,7 +33,15 @@ import { useKeyboard } from "../ui/useKeyboard.ts";
 import { ReplyCard } from "./ReplyCard.tsx";
 import { ChevronIcon, NavigateIcon, OutIcon, ShareIcon } from "./TripIcons.tsx";
 import { TripMap } from "./TripMap.tsx";
-import { dayInk, openLink, useNow, useShareTrip, useTrip, useTripSay } from "./useTrip.ts";
+import {
+  dayInk,
+  openFirst,
+  openLink,
+  useNow,
+  useShareTrip,
+  useTrip,
+  useTripSay,
+} from "./useTrip.ts";
 
 type Snap = "low" | "half" | "full";
 
@@ -156,7 +163,7 @@ export function TripMapScreen({
   const navigate = () => {
     const stop = stops[pick];
     if (!stop) return;
-    openLink(amapGo(trip, stop, stops[pick - 1]?.next?.mode ?? "taxi"));
+    void openFirst(goLinks(trip, stop, stops[pick - 1]?.next?.mode ?? "taxi"));
   };
   const savedAt = new Intl.DateTimeFormat(locale, {
     month: "numeric",
@@ -397,7 +404,7 @@ function Stops({
                     <Pressable
                       style={styles.stopLink}
                       hitSlop={6}
-                      onPress={() => openLink(amapPlace(trip, stop))}
+                      onPress={() => void openFirst(placeLinks(trip, stop))}
                     >
                       <Text style={styles.link}>{t("trip-open-amap")}</Text>
                       <OutIcon color={color.accent} />
@@ -405,7 +412,7 @@ function Stops({
                     <Pressable
                       style={styles.stopLink}
                       hitSlop={6}
-                      onPress={() => openLink(amapFood(t, trip, stop))}
+                      onPress={() => void openFirst(foodLinks(t, trip, stop))}
                     >
                       <Text style={styles.link}>{t("trip-nearby-food")}</Text>
                       <OutIcon color={color.accent} />
@@ -418,7 +425,7 @@ function Stops({
               <Pressable
                 style={styles.leg}
                 accessibilityRole="button"
-                onPress={() => openLink(amapRoute(trip, stop, next))}
+                onPress={() => void openFirst(goLinks(trip, next, stop.next?.mode ?? "taxi"))}
               >
                 <Svg width={2} height={28} style={styles.legLine}>
                   <Line
