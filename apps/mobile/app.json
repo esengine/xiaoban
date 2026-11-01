@@ -31,7 +31,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "./plugins/with-short-object-paths.js"
     ],
     "experiments": {
       "typedRoutes": true
