@@ -1,7 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { downloadDir, join } from "@tauri-apps/api/path";
 import type { HubStore } from "@xiaoban/client";
-import type { DocBlock, DocFormat } from "@xiaoban/protocol";
+import type { DocFormat } from "@xiaoban/protocol";
 
 const UNSAFE = /[\\/:*?"<>|\n\r\t]/g;
 
@@ -32,19 +32,4 @@ export async function openInWord(store: HubStore, id: string, title: string) {
   if (path) await invoke("file_open", { path });
 }
 
-export function plainText(blocks: DocBlock[]) {
-  let number = 0;
-  return blocks
-    .map((block) => {
-      number = block.kind === "number" ? number + 1 : 0;
-      const text = block.text.replaceAll("**", "");
-      if (block.kind === "bullet") return `• ${text}`;
-      if (block.kind === "number") return `${number}. ${text}`;
-      return text;
-    })
-    .join("\n\n");
-}
-
-export function countChars(blocks: DocBlock[]) {
-  return blocks.reduce((sum, block) => sum + block.text.replaceAll("**", "").length, 0);
-}
+export { countChars, plainText } from "@xiaoban/client";

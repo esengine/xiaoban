@@ -32,3 +32,13 @@ export {
   weatherText,
   weekday,
 } from "./trip.ts";
+export {
+  cellName,
+  colName,
+  countChars,
+  parseRange,
+  plainText,
+  toCsv,
+  toNumber,
+  toTsv,
+} from "./work.ts";
