@@ -1,24 +1,38 @@
 import { HubClient, HubStore } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
-import type { Credential } from "@xiaoban/protocol";
-import { createContext, type ReactNode, use, useCallback, useEffect, useState } from "react";
+import type { Credential, ProviderId } from "@xiaoban/protocol";
+import {
+  createContext,
+  type ReactNode,
+  use,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Platform } from "react-native";
+import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
+import { fetchKeys, type Keys, loadKeys, saveKey } from "./keys.ts";
 import {
   clearSession,
   hubUrl,
   loadSession,
+  localDeviceId,
   newDeviceId,
   type Session,
   saveSession,
 } from "./session.ts";
 
-type Phase = "loading" | "unpaired" | "ready";
+type Phase = "loading" | "unpaired" | "setup" | "ready";
 
 interface HubContextValue {
   phase: Phase;
   store: HubStore | null;
+  local: HubStore | null;
+  onComputer: boolean;
   pair: (address: string, code: string) => Promise<void>;
   unpair: () => Promise<void>;
+  keySaved: (provider: ProviderId, key: string) => Promise<void>;
 }
 
 export class MissingDeviceToken extends Error {
@@ -28,11 +42,25 @@ export class MissingDeviceToken extends Error {
 const HubContext = createContext<HubContextValue | null>(null);
 const platform = Platform.OS === "ios" ? "ios" : "android";
 
+async function startLocal(locale: string, keys: Keys, name: string): Promise<number | null> {
+  if (!XiaobanHub) return null;
+  try {
+    const port = await XiaobanHub.start(locale, JSON.stringify(keys), name);
+    return port > 0 ? port : null;
+  } catch {
+    return null;
+  }
+}
+
 export function HubProvider({ children }: { children: ReactNode }) {
-  const { t } = useI18n();
-  const [phase, setPhase] = useState<Phase>("loading");
-  const [store, setStore] = useState<HubStore | null>(null);
+  const { t, locale } = useI18n();
+  const [loaded, setLoaded] = useState(false);
+  const [local, setLocal] = useState<HubStore | null>(null);
+  const [remote, setRemote] = useState<HubStore | null>(null);
+  const [remoteOpen, setRemoteOpen] = useState(false);
+  const [keys, setKeys] = useState<Keys>({});
   const deviceName = t(platform === "ios" ? "device-ios" : "device-android");
+  const localRef = useRef<HubStore | null>(null);
 
   const createStore = useCallback(
     (url: string, deviceId: string, credential: Credential) =>
@@ -43,22 +71,65 @@ export function HubProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    void loadSession().then((session) => {
-      if (!session) {
-        setPhase("unpaired");
-        return;
+    let cancelled = false;
+    void (async () => {
+      const [session, stored] = await Promise.all([loadSession(), loadKeys()]);
+      const port = await startLocal(locale, stored, deviceName);
+      if (cancelled) return;
+      setKeys(stored);
+      if (port !== null) {
+        const store = createStore(`ws://127.0.0.1:${port}/ws`, await localDeviceId(), {
+          kind: "local",
+        });
+        localRef.current = store;
+        setLocal(store);
+        void store.client.connect().catch(() => undefined);
       }
-      const restored = createStore(session.url, session.deviceId, {
-        kind: "paired",
-        token: session.token,
-      });
-      setStore(restored);
-      setPhase("ready");
-      void restored.client.connect();
-    });
-  }, [createStore]);
+      if (session) {
+        const store = createStore(session.url, session.deviceId, {
+          kind: "paired",
+          token: session.token,
+        });
+        setRemote(store);
+        void store.client.connect().catch(() => undefined);
+      }
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [createStore, deviceName, locale]);
 
-  useEffect(() => () => store?.client.close(), [store]);
+  useEffect(() => () => local?.client.close(), [local]);
+  useEffect(() => () => remote?.client.close(), [remote]);
+
+  useEffect(() => {
+    if (!remote) {
+      setRemoteOpen(false);
+      return;
+    }
+    setRemoteOpen(remote.client.status === "open");
+    return remote.client.onStatus((status) => setRemoteOpen(status === "open"));
+  }, [remote]);
+
+  useEffect(() => {
+    if (!remote || !remoteOpen || !localRef.current) return;
+    void fetchKeys(remote)
+      .then(async ({ keys: synced, model }) => {
+        setKeys(synced);
+        const key = model ? synced[model.provider] : undefined;
+        if (!model || !key) return;
+        await localRef.current?.configureProvider({
+          provider: model.provider,
+          apiKey: key,
+          model: model.model,
+          ...(model.baseUrl ? { baseUrl: model.baseUrl } : {}),
+          ...(model.label ? { label: model.label } : {}),
+          api: model.api,
+        });
+      })
+      .catch(() => undefined);
+  }, [remote, remoteOpen]);
 
   const pair = useCallback(
     async (address: string, code: string) => {
@@ -69,20 +140,36 @@ export function HubProvider({ children }: { children: ReactNode }) {
       if (!welcome.deviceToken) throw new MissingDeviceToken();
       const session: Session = { url, deviceId, token: welcome.deviceToken };
       await saveSession(session);
-      setStore(paired);
-      setPhase("ready");
+      setRemote(paired);
     },
     [createStore],
   );
 
   const unpair = useCallback(async () => {
-    store?.client.close();
+    remote?.client.close();
     await clearSession();
-    setStore(null);
-    setPhase("unpaired");
-  }, [store]);
+    setRemote(null);
+  }, [remote]);
 
-  return <HubContext value={{ phase, store, pair, unpair }}>{children}</HubContext>;
+  const keySaved = useCallback(async (provider: ProviderId, key: string) => {
+    setKeys(await saveKey(provider, key));
+  }, []);
+
+  const onComputer = remote !== null && (remoteOpen || local === null);
+  const store = onComputer ? remote : (local ?? remote);
+  const phase: Phase = !loaded
+    ? "loading"
+    : store === null
+      ? "unpaired"
+      : !onComputer && Object.keys(keys).length === 0
+        ? "setup"
+        : "ready";
+
+  return (
+    <HubContext value={{ phase, store, local, onComputer, pair, unpair, keySaved }}>
+      {children}
+    </HubContext>
+  );
 }
 
 export function useHubContext(): HubContextValue {

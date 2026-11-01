@@ -10,6 +10,9 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "@xiaoban/client": "workspace:*",
     "@xiaoban/i18n": "workspace:*",
     "@xiaoban/protocol": "workspace:*",

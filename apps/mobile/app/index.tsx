@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const { phase, store } = useHubContext();
   const [tab, setTab] = useState<Tab>(remembered);
   if (phase === "loading") return <View style={styles.screen} />;
+  if (phase === "setup") return <Redirect href="/setup" />;
   if (phase === "unpaired" || !store) return <Redirect href="/pair" />;
   const change = (next: Tab) => {
     remembered = next;

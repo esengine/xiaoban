@@ -1891,3 +1891,6 @@ weather-hours-swipe = 左右滑
 weather-hour-short = { $hour }时
 weather-rules-link = 提醒
 weather-add-short = ＋
+setup-recommended = { $provider } · 推荐
+setup-more = 更多
+setup-key-local = 密钥只存在这台手机里 · 已有电脑端？连上后密钥会自动带过来

@@ -1900,3 +1900,6 @@ weather-hours-swipe = Swipe sideways
 weather-hour-short = { $hour }h
 weather-rules-link = Alerts
 weather-add-short = ＋
+setup-recommended = { $provider } · Recommended
+setup-more = More
+setup-key-local = Your key stays on this phone · Have Xiaoban on a computer? Connect it and your keys come along

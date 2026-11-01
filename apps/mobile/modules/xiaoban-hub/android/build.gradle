@@ -1,0 +1,15 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.xiaoban'
+version = '0.1.0'
+
+android {
+  namespace "app.xiaoban.hub"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}

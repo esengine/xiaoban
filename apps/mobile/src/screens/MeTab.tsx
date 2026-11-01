@@ -85,7 +85,7 @@ export function MeTab({ store }: { store: HubStore }) {
         text: t("me-unpair"),
         style: "destructive",
         onPress: () => {
-          void unpair().then(() => router.replace("/pair"));
+          void unpair().then(() => router.replace("/"));
         },
       },
     ]);

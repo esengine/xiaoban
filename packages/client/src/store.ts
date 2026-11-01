@@ -189,6 +189,12 @@ export class HubStore {
     return this.client.request({ type: "create_pairing_code" }, "pairing_code");
   }
 
+  async shareProviderKeys(
+    publicKey: string,
+  ): Promise<Extract<Response, { type: "provider_keys" }>> {
+    return this.client.request({ type: "share_provider_keys", publicKey }, "provider_keys");
+  }
+
   async listProviders(): Promise<ProviderOption[]> {
     const { providers } = await this.client.request({ type: "list_providers" }, "providers");
     return providers;

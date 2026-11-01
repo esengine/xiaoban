@@ -33,3 +33,13 @@ export function hubUrl(address: string): string {
     .replace(/\/ws$/, "");
   return `ws://${host.includes(":") ? host : `${host}:47100`}/ws`;
 }
+
+const LOCAL_DEVICE = "xiaoban.local-device";
+
+export async function localDeviceId(): Promise<string> {
+  const stored = await SecureStore.getItemAsync(LOCAL_DEVICE);
+  if (stored) return stored;
+  const id = randomUUID();
+  await SecureStore.setItemAsync(LOCAL_DEVICE, id);
+  return id;
+}

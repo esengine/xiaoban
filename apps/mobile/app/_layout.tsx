@@ -21,6 +21,10 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false, title: t("app-name") }} />
+          <Stack.Screen
+            name="setup"
+            options={{ headerShown: false, title: t("onboarding-hello") }}
+          />
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />
         </Stack>
