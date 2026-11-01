@@ -1,4 +1,4 @@
-import type { HubStore } from "@xiaoban/client";
+import { activeModelName, type HubStore } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
@@ -49,12 +49,13 @@ export function MeTab({ store }: { store: HubStore }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { unpair, paired, onComputer } = useHubContext();
-  const { memories, preferences, threads, devices, hub, status } = useHubState(store);
+  const { memories, preferences, threads, devices, hub, status, model } = useHubState(store);
 
   useEffect(() => {
     if (status !== "open") return;
     void store.refreshMemories().catch(() => undefined);
     void store.refreshDevices().catch(() => undefined);
+    void store.refreshModel().catch(() => undefined);
   }, [store, status]);
 
   const name = memories.find(
@@ -108,6 +109,18 @@ export function MeTab({ store }: { store: HubStore }) {
           <Text style={styles.sub}>{t("me-days", { days })}</Text>
         </View>
       </View>
+
+      <Pressable
+        style={[styles.card, styles.modelRow]}
+        onPress={() => router.push("/models")}
+        accessibilityRole="button"
+      >
+        <Text style={styles.cardTitle}>{t("me-model")}</Text>
+        <Text style={styles.modelName} numberOfLines={1}>
+          {model ? activeModelName(model) : t("model-not-connected")}
+        </Text>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
 
       <View style={styles.card}>
         <View style={styles.cardHead}>
@@ -226,6 +239,9 @@ const styles = StyleSheet.create({
   },
   cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardTitle: { fontSize: 15, fontWeight: "700", color: color.ink },
+  modelRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  modelName: { flex: 1, textAlign: "right", fontSize: 13, color: color.muted },
+  chevron: { fontSize: 18, color: color.faint },
   link: { fontSize: 13, color: color.accent },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {

@@ -29,6 +29,7 @@ export default function RootLayout() {
             name="consent"
             options={{ headerShown: false, presentation: "modal", title: t("consent-title") }}
           />
+          <Stack.Screen name="models" options={{ headerShown: false, title: t("models-title") }} />
           <Stack.Screen name="scan" options={{ headerShown: false, title: t("scan-title") }} />
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />
