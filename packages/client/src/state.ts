@@ -17,6 +17,7 @@ import type {
   MemoryGalaxy,
   Message,
   ModelInfo,
+  Plan,
   Preferences,
   ServiceStatus,
   StepResult,
@@ -74,6 +75,7 @@ export interface HubState {
   usedMemories: string[];
   archived: Record<string, Archived>;
   compacting: Readonly<Record<string, CompactPhase>>;
+  plans: Readonly<Record<string, Plan | null>>;
   olderMessages: Record<string, boolean>;
   galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
@@ -109,6 +111,7 @@ export const initialHubState: HubState = {
   usedMemories: [],
   archived: {},
   compacting: {},
+  plans: {},
   olderMessages: {},
   galaxies: [],
   model: null,
@@ -180,6 +183,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           event.confirm,
         ],
       };
+    case "plan_updated":
+      return { ...state, plans: { ...state.plans, [event.threadId]: event.plan } };
     case "thread_compacting":
       return {
         ...state,

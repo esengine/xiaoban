@@ -13,6 +13,7 @@ import type { Kitchen } from "./Kitchen.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
+import type { Plan } from "./Plan.ts";
 import type { PrepTask } from "./PrepTask.ts";
 import type { StepResult } from "./StepResult.ts";
 import type { Thread } from "./Thread.ts";
@@ -50,6 +51,7 @@ export type Event =
     }
   | { type: "thread_archived"; threadId: string; archived: Archived }
   | { type: "thread_compacting"; threadId: string; phase: CompactPhase }
+  | { type: "plan_updated"; threadId: string; plan: Plan | null }
   | { type: "turn_backgrounded"; turnId: string }
   | { type: "turn_paused"; turnId: string; paused: boolean; byUser: boolean }
   | { type: "workspace_updated"; workspace: Workspace }

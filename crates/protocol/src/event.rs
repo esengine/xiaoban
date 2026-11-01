@@ -97,6 +97,10 @@ pub enum Event {
         thread_id: String,
         phase: crate::CompactPhase,
     },
+    PlanUpdated {
+        thread_id: String,
+        plan: Option<crate::Plan>,
+    },
     TurnBackgrounded {
         turn_id: String,
     },
@@ -154,7 +158,8 @@ impl Event {
             Self::TurnStarted { thread_id, .. }
             | Self::ThreadDeleted { thread_id }
             | Self::ThreadArchived { thread_id, .. }
-            | Self::ThreadCompacting { thread_id, .. } => Some(thread_id),
+            | Self::ThreadCompacting { thread_id, .. }
+            | Self::PlanUpdated { thread_id, .. } => Some(thread_id),
             Self::Thinking { .. }
             | Self::TextDelta { .. }
             | Self::ReasoningDelta { .. }

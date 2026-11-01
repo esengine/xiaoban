@@ -159,6 +159,10 @@ function Home() {
               setView("chat");
               setSelected(primaryId);
             }}
+            onOpenThread={(threadId) => {
+              setView("chat");
+              setSelected(threadId);
+            }}
           />
         )}
         {consent && <OperateConsent key={consent.id} confirm={consent} />}
@@ -323,7 +327,15 @@ function Home() {
         </div>
       ) : (
         <div className="panel panel--workspace" data-open={panels.workspace}>
-          <Workspace threadId={activeId} onOpenTrip={openTrip} />
+          <Workspace
+            threadId={activeId}
+            onOpenTrip={openTrip}
+            openers={{
+              onOpenDoc: (docId) => setDocView({ docId, print: false }),
+              onOpenSheet: setSheetView,
+              onOpenDeck: (deckId) => setDeckView({ deckId, action: null }),
+            }}
+          />
         </div>
       )}
       {addingWorkspace && (

@@ -121,6 +121,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs.extend(crate::thread_tools::specs(localizer));
     specs.extend(crate::subthreads::specs(localizer));
     specs.push(crate::agents::spec(localizer));
+    specs.push(crate::plan::spec(localizer));
     specs
 }
 
@@ -693,6 +694,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::ledger::BUDGET
                 | crate::ledger::SORT
                 | crate::life::LIFE
+                | crate::plan::PLAN
                 | crate::doc::START
                 | crate::doc::SECTION
                 | crate::doc::EDIT
@@ -743,6 +745,7 @@ impl ToolRunner for HubTools<'_> {
                 name if crate::kitchen::is_tool(name) => self.kitchen_tool(name, arguments).await,
                 name if crate::ledger::is_tool(name) => self.ledger_tool(name, arguments).await,
                 crate::life::LIFE => self.life(arguments).await,
+                crate::plan::PLAN => self.plan(arguments).await,
                 name if crate::doc::is_tool(name) => self.doc_tool(name, arguments).await,
                 name if crate::sheet::is_tool(name) => self.sheet_tool(name, arguments).await,
                 name if crate::slides::is_tool(name) => self.slides_tool(name, arguments).await,

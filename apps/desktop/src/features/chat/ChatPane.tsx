@@ -25,6 +25,8 @@ import { useWorkspaceOf } from "../code/useCode.ts";
 import { DocCard, WritingDocs } from "../doc/DocCard.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
+import { PlanCard } from "../plan/PlanCard.tsx";
+import { usePlanDock } from "../plan/usePlanDock.ts";
 import { SheetCard } from "../sheet/SheetCard.tsx";
 import { DeckCard, WritingDecks } from "../slides/DeckCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
@@ -282,6 +284,11 @@ export function ChatPane(full: Props) {
   const waitingHere = queued.filter((item) => item.threadId === threadId);
   const nextQueued = waitingHere[0];
   const holding = state.compacting[threadId]?.kind === "started";
+  const plan = state.plans[threadId] ?? null;
+  const [planDocked, setPlanDocked] = usePlanDock(threadId);
+  useEffect(() => {
+    if (state.status === "open" && !side) void store.loadPlan(threadId).catch(() => undefined);
+  }, [store, threadId, state.status, side]);
   useEffect(() => {
     if (running || holding || !nextQueued) return;
     setQueued((list) => list.filter((item) => item.id !== nextQueued.id));
@@ -616,6 +623,22 @@ export function ChatPane(full: Props) {
               onToggle={props.onToggleWorkspace}
             />
           </header>
+        )}
+        {!side && plan && !planDocked && (
+          <div className="chat__plan">
+            <PlanCard
+              plan={plan}
+              openers={{
+                onOpenDoc: (id) => props.onOpenDoc(id),
+                onOpenSheet: props.onOpenSheet,
+                onOpenDeck: (id) => props.onOpenDeck(id),
+              }}
+              onDock={setPlanDocked}
+              onAsk={() =>
+                document.querySelector<HTMLInputElement>(".composer__field input")?.focus()
+              }
+            />
+          </div>
         )}
         {!side && <Pins items={pinItems} />}
         <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>

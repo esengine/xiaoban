@@ -244,6 +244,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         request @ (Request::DailyLayout | Request::SetDailyLayout { .. }) => {
             crate::daily::handle(state, request).await
         }
+        request @ (Request::Plan { .. } | Request::ListPlans | Request::PlanAction { .. }) => {
+            crate::plan::handle(state, request).await
+        }
         Request::ContextUsage { thread_id } => Ok(Response::ContextUsage {
             usage: turns::context_usage(state, &thread_id).await,
         }),

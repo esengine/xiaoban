@@ -29,6 +29,7 @@ import type { MemoryGalaxy } from "./MemoryGalaxy.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
 import type { OperatePermissions } from "./OperatePermissions.ts";
+import type { Plan } from "./Plan.ts";
 import type { Preferences } from "./Preferences.ts";
 import type { ProviderOption } from "./ProviderOption.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
@@ -99,6 +100,8 @@ export type Response =
   | { type: "weather"; weather: WeatherView }
   | { type: "daily_layout"; layout: DailyLayout }
   | { type: "context_usage"; usage: ContextUsage }
+  | { type: "plan"; plan: Plan | null }
+  | { type: "plans"; plans: Array<Plan> }
   | { type: "doc"; doc: Doc }
   | { type: "doc_summary"; summary: DocSummary }
   | { type: "doc_blocks"; blocks: Array<DocBlock> }

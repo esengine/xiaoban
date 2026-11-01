@@ -30,6 +30,7 @@ mod model;
 mod network;
 mod operate;
 mod operate_tools;
+mod plan;
 mod pauses;
 mod preferences;
 mod prompts;

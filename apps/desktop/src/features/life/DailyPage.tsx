@@ -1,8 +1,11 @@
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { Plan } from "@xiaoban/protocol";
 import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
+import { PlanRing } from "../plan/PlanCard.tsx";
+import { usePlanSummary } from "../plan/planSummary.ts";
 import { WeatherIcon } from "../trip/icons.tsx";
 import { DailyArranged } from "./DailyArrange.tsx";
 import { DishCover } from "./KitchenPage.tsx";
@@ -133,11 +136,13 @@ export function DailyPage({
   onOpenLedger,
   onOpenWeather,
   onTalk,
+  onOpenThread,
 }: {
   onOpenKitchen: () => void;
   onOpenLedger: () => void;
   onOpenWeather: () => void;
   onTalk: () => void;
+  onOpenThread: (threadId: string) => void;
 }) {
   const { t, locale } = useI18n();
   const store = useHub();
@@ -293,6 +298,12 @@ export function DailyPage({
               node: <Spending onOpen={onOpenLedger} />,
             },
             {
+              id: "plans",
+              title: t("daily-plans"),
+              wide: false,
+              node: <Plans onOpen={onOpenThread} />,
+            },
+            {
               id: "more",
               title: t("daily-more-title"),
               wide: false,
@@ -307,5 +318,50 @@ export function DailyPage({
         />
       </div>
     </main>
+  );
+}
+
+function PlanLine({ plan, onOpen }: { plan: Plan; onOpen: (threadId: string) => void }) {
+  const summary = usePlanSummary(plan);
+  return (
+    <button type="button" className="daily__plan" onClick={() => onOpen(plan.threadId)}>
+      <PlanRing plan={plan} size={28} />
+      <span>
+        {plan.title}
+        <small>{summary}</small>
+      </span>
+    </button>
+  );
+}
+
+function Plans({ onOpen }: { onOpen: (threadId: string) => void }) {
+  const { t } = useI18n();
+  const store = useHub();
+  const { plans, status } = useHubState(store);
+  useEffect(() => {
+    if (status === "open") void store.listPlans().catch(() => undefined);
+  }, [store, status]);
+  const active = Object.values(plans).filter(
+    (plan): plan is Plan => plan !== null && plan.status !== "done",
+  );
+  return (
+    <section className="life-card daily__plans">
+      <div className="life-card__head">
+        <b>{t("daily-plans")}</b>
+        <span className="life-card__spacer" />
+        {active.length > 0 && (
+          <span className="life-card__note">
+            {t("daily-plans-count", { count: active.length })}
+          </span>
+        )}
+      </div>
+      {active.length > 0 ? (
+        active
+          .slice(0, 4)
+          .map((plan) => <PlanLine key={plan.threadId} plan={plan} onOpen={onOpen} />)
+      ) : (
+        <p className="life-card__hint">{t("daily-plans-empty")}</p>
+      )}
+    </section>
   );
 }

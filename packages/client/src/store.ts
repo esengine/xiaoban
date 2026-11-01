@@ -36,6 +36,8 @@ import type {
   ModelApi,
   ModelInfo,
   OperatePermissions,
+  Plan,
+  PlanAction,
   Preferences,
   ProviderId,
   ProviderOption,
@@ -725,6 +727,27 @@ export class HubStore {
   async exportDoc(id: string, format: DocFormat, path: string): Promise<string> {
     const result = await this.client.request({ type: "export_doc", id, format, path }, "exported");
     return result.path;
+  }
+
+  async loadPlan(threadId: string): Promise<Plan | null> {
+    const { plan } = await this.client.request({ type: "plan", threadId }, "plan");
+    this.#update((state) => ({ ...state, plans: { ...state.plans, [threadId]: plan } }));
+    return plan;
+  }
+
+  async listPlans(): Promise<Plan[]> {
+    const { plans } = await this.client.request({ type: "list_plans" }, "plans");
+    this.#update((state) => ({
+      ...state,
+      plans: { ...state.plans, ...Object.fromEntries(plans.map((plan) => [plan.threadId, plan])) },
+    }));
+    return plans;
+  }
+
+  async planAction(threadId: string, action: PlanAction): Promise<Plan | null> {
+    const { plan } = await this.client.request({ type: "plan_action", threadId, action }, "plan");
+    this.#update((state) => ({ ...state, plans: { ...state.plans, [threadId]: plan } }));
+    return plan;
   }
 
   async contextUsage(threadId: string): Promise<ContextUsage> {

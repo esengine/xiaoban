@@ -10,6 +10,7 @@ import type { DocBlock } from "./DocBlock.ts";
 import type { DocFormat } from "./DocFormat.ts";
 import type { Expense } from "./Expense.ts";
 import type { ModelApi } from "./ModelApi.ts";
+import type { PlanAction } from "./PlanAction.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
 import type { ServiceId } from "./ServiceId.ts";
@@ -190,6 +191,9 @@ export type Request =
   | { type: "export_doc"; id: string; format: DocFormat; path: string }
   | { type: "set_daily_layout"; layout: DailyLayout }
   | { type: "context_usage"; threadId: string }
+  | { type: "plan"; threadId: string }
+  | { type: "list_plans" }
+  | { type: "plan_action"; threadId: string; action: PlanAction }
   | { type: "compact_thread"; threadId: string }
   | { type: "set_auto_compact"; percent: number | null }
   | { type: "locate_place" }

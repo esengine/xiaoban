@@ -478,6 +478,14 @@ pub enum Request {
     ContextUsage {
         thread_id: String,
     },
+    Plan {
+        thread_id: String,
+    },
+    ListPlans,
+    PlanAction {
+        thread_id: String,
+        action: crate::PlanAction,
+    },
     CompactThread {
         thread_id: String,
     },
@@ -693,6 +701,12 @@ pub enum Response {
     },
     ContextUsage {
         usage: crate::ContextUsage,
+    },
+    Plan {
+        plan: Option<crate::Plan>,
+    },
+    Plans {
+        plans: Vec<crate::Plan>,
     },
     Doc {
         doc: crate::Doc,

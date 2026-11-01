@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { MemoryPanel } from "../memory/MemoryPanel.tsx";
 import { PairingDialog } from "../pairing/PairingDialog.tsx";
+import { PlanCard, type PlanOpeners } from "../plan/PlanCard.tsx";
+import { usePlanDock } from "../plan/usePlanDock.ts";
 import { range, stopCount } from "../trip/format.ts";
 import { MapIcon } from "../trip/icons.tsx";
 import { useTrip } from "../trip/TripCard.tsx";
@@ -33,13 +35,17 @@ function TripOutput({ tripId, onOpen }: { tripId: string; onOpen: () => void }) 
 export function Workspace({
   threadId,
   onOpenTrip,
+  openers = {},
 }: {
   threadId: string | null;
   onOpenTrip: (tripId: string, version: number | null) => void;
+  openers?: PlanOpeners;
 }) {
   const { t } = useI18n();
   const store = useHub();
-  const { devices, messages } = useHubState(store);
+  const { devices, messages, plans } = useHubState(store);
+  const plan = threadId ? (plans[threadId] ?? null) : null;
+  const [planDocked, setPlanDocked] = usePlanDock(threadId);
   const tripIds = [
     ...new Set(
       (threadId ? (messages[threadId] ?? []) : []).flatMap((message) =>
@@ -52,6 +58,11 @@ export function Workspace({
 
   return (
     <aside className="workspace" aria-label={t("workspace-label")}>
+      {plan && planDocked && (
+        <section className="workspace__section workspace__plan">
+          <PlanCard plan={plan} docked openers={openers} onDock={setPlanDocked} />
+        </section>
+      )}
       {tripIds.length > 0 && (
         <section className="workspace__section">
           <h2 className="workspace__title">{t("workspace-outputs")}</h2>
