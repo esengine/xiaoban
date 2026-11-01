@@ -2,8 +2,8 @@ import { describeError } from "@xiaoban/client";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color, dark, radius, space } from "@xiaoban/tokens";
-import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,17 +22,19 @@ const CODE_LENGTH = 6;
 export default function PairScreen() {
   const { t } = useI18n();
   const { pair } = useHubContext();
-  const [address, setAddress] = useState("");
-  const [code, setCode] = useState("");
+  const link = useLocalSearchParams<{ host?: string; port?: string; code?: string }>();
+  const linked = link.host && link.code ? `${link.host}${link.port ? `:${link.port}` : ""}` : null;
+  const [address, setAddress] = useState(linked ?? "");
+  const [code, setCode] = useState(linked ? (link.code ?? "") : "");
   const [error, setError] = useState<PlainMessageKey | null>(null);
   const [busy, setBusy] = useState(false);
   const ready = address.trim().length > 0 && code.length === CODE_LENGTH && !busy;
 
-  const submit = async () => {
+  const submit = async (target = address, secret = code) => {
     setBusy(true);
     setError(null);
     try {
-      await pair(address, code);
+      await pair(target, secret);
       router.replace("/");
     } catch (cause) {
       setError(describeError(cause));
@@ -40,6 +42,13 @@ export default function PairScreen() {
       setBusy(false);
     }
   };
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (!linked || !link.code || started.current) return;
+    started.current = true;
+    void submit(linked, link.code);
+  });
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -91,7 +100,7 @@ export default function PairScreen() {
         <Pressable
           style={[styles.submit, !ready && styles.disabled]}
           disabled={!ready}
-          onPress={submit}
+          onPress={() => void submit()}
           accessibilityRole="button"
           accessibilityState={{ disabled: !ready, busy }}
         >
