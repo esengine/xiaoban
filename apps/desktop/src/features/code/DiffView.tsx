@@ -1,10 +1,43 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import type { DiffHunk, DiffLine, FileDiff } from "@xiaoban/protocol";
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { Chevron } from "../chat/ThreadList.tsx";
 import { highlightLine } from "./highlight.ts";
 
 type Mode = "unified" | "split";
+
+const OPEN_BUDGET = 600;
+const BIG_FILE = 400;
+
+export function linesOf(file: FileDiff): number {
+  return file.hunks.reduce((sum, hunk) => sum + hunk.lines.length, 0);
+}
+
+export function openByDefault(files: FileDiff[]): Set<string> {
+  const open = new Set<string>();
+  let used = 0;
+  for (const file of files) {
+    const lines = linesOf(file);
+    if (file.binary || lines > BIG_FILE || used + lines > OPEN_BUDGET) continue;
+    used += lines;
+    open.add(file.path);
+  }
+  return open;
+}
+
+export function useOpenFiles(files: FileDiff[]) {
+  const [toggled, setToggled] = useState<Set<string>>(new Set());
+  const defaults = useMemo(() => openByDefault(files), [files]);
+  const isOpen = (path: string) => defaults.has(path) !== toggled.has(path);
+  const toggle = (path: string) =>
+    setToggled((current) => {
+      const next = new Set(current);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  return { isOpen, toggle };
+}
 
 const Painted = memo(function Painted({ text, path }: { text: string; path: string }) {
   return (
@@ -183,18 +216,11 @@ export function DiffView({
 }) {
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("unified");
-  const [closed, setClosed] = useState<Set<string>>(new Set());
+  const { isOpen, toggle } = useOpenFiles(files);
   const gone = undone.filter((path) => !files.some((file) => file.path === path));
   if (files.length === 0 && gone.length === 0) {
     return <p className="code-empty">{t("code-no-changes")}</p>;
   }
-  const toggle = (path: string) =>
-    setClosed((current) => {
-      const next = new Set(current);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
   return (
     <div className="diff">
       <div className="diff__bar">
@@ -217,7 +243,7 @@ export function DiffView({
           <Undone key={path} path={path} whole onRestore={() => onRestore?.(path)} />
         ))}
         {files.map((file) => {
-          const open = !closed.has(file.path);
+          const open = isOpen(file.path);
           return (
             <section key={file.path} className="diff-file">
               <FileHead

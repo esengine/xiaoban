@@ -223,7 +223,7 @@ function RefCardBody({ item, onClose }: { item: GithubRef; onClose: () => void }
         <Badge item={item} />
         <span className="ref-card__where">
           {t(item.pull ? "ref-pr-where" : "ref-issue-where", {
-            number: item.number,
+            number: String(item.number),
             repo: item.repo,
           })}
         </span>
@@ -260,7 +260,7 @@ function RefCardBody({ item, onClose }: { item: GithubRef; onClose: () => void }
             type="button"
             data-primary
             onClick={() => {
-              refs.onAsk(t("ref-ask-failure", { number: item.number }));
+              refs.onAsk(t("ref-ask-failure", { number: String(item.number) }));
               onClose();
             }}
           >
@@ -306,7 +306,7 @@ export function RefChip({
     return (
       <span className="ref-chip" data-loading>
         <span className="ref-chip__dot" aria-hidden="true" />
-        {t("ref-number", { number: value })}
+        {t("ref-number", { number: String(value) })}
       </span>
     );
   }
@@ -328,7 +328,7 @@ export function RefChip({
         onClick={() => setOpen(!open)}
       >
         <span className="ref-chip__dot" aria-hidden="true" />
-        {t("ref-number", { number: value })}
+        {t("ref-number", { number: String(value) })}
       </button>
       {open && (
         <RefCard

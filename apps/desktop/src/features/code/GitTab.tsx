@@ -6,29 +6,22 @@ import { useHub } from "../../app/hub.tsx";
 import { recency } from "../chat/time.ts";
 import { BranchMenu } from "./BranchMenu.tsx";
 import { BranchIcon } from "./ChatBits.tsx";
-import { FileHead, HunkView } from "./DiffView.tsx";
+import { FileHead, HunkView, useOpenFiles } from "./DiffView.tsx";
 
 const WORKING = "working";
 
 function Files({ files }: { files: FileDiff[] }) {
-  const [closed, setClosed] = useState<Set<string>>(new Set());
+  const { isOpen, toggle } = useOpenFiles(files);
   return (
     <>
       {files.map((file) => {
-        const open = !closed.has(file.path);
+        const open = isOpen(file.path);
         return (
           <section key={file.path} className="diff-file">
             <FileHead
               file={file}
               open={open}
-              onToggle={() =>
-                setClosed((current) => {
-                  const next = new Set(current);
-                  if (next.has(file.path)) next.delete(file.path);
-                  else next.add(file.path);
-                  return next;
-                })
-              }
+              onToggle={() => toggle(file.path)}
               onOpen={null}
               onRevert={null}
             />

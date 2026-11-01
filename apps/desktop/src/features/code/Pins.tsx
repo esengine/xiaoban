@@ -37,7 +37,7 @@ function Pin({ number, repo }: { number: number; repo: string | null }) {
           <PinIcon pull={item.pull} />
         </span>
         <span className="ref-pin__label">
-          {t(item.pull ? "ref-pr-label" : "ref-issue-label", { number: item.number })}
+          {t(item.pull ? "ref-pr-label" : "ref-issue-label", { number: String(item.number) })}
         </span>
         <span className="ref-pin__title">{item.title}</span>
         <Badge item={item} />
