@@ -1,6 +1,13 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { connectionKey, type Draft, providerKey, type Settled } from "@xiaoban/client";
+import {
+  connectionKey,
+  type Draft,
+  providerKey,
+  runFailed,
+  type Settled,
+  scheduleOfThread,
+} from "@xiaoban/client";
 import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
@@ -29,6 +36,7 @@ import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { PlanCard } from "../plan/PlanCard.tsx";
 import { usePlanDock } from "../plan/usePlanDock.ts";
+import { FailedCard, RunMarker, ScheduleBar, ScheduleCard } from "../schedule/ScheduleCard.tsx";
 import { SheetCard } from "../sheet/SheetCard.tsx";
 import { DeckCard, WritingDecks } from "../slides/DeckCard.tsx";
 import { EventCard } from "../trip/EventCard.tsx";
@@ -292,6 +300,12 @@ export function ChatPane(full: Props) {
   const nextQueued = waitingHere[0];
   const holding = state.compacting[threadId]?.kind === "started";
   const plan = state.plans[threadId] ?? null;
+  const schedule = scheduleOfThread(state.schedules, threadId);
+  const schedulesLoaded = state.schedulesLoaded;
+  useEffect(() => {
+    if (state.status === "open" && !schedulesLoaded)
+      void store.listSchedules().catch(() => undefined);
+  }, [state.status, schedulesLoaded, store]);
   const [planDocked, setPlanDocked] = usePlanDock(threadId);
   useEffect(() => {
     if (state.status === "open" && !side) void store.loadPlan(threadId).catch(() => undefined);
@@ -526,6 +540,12 @@ export function ChatPane(full: Props) {
     if (attachment?.kind === "event") {
       return <EventCard event={attachment.event} />;
     }
+    if (attachment?.kind === "schedule") {
+      return <ScheduleCard scheduleId={attachment.scheduleId} onOpenThread={props.onOpenThread} />;
+    }
+    if (attachment?.kind === "schedule_failed") {
+      return <FailedCard scheduleId={attachment.scheduleId} reason={attachment.reason} />;
+    }
     if (attachment?.kind === "deck") {
       return <DeckCard deckId={attachment.deckId} onOpen={props.onOpenDeck} />;
     }
@@ -556,6 +576,17 @@ export function ChatPane(full: Props) {
   const renderRow = (row: Row) => {
     if (row.kind === "user") {
       const message = row.message;
+      const run = message.attachment;
+      if (run?.kind === "schedule_run") {
+        return (
+          <RunMarker
+            key={message.id}
+            mark={run.mark}
+            dueAt={run.dueAt}
+            failed={runFailed(messages, messages.indexOf(message))}
+          />
+        );
+      }
       return (
         <UserItem
           key={message.id}
@@ -656,6 +687,11 @@ export function ChatPane(full: Props) {
             />
           </div>
         )}
+        {!side && schedule && (
+          <div className="chat__plan">
+            <ScheduleBar schedule={schedule} />
+          </div>
+        )}
         {!side && <Pins items={pinItems} />}
         <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>
           {showLoading && (
@@ -743,7 +779,9 @@ export function ChatPane(full: Props) {
         {!side && <BranchBar threadId={threadId} />}
         <Composer
           busy={Boolean(running) || holding}
-          placeholder={side?.labels.placeholder}
+          placeholder={
+            side?.labels.placeholder ?? (schedule ? t("schedule-composer-hint") : undefined)
+          }
           quote={quote}
           onClearQuote={() => quoteWith(null)}
           attachments={attachments}

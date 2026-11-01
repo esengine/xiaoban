@@ -276,4 +276,7 @@ pub enum Attachment {
     Recipe { recipe_id: String },
     Event { event: crate::EventDraft },
     FloorPlan { plan_id: String },
+    Schedule { schedule_id: String },
+    ScheduleRun { schedule_id: String, mark: crate::RunMark, #[ts(type = "number")] due_at: i64 },
+    ScheduleFailed { schedule_id: String, reason: String },
 }

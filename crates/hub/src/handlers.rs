@@ -283,6 +283,13 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         request @ (Request::Plan { .. } | Request::ListPlans | Request::PlanAction { .. }) => {
             crate::plan::handle(state, request).await
         }
+        request @ (Request::ListSchedules
+        | Request::Schedule { .. }
+        | Request::StartSchedule { .. }
+        | Request::UpdateSchedule { .. }
+        | Request::SetScheduleActive { .. }
+        | Request::RunSchedule { .. }
+        | Request::DeleteSchedule { .. }) => crate::schedules::handle(state, request).await,
         request @ (Request::FindCapabilities { .. }
         | Request::ListCapabilities
         | Request::InstallCapability { .. }

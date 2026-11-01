@@ -101,6 +101,12 @@ pub enum Event {
         thread_id: String,
         plan: Option<crate::Plan>,
     },
+    ScheduleUpdated {
+        schedule: crate::Schedule,
+    },
+    ScheduleRemoved {
+        id: String,
+    },
     CapabilitiesChanged {
         capabilities: Vec<crate::Capability>,
     },
@@ -223,6 +229,8 @@ impl Event {
             | Self::NoticeWithdrawn { .. }
             | Self::DailyFeedChanged
             | Self::InsightAlert { .. }
+            | Self::ScheduleUpdated { .. }
+            | Self::ScheduleRemoved { .. }
             | Self::CapabilitiesChanged { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::Notify { notice } => notice.thread_id.as_deref(),

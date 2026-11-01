@@ -2832,3 +2832,147 @@ async fn phone_price_checks_are_read_only_and_only_keep_prices_on_screen() {
     assert!(matches!(costs.stays[1].price.source, PriceSource::None { voided: true, .. }));
     hub.shutdown().await;
 }
+
+struct FailingAt {
+    calls: std::sync::Mutex<usize>,
+    fail_at: usize,
+    then: RecordingProvider,
+}
+
+impl ModelProvider for FailingAt {
+    fn stream(&self, request: xiaoban_agent::ChatRequest) -> xiaoban_agent::ModelStream {
+        let mut calls = self.calls.lock().unwrap();
+        *calls += 1;
+        if *calls == self.fail_at {
+            return futures_util::stream::once(async { Err(AgentError::Stream("offline".into())) })
+                .boxed();
+        }
+        self.then.stream(request)
+    }
+}
+
+async fn schedule_of(client: &mut TestClient, id: &str) -> xiaoban_protocol::Schedule {
+    let Response::Schedule { schedule } = client
+        .request(Request::Schedule { id: id.into() })
+        .await
+    else {
+        panic!("expected a schedule");
+    };
+    schedule
+}
+
+async fn run_schedule(client: &mut TestClient, id: &str) -> Result<(), String> {
+    let Response::Schedule { schedule } = client
+        .request(Request::RunSchedule { id: id.into() })
+        .await
+    else {
+        panic!("expected a schedule");
+    };
+    let thread = schedule.thread_id.unwrap();
+    loop {
+        match client.next_event().await {
+            Event::TurnCompleted { message, .. } if message.thread_id == thread => return Ok(()),
+            Event::TurnFailed { failure, .. } => return Err(format!("{failure:?}")),
+            _ => {}
+        }
+    }
+}
+
+#[tokio::test]
+async fn scheduled_tasks_wait_for_start_then_run_report_and_record_failures() {
+    let recording = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "propose_schedule",
+            &serde_json::json!({
+                "title": "盯快递 SF1234",
+                "task": "查快递 SF1234 到哪了",
+                "kind": "every",
+                "every_minutes": 120,
+                "from": "08:00",
+                "to": "22:00",
+                "condition": "快递签收",
+                "notify": "changed",
+            }),
+        )],
+        vec![ModelChunk::Text("排好了，你确认一下".into())],
+        vec![tool_call(
+            "report_schedule",
+            &serde_json::json!({ "outcome": "met", "status": "已签收", "changed": true }),
+        )],
+        vec![ModelChunk::Text("快递已经签收了".into())],
+    ]));
+    let provider = FailingAt {
+        calls: std::sync::Mutex::new(0),
+        fail_at: 5,
+        then: recording.clone(),
+    };
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider)).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let origin = new_thread(&mut client).await;
+    converse(&mut client, &origin, "另外每 2 小时看一下这个快递到哪了", Vec::new()).await;
+
+    let card = latest_message_with(&mut client, &origin, |attachment| {
+        matches!(attachment, Attachment::Schedule { .. })
+    })
+    .await;
+    let Some(Attachment::Schedule { schedule_id }) = card.attachment else {
+        panic!("expected a task card");
+    };
+    let draft = schedule_of(&mut client, &schedule_id).await;
+    assert_eq!(draft.state, xiaoban_protocol::ScheduleState::Draft);
+    assert_eq!(draft.thread_id, None);
+    let Response::Schedules { schedules } = client.request(Request::ListSchedules).await else {
+        panic!("expected schedules");
+    };
+    assert!(schedules.is_empty(), "a card that was not started must not take effect");
+    let early = client
+        .try_request(Request::RunSchedule {
+            id: schedule_id.clone(),
+        })
+        .await
+        .unwrap_err();
+    assert_eq!(early.code, ErrorCode::BadRequest);
+
+    let Response::Schedule { schedule } = client
+        .request(Request::StartSchedule {
+            id: schedule_id.clone(),
+        })
+        .await
+    else {
+        panic!("expected a schedule");
+    };
+    assert_eq!(schedule.state, xiaoban_protocol::ScheduleState::Active);
+    assert!(schedule.next_at.is_some());
+    let thread = schedule.thread_id.clone().unwrap();
+    assert_ne!(thread, origin);
+
+    run_schedule(&mut client, &schedule_id).await.unwrap();
+    let done = schedule_of(&mut client, &schedule_id).await;
+    assert_eq!(done.state, xiaoban_protocol::ScheduleState::Finished);
+    assert_eq!(done.runs, 1);
+    assert_eq!(done.last.as_ref().unwrap().status, "已签收");
+    let trigger = latest_message_with(&mut client, &thread, |attachment| {
+        matches!(attachment, Attachment::ScheduleRun { .. })
+    })
+    .await;
+    assert_eq!(trigger.role, Role::User);
+    assert_eq!(trigger.text, "查快递 SF1234 到哪了");
+    let asked = recording.requests()[2]
+        .messages
+        .iter()
+        .any(|message| message.content.contains("快递签收"));
+    assert!(asked, "the stop condition should reach the model");
+
+    assert!(run_schedule(&mut client, &schedule_id).await.is_err());
+    let failed = latest_message_with(&mut client, &thread, |attachment| {
+        matches!(attachment, Attachment::ScheduleFailed { .. })
+    })
+    .await;
+    assert_eq!(failed.role, Role::Assistant);
+    let after = schedule_of(&mut client, &schedule_id).await;
+    let last = after.last.unwrap();
+    assert!(!last.ok);
+    assert!(last.reason.is_some_and(|reason| !reason.is_empty()));
+    assert_eq!(after.runs, 2);
+    hub.shutdown().await;
+}

@@ -19,6 +19,7 @@ import type { ModelInfo } from "./ModelInfo.ts";
 import type { Notice } from "./Notice.ts";
 import type { Plan } from "./Plan.ts";
 import type { PrepTask } from "./PrepTask.ts";
+import type { Schedule } from "./Schedule.ts";
 import type { StepResult } from "./StepResult.ts";
 import type { Thread } from "./Thread.ts";
 import type { Usage } from "./Usage.ts";
@@ -56,6 +57,8 @@ export type Event =
   | { type: "thread_archived"; threadId: string; archived: Archived }
   | { type: "thread_compacting"; threadId: string; phase: CompactPhase }
   | { type: "plan_updated"; threadId: string; plan: Plan | null }
+  | { type: "schedule_updated"; schedule: Schedule }
+  | { type: "schedule_removed"; id: string }
   | { type: "capabilities_changed"; capabilities: Array<Capability> }
   | {
       type: "capabilities_found";

@@ -5,6 +5,8 @@ import { type HostInstance, Pressable, View } from "react-native";
 import { EventCard } from "../calendar/EventCard.tsx";
 import { FloorCard } from "../floor/FloorCard.tsx";
 import { RecipeCard } from "../life/RecipeCard.tsx";
+import { FailedCard } from "../schedule/ScheduleBits.tsx";
+import { ScheduleCard } from "../schedule/ScheduleCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { DeckCard, DocCard, SheetCard } from "../work/WorkCards.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
@@ -29,6 +31,10 @@ function AttachmentCard({ message, last }: { message: Message; last: boolean }) 
       return <EventCard event={attachment.event} />;
     case "floor_plan":
       return <FloorCard planId={attachment.planId} />;
+    case "schedule":
+      return <ScheduleCard scheduleId={attachment.scheduleId} />;
+    case "schedule_failed":
+      return <FailedCard scheduleId={attachment.scheduleId} reason={attachment.reason} />;
     case "subthreads":
       return <SubthreadCards threadIds={attachment.threadIds} />;
     case "service_needed":
@@ -62,7 +68,9 @@ export function MessageItem({
     >
       {report ? <ReportTitle threadId={report.threadId} title={report.title} /> : null}
       <SentFiles files={message.files} align={user ? "flex-end" : "flex-start"} />
-      {message.text || message.quote || message.files.length === 0 ? (
+      {message.text ||
+      message.quote ||
+      (message.files.length === 0 && message.attachment?.kind !== "schedule_failed") ? (
         <Pressable delayLongPress={350} onLongPress={() => onLongPress(ref.current)}>
           <Bubble
             from={user ? "user" : "assistant"}

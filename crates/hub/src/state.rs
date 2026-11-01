@@ -40,6 +40,7 @@ pub struct HubState {
     pub operator: Arc<dyn crate::operate::Operator>,
     pub confirms: crate::confirms::Confirms,
     pub pauses: crate::pauses::Pauses,
+    pub schedules: crate::schedules::Runs,
     pub files: crate::files::Files,
     pub auto_titles: bool,
     pub auto_thinking: bool,

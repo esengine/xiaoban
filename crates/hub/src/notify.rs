@@ -550,6 +550,11 @@ pub fn watch(state: SharedState, shutdown: CancellationToken) {
                 () = shutdown.cancelled() => return,
             };
             match event {
+                Ok(Event::TurnCompleted { turn_id, .. } | Event::TurnFailed { turn_id, .. })
+                    if state.schedules.take_quiet(&turn_id) =>
+                {
+                    turns.remove(&turn_id);
+                }
                 Ok(event) => {
                     let draft = match event {
                         Event::InsightAlert { insight } => Some(insight_draft(&state.localizer, insight)),

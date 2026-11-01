@@ -560,6 +560,26 @@ pub enum Request {
         thread_id: String,
     },
     ListPlans,
+    ListSchedules,
+    Schedule {
+        id: String,
+    },
+    StartSchedule {
+        id: String,
+    },
+    UpdateSchedule {
+        schedule: Box<crate::Schedule>,
+    },
+    SetScheduleActive {
+        id: String,
+        active: bool,
+    },
+    RunSchedule {
+        id: String,
+    },
+    DeleteSchedule {
+        id: String,
+    },
     PlanAction {
         thread_id: String,
         action: crate::PlanAction,
@@ -828,6 +848,12 @@ pub enum Response {
     },
     Plans {
         plans: Vec<crate::Plan>,
+    },
+    Schedule {
+        schedule: crate::Schedule,
+    },
+    Schedules {
+        schedules: Vec<crate::Schedule>,
     },
     Capabilities {
         capabilities: Vec<crate::Capability>,

@@ -49,6 +49,10 @@ export default function RootLayout() {
             options={{ headerShown: false, title: t("notify-settings-title") }}
           />
           <Stack.Screen
+            name="schedules"
+            options={{ headerShown: false, title: t("schedules-title") }}
+          />
+          <Stack.Screen
             name="calendar-settings"
             options={{ headerShown: false, title: t("calendar-settings-title") }}
           />

@@ -13741,6 +13741,16 @@ button.sent-files__image {
 
 .floor__pending {
   display: flex;
+.schedule-card,
+.schedule-failed {
+  margin-top: 10px;
+  width: 340px;
+  max-width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-surface);
+  display: flex;
   flex-direction: column;
   gap: 10px;
 }
@@ -13817,6 +13827,93 @@ button.sent-files__image {
 }
 
 .floor-measure-row__bad {
+.schedule-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 15px;
+  color: var(--color-ink);
+}
+
+.schedule-card__head .button-icon,
+.schedule-bar .button-icon {
+  stroke: var(--color-accent);
+  flex: none;
+}
+
+.schedule-card__rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.schedule-card__row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 12px;
+}
+
+.schedule-card__row dt {
+  color: var(--color-faded);
+}
+
+.schedule-card__row dd {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.schedule-card__value {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.schedule-card__value:hover {
+  color: var(--color-accent);
+}
+
+.schedule-card__foot {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--color-faded);
+}
+
+.schedule-card__buttons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.schedule-card__buttons .button {
+  flex: 1;
+  justify-content: center;
+}
+
+.schedule-card__status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 13px;
+  color: var(--color-success);
+}
+
+.schedule-card__link {
+  margin-left: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.schedule-card__invalid {
   margin: 0;
   font-size: 12px;
   color: var(--color-danger-ink);
@@ -14502,4 +14599,239 @@ button.sent-files__image {
 
 .daily__done-state[data-running] {
   color: var(--color-accent);
+.schedule-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-edit__field {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 12px;
+  font-size: 13px;
+}
+
+.schedule-edit__field > span {
+  padding-top: 6px;
+  color: var(--color-faded);
+}
+
+.schedule-edit__field > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-edit__input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  outline: none;
+}
+
+.schedule-edit__input:focus {
+  border-color: var(--color-accent);
+}
+
+.schedule-edit__area {
+  height: 60px;
+  padding: 6px 8px;
+  resize: vertical;
+}
+
+.schedule-edit__time {
+  flex: 0 0 auto;
+  width: 120px;
+}
+
+.schedule-chip {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 12px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.schedule-chip[data-on] {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+
+.schedule-bar {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.schedule-bar__text {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.schedule-bar__text b {
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+.schedule-bar__text span {
+  font-size: 11.5px;
+  color: var(--color-muted);
+}
+
+.schedule-bar__link,
+.schedule-bar__muted {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.schedule-bar__link {
+  color: var(--color-accent);
+}
+
+.schedule-bar__muted {
+  color: var(--color-muted);
+}
+
+.schedule-marker {
+  align-self: center;
+}
+
+.schedule-marker span {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: var(--color-chip-soft);
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.schedule-failed {
+  border-color: var(--color-attention-line);
+}
+
+.schedule-failed b {
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.schedule-failed p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+.schedules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedules__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.schedules__item + .schedules__item {
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.schedules__text {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.schedules__text b {
+  font-size: 13.5px;
+  color: var(--color-ink);
+}
+
+.schedules__text span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.schedules__text .schedules__last {
+  color: var(--color-success);
+}
+
+.schedules__text .schedules__last[data-failed] {
+  color: var(--color-danger-ink);
+}
+
+.schedules__toggle {
+  flex: none;
+  width: 36px;
+  height: 22px;
+  padding: 2px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--color-line-strong);
+  display: flex;
+  cursor: pointer;
+}
+
+.schedules__toggle span {
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--color-surface);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.schedules__toggle[aria-checked="true"] {
+  background: var(--color-accent);
+}
+
+.schedules__toggle[aria-checked="true"] span {
+  transform: translateX(14px);
 }

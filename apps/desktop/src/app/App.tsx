@@ -140,10 +140,19 @@ function Home() {
     setView(next === "daily" ? "daily" : "chat");
   };
 
+  const openThread = (threadId: string) => {
+    setTrip(null);
+    setDeckView(null);
+    setSheetView(null);
+    setDocView(null);
+    setView("chat");
+    setSelected(threadId);
+  };
+
   if (view !== "chat" && !trip) {
     return (
       <div className="shell">
-        <Rail current="daily" onNavigate={navigate} />
+        <Rail onOpenThread={openThread} current="daily" onNavigate={navigate} />
         {view === "cook" ? (
           <CookPage onBack={() => setView(cookReturn)} />
         ) : view === "kitchen" || view === "week" ? (
@@ -194,6 +203,7 @@ function Home() {
     return (
       <div className="shell">
         <Rail
+          onOpenThread={openThread}
           onNavigate={(next) => {
             setDeckView(null);
             navigate(next);
@@ -213,6 +223,7 @@ function Home() {
     return (
       <div className="shell">
         <Rail
+          onOpenThread={openThread}
           onNavigate={(next) => {
             setSheetView(null);
             navigate(next);
@@ -257,6 +268,7 @@ function Home() {
     return (
       <div className="shell">
         <Rail
+          onOpenThread={openThread}
           onNavigate={(next) => {
             setDocView(null);
             navigate(next);
@@ -272,7 +284,7 @@ function Home() {
     const thread = threads.find((candidate) => candidate.id === trip.threadId);
     return (
       <div className="shell">
-        <Rail onNavigate={navigate} />
+        <Rail onOpenThread={openThread} onNavigate={navigate} />
         <TripWorkbench
           key={`${trip.tripId}@${trip.version ?? "latest"}`}
           tripId={trip.tripId}
@@ -291,7 +303,7 @@ function Home() {
 
   return (
     <div className="shell" data-chat-hidden={chatHidden || undefined}>
-      <Rail onNavigate={navigate} />
+      <Rail onOpenThread={openThread} onNavigate={navigate} />
       <div
         className="panel panel--list"
         data-open={panels.list}

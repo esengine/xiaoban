@@ -26,6 +26,7 @@ export function Composer({
   busy,
   stoppable,
   quote,
+  placeholder,
   onClearQuote,
   onSend,
   onStop,
@@ -34,6 +35,7 @@ export function Composer({
   busy: boolean;
   stoppable: boolean;
   quote: Quote | null;
+  placeholder?: string | undefined;
   onClearQuote: () => void;
   onSend: (text: string, files: string[]) => void;
   onStop: () => void;
@@ -135,9 +137,11 @@ export function Composer({
               placeholder={
                 busy
                   ? t("composer-placeholder-busy")
-                  : voice.available
-                    ? t("chat-placeholder-voice")
-                    : t("chat-placeholder")
+                  : placeholder
+                    ? placeholder
+                    : voice.available
+                      ? t("chat-placeholder-voice")
+                      : t("chat-placeholder")
               }
               placeholderTextColor={color.faint}
               value={text}

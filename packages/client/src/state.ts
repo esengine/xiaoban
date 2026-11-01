@@ -23,6 +23,7 @@ import type {
   Plan,
   Preferences,
   RecipeView,
+  Schedule,
   ServiceStatus,
   StepResult,
   Thread,
@@ -80,6 +81,8 @@ export interface HubState {
   archived: Record<string, Archived>;
   compacting: Readonly<Record<string, CompactPhase>>;
   plans: Readonly<Record<string, Plan | null>>;
+  schedules: Readonly<Record<string, Schedule>>;
+  schedulesLoaded: boolean;
   capabilities: Capability[];
   foundCapabilities: Readonly<Record<string, Capability[]>>;
   usedCapabilities: Readonly<Record<string, string[]>>;
@@ -123,6 +126,8 @@ export const initialHubState: HubState = {
   archived: {},
   compacting: {},
   plans: {},
+  schedules: {},
+  schedulesLoaded: false,
   capabilities: [],
   foundCapabilities: {},
   usedCapabilities: {},
@@ -203,6 +208,15 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "plan_updated":
       return { ...state, plans: { ...state.plans, [event.threadId]: event.plan } };
+    case "schedule_updated":
+      return {
+        ...state,
+        schedules: { ...state.schedules, [event.schedule.id]: event.schedule },
+      };
+    case "schedule_removed": {
+      const { [event.id]: _removed, ...schedules } = state.schedules;
+      return { ...state, schedules };
+    }
     case "capabilities_changed":
       return { ...state, capabilities: event.capabilities };
     case "capabilities_found":

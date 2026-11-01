@@ -18,6 +18,7 @@ mod relay;
 mod sheet;
 mod slides;
 mod request;
+mod schedule;
 mod trip;
 mod weather;
 
@@ -41,6 +42,7 @@ pub use relay::*;
 pub use sheet::*;
 pub use slides::*;
 pub use request::*;
+pub use schedule::*;
 pub use trip::*;
 pub use weather::*;
 

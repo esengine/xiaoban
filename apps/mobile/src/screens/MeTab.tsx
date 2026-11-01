@@ -156,6 +156,26 @@ export function MeTab({ store }: { store: HubStore }) {
 
       <Pressable
         style={[styles.card, styles.modelRow]}
+        onPress={() => router.push("/schedules")}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.cardTitle, styles.flex]}>{t("schedules-title")}</Text>
+        <Svg
+          width={14}
+          height={14}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color.faint}
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <Path d="M9 6l6 6-6 6" />
+        </Svg>
+      </Pressable>
+
+      <Pressable
+        style={[styles.card, styles.modelRow]}
         onPress={() => router.push("/calendar-settings")}
         accessibilityRole="button"
       >
