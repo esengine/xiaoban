@@ -43,6 +43,7 @@ export function useVoice(onText: (text: string) => void) {
   const [transcript, setTranscript] = useState("");
   const [levels, setLevels] = useState<number[]>(QUIET);
   const [note, setNote] = useState<string | null>(null);
+  const [fixable, setFixable] = useState(false);
   const id = useRef(Symbol("voice")).current;
   const phaseRef = useRef<VoicePhase>("idle");
   const committed = useRef("");
@@ -58,10 +59,17 @@ export function useVoice(onText: (text: string) => void) {
     setPhaseState(next);
   }, []);
 
-  const flash = useCallback((text: string) => {
+  const flash = useCallback((text: string, fix = false) => {
     if (noteTimer.current) clearTimeout(noteTimer.current);
     setNote(text);
-    noteTimer.current = setTimeout(() => setNote(null), NOTE_TIME);
+    setFixable(fix);
+    noteTimer.current = setTimeout(
+      () => {
+        setNote(null);
+        setFixable(false);
+      },
+      fix ? NOTE_TIME * 4 : NOTE_TIME,
+    );
   }, []);
 
   const reset = useCallback(() => {
@@ -112,6 +120,12 @@ export function useVoice(onText: (text: string) => void) {
       }),
       ExpoSpeechRecognitionModule.addListener("error", (event: ExpoSpeechRecognitionErrorEvent) => {
         if (!mine() || event.error === "aborted") return;
+        if (event.error === "service-not-allowed") {
+          reset();
+          setMode("typing");
+          flash(t("voice-service-mic"), true);
+          return;
+        }
         if (event.error === "not-allowed") {
           reset();
           setMode("typing");
@@ -229,6 +243,7 @@ export function useVoice(onText: (text: string) => void) {
     transcript,
     levels: reduced ? RESTING : levels,
     note,
+    fixable,
     enterVoice,
     enterTyping,
     begin,

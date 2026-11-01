@@ -40,6 +40,19 @@ class XiaobanHubModule : Module() {
       OperatorOverlay.external(state)
     }
 
+    Function("openRecognizerSettings") { hint: String ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val service = Settings.Secure.getString(context.contentResolver, "voice_recognition_service")
+      val target = service?.let { ComponentName.unflattenFromString(it)?.packageName }
+      val intent = if (target != null) {
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$target"))
+      } else {
+        Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS)
+      }
+      context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+      Toast.makeText(context, hint, Toast.LENGTH_LONG).show()
+    }
+
     Function("operatorReady") {
       XiaobanOperatorService.current != null
     }

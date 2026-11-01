@@ -2,6 +2,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
 import { useMemo, useRef } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
+import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { Icon } from "../ui/Icon.tsx";
 import { type Voice, WAVE_BARS } from "./useVoice.ts";
 
@@ -109,11 +110,23 @@ export function VoiceSwitch({
 }
 
 export function VoiceNote({ voice, style }: { voice: Voice; style?: TextStyle }) {
+  const { t } = useI18n();
   if (!voice.note) return null;
   return (
-    <Text style={[styles.note, style]} accessibilityLiveRegion="polite">
-      {voice.note}
-    </Text>
+    <View style={styles.noteRow}>
+      <Text style={[styles.note, style]} accessibilityLiveRegion="polite">
+        {voice.note}
+      </Text>
+      {voice.fixable ? (
+        <Pressable
+          hitSlop={8}
+          accessibilityRole="button"
+          onPress={() => XiaobanHub?.openRecognizerSettings(t("voice-service-toast"))}
+        >
+          <Text style={styles.noteFix}>{t("voice-service-fix")}</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -143,5 +156,7 @@ const styles = StyleSheet.create({
   wave: { flexDirection: "row", alignItems: "center", gap: 2, height: 22 },
   bar: { width: 3, borderRadius: 2, backgroundColor: color.surface },
   switch: { alignItems: "center", justifyContent: "center" },
-  note: { paddingHorizontal: 6, fontSize: 12, lineHeight: 17, color: color.muted },
+  note: { flexShrink: 1, paddingHorizontal: 6, fontSize: 12, lineHeight: 17, color: color.muted },
+  noteRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  noteFix: { fontSize: 12, fontWeight: "500", color: color.accent },
 });

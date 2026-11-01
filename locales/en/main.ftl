@@ -2037,3 +2037,6 @@ skills-browser = Built-in browser
 skills-browser-example = Compare 800 mm floor tiles on the building-supply site
 skills-phone = Use this Android phone
 skills-phone-example = Move the measuring appointment to Friday
+voice-service-mic = The system speech recognition service has no microphone permission, so it can't hear you
+voice-service-fix = Turn it on
+voice-service-toast = Open Permissions › Microphone, choose "Allow only while in use", then come back

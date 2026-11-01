@@ -7,6 +7,7 @@ interface XiaobanHubNative {
   island(state: string): void;
   operatorReady(): boolean;
   openOperatorSettings(detailHint: string, listHint: string): void;
+  openRecognizerSettings(hint: string): void;
 }
 
 export const XiaobanHub = requireOptionalNativeModule<XiaobanHubNative>("XiaobanHub");

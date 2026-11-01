@@ -2025,3 +2025,6 @@ skills-browser = 内置浏览器
 skills-browser-example = 在建材商城比一下 800 的地砖
 skills-phone = 操作安卓手机
 skills-phone-example = 把量尺预约改到周五
+voice-service-mic = 系统的语音识别服务没有麦克风权限，所以听不到
+voice-service-fix = 去打开
+voice-service-toast = 点「权限」› 麦克风，选「仅在使用中允许」，再回到小伴
