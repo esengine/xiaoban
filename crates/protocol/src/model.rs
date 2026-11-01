@@ -171,6 +171,7 @@ impl ProviderId {
 pub enum ModelApi {
     #[default]
     OpenAi,
+    Responses,
     Anthropic,
 }
 
@@ -178,6 +179,7 @@ impl ModelApi {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::OpenAi => "open_ai",
+            Self::Responses => "responses",
             Self::Anthropic => "anthropic",
         }
     }
@@ -185,6 +187,7 @@ impl ModelApi {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "open_ai" => Some(Self::OpenAi),
+            "responses" => Some(Self::Responses),
             "anthropic" => Some(Self::Anthropic),
             _ => None,
         }

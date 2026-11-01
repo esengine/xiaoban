@@ -65,6 +65,7 @@ pub fn normalize_base_url(raw: &str) -> Result<String, AgentError> {
     let path = path
         .strip_suffix("/chat/completions")
         .or_else(|| path.strip_suffix("/messages"))
+        .or_else(|| path.strip_suffix("/responses"))
         .or_else(|| path.strip_suffix("/models"))
         .unwrap_or(path)
         .to_owned();
@@ -214,7 +215,13 @@ mod tests {
         assert_eq!(custom.info.label.as_deref(), Some("我的中转站"));
         assert_eq!(custom.config.base_url, "https://relay.example.com/v1");
         assert!(matches!(
-            ConfiguredProvider::custom("https://r.example.com", "k".into(), " ", None, ModelApi::OpenAi),
+            ConfiguredProvider::custom(
+                "https://r.example.com",
+                "k".into(),
+                " ",
+                None,
+                ModelApi::OpenAi
+            ),
             Err(AgentError::UnknownModel { .. })
         ));
     }

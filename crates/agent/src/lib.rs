@@ -6,6 +6,7 @@ mod prompt;
 mod provider;
 mod providers;
 mod recording;
+mod responses;
 mod scripted;
 mod turn;
 
@@ -24,5 +25,6 @@ pub use providers::{
     ConfiguredProvider, PRESETS, ProviderPreset, first_configured_from_env, normalize_base_url,
 };
 pub use recording::RecordingProvider;
+pub use responses::Responses;
 pub use scripted::{ScriptedProvider, UnconfiguredProvider};
 pub use turn::{Agent, NoTools, ToolRunner, TurnEvent, TurnOutcome};

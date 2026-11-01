@@ -205,9 +205,15 @@ enum Block {
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum BlockDelta {
-    TextDelta { text: String },
-    ThinkingDelta { thinking: String },
-    InputJsonDelta { partial_json: String },
+    TextDelta {
+        text: String,
+    },
+    ThinkingDelta {
+        thinking: String,
+    },
+    InputJsonDelta {
+        partial_json: String,
+    },
     #[serde(other)]
     Other,
 }
@@ -327,7 +333,11 @@ mod tests {
                     .with_images(vec!["data:image/png;base64,AAA".into()]),
                 ChatMessage::assistant_calls(
                     "",
-                    vec![ToolCall::function("c1", "remember", r#"{"subject":"称呼"}"#)],
+                    vec![ToolCall::function(
+                        "c1",
+                        "remember",
+                        r#"{"subject":"称呼"}"#,
+                    )],
                 ),
                 ChatMessage::tool_result("c1", "ok"),
                 ChatMessage::new(ChatRole::User, "好"),
@@ -340,7 +350,10 @@ mod tests {
         let (system, messages) = wire(&request);
         assert_eq!(system, "你是小伴");
         assert_eq!(messages.len(), 3);
-        assert_eq!(messages[0]["content"][0]["source"]["media_type"], "image/png");
+        assert_eq!(
+            messages[0]["content"][0]["source"]["media_type"],
+            "image/png"
+        );
         assert_eq!(messages[0]["content"][1]["text"], "记一下");
         assert_eq!(messages[1]["content"][0]["type"], "tool_use");
         assert_eq!(messages[1]["content"][0]["input"]["subject"], "称呼");
@@ -385,6 +398,9 @@ mod tests {
             })]
         );
         assert_eq!(decode(r#"{"type":"ping"}"#).unwrap(), Vec::new());
-        assert!(decode(r#"{"type":"error","error":{"type":"overloaded_error","message":"busy"}}"#).is_err());
+        assert!(
+            decode(r#"{"type":"error","error":{"type":"overloaded_error","message":"busy"}}"#)
+                .is_err()
+        );
     }
 }

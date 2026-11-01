@@ -11,7 +11,7 @@ type Problem =
   | { failure: Failure; model: string }
   | { unreachable: true; key: ReturnType<typeof describeError> };
 
-const APIS: ModelApi[] = ["open_ai", "anthropic"];
+const APIS: ModelApi[] = ["open_ai", "responses", "anthropic"];
 
 export function ModelStep({ onDone }: { onDone: () => void }) {
   const { t, locale } = useI18n();
