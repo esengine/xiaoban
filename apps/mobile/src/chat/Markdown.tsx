@@ -3,15 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { color, dark } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
 import { memo, type ReactNode, useMemo, useState } from "react";
-import {
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  type TextStyle,
-  View,
-} from "react-native";
+import { Linking, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -135,11 +127,9 @@ function CodeBlock({ node }: { node: Node }) {
   };
   return (
     <View style={styles.pre}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Text style={styles.preText} selectable>
-          {node.value}
-        </Text>
-      </ScrollView>
+      <Text style={styles.preText} selectable>
+        {node.value}
+      </Text>
       <Pressable
         style={styles.copy}
         hitSlop={8}
@@ -156,27 +146,21 @@ function CodeBlock({ node }: { node: Node }) {
 function Table({ node, tone }: { node: Node; tone: Tone }) {
   const rows = node.children ?? [];
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={styles.table}>
-        {rows.map((row, r) => (
-          <View key={`r${r}`} style={[styles.tr, r === 0 && styles.th]}>
-            {(row.children ?? []).map((cell, c) => (
-              <View key={`c${c}`} style={styles.td}>
-                <Text
-                  style={[
-                    styles.base,
-                    tone === "dark" && styles.baseDark,
-                    r === 0 && styles.strong,
-                  ]}
-                >
-                  <Inline nodes={cell.children ?? []} tone={tone} />
-                </Text>
-              </View>
-            ))}
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+    <View style={styles.table}>
+      {rows.map((row, r) => (
+        <View key={`r${r}`} style={[styles.tr, r === 0 && styles.th]}>
+          {(row.children ?? []).map((cell, c) => (
+            <View key={`c${c}`} style={[styles.td, c === 0 && styles.tdFirst]}>
+              <Text
+                style={[styles.cell, tone === "dark" && styles.baseDark, r === 0 && styles.strong]}
+              >
+                <Inline nodes={cell.children ?? []} tone={tone} />
+              </Text>
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -322,18 +306,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   boxOn: { backgroundColor: color.accent, borderColor: color.accent },
-  table: { borderWidth: 1, borderColor: color.line, borderRadius: 8, overflow: "hidden" },
-  tr: { flexDirection: "row" },
+  table: {
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  tr: { flexDirection: "row", borderTopWidth: 1, borderColor: color.lineSoft },
   th: { backgroundColor: color.ground },
   td: {
-    minWidth: 90,
-    maxWidth: 220,
-    paddingHorizontal: 8,
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
+    borderLeftWidth: 1,
     borderColor: color.lineSoft,
   },
+  tdFirst: { borderLeftWidth: 0 },
+  cell: { fontSize: 13, lineHeight: 19, color: color.ink },
   rule: { height: 1, backgroundColor: color.line, marginVertical: 4 },
   footnote: { flexDirection: "row", gap: 6 },
 });
