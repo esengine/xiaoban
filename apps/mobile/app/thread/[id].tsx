@@ -374,7 +374,6 @@ export default function ThreadScreen() {
         return <Text style={styles.time}>{row.text}</Text>;
       case "notice":
         return <Text style={styles.notice}>{row.text}</Text>;
-      case "user":
       case "user": {
         const run = row.message.attachment;
         if (run?.kind === "schedule_run") {

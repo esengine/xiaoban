@@ -5,18 +5,18 @@ export interface PlanDate {
   allDay: boolean;
 }
 
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const any = (items: string[]) => items.map(escape).join("|");
-const weekdayChars = Object.keys(words.weekdays).map(escape).join("");
-const dateMark = `[-/.${words.dateMarks.map(escape).join("")}]`;
+const quote = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const any = (items: string[]) => items.map(quote).join("|");
+const weekdayChars = Object.keys(words.weekdays).map(quote).join("");
+const dateMark = `[-/.${words.dateMarks.map(quote).join("")}]`;
 const FULL = new RegExp(`(\\d{4})${dateMark}(\\d{1,2})${dateMark}(\\d{1,2})`);
-const SHORT = new RegExp(`(\\d{1,2})[/.${escape(words.dateMarks[1] ?? "")}](\\d{1,2})`);
+const SHORT = new RegExp(`(\\d{1,2})[/.${quote(words.dateMarks[1] ?? "")}](\\d{1,2})`);
 const WEEK = new RegExp(
-  `(${escape(words.afterNext)}|${escape(words.next)})?(?:${any(words.week)})([${weekdayChars}])`,
+  `(${quote(words.afterNext)}|${quote(words.next)})?(?:${any(words.week)})([${weekdayChars}])`,
 );
-const CLOCK = new RegExp(`(\\d{1,2})[:${escape(words.clockMarks[0] ?? "")}](\\d{2})`);
+const CLOCK = new RegExp(`(\\d{1,2})[:${quote(words.clockMarks[0] ?? "")}](\\d{2})`);
 const HOUR = new RegExp(
-  `(\\d{1,2})${escape(words.clockMarks[1] ?? "")}(${escape(words.half)}|(\\d{1,2})${escape(words.minute)}?)?`,
+  `(\\d{1,2})${quote(words.clockMarks[1] ?? "")}(${quote(words.half)}|(\\d{1,2})${quote(words.minute)}?)?`,
 );
 const LATE = new RegExp(any(words.afternoon));
 const weekdays: Record<string, number> = words.weekdays;
