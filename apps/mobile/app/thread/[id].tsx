@@ -315,6 +315,7 @@ export default function ThreadScreen() {
             {row.settled && <TraceSummary trace={row.settled} />}
             <MessageItem
               message={row.message}
+              last={row.message.id === messages.at(-1)?.id}
               footer={
                 row.message.thinking ? <ThoughtToggle thinking={row.message.thinking} /> : null
               }

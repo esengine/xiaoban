@@ -3,7 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Keep } from "@xiaoban/protocol";
 import { color, dark } from "@xiaoban/tokens";
 import { router } from "expo-router";
-import { type ComponentRef, type ReactNode, useMemo, useRef, useState } from "react";
+import { type ComponentRef, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -84,31 +84,30 @@ export function HeaderLink({ label, onPress }: { label: string; onPress: () => v
   );
 }
 
-export function ChatBar({
-  store,
-  threadId,
-  placeholder,
-  top,
-  disabled = false,
-  onSend,
-}: {
+export function ChatBar(props: {
   store: HubStore;
   threadId: string | null;
   placeholder: string;
   top?: ReactNode;
   disabled?: boolean;
-  onSend?: (text: string) => Promise<unknown>;
+  onSend?: ((text: string) => Promise<unknown>) | undefined;
+  turn?: string | null;
+  onTurn?: (turnId: string | null) => void;
+  focusKey?: number;
 }) {
+  const { store, threadId, placeholder, top, disabled = false, onSend, onTurn } = props;
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
-  const [turn, setTurn] = useState<string | null>(null);
+  const [ownTurn, setOwnTurn] = useState<string | null>(null);
+  const turn = onTurn ? (props.turn ?? null) : ownTurn;
+  const setTurn = onTurn ?? setOwnTurn;
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const submit = (value: string) => {
     if (!value || !threadId || disabled) return false;
-    const sent = onSend
-      ? onSend(value)
-      : store.send(threadId, value).then((turnId) => setTurn(turnId));
+    const sent = (onSend ? onSend(value) : store.send(threadId, value)).then((result) => {
+      if (typeof result === "string") setTurn(result);
+    });
     void sent.catch(() => {
       setText(value);
       voice.enterTyping();
@@ -127,9 +126,13 @@ export function ChatBar({
   const speaking = voice.available && voice.mode === "voice" && threadId !== null;
   const ready = Boolean(text.trim() && threadId && !disabled);
   const focusInput = () => setTimeout(() => input.current?.focus(), 50);
+  const focusKey = props.focusKey ?? 0;
+  useEffect(() => {
+    if (focusKey > 0) setTimeout(() => input.current?.focus(), 50);
+  }, [focusKey]);
   return (
     <View style={[styles.bar, top ? styles.barRaised : null]}>
-      {turn && threadId && !onSend ? (
+      {turn && threadId ? (
         <LifeReply store={store} threadId={threadId} turnId={turn} onClose={() => setTurn(null)} />
       ) : null}
       {top}

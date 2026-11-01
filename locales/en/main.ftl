@@ -2022,3 +2022,34 @@ voice-release-cancel = Release to cancel
 voice-switch-voice = Switch to voice
 voice-switch-typing = Switch to typing
 voice-empty = Didn't catch that, try again
+doc-phone-pending = { $count ->
+    [one] 1 change waiting for you
+   *[other] { $count } changes waiting for you
+}
+doc-phone-share = Export and share
+doc-phone-send = Send to someone
+doc-phone-export-note = Word and PDF export is on your computer
+doc-phone-suggestion = Xiaoban's version · "{ $action }"
+doc-phone-asking = Ask about: { $text }
+sheet-phone-export = Export
+sheet-phone-share-csv = Open in another app (CSV)
+sheet-phone-export-note = Excel export is on your computer
+sheet-phone-done = Done
+sheet-phone-fn-equals = { "=" }
+sheet-phone-fn-sum = SUM
+sheet-phone-fn-average = AVERAGE
+sheet-phone-fn-min = MIN
+sheet-phone-fn-max = MAX
+sheet-phone-next = ↓ Next
+sheet-phone-sort = Sort
+sheet-phone-summary = { $count } cells · Sum { $sum } · Average { $avg } · Min { $min }
+sheet-phone-marks = Xiaoban changed { $count } cells
+sheet-phone-hint = Tap a cell to edit, start with = for a formula; press and drag to select
+sheet-phone-asking = Ask about { $range }
+slides-phone-more = +{ $count }
+slides-phone-sub = Page { $n } / { $total } · version { $version }
+slides-phone-before = Before
+slides-phone-after = After
+slides-phone-say = Tell Xiaoban about page { $n }
+slides-phone-less-text = Fewer words
+slides-phone-add-summary = Add a summary page after
