@@ -233,6 +233,12 @@ export function useVoice(onText: (text: string) => void) {
     finishTimer.current = setTimeout(deliver, FINISH_WAIT);
   }, [deliver, reset, setPhase]);
 
+  const dropFinishing = useCallback(() => {
+    if (phaseRef.current !== "finishing") return;
+    ExpoSpeechRecognitionModule.abort();
+    reset();
+  }, [reset]);
+
   const abandon = useCallback(() => {
     const current = phaseRef.current;
     if (current !== "holding" && current !== "cancel") return;
@@ -254,5 +260,6 @@ export function useVoice(onText: (text: string) => void) {
     move,
     release,
     abandon,
+    dropFinishing,
   };
 }

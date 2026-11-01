@@ -2111,4 +2111,5 @@ notify-answered-no = OK, this step is skipped
 notify-send-failed = Not sent. Open Xiaoban and try again
 notify-channel-urgent = Important notifications
 notify-channel-quiet = Quiet notifications
-voice-finishing = Recognizing; it will send by itself…
+voice-finishing = Recognizing, sends by itself · tap to cancel
+voice-tap-cancel = Tap to cancel this voice message

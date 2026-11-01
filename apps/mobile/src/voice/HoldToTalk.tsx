@@ -1,7 +1,15 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
 import { useMemo, useRef } from "react";
-import { PanResponder, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
+import {
+  ActivityIndicator,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  View,
+} from "react-native";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { Icon } from "../ui/Icon.tsx";
 import { type Voice, WAVE_BARS } from "./useVoice.ts";
@@ -18,7 +26,10 @@ export function HoldToTalk({ voice, height = 44 }: { voice: Voice; height?: numb
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderTerminationRequest: () => false,
-        onPanResponderGrant: () => latest.current.begin(),
+        onPanResponderGrant: () => {
+          if (latest.current.phase === "finishing") latest.current.dropFinishing();
+          else latest.current.begin();
+        },
         onPanResponderMove: (_, gesture) => latest.current.move(gesture.dy),
         onPanResponderRelease: () => latest.current.release(),
         onPanResponderTerminate: () => latest.current.abandon(),
@@ -48,7 +59,7 @@ export function HoldToTalk({ voice, height = 44 }: { voice: Voice; height?: numb
         accessible
         accessibilityRole="button"
         accessibilityLabel={t("voice-hold")}
-        accessibilityHint={t("voice-release-send")}
+        accessibilityHint={t(phase === "finishing" ? "voice-tap-cancel" : "voice-release-send")}
         style={[
           styles.pill,
           { height, borderRadius: Math.min(16, height / 2) },
@@ -56,7 +67,11 @@ export function HoldToTalk({ voice, height = 44 }: { voice: Voice; height?: numb
           cancel && styles.pillCancel,
         ]}
       >
-        {phase !== "idle" ? <Wave levels={levels} /> : null}
+        {phase === "finishing" ? (
+          <ActivityIndicator size="small" color={color.surface} />
+        ) : phase !== "idle" ? (
+          <Wave levels={levels} />
+        ) : null}
         <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
           {label}
         </Text>
@@ -92,7 +107,11 @@ export function VoiceSwitch({
   const typing = voice.mode === "typing";
   return (
     <Pressable
-      style={[styles.switch, { width: size, height: size }]}
+      style={[
+        styles.switch,
+        { width: size, height: size },
+        !typing && voice.phase !== "idle" && styles.switchOff,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={typing ? t("voice-switch-voice") : t("voice-switch-typing")}
       hitSlop={6}
@@ -158,6 +177,7 @@ const styles = StyleSheet.create({
   wave: { flexDirection: "row", alignItems: "center", gap: 2, height: 22 },
   bar: { width: 3, borderRadius: 2, backgroundColor: color.surface },
   switch: { alignItems: "center", justifyContent: "center" },
+  switchOff: { opacity: 0.3 },
   note: { flexShrink: 1, paddingHorizontal: 6, fontSize: 12, lineHeight: 17, color: color.muted },
   noteRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   noteFix: { fontSize: 12, fontWeight: "500", color: color.accent },
