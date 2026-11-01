@@ -118,6 +118,8 @@ export default function ThreadScreen() {
   const list = useRef<FlatList<Row>>(null);
   const stick = useRef(true);
   const dragging = useRef(false);
+  const offset = useRef(0);
+  const content = useRef(0);
   const [positioned, setPositioned] = useState(false);
   const loaded = state.messages[id] !== undefined;
   useEffect(() => {
@@ -130,7 +132,14 @@ export default function ThreadScreen() {
     const shown = Keyboard.addListener("keyboardDidShow", () => {
       if (stick.current) requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
     });
-    return () => shown.remove();
+    const hidden = Keyboard.addListener("keyboardDidHide", () => {
+      if (stick.current)
+        requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+    });
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
   }, []);
   const primary = state.preferences?.primaryThreadId === id;
   const thread = state.threads.find((item) => item.id === id);
@@ -380,18 +389,28 @@ export default function ThreadScreen() {
         onScrollBeginDrag={() => {
           dragging.current = true;
         }}
+        onScrollEndDrag={() => {
+          setTimeout(() => {
+            dragging.current = false;
+          }, 250);
+        }}
         onMomentumScrollEnd={() => {
           dragging.current = false;
         }}
         onScroll={(event) => {
-          if (!dragging.current) return;
           const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+          offset.current = contentOffset.y;
+          content.current = contentSize.height;
+          if (!dragging.current) return;
           stick.current =
             contentSize.height - contentOffset.y - layoutMeasurement.height < STICK_DISTANCE;
         }}
         scrollEventThrottle={100}
-        onLayout={() => {
-          if (stick.current) list.current?.scrollToEnd({ animated: false });
+        onLayout={(event) => {
+          const height = event.nativeEvent.layout.height;
+          if (stick.current || offset.current > content.current - height) {
+            list.current?.scrollToEnd({ animated: false });
+          }
         }}
         onContentSizeChange={() => {
           if (stick.current) list.current?.scrollToEnd({ animated: false });
