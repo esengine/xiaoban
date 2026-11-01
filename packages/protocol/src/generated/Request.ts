@@ -108,4 +108,5 @@ export type Request =
       text: string | null;
     }
   | { type: "finish_merge"; workspaceId: string }
-  | { type: "abort_merge"; workspaceId: string };
+  | { type: "abort_merge"; workspaceId: string }
+  | { type: "inspect_folder"; path: string };

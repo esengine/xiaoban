@@ -225,6 +225,23 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::ResolveConflict { .. }
         | Request::FinishMerge { .. }
         | Request::AbortMerge { .. }) => git_request(state, local, request).await,
+        Request::InspectFolder { path } => {
+            only_here(local)?;
+            let folder = workspace::real(&workspace::expand(&path));
+            let probe = Workspace {
+                id: String::new(),
+                name: workspace::folder_name(&folder),
+                path: folder.to_string_lossy().into_owned(),
+                created_at: 0,
+                active_at: 0,
+            };
+            Ok(Response::Folder {
+                path: workspace::pretty(&folder),
+                name: probe.name.clone(),
+                exists: folder.is_dir(),
+                git: workspace::info(&probe).await,
+            })
+        }
         Request::StopCommand { command_id } => {
             crate::commands::stop(state, &command_id);
             Ok(Response::Ack)

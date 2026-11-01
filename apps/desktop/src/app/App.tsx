@@ -7,6 +7,7 @@ import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { CodePanel } from "../features/code/CodePanel.tsx";
+import { NewWorkspace } from "../features/code/NewWorkspace.tsx";
 import { useCodeWidth } from "../features/code/useCodeWidth.ts";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
@@ -74,13 +75,7 @@ function Home() {
     [store, threads, primaryId],
   );
 
-  const addWorkspace = useCallback(async () => {
-    if (!isTauri()) return;
-    const path = await invoke<string | null>("pick_folder").catch(() => null);
-    if (!path) return;
-    const workspace = await store.createWorkspace(path);
-    await newThread(workspace.id);
-  }, [store, newThread]);
+  const [addingWorkspace, setAddingWorkspace] = useState(false);
 
   const activeWorkspace = threads.find((thread) => thread.id === activeId)?.workspaceId ?? null;
   const codeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspace) ?? null;
@@ -162,7 +157,7 @@ function Home() {
           activeId={activeId}
           onSelect={setSelected}
           onNew={(workspaceId) => void newThread(workspaceId)}
-          onAddWorkspace={() => void addWorkspace()}
+          onAddWorkspace={() => setAddingWorkspace(true)}
         />
       </div>
       {activeId ? (
@@ -220,6 +215,12 @@ function Home() {
         <div className="panel panel--workspace" data-open={panels.workspace}>
           <Workspace threadId={activeId} onOpenTrip={openTrip} />
         </div>
+      )}
+      {addingWorkspace && (
+        <NewWorkspace
+          onCreated={(workspaceId) => void newThread(workspaceId)}
+          onClose={() => setAddingWorkspace(false)}
+        />
       )}
       {consent && <OperateConsent key={consent.id} confirm={consent} />}
     </div>

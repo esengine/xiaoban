@@ -382,6 +382,13 @@ export class HubStore {
     return workspaces;
   }
 
+  async inspectFolder(
+    path: string,
+  ): Promise<{ path: string; name: string; exists: boolean; git: GitInfo }> {
+    const folder = await this.client.request({ type: "inspect_folder", path }, "folder");
+    return { path: folder.path, name: folder.name, exists: folder.exists, git: folder.git };
+  }
+
   async createWorkspace(path: string): Promise<Workspace> {
     const { workspace } = await this.client.request(
       { type: "create_workspace", path },

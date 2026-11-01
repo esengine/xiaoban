@@ -263,6 +263,9 @@ pub enum Request {
     AbortMerge {
         workspace_id: String,
     },
+    InspectFolder {
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -413,6 +416,12 @@ pub enum Response {
     },
     Conflicts {
         files: Vec<crate::ConflictFile>,
+    },
+    Folder {
+        path: String,
+        name: String,
+        exists: bool,
+        git: crate::GitInfo,
     },
     WorkspaceImage {
         url: String,

@@ -75,4 +75,5 @@ export type Response =
   | { type: "commit_draft"; message: string | null }
   | { type: "pull_request"; url: string }
   | { type: "conflicts"; files: Array<ConflictFile> }
+  | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };
