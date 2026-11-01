@@ -33,7 +33,9 @@ export function HoldToTalk({ voice, height = 44 }: { voice: Voice; height?: numb
       ? t("voice-hold")
       : cancel
         ? t("voice-release-cancel")
-        : t("voice-release-send");
+        : phase === "finishing"
+          ? t("voice-finishing")
+          : t("voice-release-send");
   return (
     <View style={styles.wrap}>
       {phase !== "idle" && transcript ? (

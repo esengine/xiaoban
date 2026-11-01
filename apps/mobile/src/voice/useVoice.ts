@@ -13,7 +13,7 @@ export type VoicePhase = "idle" | "holding" | "cancel" | "finishing";
 
 export const WAVE_BARS = 14;
 const CANCEL_DISTANCE = 64;
-const FINISH_WAIT = 2500;
+const FINISH_WAIT = 15000;
 const NOTE_TIME = 2400;
 const QUIET = Array.from({ length: WAVE_BARS }, () => 0);
 const RESTING = Array.from({ length: WAVE_BARS }, (_, index) => 0.25 + ((index * 7) % 5) * 0.12);
@@ -107,8 +107,13 @@ export function useVoice(onText: (text: string) => void) {
             partial.current = text;
           }
           setTranscript(`${committed.current}${partial.current}`);
+          if (event.isFinal && phaseRef.current === "finishing") deliver();
         },
       ),
+      ExpoSpeechRecognitionModule.addListener("start", () => {
+        if (!mine()) return;
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+      }),
       ExpoSpeechRecognitionModule.addListener("volumechange", (event: { value: number }) => {
         if (!mine() || phaseRef.current === "finishing") return;
         setLevels((previous) => [...previous.slice(1), levelOf(event.value)]);
@@ -184,7 +189,6 @@ export function useVoice(onText: (text: string) => void) {
     setLevels(QUIET);
     setNote(null);
     setPhase("holding");
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
     try {
       ExpoSpeechRecognitionModule.start({
         lang: locale === "zh-CN" ? "zh-CN" : "en-US",

@@ -2096,3 +2096,4 @@ notify-answered-no = 好，这一步不做了
 notify-send-failed = 没发出去，打开小伴再试一次
 notify-channel-urgent = 要紧的通知
 notify-channel-quiet = 安静的通知
+voice-finishing = 正在识别，好了会自动发出…
