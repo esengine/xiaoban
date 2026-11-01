@@ -64,15 +64,30 @@ export function useChanges(threadId: string, workspace: Workspace | null) {
       live = false;
     };
   }, [store, threadId, workspace, version, focus]);
+  const [undone, setUndone] = useState<string[]>([]);
   const revert = useCallback(
     (path: string, hunk: number | null) =>
       void store
         .revertChange(threadId, path, hunk)
-        .then(setFiles)
+        .then((list) => {
+          setFiles(list);
+          setUndone((current) => [...current.filter((item) => item !== path), path]);
+        })
         .catch(() => undefined),
     [store, threadId],
   );
-  return { files, revert };
+  const restore = useCallback(
+    (path: string) =>
+      void store
+        .restoreChange(threadId, path)
+        .then((list) => {
+          setFiles(list);
+          setUndone((current) => current.filter((item) => item !== path));
+        })
+        .catch(() => setUndone((current) => current.filter((item) => item !== path))),
+    [store, threadId],
+  );
+  return { files, revert, restore, undone };
 }
 
 export function useCommands(workspace: Workspace | null) {

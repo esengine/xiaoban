@@ -974,3 +974,6 @@ workspace-new-no-repo = 这个文件夹没用 git 管理，改动照样能看、
 workspace-new-no-git = 电脑上没装 git，改动照样能看、能撤回
 workspace-new-start = 开始
 workspace-new-hint = 也可以直接把文件夹拖进左栏
+code-undone-file = 已撤回，恢复成改之前的样子
+code-undone-block = 刚撤回了一块改动
+code-restore = 恢复

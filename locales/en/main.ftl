@@ -983,3 +983,6 @@ workspace-new-no-repo = This folder isn't a git repository; changes can still be
 workspace-new-no-git = Git isn't installed; changes can still be viewed and reverted
 workspace-new-start = Start
 workspace-new-hint = You can also drag a folder onto the sidebar
+code-undone-file = Reverted to how it was
+code-undone-block = A block was just reverted
+code-restore = Restore

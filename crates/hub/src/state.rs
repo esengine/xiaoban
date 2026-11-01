@@ -19,6 +19,8 @@ pub struct Active {
     pub search_key: Option<String>,
 }
 
+pub type Reverted = Option<Vec<u8>>;
+
 #[derive(Debug)]
 pub struct HubState {
     pub info: HubInfo,
@@ -49,6 +51,7 @@ pub struct HubState {
     pub gh_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
+    pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
     pub code_reads: std::sync::Mutex<std::collections::HashMap<(String, std::path::PathBuf), String>>,
 }
 

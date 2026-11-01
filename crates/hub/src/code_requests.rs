@@ -97,6 +97,14 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 files: crate::changes::thread_changes(state, &thread_id).await,
             })
         }
+        Request::RestoreChange { thread_id, path } => {
+            crate::changes::restore(state, &thread_id, &path)
+                .await
+                .map_err(|failure| bad_request(&failure))?;
+            Ok(Response::Changes {
+                files: crate::changes::thread_changes(state, &thread_id).await,
+            })
+        }
         Request::GitInfo { workspace_id } => {
             let found = load(state, workspace_id).await?;
             Ok(Response::Git {

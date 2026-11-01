@@ -109,4 +109,5 @@ export type Request =
     }
   | { type: "finish_merge"; workspaceId: string }
   | { type: "abort_merge"; workspaceId: string }
-  | { type: "inspect_folder"; path: string };
+  | { type: "inspect_folder"; path: string }
+  | { type: "restore_change"; threadId: string; path: string };

@@ -147,19 +147,47 @@ export function FileHead({
   );
 }
 
+function Undone({
+  path,
+  whole,
+  onRestore,
+}: {
+  path: string;
+  whole: boolean;
+  onRestore: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="diff-undone">
+      {whole && <span className="diff-file__path">{path}</span>}
+      <span>{t(whole ? "code-undone-file" : "code-undone-block")}</span>
+      <button type="button" className="code-link" onClick={onRestore}>
+        {t("code-restore")}
+      </button>
+    </div>
+  );
+}
+
 export function DiffView({
   files,
+  undone = [],
   onOpen,
   onRevert,
+  onRestore,
 }: {
   files: FileDiff[];
+  undone?: string[];
   onOpen: (path: string) => void;
   onRevert: (path: string, hunk: number | null) => void;
+  onRestore?: (path: string) => void;
 }) {
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("unified");
   const [closed, setClosed] = useState<Set<string>>(new Set());
-  if (files.length === 0) return <p className="code-empty">{t("code-no-changes")}</p>;
+  const gone = undone.filter((path) => !files.some((file) => file.path === path));
+  if (files.length === 0 && gone.length === 0) {
+    return <p className="code-empty">{t("code-no-changes")}</p>;
+  }
   const toggle = (path: string) =>
     setClosed((current) => {
       const next = new Set(current);
@@ -185,6 +213,9 @@ export function DiffView({
         </span>
       </div>
       <div className="diff__files">
+        {gone.map((path) => (
+          <Undone key={path} path={path} whole onRestore={() => onRestore?.(path)} />
+        ))}
         {files.map((file) => {
           const open = !closed.has(file.path);
           return (
@@ -196,6 +227,9 @@ export function DiffView({
                 onOpen={file.status === "deleted" ? null : () => onOpen(file.path)}
                 onRevert={() => onRevert(file.path, null)}
               />
+              {undone.includes(file.path) && (
+                <Undone path={file.path} whole={false} onRestore={() => onRestore?.(file.path)} />
+              )}
               {open &&
                 (file.binary ? (
                   <p className="code-empty">{t("code-binary")}</p>

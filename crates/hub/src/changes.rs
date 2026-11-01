@@ -161,6 +161,11 @@ pub async fn revert(
         .ok_or("no change recorded for that file")?;
     let path = Path::new(&baseline.path);
     let now = current(path);
+    state
+        .reverted
+        .lock()
+        .unwrap()
+        .insert((thread_id.to_owned(), shown_path.to_owned()), now.clone());
     match hunk {
         None => match &baseline.content {
             Some(content) => std::fs::write(path, content).map_err(|failure| failure.to_string())?,
@@ -175,6 +180,38 @@ pub async fn revert(
             let new = now.as_deref().map(|b| String::from_utf8_lossy(b).into_owned()).unwrap_or_default();
             let reverted = revert_hunk(&old, &new, index as usize).ok_or("no such change block")?;
             std::fs::write(path, reverted).map_err(|failure| failure.to_string())?;
+        }
+    }
+    state.publish(Event::FilesChanged {
+        workspace_id: workspace.id,
+        thread_id: Some(thread_id.to_owned()),
+        paths: vec![shown_path.to_owned()],
+    });
+    Ok(())
+}
+
+pub async fn restore(state: &SharedState, thread_id: &str, shown_path: &str) -> Result<(), String> {
+    let workspace = crate::workspace::for_thread(state, thread_id)
+        .await
+        .ok_or("not a workspace conversation")?;
+    let saved = state
+        .reverted
+        .lock()
+        .unwrap()
+        .remove(&(thread_id.to_owned(), shown_path.to_owned()))
+        .ok_or("nothing to restore")?;
+    let target = crate::workspace::resolve(&workspace, shown_path);
+    match saved {
+        Some(bytes) => {
+            if let Some(parent) = target.path.parent() {
+                std::fs::create_dir_all(parent).map_err(|failure| failure.to_string())?;
+            }
+            std::fs::write(&target.path, bytes).map_err(|failure| failure.to_string())?;
+        }
+        None => {
+            if target.path.exists() {
+                std::fs::remove_file(&target.path).map_err(|failure| failure.to_string())?;
+            }
         }
     }
     state.publish(Event::FilesChanged {

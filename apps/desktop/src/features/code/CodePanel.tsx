@@ -51,7 +51,7 @@ export function CodePanel({
   const { t } = useI18n();
   const openMenu = useContextMenu();
   const git = useGit(workspace);
-  const { files, revert } = useChanges(threadId, workspace);
+  const { files, revert, restore, undone } = useChanges(threadId, workspace);
   const [tab, setTab] = useState<Tab>({ kind: "changes" });
   const [opened, setOpened] = useState<string[]>([]);
   const [treeOpen, setTreeOpen] = useState(true);
@@ -255,7 +255,15 @@ export function CodePanel({
           </button>
         )}
         <div className="code-panel__content">
-          {tab.kind === "changes" && <DiffView files={files} onOpen={openFile} onRevert={revert} />}
+          {tab.kind === "changes" && (
+            <DiffView
+              files={files}
+              undone={undone}
+              onOpen={openFile}
+              onRevert={revert}
+              onRestore={restore}
+            />
+          )}
           {tab.kind === "terminal" && <Terminal workspace={workspace} />}
           {tab.kind === "conflict" && git && (
             <ConflictView workspace={workspace} git={git} onAsk={onAsk} />

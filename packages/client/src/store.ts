@@ -544,6 +544,14 @@ export class HubStore {
     return files;
   }
 
+  async restoreChange(threadId: string, path: string): Promise<FileDiff[]> {
+    const { files } = await this.client.request(
+      { type: "restore_change", threadId, path },
+      "changes",
+    );
+    return files;
+  }
+
   async gitInfo(workspaceId: string): Promise<GitInfo> {
     const { git } = await this.client.request({ type: "git_info", workspaceId }, "git");
     return git;

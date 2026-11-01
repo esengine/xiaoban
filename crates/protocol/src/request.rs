@@ -266,6 +266,10 @@ pub enum Request {
     InspectFolder {
         path: String,
     },
+    RestoreChange {
+        thread_id: String,
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
