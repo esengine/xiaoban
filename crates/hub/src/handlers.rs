@@ -199,6 +199,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::RemoveFridgeItem { .. }
         | Request::WeekItemGone { .. }) => crate::kitchen::handle(state, request).await,
         request @ (Request::Ledger { .. }
+        | Request::LedgerRange { .. }
+        | Request::LedgerYear { .. }
         | Request::SetBudget { .. }
         | Request::UpdateExpense { .. }
         | Request::DeleteExpense { .. }

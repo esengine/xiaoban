@@ -84,4 +84,25 @@ pub struct Ledger {
     pub muted: Vec<String>,
     pub import: Option<ImportPreview>,
     pub empty: bool,
+    pub from: String,
+    pub to: String,
+    #[ts(type = "number")]
+    pub previous_cents: i64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct MonthTotal {
+    pub month: String,
+    #[ts(type = "number")]
+    pub cents: i64,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+pub struct LedgerYear {
+    pub year: i32,
+    pub months: Vec<MonthTotal>,
+    pub days: Vec<String>,
 }

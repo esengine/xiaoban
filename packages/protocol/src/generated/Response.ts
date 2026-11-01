@@ -14,6 +14,7 @@ import type { GithubRef } from "./GithubRef.ts";
 import type { Interpretation } from "./Interpretation.ts";
 import type { Kitchen } from "./Kitchen.ts";
 import type { Ledger } from "./Ledger.ts";
+import type { LedgerYear } from "./LedgerYear.ts";
 import type { Location } from "./Location.ts";
 import type { Memory } from "./Memory.ts";
 import type { MemoryGalaxy } from "./MemoryGalaxy.ts";
@@ -81,5 +82,6 @@ export type Response =
   | { type: "workspace_settings"; settings: WorkspaceSettings }
   | { type: "kitchen"; kitchen: Kitchen }
   | { type: "ledger"; ledger: Ledger }
+  | { type: "ledger_year"; year: LedgerYear }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };

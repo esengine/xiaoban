@@ -184,6 +184,83 @@ pub async fn view(state: &SharedState, month: &str) -> Ledger {
         muted: meta.muted,
         import: meta.import,
         empty,
+        ..Ledger::default()
+    }
+}
+
+fn day_bounds(date: jiff::civil::Date) -> Option<(i64, i64)> {
+    let start = date.to_zoned(zone()).ok()?;
+    let end = date.tomorrow().ok()?.to_zoned(zone()).ok()?;
+    Some((start.timestamp().as_millisecond(), end.timestamp().as_millisecond()))
+}
+
+async fn between(state: &SharedState, from: jiff::civil::Date, to: jiff::civil::Date) -> Vec<Expense> {
+    let (Some((start, _)), Some((_, end))) = (day_bounds(from), day_bounds(to)) else {
+        return Vec::new();
+    };
+    let mut month = from.strftime("%Y-%m").to_string();
+    let last = to.strftime("%Y-%m").to_string();
+    let mut out = Vec::new();
+    while month <= last {
+        out.extend(entries(state, &month).await.into_iter().filter(|entry| entry.at >= start && entry.at < end));
+        month = shift_month(&month, 1);
+    }
+    out.sort_by_key(|entry| std::cmp::Reverse(entry.at));
+    out
+}
+
+pub async fn view_range(state: &SharedState, from: &str, to: &str) -> Ledger {
+    let parse = |value: &str| value.trim().parse::<jiff::civil::Date>().ok();
+    let (Some(mut from), Some(mut to)) = (parse(from), parse(to)) else {
+        return view(state, &current_month()).await;
+    };
+    if from > to {
+        std::mem::swap(&mut from, &mut to);
+    }
+    let days = (to - from).get_days().clamp(0, 400);
+    let to = from.checked_add(jiff::Span::new().days(days)).unwrap_or(to);
+    let list = between(state, from, to).await;
+    let before_end = from.yesterday().unwrap_or(from);
+    let before_start = before_end.checked_sub(jiff::Span::new().days(days)).unwrap_or(before_end);
+    let previous = between(state, before_start, before_end).await;
+    let meta = meta(state).await;
+    let empty = list.is_empty() && !any_entries(state).await;
+    Ledger {
+        thread_id: thread(state).await,
+        month: String::new(),
+        budget_cents: meta.budget_cents,
+        previous: totals(&previous),
+        previous_cents: previous.iter().map(|entry| entry.cents).sum(),
+        entries: list,
+        muted: meta.muted,
+        import: meta.import,
+        empty,
+        from: from.to_string(),
+        to: to.to_string(),
+    }
+}
+
+pub async fn year(state: &SharedState, year: i32) -> xiaoban_protocol::LedgerYear {
+    let mut months = Vec::new();
+    let mut days = std::collections::BTreeSet::new();
+    for number in 1..=12 {
+        let month = format!("{year:04}-{number:02}");
+        let list = entries(state, &month).await;
+        for entry in &list {
+            if let Ok(stamp) = jiff::Timestamp::from_millisecond(entry.at) {
+                days.insert(stamp.to_zoned(zone()).date().to_string());
+            }
+        }
+        months.push(xiaoban_protocol::MonthTotal {
+            month,
+            cents: list.iter().map(|entry| entry.cents).sum(),
+            count: u32::try_from(list.len()).unwrap_or(u32::MAX),
+        });
+    }
+    xiaoban_protocol::LedgerYear {
+        year,
+        months,
+        days: days.into_iter().collect(),
     }
 }
 
@@ -567,6 +644,16 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
         _ => current_month(),
     };
     match request {
+        Request::LedgerRange { from, to } => {
+            return Ok(Response::Ledger {
+                ledger: view_range(state, &from, &to).await,
+            });
+        }
+        Request::LedgerYear { year: number } => {
+            return Ok(Response::LedgerYear {
+                year: year(state, number.clamp(2000, 2100)).await,
+            });
+        }
         Request::Ledger { .. } => {
             ensure_thread(state)
                 .await

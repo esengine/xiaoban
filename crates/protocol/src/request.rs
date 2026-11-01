@@ -329,6 +329,13 @@ pub enum Request {
     Ledger {
         month: String,
     },
+    LedgerRange {
+        from: String,
+        to: String,
+    },
+    LedgerYear {
+        year: i32,
+    },
     SetBudget {
         month: String,
         #[ts(type = "number | null")]
@@ -517,6 +524,9 @@ pub enum Response {
     },
     Ledger {
         ledger: crate::Ledger,
+    },
+    LedgerYear {
+        year: crate::LedgerYear,
     },
     Folder {
         path: String,

@@ -7,6 +7,14 @@ import type { CategoryTotal, Expense, ImportRow, Ledger } from "@xiaoban/protoco
 import { useEffect, useMemo, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { KitchenChat } from "./KitchenChat.tsx";
+import {
+  addDays,
+  isoDay,
+  LedgerPicker,
+  type LedgerQuery,
+  parseDay,
+  spanDays,
+} from "./LedgerPicker.tsx";
 
 const IMAGE = /\.(png|jpe?g|heic|webp|gif)$/i;
 const BILL = /\.(csv|xlsx|xls)$/i;
@@ -153,6 +161,32 @@ function Summary({ ledger, spent }: { ledger: Ledger; spent: number }) {
             </button>
           </>
         )}
+      </span>
+    </section>
+  );
+}
+
+function RangeSummary({ ledger, spent, label }: { ledger: Ledger; spent: number; label: string }) {
+  const { t } = useI18n();
+  const money = useMoney();
+  const days = spanDays(ledger.from, ledger.to);
+  const diff = spent - ledger.previousCents;
+  return (
+    <section className="life-card ledger-summary">
+      <span className="life-card__note">{t("ledger-range-spent", { range: label })}</span>
+      <b className="ledger-summary__total">{money(spent)}</b>
+      <span className="life-card__note">
+        {[
+          t("ledger-range-count", { days }),
+          t("ledger-range-daily", { amount: money(Math.round(spent / Math.max(1, days))) }),
+          ledger.previousCents > 0 || spent > 0
+            ? diff >= 0
+              ? t("ledger-range-more", { days, amount: money(diff) })
+              : t("ledger-range-less", { days, amount: money(-diff) })
+            : "",
+        ]
+          .filter(Boolean)
+          .join(t("daily-dot"))}
       </span>
     </section>
   );
@@ -336,7 +370,11 @@ function Flow({
   categories,
   colors,
   onImport,
+  period,
+  onThisMonth,
 }: {
+  period: string | null;
+  onThisMonth: () => void;
   ledger: Ledger;
   entries: Expense[];
   filter: string | null;
@@ -377,17 +415,28 @@ function Flow({
     if (key === yesterday) return t("ledger-yesterday", { date: day.format(date) });
     return day.format(date);
   };
-  const month = monthDate(ledger.month).getMonth() + 1;
+  const month = ledger.month ? monthDate(ledger.month).getMonth() + 1 : 0;
   return (
     <section className="life-card ledger-flow">
       <div className="life-card__head">
         <b>
-          {t("ledger-flow-head", {
-            scope: filter ?? t("ledger-all"),
-            month,
-            count: shown.length,
-          })}
+          {period
+            ? t("ledger-flow-head-range", {
+                scope: filter ?? t("ledger-all"),
+                range: period,
+                count: shown.length,
+              })
+            : t("ledger-flow-head", {
+                scope: filter ?? t("ledger-all"),
+                month,
+                count: shown.length,
+              })}
         </b>
+        {period && (
+          <button type="button" className="code-link" onClick={onThisMonth}>
+            {t("ledger-this-month")}
+          </button>
+        )}
         <span className="life-card__spacer" />
         <input
           className="ledger-search"
@@ -627,13 +676,37 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
   const { t, locale } = useI18n();
   const store = useHub();
   const { ledger } = useHubState(store);
-  const [month, setMonth] = useState(() => monthKey(new Date()));
+  const [query, setQuery] = useState<LedgerQuery>(() => ({
+    kind: "month",
+    month: monthKey(new Date()),
+  }));
   const [filter, setFilter] = useState<string | null>(null);
+  const [picker, setPicker] = useState<HTMLElement | null>(null);
   const threadId = ledger?.threadId ?? null;
+  const month = query.kind === "month" ? query.month : "";
 
   useEffect(() => {
-    void store.loadLedger(month).catch(() => undefined);
-  }, [store, month]);
+    if (query.kind === "month") void store.loadLedger(query.month).catch(() => undefined);
+    else void store.loadLedgerRange(query.from, query.to).catch(() => undefined);
+  }, [store, query]);
+
+  const go = (next: LedgerQuery) => {
+    setFilter(null);
+    setQuery(next);
+  };
+  const step = (by: number) => {
+    if (query.kind === "month") go({ kind: "month", month: shiftMonth(query.month, by) });
+    else {
+      const days = spanDays(query.from, query.to);
+      go({
+        kind: "range",
+        from: isoDay(addDays(parseDay(query.from), by * days)),
+        to: isoDay(addDays(parseDay(query.to), by * days)),
+      });
+    }
+  };
+  const atEnd =
+    query.kind === "month" ? query.month >= monthKey(new Date()) : query.to >= isoDay(new Date());
 
   const send = (text: string, files: string[] = []) => {
     if (threadId) void store.send(threadId, text, { files }).catch(() => undefined);
@@ -663,7 +736,13 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
     return () => void stop.then((unlisten) => unlisten());
   }, [store, threadId, t]);
 
-  const current = ledger && ledger.month === month ? ledger : null;
+  const current =
+    ledger &&
+    (query.kind === "month"
+      ? ledger.month === query.month
+      : ledger.from === query.from && ledger.to === query.to)
+      ? ledger
+      : null;
   const entries = current?.entries ?? [];
   const totals = useMemo(() => totalsOf(entries), [entries]);
   const colors = useMemo(
@@ -677,9 +756,17 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
     return [...names];
   }, [totals, current, t]);
   const spent = entries.reduce((sum, entry) => sum + entry.cents, 0);
-  const title = new Intl.DateTimeFormat(locale, { year: "numeric", month: "long" }).format(
-    monthDate(month),
-  );
+  const short = new Intl.DateTimeFormat(locale, { month: "numeric", day: "numeric" });
+  const rangeLabel =
+    query.kind === "range"
+      ? `${short.format(parseDay(query.from))} – ${short.format(parseDay(query.to))}`
+      : "";
+  const title =
+    query.kind === "month"
+      ? new Intl.DateTimeFormat(locale, { year: "numeric", month: "long" }).format(
+          monthDate(query.month),
+        )
+      : rangeLabel;
 
   return (
     <main className="life-page ledger">
@@ -693,24 +780,25 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
             <button
               type="button"
               className="code-tab"
-              aria-label={t("ledger-prev-month")}
-              onClick={() => {
-                setFilter(null);
-                setMonth(shiftMonth(month, -1));
-              }}
+              aria-label={query.kind === "month" ? t("ledger-prev-month") : t("ledger-prev-range")}
+              onClick={() => step(-1)}
             >
               {t("ledger-prev")}
             </button>
-            <span className="code-tab ledger-month">{title}</span>
+            <button
+              type="button"
+              className="code-tab ledger-month"
+              aria-expanded={picker !== null}
+              onClick={(event) => setPicker(picker ? null : event.currentTarget)}
+            >
+              {t("ledger-picker-label", { title })}
+            </button>
             <button
               type="button"
               className="code-tab"
-              aria-label={t("ledger-next-month")}
-              disabled={month >= monthKey(new Date())}
-              onClick={() => {
-                setFilter(null);
-                setMonth(shiftMonth(month, 1));
-              }}
+              aria-label={query.kind === "month" ? t("ledger-next-month") : t("ledger-next-range")}
+              disabled={atEnd}
+              onClick={() => step(1)}
             >
               {t("ledger-next")}
             </button>
@@ -721,13 +809,19 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
         <div className="kitchen__content">
           {current &&
             (current.empty ? (
-              <Empty month={month} onImport={() => void pickBill()} />
+              <Empty month={month || monthKey(new Date())} onImport={() => void pickBill()} />
             ) : (
               <div className="ledger__grid">
                 <div className="ledger__side">
-                  <Summary ledger={current} spent={spent} />
+                  {query.kind === "month" ? (
+                    <Summary ledger={current} spent={spent} />
+                  ) : (
+                    <RangeSummary ledger={current} spent={spent} label={rangeLabel} />
+                  )}
                   <Categories totals={totals} filter={filter} onFilter={setFilter} />
-                  <Noticed ledger={current} totals={totals} onOpenWeek={onOpenWeek} />
+                  {query.kind === "month" && (
+                    <Noticed ledger={current} totals={totals} onOpenWeek={onOpenWeek} />
+                  )}
                 </div>
                 <Flow
                   ledger={current}
@@ -736,6 +830,8 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
                   categories={categories}
                   colors={colors}
                   onImport={() => void pickBill()}
+                  period={query.kind === "range" ? rangeLabel : null}
+                  onThisMonth={() => go({ kind: "month", month: monthKey(new Date()) })}
                 />
               </div>
             ))}
@@ -753,6 +849,9 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
         )}
       </div>
       {current?.import && <ImportDialog ledger={current} categories={categories} />}
+      {picker && (
+        <LedgerPicker anchor={picker} query={query} onPick={go} onClose={() => setPicker(null)} />
+      )}
     </main>
   );
 }

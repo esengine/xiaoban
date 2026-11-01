@@ -132,6 +132,8 @@ export type Request =
   | { type: "remove_fridge_item"; name: string; shop: boolean }
   | { type: "week_item_gone"; start: string; name: string }
   | { type: "ledger"; month: string }
+  | { type: "ledger_range"; from: string; to: string }
+  | { type: "ledger_year"; year: number }
   | { type: "set_budget"; month: string; cents: number | null }
   | { type: "update_expense"; month: string; expense: Expense }
   | { type: "delete_expense"; month: string; id: string }

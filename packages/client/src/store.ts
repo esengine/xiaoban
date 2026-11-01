@@ -18,6 +18,7 @@ import type {
   Interpretation,
   Kitchen,
   Ledger,
+  LedgerYear,
   Location,
   Memory,
   MemoryGalaxy,
@@ -53,8 +54,7 @@ export class HubStore {
     client.onEvent((event) => {
       this.#update((state) => applyEvent(state, event));
       if (event.type === "ledger_changed") {
-        const month = this.#state.ledger?.month;
-        if (month) void this.loadLedger(month).catch(() => undefined);
+        void this.#reloadLedger().catch(() => undefined);
       }
     });
     client.onStatus((status) => this.#update((state) => ({ ...state, status })));
@@ -455,15 +455,38 @@ export class HubStore {
     return this.#kitchenRequest({ type: "week_item_gone", start, name });
   }
 
+  #ledgerRange: { from: string; to: string } | null = null;
+
   async loadLedger(month: string): Promise<Ledger> {
+    this.#ledgerRange = null;
     const { ledger } = await this.client.request({ type: "ledger", month }, "ledger");
     this.#update((state) => ({ ...state, ledger }));
     return ledger;
   }
 
+  async loadLedgerRange(from: string, to: string): Promise<Ledger> {
+    this.#ledgerRange = { from, to };
+    const { ledger } = await this.client.request({ type: "ledger_range", from, to }, "ledger");
+    this.#update((state) => ({ ...state, ledger }));
+    return ledger;
+  }
+
+  async ledgerYear(year: number): Promise<LedgerYear> {
+    const result = await this.client.request({ type: "ledger_year", year }, "ledger_year");
+    return result.year;
+  }
+
+  async #reloadLedger(): Promise<void> {
+    const range = this.#ledgerRange;
+    const month = this.#state.ledger?.month;
+    if (range) await this.loadLedgerRange(range.from, range.to);
+    else if (month) await this.loadLedger(month);
+  }
+
   async #ledgerRequest(request: Parameters<HubClient["request"]>[0]): Promise<void> {
     const { ledger } = await this.client.request(request, "ledger");
-    this.#update((state) => ({ ...state, ledger }));
+    if (this.#ledgerRange) await this.#reloadLedger();
+    else this.#update((state) => ({ ...state, ledger }));
   }
 
   setBudget(month: string, cents: number | null): Promise<void> {

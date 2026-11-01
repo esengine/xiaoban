@@ -12,4 +12,7 @@ export type Ledger = {
   muted: Array<string>;
   import: ImportPreview | null;
   empty: boolean;
+  from: string;
+  to: string;
+  previousCents: number;
 };
