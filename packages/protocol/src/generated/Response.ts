@@ -101,6 +101,7 @@ export type Response =
   | { type: "weather"; weather: WeatherView }
   | { type: "daily_layout"; layout: DailyLayout }
   | { type: "context_usage"; usage: ContextUsage }
+  | { type: "uploaded"; path: string }
   | {
       type: "provider_keys";
       publicKey: string;

@@ -10,3 +10,4 @@ dist
 /apps/mobile/android
 /crates/*/bindings
 /apps/mobile/modules/xiaoban-hub/android/src/main/jniLibs
+/apps/mobile/modules/xiaoban-hub/android/build

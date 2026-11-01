@@ -56,6 +56,7 @@ export type Request =
     }
   | { type: "select_model"; provider: ProviderId; model: string }
   | { type: "share_provider_keys"; publicKey: string }
+  | { type: "upload_file"; name: string; data: string }
   | { type: "preferences" }
   | { type: "set_autonomy"; level: AutonomyLevel }
   | { type: "remember"; subject: string; value: string }
