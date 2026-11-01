@@ -2,7 +2,7 @@ import { keyLabel, remarkInlineTags } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color, dark } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
-import { memo, type ReactNode, useMemo, useState } from "react";
+import { memo, type ReactNode, useDeferredValue, useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
@@ -244,7 +244,8 @@ export const Markdown = memo(function Markdown({
   text: string;
   tone?: Tone;
 }) {
-  const tree = useMemo(() => parse(text), [text]);
+  const settled = useDeferredValue(text);
+  const tree = useMemo(() => parse(settled), [settled]);
   return (
     <View style={styles.root}>
       <Blocks nodes={tree.children ?? []} tone={tone} />

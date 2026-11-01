@@ -29,6 +29,7 @@ function Bridge({
   const background = useBackground();
   const running = Object.values(state.drafts).find((draft) => !draft.failure) ?? null;
   const confirm = state.confirms[0] ?? null;
+  const sent = useRef("");
   const last = useRef<{ turn: string | null; steps: number; title: string }>({
     turn: null,
     steps: 0,
@@ -40,7 +41,12 @@ function Bridge({
   useEffect(() => {
     const island = XiaobanHub?.island;
     if (!island) return;
-    const push = (value: object) => island(JSON.stringify(value));
+    const push = (value: object) => {
+      const next = JSON.stringify(value);
+      if (next === sent.current) return;
+      sent.current = next;
+      island(next);
+    };
     if (!background) {
       push({ mode: "hidden" });
       last.current = {
