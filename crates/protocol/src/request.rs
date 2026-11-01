@@ -352,6 +352,10 @@ pub enum Request {
         rules: crate::WeatherRules,
     },
     LocateWeather,
+    DailyLayout,
+    SetDailyLayout {
+        layout: crate::DailyLayout,
+    },
     LocatePlace,
     UpdatePlace {
         id: String,
@@ -555,6 +559,9 @@ pub enum Response {
     },
     Weather {
         weather: crate::WeatherView,
+    },
+    DailyLayout {
+        layout: crate::DailyLayout,
     },
     Places {
         places: Vec<crate::WeatherPlace>,

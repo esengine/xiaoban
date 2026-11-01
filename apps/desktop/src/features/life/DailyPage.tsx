@@ -1,9 +1,10 @@
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { WeatherIcon } from "../trip/icons.tsx";
+import { DailyArranged } from "./DailyArrange.tsx";
 import { DishCover } from "./KitchenPage.tsx";
 import { shadeOf, useMoney } from "./LedgerPage.tsx";
 import { NoPlace, TipIcon, useSkyText } from "./WeatherPage.tsx";
@@ -141,6 +142,7 @@ export function DailyPage({
   const { t, locale } = useI18n();
   const store = useHub();
   const { confirms, kitchen, memories } = useHubState(store);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
@@ -173,84 +175,136 @@ export function DailyPage({
             </h1>
             <p>{date}</p>
           </div>
-          <button type="button" className="code-status-button" onClick={onTalk}>
-            {t("daily-talk")}
-          </button>
-        </header>
-        <div className="daily__grid">
-          {pending.length > 0 && (
-            <section className="life-card daily__confirm">
-              <div className="life-card__head">
-                <span className="daily__dot" aria-hidden="true" />
-                <b>{t("daily-confirm", { count: pending.length })}</b>
-              </div>
-              <div className="daily__confirms">
-                {pending.map((confirm) => (
-                  <ConfirmCard key={confirm.id} confirm={confirm} />
-                ))}
-              </div>
-            </section>
-          )}
-          <section className="life-card daily__food">
-            <div className="life-card__head">
-              <b>{t("daily-food")}</b>
-              {kitchen && kitchen.servings > 0 && (
-                <span className="life-card__note">
-                  {[
-                    t("kitchen-servings", { count: kitchen.servings }),
-                    ...(kitchen.avoid.length > 0
-                      ? [t("kitchen-avoid", { items: kitchen.avoid.join(t("kitchen-joiner")) })]
-                      : []),
-                  ].join(t("daily-dot"))}
-                </span>
-              )}
-              <span className="life-card__spacer" />
-              <button type="button" className="code-link" onClick={onOpenKitchen}>
-                {t("daily-open-kitchen")}
+          <span className="daily__actions">
+            {editing && <span className="life-card__note">{t("daily-arrange-hint")}</span>}
+            <button
+              type="button"
+              className="code-status-button"
+              data-dark={editing || undefined}
+              onClick={() => setEditing(!editing)}
+            >
+              {editing ? t("daily-arrange-done") : t("daily-arrange")}
+            </button>
+            {!editing && (
+              <button type="button" className="code-status-button" onClick={onTalk}>
+                {t("daily-talk")}
               </button>
-            </div>
-            {dishes.length > 0 ? (
-              <>
-                <div className="daily__dishes">
-                  {dishes.slice(0, 3).map((dish) => (
-                    <button
-                      key={dish.name}
-                      type="button"
-                      className="daily__dish"
-                      onClick={onOpenKitchen}
-                    >
-                      <DishCover name={dish.name} image={dish.image} />
-                      <b>{dish.name}</b>
-                      <span>
-                        {t("kitchen-minutes", { minutes: dish.minutes })}
-                        {t("daily-dot")}
-                        {dish.missing.length > 0
-                          ? t("kitchen-missing", { items: dish.missing.join(t("kitchen-joiner")) })
-                          : t("kitchen-have-all")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                {left > 0 && (
-                  <p className="life-card__hint">{t("daily-shopping", { count: left })}</p>
-                )}
-              </>
-            ) : (
-              <div className="daily__empty">
-                <p>{t("daily-food-empty")}</p>
-                <button type="button" className="dialog__primary" onClick={onOpenKitchen}>
-                  {t("daily-food-start")}
-                </button>
-              </div>
             )}
-          </section>
-          <WeatherCard onOpen={onOpenWeather} />
-          <Spending onOpen={onOpenLedger} />
-          <section className="life-card daily__more">
-            <b>{t("daily-more-title")}</b>
-            <p>{t("daily-more-body")}</p>
-          </section>
-        </div>
+          </span>
+        </header>
+        <DailyArranged
+          editing={editing}
+          items={[
+            {
+              id: "confirm",
+              title: t("daily-card-confirm"),
+              wide: true,
+              node:
+                pending.length > 0 ? (
+                  <section className="life-card daily__confirm">
+                    <div className="life-card__head">
+                      <span className="daily__dot" aria-hidden="true" />
+                      <b>{t("daily-confirm", { count: pending.length })}</b>
+                    </div>
+                    <div className="daily__confirms">
+                      {pending.map((confirm) => (
+                        <ConfirmCard key={confirm.id} confirm={confirm} />
+                      ))}
+                    </div>
+                  </section>
+                ) : null,
+            },
+            {
+              id: "food",
+              title: t("daily-food"),
+              wide: true,
+              node: (
+                <section className="life-card daily__food">
+                  <div className="life-card__head">
+                    <b>{t("daily-food")}</b>
+                    {kitchen && kitchen.servings > 0 && (
+                      <span className="life-card__note">
+                        {[
+                          t("kitchen-servings", { count: kitchen.servings }),
+                          ...(kitchen.avoid.length > 0
+                            ? [
+                                t("kitchen-avoid", {
+                                  items: kitchen.avoid.join(t("kitchen-joiner")),
+                                }),
+                              ]
+                            : []),
+                        ].join(t("daily-dot"))}
+                      </span>
+                    )}
+                    <span className="life-card__spacer" />
+                    <button type="button" className="code-link" onClick={onOpenKitchen}>
+                      {t("daily-open-kitchen")}
+                    </button>
+                  </div>
+                  {dishes.length > 0 ? (
+                    <>
+                      <div className="daily__dishes">
+                        {dishes.slice(0, 3).map((dish) => (
+                          <button
+                            key={dish.name}
+                            type="button"
+                            className="daily__dish"
+                            onClick={onOpenKitchen}
+                          >
+                            <DishCover name={dish.name} image={dish.image} />
+                            <b>{dish.name}</b>
+                            <span>
+                              {t("kitchen-minutes", { minutes: dish.minutes })}
+                              {t("daily-dot")}
+                              {dish.missing.length > 0
+                                ? t("kitchen-missing", {
+                                    items: dish.missing.join(t("kitchen-joiner")),
+                                  })
+                                : t("kitchen-have-all")}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      {left > 0 && (
+                        <p className="life-card__hint">{t("daily-shopping", { count: left })}</p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="daily__empty">
+                      <p>{t("daily-food-empty")}</p>
+                      <button type="button" className="dialog__primary" onClick={onOpenKitchen}>
+                        {t("daily-food-start")}
+                      </button>
+                    </div>
+                  )}
+                </section>
+              ),
+            },
+            {
+              id: "weather",
+              title: t("weather-title"),
+              wide: false,
+              node: <WeatherCard onOpen={onOpenWeather} />,
+            },
+            {
+              id: "money",
+              title: t("daily-money"),
+              wide: false,
+              node: <Spending onOpen={onOpenLedger} />,
+            },
+            {
+              id: "more",
+              title: t("daily-more-title"),
+              wide: false,
+              node: (
+                <section className="life-card daily__more">
+                  <b>{t("daily-more-title")}</b>
+                  <p>{t("daily-more-body")}</p>
+                </section>
+              ),
+            },
+          ]}
+        />
       </div>
     </main>
   );

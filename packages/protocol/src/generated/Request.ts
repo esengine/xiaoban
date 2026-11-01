@@ -4,6 +4,7 @@ import type { AutonomyLevel } from "./AutonomyLevel.ts";
 import type { ConfirmChoice } from "./ConfirmChoice.ts";
 import type { ConflictChoice } from "./ConflictChoice.ts";
 import type { ContextNote } from "./ContextNote.ts";
+import type { DailyLayout } from "./DailyLayout.ts";
 import type { Expense } from "./Expense.ts";
 import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
@@ -142,6 +143,8 @@ export type Request =
   | { type: "remove_place"; id: string }
   | { type: "set_weather_rules"; rules: WeatherRules }
   | { type: "locate_weather" }
+  | { type: "daily_layout" }
+  | { type: "set_daily_layout"; layout: DailyLayout }
   | { type: "locate_place" }
   | { type: "update_place"; id: string; label: string | null; location: WeatherPlace | null }
   | { type: "set_home_place"; id: string }

@@ -23,6 +23,8 @@ export type { CookStep } from "./CookStep.ts";
 export type { CookTimer } from "./CookTimer.ts";
 export type { Coord } from "./Coord.ts";
 export type { Credential } from "./Credential.ts";
+export type { DailyCard } from "./DailyCard.ts";
+export type { DailyLayout } from "./DailyLayout.ts";
 export type { DayRhythm } from "./DayRhythm.ts";
 export type { DayWeather } from "./DayWeather.ts";
 export type { Device } from "./Device.ts";

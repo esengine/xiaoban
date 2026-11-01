@@ -5,6 +5,7 @@ import type { CommandRun } from "./CommandRun.ts";
 import type { CommitInfo } from "./CommitInfo.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { ConflictFile } from "./ConflictFile.ts";
+import type { DailyLayout } from "./DailyLayout.ts";
 import type { Device } from "./Device.ts";
 import type { DirEntry } from "./DirEntry.ts";
 import type { Failure } from "./Failure.ts";
@@ -86,6 +87,7 @@ export type Response =
   | { type: "ledger"; ledger: Ledger }
   | { type: "ledger_year"; year: LedgerYear }
   | { type: "weather"; weather: WeatherView }
+  | { type: "daily_layout"; layout: DailyLayout }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
   | { type: "workspace_image"; url: string; bytes: number };

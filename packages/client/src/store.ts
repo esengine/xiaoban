@@ -8,6 +8,7 @@ import type {
   ConflictChoice,
   ConflictFile,
   ContextNote,
+  DailyLayout,
   Device,
   DirEntry,
   Expense,
@@ -518,6 +519,16 @@ export class HubStore {
 
   cancelImport(month: string): Promise<void> {
     return this.#ledgerRequest({ type: "cancel_import", month });
+  }
+
+  async dailyLayout(): Promise<DailyLayout> {
+    const { layout } = await this.client.request({ type: "daily_layout" }, "daily_layout");
+    return layout;
+  }
+
+  async setDailyLayout(layout: DailyLayout): Promise<DailyLayout> {
+    const result = await this.client.request({ type: "set_daily_layout", layout }, "daily_layout");
+    return result.layout;
   }
 
   async loadWeather(placeId: string | null = null): Promise<WeatherView> {

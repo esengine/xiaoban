@@ -1,15 +1,7 @@
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
-import type {
-  Sky,
-  TipKind,
-  WeatherPlace,
-  WeatherReport,
-  WeatherRules,
-  WeatherView,
-} from "@xiaoban/protocol";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import type { Sky, TipKind, WeatherReport, WeatherRules, WeatherView } from "@xiaoban/protocol";
+import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { WeatherIcon } from "../trip/icons.tsx";
 import { AddPlace, PlaceMenu, placeName } from "./WeatherPlaces.tsx";
