@@ -2329,9 +2329,8 @@ async fn floor_plan(client: &mut TestClient, request: Request) -> xiaoban_protoc
     plan
 }
 
-#[tokio::test]
-async fn floor_plans_version_every_change_and_take_measurements() {
-    let provider = ScriptedProvider::sequence([
+fn floor_provider() -> ScriptedProvider {
+    ScriptedProvider::sequence([
         vec![tool_call(
             "floorplan_save",
             &serde_json::json!({
@@ -2373,7 +2372,12 @@ async fn floor_plans_version_every_change_and_take_measurements() {
             }),
         )],
         vec![ModelChunk::Text("加好了".into())],
-    ]);
+    ])
+}
+
+#[tokio::test]
+async fn floor_plans_version_every_change_and_take_measurements() {
+    let provider = floor_provider();
     let hub = Hub::start(HubConfig::ephemeral(), runtime(provider))
         .await
         .unwrap();
