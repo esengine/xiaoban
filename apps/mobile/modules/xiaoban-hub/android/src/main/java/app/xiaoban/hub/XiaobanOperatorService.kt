@@ -22,6 +22,7 @@ class XiaobanOperatorService : AccessibilityService() {
   override fun onDestroy() {
     if (current === this) current = null
     OperatorOverlay.hide()
+    PlanBall.hide()
     super.onDestroy()
   }
 

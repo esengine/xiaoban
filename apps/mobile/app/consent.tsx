@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { XiaobanHub } from "../modules/xiaoban-hub/index.ts";
 import { useHubStore } from "../src/hub/HubProvider.tsx";
+import { setPlanBall } from "../src/hub/planBallStore.ts";
 
 function Section({
   number,
@@ -35,7 +36,7 @@ export default function ConsentScreen() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const store = useHubStore();
-  const { confirm } = useLocalSearchParams<{ confirm?: string }>();
+  const { confirm, ball } = useLocalSearchParams<{ confirm?: string; ball?: string }>();
   const [agreed, setAgreed] = useState(false);
   const answered = useRef(false);
 
@@ -43,6 +44,7 @@ export default function ConsentScreen() {
     if (answered.current) return;
     answered.current = true;
     if (confirm) void store.answerConfirm(confirm, choice).catch(() => undefined);
+    if (ball && choice === "yes") setPlanBall(ball);
     if (router.canGoBack()) router.back();
     else router.replace("/");
   };

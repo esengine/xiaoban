@@ -25,9 +25,12 @@ const TONES: [Tone, Tone, Tone, Tone, Tone] = [
 
 type Filter = "all" | "confirm" | "running";
 
-export function openThread(id: string) {
+export function openThread(id: string, options: { plan?: boolean } = {}) {
   markRead(id);
-  router.push({ pathname: "/thread/[id]", params: { id } });
+  router.push({
+    pathname: "/thread/[id]",
+    params: options.plan ? { id, plan: "open" } : { id },
+  });
 }
 
 export function ChatsTab({ store }: { store: HubStore }) {

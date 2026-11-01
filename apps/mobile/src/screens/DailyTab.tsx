@@ -98,7 +98,7 @@ function PlanRow({ plan }: { plan: Plan }) {
             ? t("plan-sub-doing", { step: next.title })
             : t("plan-sub-done");
   return (
-    <Pressable style={styles.planRow} onPress={() => openThread(plan.threadId)}>
+    <Pressable style={styles.planRow} onPress={() => openThread(plan.threadId, { plan: true })}>
       <View style={styles.planRing}>
         <Text style={styles.planRingText}>
           {t("plan-ring", { done, total: plan.steps.length })}
