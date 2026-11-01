@@ -8,6 +8,25 @@ const MAX_ROWS: usize = 3000;
 const MAX_KEYS: usize = 400;
 const SAME_WINDOW_MS: i64 = 15 * 60 * 1000;
 
+fn words(key: &str) -> &'static [String] {
+    static WORDS: std::sync::OnceLock<std::collections::HashMap<String, Vec<String>>> = std::sync::OnceLock::new();
+    WORDS
+        .get_or_init(|| {
+            include_str!("bill_words.txt")
+                .lines()
+                .filter_map(|line| line.split_once('='))
+                .map(|(name, list)| (name.trim().to_owned(), list.split(',').map(|word| word.trim().to_owned()).collect()))
+                .collect()
+        })
+        .get(key)
+        .map_or(&[], Vec::as_slice)
+}
+
+fn has(text: &str, key: &str) -> bool {
+    let lower = text.to_lowercase();
+    words(key).iter().any(|word| lower.contains(word.as_str()))
+}
+
 pub fn is_bill(path: &str) -> bool {
     Path::new(path)
         .extension()
@@ -100,21 +119,21 @@ struct Columns {
     kind: Option<usize>,
 }
 
-fn find(header: &[String], words: &[&str]) -> Option<usize> {
-    words
+fn find(header: &[String], key: &str) -> Option<usize> {
+    words(key)
         .iter()
-        .find_map(|word| header.iter().position(|cell| cell.contains(word)))
+        .find_map(|word| header.iter().position(|cell| cell.contains(word.as_str())))
 }
 
 fn columns(header: &[String]) -> Option<Columns> {
     Some(Columns {
-        time: find(header, &["交易时间", "付款时间", "交易创建时间", "创建时间", "时间"])?,
-        payee: find(header, &["交易对方", "对方"]),
-        item: find(header, &["商品说明", "商品名称", "商品"]),
-        direction: find(header, &["收/支"]),
-        amount: find(header, &["金额"])?,
-        status: find(header, &["交易状态", "当前状态", "状态"]),
-        kind: find(header, &["交易类型", "交易分类", "类型"]),
+        time: find(header, "time")?,
+        payee: find(header, "payee"),
+        item: find(header, "item"),
+        direction: find(header, "direction"),
+        amount: find(header, "amount")?,
+        status: find(header, "status"),
+        kind: find(header, "kind"),
     })
 }
 
@@ -127,9 +146,9 @@ fn amount(text: &str) -> i64 {
 fn app_of(name: &str, rows: &[Vec<String>]) -> String {
     let head: String = rows.iter().take(25).flatten().cloned().collect::<Vec<_>>().join(" ");
     let all = format!("{name} {head}");
-    if all.contains("支付宝") || all.to_lowercase().contains("alipay") {
+    if has(&all, "alipay") {
         "alipay".to_owned()
-    } else if all.contains("微信") || all.to_lowercase().contains("wechat") {
+    } else if has(&all, "wechat") {
         "wechat".to_owned()
     } else {
         String::new()
@@ -138,19 +157,19 @@ fn app_of(name: &str, rows: &[Vec<String>]) -> String {
 
 fn status_of(direction: &str, status: &str, kind: &str, payee: &str, item: &str) -> ImportStatus {
     let joined = format!("{status} {kind} {item}");
-    if joined.contains("退款") {
+    if has(&joined, "refund") {
         return ImportStatus::Refund;
     }
-    if direction.contains("收入") {
+    if has(direction, "income") {
         return ImportStatus::Income;
     }
-    if joined.contains("转账") || joined.contains("红包") || payee.contains("转账") || direction.contains("不计收支") {
+    if has(&joined, "transfer") || has(payee, "transfer") || has(direction, "transfer") {
         return ImportStatus::Transfer;
     }
-    if !direction.is_empty() && !direction.contains("支出") && direction.trim() != "/" {
+    if !direction.is_empty() && !has(direction, "spend") && direction.trim() != "/" {
         return ImportStatus::Transfer;
     }
-    if status.contains("关闭") || status.contains("失败") {
+    if has(status, "failed") {
         return ImportStatus::Transfer;
     }
     ImportStatus::New
@@ -183,7 +202,7 @@ pub fn read(path: &Path, known: &[Expense]) -> Result<ImportPreview, String> {
         .collect();
     let start = rows
         .iter()
-        .position(|row| row.iter().any(|cell| cell.contains("金额")) && row.iter().any(|cell| cell.contains("时间")))
+        .position(|row| row.iter().any(|cell| has(cell, "amount")) && row.iter().any(|cell| has(cell, "time")))
         .ok_or("no header row")?;
     let columns = columns(&rows[start]).ok_or("missing columns")?;
     let app = app_of(&name, &rows[..start]);
