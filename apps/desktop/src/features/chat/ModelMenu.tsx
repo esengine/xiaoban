@@ -7,6 +7,7 @@ import { useHub } from "../../app/hub.tsx";
 import { dismiss, dismissOnCancel } from "../../lib/dialog.ts";
 import { ModelStep } from "../onboarding/steps/ModelStep.tsx";
 import { FloatPanel } from "./FloatPanel.tsx";
+import { Segmented } from "./Segmented.tsx";
 
 const EFFORTS: ThinkingEffort[] = ["auto", "none", "low", "high", "max"];
 
@@ -65,85 +66,75 @@ export function ModelMenu({ threadId }: { threadId: string }) {
         {activeModelName(active)}
         {supported && <span className="model-menu__effort">{label(effort)}</span>}
       </button>
-      {open && (
-        <FloatPanel
-          anchor={trigger}
-          label={t("thinking-model")}
-          className="model-menu"
-          onClose={() => setOpen(false)}
+      <FloatPanel
+        open={open}
+        anchor={trigger}
+        label={t("thinking-model")}
+        className="model-menu"
+        onClose={() => setOpen(false)}
+      >
+        <b className="model-menu__title">{t("thinking-model")}</b>
+        <ul className="model-menu__models">
+          {choices.map((choice) => {
+            const current = choice.model === active.model && choice.provider === active.provider;
+            const busy = switching?.model === choice.model;
+            return (
+              <li key={`${choice.provider}:${choice.model}`}>
+                <button
+                  type="button"
+                  aria-pressed={current}
+                  disabled={switching !== null}
+                  onClick={() => void pick(choice)}
+                >
+                  <span>
+                    {current ? (active.label ?? modelName(choice.model)) : modelName(choice.model)}
+                  </span>
+                  {busy ? (
+                    <span className="model-menu__note">{t("model-switching")}</span>
+                  ) : (
+                    current && (
+                      <svg className="model-menu__check" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" />
+                      </svg>
+                    )
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {failed && <p className="model-menu__failed">{failed}</p>}
+        <button
+          type="button"
+          className="model-menu__add"
+          onClick={() => {
+            setOpen(false);
+            setAdding(true);
+          }}
         >
-          <b className="model-menu__title">{t("thinking-model")}</b>
-          <ul className="model-menu__models">
-            {choices.map((choice) => {
-              const current = choice.model === active.model && choice.provider === active.provider;
-              const busy = switching?.model === choice.model;
-              return (
-                <li key={`${choice.provider}:${choice.model}`}>
-                  <button
-                    type="button"
-                    aria-pressed={current}
-                    disabled={switching !== null}
-                    onClick={() => void pick(choice)}
-                  >
-                    <span>
-                      {current
-                        ? (active.label ?? modelName(choice.model))
-                        : modelName(choice.model)}
-                    </span>
-                    {busy ? (
-                      <span className="model-menu__note">{t("model-switching")}</span>
-                    ) : (
-                      current && (
-                        <svg className="model-menu__check" viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M5 12.5l4.5 4.5L19 7.5" />
-                        </svg>
-                      )
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {failed && <p className="model-menu__failed">{failed}</p>}
-          <button
-            type="button"
-            className="model-menu__add"
-            onClick={() => {
-              setOpen(false);
-              setAdding(true);
-            }}
-          >
-            {t("model-add")}
-          </button>
-          <hr className="model-menu__separator" />
-          <b className="model-menu__title">{t("thinking-title")}</b>
-          <div className="model-menu__segments" data-disabled={!supported || undefined}>
+          {t("model-add")}
+        </button>
+        <hr className="model-menu__separator" />
+        <b className="model-menu__title">{t("thinking-title")}</b>
+        <Segmented
+          options={EFFORTS.map((value) => ({ value, label: label(value) }))}
+          value={effort}
+          disabled={!supported}
+          onChange={(value) => void store.setThinking(threadId, value)}
+        />
+        {supported ? (
+          <dl className="model-menu__help">
             {EFFORTS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={value === effort}
-                disabled={!supported}
-                onClick={() => void store.setThinking(threadId, value)}
-              >
-                {label(value)}
-              </button>
+              <div key={value}>
+                <dt>{label(value)}</dt>
+                <dd>{t(`thinking-${value}-help`)}</dd>
+              </div>
             ))}
-          </div>
-          {supported ? (
-            <dl className="model-menu__help">
-              {EFFORTS.map((value) => (
-                <div key={value}>
-                  <dt>{label(value)}</dt>
-                  <dd>{t(`thinking-${value}-help`)}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : (
-            <p className="model-menu__help">{t("thinking-unsupported")}</p>
-          )}
-        </FloatPanel>
-      )}
+          </dl>
+        ) : (
+          <p className="model-menu__help">{t("thinking-unsupported")}</p>
+        )}
+      </FloatPanel>
       {adding && <AddModel onClose={() => setAdding(false)} />}
     </>
   );

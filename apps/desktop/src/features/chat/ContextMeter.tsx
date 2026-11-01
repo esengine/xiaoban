@@ -4,6 +4,7 @@ import type { ContextUsage } from "@xiaoban/protocol";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { FloatPanel } from "./FloatPanel.tsx";
+import { Segmented } from "./Segmented.tsx";
 
 const AUTO = [70, 80, 90, null] as const;
 const WARN = 80;
@@ -78,60 +79,56 @@ export function ContextMeter({ threadId }: { threadId: string }) {
           style={{ "--used": `${percent * 3.6}deg` } as CSSProperties}
         />
       </button>
-      {open && (
-        <FloatPanel
-          anchor={trigger}
-          label={t("context-title")}
-          className="context-meter__panel"
-          onClose={() => setOpen(false)}
-        >
-          <div className="context-meter__head">
-            <b>{t("context-title")}</b>
-            <span>
-              {t("context-amount", {
-                percent,
-                used: compact.format(usage.used),
-                window: compact.format(usage.window),
-              })}
-            </span>
-          </div>
-          <div className="context-meter__bar" data-warn={percent >= WARN || undefined}>
-            <span style={{ width: `${percent}%` }} />
-            {usage.autoPercent !== null && (
-              <i style={{ left: `${usage.autoPercent}%` }} aria-hidden="true" />
-            )}
-          </div>
-          <p className="context-meter__help">{t("context-help")}</p>
-          <div className="context-meter__action">
-            <button
-              type="button"
-              className="context-meter__compact"
-              disabled={!usage.canCompact}
-              onClick={compactNow}
-            >
-              {t("context-compact")}
-            </button>
-            <span>{note}</span>
-          </div>
-          <hr className="model-menu__separator" />
-          <div className="context-meter__auto">
-            <span>{t("context-auto")}</span>
-            <div className="model-menu__segments">
-              {AUTO.map((value) => (
-                <button
-                  key={value ?? "off"}
-                  type="button"
-                  aria-pressed={usage.autoPercent === value}
-                  onClick={() => setAuto(value)}
-                >
-                  {value === null ? t("context-auto-off") : `${value}%`}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="context-meter__foot">{t("context-auto-note")}</p>
-        </FloatPanel>
-      )}
+      <FloatPanel
+        open={open}
+        anchor={trigger}
+        label={t("context-title")}
+        className="context-meter__panel"
+        onClose={() => setOpen(false)}
+      >
+        <div className="context-meter__head">
+          <b>{t("context-title")}</b>
+          <span>
+            {t("context-amount", {
+              percent,
+              used: compact.format(usage.used),
+              window: compact.format(usage.window),
+            })}
+          </span>
+        </div>
+        <div className="context-meter__bar" data-warn={percent >= WARN || undefined}>
+          <span style={{ width: `${percent}%` }} />
+          {usage.autoPercent !== null && (
+            <i style={{ left: `${usage.autoPercent}%` }} aria-hidden="true" />
+          )}
+        </div>
+        <p className="context-meter__help">{t("context-help")}</p>
+        <div className="context-meter__action">
+          <button
+            type="button"
+            className="context-meter__compact"
+            disabled={!usage.canCompact}
+            onClick={compactNow}
+          >
+            {t("context-compact")}
+          </button>
+          <span>{note}</span>
+        </div>
+        <hr className="model-menu__separator" />
+        <div className="context-meter__auto">
+          <span>{t("context-auto")}</span>
+          <Segmented
+            className="context-meter__segments"
+            options={AUTO.map((value) => ({
+              value,
+              label: value === null ? t("context-auto-off") : `${value}%`,
+            }))}
+            value={usage.autoPercent}
+            onChange={setAuto}
+          />
+        </div>
+        <p className="context-meter__foot">{t("context-auto-note")}</p>
+      </FloatPanel>
     </>
   );
 }
