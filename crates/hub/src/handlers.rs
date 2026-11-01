@@ -167,7 +167,13 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::WorkspaceImage { .. }
         | Request::GithubRefs { .. }
         | Request::ThreadPins { .. }
-        | Request::PinRef { .. }) => crate::code_requests::handle(state, local, request).await,
+        | Request::PinRef { .. }
+        | Request::GitLog { .. }
+        | Request::CommitFiles { .. }
+        | Request::DraftCommit { .. }
+        | Request::Commit { .. }
+        | Request::InitGit { .. }
+        | Request::CreatePullRequest { .. }) => crate::code_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

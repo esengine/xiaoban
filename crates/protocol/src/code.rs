@@ -145,6 +145,18 @@ pub struct GithubRef {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+pub struct CommitInfo {
+    pub hash: String,
+    pub short: String,
+    pub subject: String,
+    pub author: String,
+    #[ts(type = "number")]
+    pub time: i64,
+    pub merge: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub struct CommandRun {
     pub id: String,
     pub workspace_id: String,

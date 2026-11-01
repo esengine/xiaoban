@@ -2,6 +2,7 @@
 import type { Archived } from "./Archived.ts";
 import type { Branch } from "./Branch.ts";
 import type { CommandRun } from "./CommandRun.ts";
+import type { CommitInfo } from "./CommitInfo.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { Device } from "./Device.ts";
 import type { DirEntry } from "./DirEntry.ts";
@@ -69,4 +70,7 @@ export type Response =
   | { type: "branches"; branches: Array<Branch> }
   | { type: "github_refs"; refs: Array<GithubRef> }
   | { type: "pins"; pinned: Array<number>; hidden: Array<number> }
+  | { type: "commits"; commits: Array<CommitInfo> }
+  | { type: "commit_draft"; message: string | null }
+  | { type: "pull_request"; url: string }
   | { type: "workspace_image"; url: string; bytes: number };

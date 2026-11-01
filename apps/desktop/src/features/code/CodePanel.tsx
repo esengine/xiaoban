@@ -1,11 +1,15 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { DirEntry, Workspace } from "@xiaoban/protocol";
-import { type MouseEvent, useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
+import { useHub } from "../../app/hub.tsx";
+import { openExternal } from "../../lib/external.ts";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
+import { CommitDialog } from "./CommitDialog.tsx";
 import { DiffView } from "./DiffView.tsx";
 import { FileTree, SideIcon } from "./FileTree.tsx";
 import { FileView } from "./FileView.tsx";
+import { GitTab } from "./GitTab.tsx";
 import { Terminal } from "./Terminal.tsx";
 import { nameOf, useChanges, useGit } from "./useCode.ts";
 
@@ -16,7 +20,11 @@ export function showCode(tab: "changes" | "terminal") {
   window.dispatchEvent(new CustomEvent(SHOW_EVENT, { detail: tab }));
 }
 
-type Tab = { kind: "changes" } | { kind: "terminal" } | { kind: "file"; path: string };
+type Tab =
+  | { kind: "changes" }
+  | { kind: "git" }
+  | { kind: "terminal" }
+  | { kind: "file"; path: string };
 
 function OutIcon() {
   return (
@@ -44,6 +52,29 @@ export function CodePanel({
   const [tab, setTab] = useState<Tab>({ kind: "changes" });
   const [opened, setOpened] = useState<string[]>([]);
   const [treeOpen, setTreeOpen] = useState(true);
+  const store = useHub();
+  const [committing, setCommitting] = useState(false);
+  const afterCommit = useRef<(() => void) | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [prFailure, setPrFailure] = useState<string | null>(null);
+  const startCommit = (after?: () => void) => {
+    afterCommit.current = after ?? null;
+    setCommitting(true);
+  };
+  const openPullRequest = async () => {
+    setOpening(true);
+    setPrFailure(null);
+    try {
+      const url = await store.createPullRequest(workspace.id);
+      const number = Number(/\/pull\/(\d+)/.exec(url)?.[1]);
+      if (number) void store.pinRef(threadId, number, true).catch(() => undefined);
+      void openExternal(url);
+    } catch (error) {
+      setPrFailure(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOpening(false);
+    }
+  };
 
   useEffect(() => {
     const show = (event: Event) => {
@@ -106,6 +137,17 @@ export function CodePanel({
           {t("code-tab-changes")}
           {files.length > 0 && <span className="code-tab__count">{files.length}</span>}
         </button>
+        {git?.installed && (
+          <button
+            type="button"
+            role="tab"
+            className="code-tab"
+            aria-selected={tab.kind === "git"}
+            onClick={() => setTab({ kind: "git" })}
+          >
+            {t("code-tab-git")}
+          </button>
+        )}
         <button
           type="button"
           role="tab"
@@ -178,6 +220,9 @@ export function CodePanel({
         <div className="code-panel__content">
           {tab.kind === "changes" && <DiffView files={files} onOpen={openFile} onRevert={revert} />}
           {tab.kind === "terminal" && <Terminal workspace={workspace} />}
+          {tab.kind === "git" && (
+            <GitTab workspace={workspace} git={git} onAsk={onAsk} onCommit={startCommit} />
+          )}
           {tab.kind === "file" && (
             <FileView
               key={tab.path}
@@ -201,7 +246,36 @@ export function CodePanel({
         {git?.repository && git.ahead > 0 && git.upstream && (
           <span>{t("code-status-ahead", { count: git.ahead, upstream: git.upstream })}</span>
         )}
+        <span className="code-panel__spacer" />
+        {prFailure && <span className="code-panel__failure">{prFailure}</span>}
+        {git?.repository && changedCount > 0 && (
+          <button type="button" className="code-status-button" onClick={() => startCommit()}>
+            {t("git-commit-open")}
+          </button>
+        )}
+        {git?.repository && git.branch && (
+          <button
+            type="button"
+            className="code-status-button"
+            data-primary
+            disabled={opening}
+            onClick={() => void openPullRequest()}
+          >
+            {opening ? t("git-pr-opening") : t("git-pr")}
+          </button>
+        )}
       </div>
+      {committing && git && (
+        <CommitDialog
+          workspace={workspace}
+          git={git}
+          onDone={() => afterCommit.current?.()}
+          onClose={() => {
+            afterCommit.current = null;
+            setCommitting(false);
+          }}
+        />
+      )}
     </section>
   );
 }

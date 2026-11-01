@@ -2,6 +2,7 @@ import type {
   AutonomyLevel,
   Branch,
   CommandRun,
+  CommitInfo,
   ConfirmChoice,
   ContextNote,
   Device,
@@ -443,6 +444,53 @@ export class HubStore {
   ): Promise<{ pinned: number[]; hidden: number[] }> {
     const result = await this.client.request({ type: "pin_ref", threadId, number, pinned }, "pins");
     return { pinned: result.pinned, hidden: result.hidden };
+  }
+
+  async gitLog(workspaceId: string, all = false): Promise<CommitInfo[]> {
+    const { commits } = await this.client.request({ type: "git_log", workspaceId, all }, "commits");
+    return commits;
+  }
+
+  async commitFiles(workspaceId: string, hash: string | null): Promise<FileDiff[]> {
+    const { files } = await this.client.request(
+      { type: "commit_files", workspaceId, hash },
+      "changes",
+    );
+    return files;
+  }
+
+  async draftCommit(workspaceId: string, paths: string[]): Promise<string | null> {
+    const { message } = await this.client.request(
+      { type: "draft_commit", workspaceId, paths },
+      "commit_draft",
+    );
+    return message;
+  }
+
+  async commit(
+    workspaceId: string,
+    message: string,
+    paths: string[],
+    push: boolean,
+  ): Promise<GitInfo> {
+    const { git } = await this.client.request(
+      { type: "commit", workspaceId, message, paths, push },
+      "git",
+    );
+    return git;
+  }
+
+  async initGit(workspaceId: string): Promise<GitInfo> {
+    const { git } = await this.client.request({ type: "init_git", workspaceId }, "git");
+    return git;
+  }
+
+  async createPullRequest(workspaceId: string): Promise<string> {
+    const { url } = await this.client.request(
+      { type: "create_pull_request", workspaceId },
+      "pull_request",
+    );
+    return url;
   }
 
   async threadChanges(threadId: string): Promise<FileDiff[]> {

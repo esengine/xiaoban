@@ -1,9 +1,10 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import type { ChangedFile } from "@xiaoban/protocol";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { BranchMenu } from "./BranchMenu.tsx";
 import { showCode } from "./CodePanel.tsx";
+import { CommitDialog } from "./CommitDialog.tsx";
 import { FileIcon } from "./FileTree.tsx";
 import { useChanges, useGit, useWorkspaceOf } from "./useCode.ts";
 
@@ -25,6 +26,8 @@ export function BranchBar({ threadId }: { threadId: string }) {
   const { files } = useChanges(threadId, workspace);
   const store = useHub();
   const [menu, setMenu] = useState(false);
+  const [committing, setCommitting] = useState(false);
+  const afterCommit = useRef<(() => void) | null>(null);
   if (!workspace) return null;
   const repo = git?.repository ?? false;
   const changed = repo ? (git?.changed ?? []) : files;
@@ -48,7 +51,15 @@ export function BranchBar({ threadId }: { threadId: string }) {
             </svg>
           </button>
           {menu && git && (
-            <BranchMenu workspace={workspace} git={git} onClose={() => setMenu(false)} />
+            <BranchMenu
+              workspace={workspace}
+              git={git}
+              onCommit={(after) => {
+                afterCommit.current = after;
+                setCommitting(true);
+              }}
+              onClose={() => setMenu(false)}
+            />
           )}
         </span>
       )}
@@ -79,6 +90,17 @@ export function BranchBar({ threadId }: { threadId: string }) {
             {t("code-view")}
           </button>
         </>
+      )}
+      {committing && git && (
+        <CommitDialog
+          workspace={workspace}
+          git={git}
+          onDone={() => afterCommit.current?.()}
+          onClose={() => {
+            afterCommit.current = null;
+            setCommitting(false);
+          }}
+        />
       )}
     </div>
   );

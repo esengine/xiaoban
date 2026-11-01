@@ -215,6 +215,12 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             let (pinned, hidden) = crate::github::pin(state, &thread_id, number, pinned).await;
             Ok(Response::Pins { pinned, hidden })
         }
+        request @ (Request::GitLog { .. }
+        | Request::CommitFiles { .. }
+        | Request::DraftCommit { .. }
+        | Request::Commit { .. }
+        | Request::InitGit { .. }
+        | Request::CreatePullRequest { .. }) => git_request(state, local, request).await,
         Request::StopCommand { command_id } => {
             crate::commands::stop(state, &command_id);
             Ok(Response::Ack)
@@ -276,4 +282,79 @@ fn image(path: &Path) -> Handled {
         url: format!("data:{mime};base64,{encoded}"),
         bytes: size,
     })
+}
+
+fn changed(state: &SharedState, workspace: &Workspace) {
+    state.publish(Event::FilesChanged {
+        workspace_id: workspace.id.clone(),
+        thread_id: None,
+        paths: Vec::new(),
+    });
+}
+
+async fn git_request(state: &SharedState, local: bool, request: Request) -> Handled {
+    use crate::git_ops;
+    match request {
+        Request::GitLog { workspace_id, all } => {
+            let found = load(state, workspace_id).await?;
+            Ok(Response::Commits {
+                commits: git_ops::log(&found, all, 200).await,
+            })
+        }
+        Request::CommitFiles { workspace_id, hash } => {
+            let found = load(state, workspace_id).await?;
+            let files = match hash {
+                Some(hash) => git_ops::commit_files(&found, &hash)
+                    .await
+                    .map_err(|failure| bad_request(&failure))?,
+                None => git_ops::working_files(&found).await,
+            };
+            Ok(Response::Changes { files })
+        }
+        Request::DraftCommit {
+            workspace_id,
+            paths,
+        } => {
+            let found = load(state, workspace_id).await?;
+            Ok(Response::CommitDraft {
+                message: git_ops::draft_message(state, &found, &paths).await,
+            })
+        }
+        Request::Commit {
+            workspace_id,
+            message,
+            paths,
+            push,
+        } => {
+            only_here(local)?;
+            let found = load(state, workspace_id).await?;
+            let result = git_ops::commit(&found, &message, &paths, push).await;
+            changed(state, &found);
+            result.map_err(|failure| bad_request(&failure))?;
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
+            })
+        }
+        Request::InitGit { workspace_id } => {
+            only_here(local)?;
+            let found = load(state, workspace_id).await?;
+            git_ops::init(&found)
+                .await
+                .map_err(|failure| bad_request(&failure))?;
+            changed(state, &found);
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
+            })
+        }
+        Request::CreatePullRequest { workspace_id } => {
+            only_here(local)?;
+            let found = load(state, workspace_id).await?;
+            let result = git_ops::pull_request(&found).await;
+            changed(state, &found);
+            Ok(Response::PullRequest {
+                url: result.map_err(|failure| bad_request(&failure))?,
+            })
+        }
+        _ => Err(bad_request("not a git request")),
+    }
 }

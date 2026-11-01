@@ -9,11 +9,13 @@ function SwitchDialog({
   name,
   git,
   onPick,
+  onCommit,
   onClose,
 }: {
   name: string;
   git: GitInfo;
   onPick: (stash: boolean) => void;
+  onCommit: (() => void) | null;
   onClose: () => void;
 }) {
   const { t } = useI18n();
@@ -40,10 +42,23 @@ function SwitchDialog({
         {t("branch-switch-body", { branch: git.branch ?? "", count: git.changed.length })}
       </p>
       <div className="branch-switch__choices">
+        {onCommit && (
+          <button
+            type="button"
+            className="branch-switch__choice"
+            data-primary
+            onClick={() => {
+              onCommit();
+              dismiss(dialog.current);
+            }}
+          >
+            {t("branch-switch-commit")}
+          </button>
+        )}
         <button
           type="button"
           className="branch-switch__choice"
-          data-primary
+          data-primary={!onCommit || undefined}
           onClick={() => pick(true)}
         >
           {t("branch-switch-stash")}
@@ -67,10 +82,14 @@ function SwitchDialog({
 export function BranchMenu({
   workspace,
   git,
+  below = false,
+  onCommit,
   onClose,
 }: {
   workspace: Workspace;
   git: GitInfo;
+  below?: boolean;
+  onCommit?: (after: () => void) => void;
   onClose: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -146,7 +165,13 @@ export function BranchMenu({
   };
 
   return (
-    <div className="branch-menu" ref={box} role="dialog" aria-label={t("branch-menu")}>
+    <div
+      className="branch-menu"
+      data-below={below || undefined}
+      ref={box}
+      role="dialog"
+      aria-label={t("branch-menu")}
+    >
       <label className="branch-menu__search">
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="6" />
@@ -227,6 +252,17 @@ export function BranchMenu({
           name={asking}
           git={git}
           onPick={(stash) => void run(() => store.switchBranch(workspace.id, asking, { stash }))}
+          onCommit={
+            onCommit
+              ? () => {
+                  const target = asking;
+                  onClose();
+                  onCommit(
+                    () => void store.switchBranch(workspace.id, target).catch(() => undefined),
+                  );
+                }
+              : null
+          }
           onClose={() => setAsking(null)}
         />
       )}

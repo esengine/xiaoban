@@ -13,6 +13,7 @@ mod discovery;
 mod error;
 mod file_tools;
 mod files;
+mod git_ops;
 mod github;
 mod handlers;
 mod interpret;

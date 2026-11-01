@@ -219,6 +219,33 @@ pub enum Request {
         number: u32,
         pinned: bool,
     },
+    GitLog {
+        workspace_id: String,
+        #[serde(default)]
+        all: bool,
+    },
+    CommitFiles {
+        workspace_id: String,
+        #[serde(default)]
+        hash: Option<String>,
+    },
+    DraftCommit {
+        workspace_id: String,
+        paths: Vec<String>,
+    },
+    Commit {
+        workspace_id: String,
+        message: String,
+        paths: Vec<String>,
+        #[serde(default)]
+        push: bool,
+    },
+    InitGit {
+        workspace_id: String,
+    },
+    CreatePullRequest {
+        workspace_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -357,6 +384,15 @@ pub enum Response {
     Pins {
         pinned: Vec<u32>,
         hidden: Vec<u32>,
+    },
+    Commits {
+        commits: Vec<crate::CommitInfo>,
+    },
+    CommitDraft {
+        message: Option<String>,
+    },
+    PullRequest {
+        url: String,
     },
     WorkspaceImage {
         url: String,

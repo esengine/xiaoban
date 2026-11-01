@@ -90,4 +90,10 @@ export type Request =
   | { type: "workspace_image"; workspaceId: string; path: string }
   | { type: "github_refs"; workspaceId: string; numbers: Array<number> }
   | { type: "thread_pins"; threadId: string }
-  | { type: "pin_ref"; threadId: string; number: number; pinned: boolean };
+  | { type: "pin_ref"; threadId: string; number: number; pinned: boolean }
+  | { type: "git_log"; workspaceId: string; all: boolean }
+  | { type: "commit_files"; workspaceId: string; hash: string | null }
+  | { type: "draft_commit"; workspaceId: string; paths: Array<string> }
+  | { type: "commit"; workspaceId: string; message: string; paths: Array<string>; push: boolean }
+  | { type: "init_git"; workspaceId: string }
+  | { type: "create_pull_request"; workspaceId: string };

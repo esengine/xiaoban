@@ -8,6 +8,7 @@ export type { ChangedFile } from "./ChangedFile.ts";
 export type { CheckOutcome } from "./CheckOutcome.ts";
 export type { ClientFrame } from "./ClientFrame.ts";
 export type { CommandRun } from "./CommandRun.ts";
+export type { CommitInfo } from "./CommitInfo.ts";
 export type { ConfirmChoice } from "./ConfirmChoice.ts";
 export type { ConfirmKind } from "./ConfirmKind.ts";
 export type { ConfirmRequest } from "./ConfirmRequest.ts";
