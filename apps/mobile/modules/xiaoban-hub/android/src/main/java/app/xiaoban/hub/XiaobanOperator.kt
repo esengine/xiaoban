@@ -48,7 +48,11 @@ object XiaobanOperator {
       when (op) {
         "ready" -> JSONObject().put("ready", XiaobanOperatorService.current != null)
         "apps" -> apps()
-        "open" -> open(request.getString("app"))
+        "open" -> if (XiaobanOperatorService.current == null) {
+          failure("the accessibility service is off, so Xiaoban cannot open or use other apps yet; call look_at_app on this app now so the user is asked to turn it on, and only then continue")
+        } else {
+          open(request.getString("app"))
+        }
         "snapshot" -> snapshot(request.getString("app"))
         "act" -> act(request)
         "keys" -> keys(request.getString("keys"))
