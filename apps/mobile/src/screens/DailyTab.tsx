@@ -166,6 +166,15 @@ export function DailyTab({ store }: { store: HubStore }) {
         <Text style={styles.date}>{date}</Text>
       </View>
 
+      {!report && (
+        <Card
+          title={t("weather-title")}
+          open={{ label: t("daily-open-weather"), href: "/weather" }}
+        >
+          <Text style={styles.hint}>{t("daily-weather-empty")}</Text>
+        </Card>
+      )}
+
       {report && (
         <Card
           title={t("weather-title")}

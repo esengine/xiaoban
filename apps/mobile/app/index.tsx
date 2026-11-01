@@ -1,7 +1,8 @@
 import { color } from "@xiaoban/tokens";
 import { Redirect } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { askLocationOnce } from "../src/hub/askLocation.ts";
 import { useHubContext } from "../src/hub/HubProvider.tsx";
 import { ChatsTab } from "../src/screens/ChatsTab.tsx";
 import { DailyTab } from "../src/screens/DailyTab.tsx";
@@ -14,6 +15,9 @@ let remembered: Tab = "chats";
 export default function HomeScreen() {
   const { phase, store } = useHubContext();
   const [tab, setTab] = useState<Tab>(remembered);
+  useEffect(() => {
+    if (phase === "ready") void askLocationOnce().catch(() => undefined);
+  }, [phase]);
   if (phase === "loading") return <View style={styles.screen} />;
   if (phase === "setup") return <Redirect href="/setup" />;
   if (phase === "unpaired" || !store) return <Redirect href="/pair" />;

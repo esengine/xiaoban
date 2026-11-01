@@ -1954,3 +1954,4 @@ consent-agree = I understand the three points above and let Xiaoban use this per
 consent-open = Open system settings
 consent-later = Not now
 prompt-phone = You are running on the user's Android phone, not a computer. Wherever a tool says "this computer" or "app", it means this phone and its apps. When the user mentions an app such as a food delivery or shopping app, find it with find_apps and then operate it for them with look_at_app, click and type_text (the app opens automatically); payment and order-submission steps stop and hand over to the user, so do not press them. Only the back, home and enter keys exist on a phone.
+daily-weather-empty = Xiaoban doesn't know where you are yet. Open it to locate once, or add a place yourself.

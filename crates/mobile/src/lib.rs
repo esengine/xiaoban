@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use xiaoban_agent::HttpConnector;
 use xiaoban_hub::{
-    Apps, DeepseekWeb, Hub, HubConfig, HubHandle, HubRuntime, MemorySecrets, NoApps, NoLocator,
+    Apps, DeepseekWeb, Hub, HubConfig, HubHandle, HubRuntime, Locator, MemorySecrets, NoApps, NoLocator,
     NoOperator, NoPresence, NoRouter, OpenMeteo, Operator, Prompts, SecretStore,
 };
 use xiaoban_i18n::Locale;
@@ -17,13 +17,14 @@ static BRIDGE: OnceLock<operator::Bridge> = OnceLock::new();
 
 mod operator;
 
-fn hands() -> (Arc<dyn Operator>, Arc<dyn Apps>) {
+fn hands() -> (Arc<dyn Operator>, Arc<dyn Apps>, Arc<dyn Locator>) {
     match BRIDGE.get() {
         Some(bridge) => (
             Arc::new(operator::PhoneOperator::new(bridge.clone())),
             Arc::new(operator::PhoneApps::new(bridge.clone())),
+            Arc::new(operator::PhoneLocator::new(bridge.clone())),
         ),
-        None => (Arc::new(NoOperator), Arc::new(NoApps)),
+        None => (Arc::new(NoOperator), Arc::new(NoApps), Arc::new(NoLocator)),
     }
 }
 
@@ -61,13 +62,13 @@ pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) ->
         return Ok(handle.addr.port());
     }
     let locale = locale_of(locale);
-    let (operator, apps) = hands();
+    let (operator, apps, locator) = hands();
     let runtime_config = HubRuntime {
         locale,
         prompts: Prompts::for_phone(locale),
         connector: Arc::new(HttpConnector),
         secrets: secrets_from(secrets_json),
-        locator: Arc::new(NoLocator),
+        locator,
         presence: Arc::new(NoPresence),
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),

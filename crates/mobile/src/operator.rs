@@ -5,9 +5,9 @@ use futures_util::future::BoxFuture;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use xiaoban_hub::{
-    ActFailure, AppEntry, Apps, MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement,
+    ActFailure, AppEntry, Apps, Locator, MAX_ELEMENTS, Operator, Snapshot, UiAction, UiElement,
 };
-use xiaoban_protocol::OperatePermissions;
+use xiaoban_protocol::{Location, OperatePermissions};
 
 pub type Bridge = Arc<dyn Fn(String) -> Result<String, String> + Send + Sync>;
 
@@ -178,6 +178,36 @@ impl Apps for PhoneApps {
     }
 }
 
+#[derive(Clone)]
+pub struct PhoneLocator {
+    bridge: Bridge,
+}
+
+impl PhoneLocator {
+    pub fn new(bridge: Bridge) -> Self {
+        Self { bridge }
+    }
+}
+
+impl fmt::Debug for PhoneLocator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("PhoneLocator")
+    }
+}
+
+impl Locator for PhoneLocator {
+    fn locate(&self) -> BoxFuture<'static, Location> {
+        let reply = call(&self.bridge, json!({ "op": "locate" }));
+        Box::pin(async move {
+            reply
+                .await
+                .ok()
+                .and_then(|value| serde_json::from_value(value).ok())
+                .unwrap_or(Location::Unavailable)
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,6 +225,7 @@ mod tests {
                     ],
                 }),
                 "apps" => json!({ "apps": [{ "id": "com.shop", "name": "Shop" }] }),
+                "locate" => json!({ "status": "found", "city": "Hangzhou", "district": null, "latitude": "30.2", "longitude": "120.1" }),
                 "act" if request["index"] == 0 => json!({ "error": "handed over to the user" }),
                 _ => json!({ "ok": true }),
             }
@@ -216,5 +247,9 @@ mod tests {
         assert!(operator.act("com.shop".into(), 1, UiAction::SetText("x".into()), false).await.is_ok());
         let apps = PhoneApps::new(fake()).list().await;
         assert_eq!(apps[0].name, "Shop");
+        assert!(matches!(
+            PhoneLocator::new(fake()).locate().await,
+            Location::Found { city, .. } if city == "Hangzhou"
+        ));
     }
 }
