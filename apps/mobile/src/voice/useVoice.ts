@@ -14,6 +14,7 @@ export type VoicePhase = "idle" | "holding" | "cancel" | "finishing";
 export const WAVE_BARS = 14;
 const CANCEL_DISTANCE = 64;
 const FINISH_WAIT = 15000;
+const MAX_RESTARTS = 3;
 const NOTE_TIME = 2400;
 const QUIET = Array.from({ length: WAVE_BARS }, () => 0);
 const RESTING = Array.from({ length: WAVE_BARS }, (_, index) => 0.25 + ((index * 7) % 5) * 0.12);
@@ -91,6 +92,36 @@ export function useVoice(onText: (text: string) => void) {
     else flash(t("voice-empty"));
   }, [flash, reset, t]);
 
+  const buzzed = useRef(false);
+  const failures = useRef(0);
+  const listen = useRef(() => {});
+  listen.current = () => {
+    ended.current = false;
+    try {
+      ExpoSpeechRecognitionModule.start({
+        lang: locale === "zh-CN" ? "zh-CN" : "en-US",
+        interimResults: true,
+        continuous: false,
+        addsPunctuation: true,
+        volumeChangeEventOptions: { enabled: true, intervalMillis: 80 },
+        androidIntentOptions: {
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
+        },
+      });
+    } catch {
+      ended.current = true;
+    }
+  };
+  const keepListening = useCallback(() => {
+    const holding = phaseRef.current === "holding" || phaseRef.current === "cancel";
+    if (!holding || failures.current >= MAX_RESTARTS) return false;
+    committed.current = `${committed.current}${partial.current}`;
+    partial.current = "";
+    listen.current();
+    return true;
+  }, []);
+
   useEffect(() => {
     if (!available) return;
     const mine = () => owner === id && phaseRef.current !== "idle";
@@ -99,6 +130,7 @@ export function useVoice(onText: (text: string) => void) {
         "result",
         (event: ExpoSpeechRecognitionResultEvent) => {
           if (!mine()) return;
+          failures.current = 0;
           const text = event.results[0]?.transcript ?? "";
           if (event.isFinal) {
             committed.current = `${committed.current}${text}`;
@@ -111,7 +143,8 @@ export function useVoice(onText: (text: string) => void) {
         },
       ),
       ExpoSpeechRecognitionModule.addListener("start", () => {
-        if (!mine()) return;
+        if (!mine() || buzzed.current) return;
+        buzzed.current = true;
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
       }),
       ExpoSpeechRecognitionModule.addListener("volumechange", (event: { value: number }) => {
@@ -120,6 +153,7 @@ export function useVoice(onText: (text: string) => void) {
       }),
       ExpoSpeechRecognitionModule.addListener("end", () => {
         if (!mine()) return;
+        if (keepListening()) return;
         ended.current = true;
         if (phaseRef.current === "finishing") deliver();
       }),
@@ -137,6 +171,7 @@ export function useVoice(onText: (text: string) => void) {
           flash(t("voice-denied-microphone"));
           return;
         }
+        failures.current += 1;
         ended.current = true;
         if (phaseRef.current === "finishing") deliver();
       }),
@@ -144,7 +179,7 @@ export function useVoice(onText: (text: string) => void) {
     return () => {
       for (const subscription of subscriptions) subscription.remove();
     };
-  }, [available, deliver, flash, id, reset, t]);
+  }, [available, deliver, flash, id, keepListening, reset, t]);
 
   useEffect(
     () => () => {
@@ -189,22 +224,10 @@ export function useVoice(onText: (text: string) => void) {
     setLevels(QUIET);
     setNote(null);
     setPhase("holding");
-    try {
-      ExpoSpeechRecognitionModule.start({
-        lang: locale === "zh-CN" ? "zh-CN" : "en-US",
-        interimResults: true,
-        continuous: false,
-        addsPunctuation: true,
-        volumeChangeEventOptions: { enabled: true, intervalMillis: 80 },
-        androidIntentOptions: {
-          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
-          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
-        },
-      });
-    } catch {
-      ended.current = true;
-    }
-  }, [id, locale, setPhase]);
+    buzzed.current = false;
+    failures.current = 0;
+    listen.current();
+  }, [id, setPhase]);
 
   const move = useCallback(
     (dy: number) => {
