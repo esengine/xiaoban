@@ -17,7 +17,7 @@ import { WorkspaceSettingsDialog } from "../code/WorkspaceSettings.tsx";
 import { ConfirmDialog } from "../dialog/ConfirmDialog.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { plain } from "./plain.ts";
-import { firstGrapheme, orderThreads, toneOf } from "./threads.ts";
+import { orderThreads } from "./threads.ts";
 import { recency } from "./time.ts";
 
 interface Props {
@@ -343,12 +343,11 @@ export function ThreadList({
             ])
           }
         >
-          <span
-            className={`thread-row__mark thread-row__mark--${primary ? "primary" : toneOf(thread.id)}`}
-            aria-hidden="true"
-          >
-            {primary ? t("app-mark") : firstGrapheme(title)}
-          </span>
+          {primary && (
+            <span className="thread-row__mark thread-row__mark--primary" aria-hidden="true">
+              {t("app-mark")}
+            </span>
+          )}
           <span className="thread-row__body">
             <span className="thread-row__top">
               {renaming === thread.id ? (

@@ -43,6 +43,41 @@ function at(grid: string[][], r: number, c: number) {
   return grid[r]?.[c] ?? "";
 }
 
+function RangeBox({
+  grid,
+  range,
+  version,
+}: {
+  grid: React.RefObject<HTMLElement | null>;
+  range: Range;
+  version: string;
+}) {
+  const [box, setBox] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  useLayoutEffect(() => {
+    void version;
+    const root = grid.current;
+    const first = root?.querySelector<HTMLElement>(`[data-cell="${range.r1}:${range.c1}"]`);
+    const last = root?.querySelector<HTMLElement>(`[data-cell="${range.r2}:${range.c2}"]`);
+    if (!root || !first || !last) return setBox(null);
+    const base = root.getBoundingClientRect();
+    const a = first.getBoundingClientRect();
+    const b = last.getBoundingClientRect();
+    setBox({
+      left: a.left - base.left,
+      top: a.top - base.top,
+      width: b.right - a.left,
+      height: b.bottom - a.top,
+    });
+  }, [grid, range.r1, range.c1, range.r2, range.c2, version]);
+  if (!box) return null;
+  return <span className="sheet-range" style={box} aria-hidden="true" />;
+}
+
 function Popover({
   anchor,
   onClose,
@@ -654,6 +689,13 @@ export function SheetPage({ sheetId, onBack }: { sheetId: string; onBack: () => 
                   ))}
                 </tbody>
               </table>
+              {multi && (
+                <RangeBox
+                  grid={grid}
+                  range={range}
+                  version={`${tab.id}:${tab.values.length}:${colsCount}`}
+                />
+              )}
             </section>
             {tab.charts.length > 0 && (
               <div className="sheet__charts">

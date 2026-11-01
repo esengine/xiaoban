@@ -11278,6 +11278,7 @@ button.sent-files__image {
 }
 
 .sheet-grid {
+  position: relative;
   display: inline-block;
   border-right: 1px solid var(--color-line);
   border-bottom: 1px solid var(--color-line);
@@ -11486,4 +11487,17 @@ button.sent-files__image {
   background: var(--color-surface);
   font-size: 12px;
   color: var(--color-ink-mid);
+}
+
+.sheet-range {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  border: 2px solid var(--color-accent);
+  pointer-events: none;
+}
+
+.sheet-cell[data-active][data-selected] {
+  background: var(--color-surface);
+  box-shadow: none;
 }
