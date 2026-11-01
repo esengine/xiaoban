@@ -6544,3 +6544,23 @@ button.sent-files__image {
   left: auto;
   right: 14px;
 }
+
+.code-segment {
+  flex: none;
+}
+
+.code-segment button,
+.code-link,
+.code-file__tag,
+.code-file__meta {
+  white-space: nowrap;
+}
+
+.code-file__bar > .code-link,
+.code-file__bar > .code-segment {
+  flex: none;
+}
+
+.code-file__path {
+  flex: 0 1 auto;
+}
