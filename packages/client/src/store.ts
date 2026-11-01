@@ -414,6 +414,14 @@ export class HubStore {
     return { text, truncated, binary };
   }
 
+  async workspaceImage(workspaceId: string, path: string): Promise<{ url: string; bytes: number }> {
+    const { url, bytes } = await this.client.request(
+      { type: "workspace_image", workspaceId, path },
+      "workspace_image",
+    );
+    return { url, bytes };
+  }
+
   async threadChanges(threadId: string): Promise<FileDiff[]> {
     const { files } = await this.client.request({ type: "thread_changes", threadId }, "changes");
     return files;

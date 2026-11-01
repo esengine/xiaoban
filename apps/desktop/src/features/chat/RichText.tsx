@@ -38,6 +38,21 @@ function ReplyImage({ src, alt }: { src: string; alt: string }) {
   const show = useImageViewer();
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   const [copied, setCopied] = useState(false);
+  if (src.startsWith("data:image/")) {
+    return (
+      <span className="rich__image">
+        <button
+          type="button"
+          className="rich__image-button"
+          data-state="ready"
+          aria-label={t("viewer-open", { name: alt })}
+          onClick={(event) => show([{ src, name: alt, source: src }], 0, event.currentTarget)}
+        >
+          <img src={src} alt={alt} />
+        </button>
+      </span>
+    );
+  }
   if (!src.startsWith("https://")) return <span>{alt}</span>;
   let site = "";
   try {

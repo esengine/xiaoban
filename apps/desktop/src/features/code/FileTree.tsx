@@ -23,6 +23,27 @@ export function FileIcon() {
   );
 }
 
+function KindIcon({ name }: { name: string }) {
+  if (/\.(png|jpe?g|gif|webp|svg|ico|bmp|avif)$/i.test(name)) {
+    return (
+      <svg className="folder-icon" aria-hidden="true" viewBox="0 0 24 24">
+        <rect x="4" y="5" width="16" height="14" rx="2" />
+        <circle cx="9" cy="10" r="1.5" />
+        <path d="M5 17l5-5 4 4 2-2 3 3" />
+      </svg>
+    );
+  }
+  if (/\.(md|markdown|mdx|txt)$/i.test(name)) {
+    return (
+      <svg className="folder-icon" aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M6 3h8l4 4v14H6z" />
+        <path d="M9 12h6M9 15h6M9 18h4" />
+      </svg>
+    );
+  }
+  return <FileIcon />;
+}
+
 export function SideIcon() {
   return (
     <svg className="code-side-icon" aria-hidden="true" viewBox="0 0 24 24">
@@ -123,7 +144,11 @@ export function FileTree({ workspace, changes, active, onOpen, onMenu, onCollaps
                 onContextMenu={(event) => onMenu(event, entry)}
               >
                 <Chevron open={open.has(entry.path)} hidden={!entry.dir} />
-                {entry.dir ? <FolderIcon open={open.has(entry.path)} /> : <FileIcon />}
+                {entry.dir ? (
+                  <FolderIcon open={open.has(entry.path)} />
+                ) : (
+                  <KindIcon name={entry.name} />
+                )}
                 <span className="code-tree__name">{entry.name}</span>
                 {mark && (
                   <span className="code-tree__mark">

@@ -16,6 +16,7 @@ import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
 import { ImageViewerProvider } from "../features/viewer/ImageViewer.tsx";
 import { Workspace } from "../features/workspace/Workspace.tsx";
 import { useHub } from "./hub.tsx";
+import { useListWidth } from "./useListWidth.ts";
 import { usePanels } from "./usePanels.ts";
 
 interface OpenTrip {
@@ -83,7 +84,8 @@ function Home() {
 
   const activeWorkspace = threads.find((thread) => thread.id === activeId)?.workspaceId ?? null;
   const codeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspace) ?? null;
-  const code = useCodeWidth(panels.list);
+  const list = useListWidth();
+  const code = useCodeWidth(panels.list ? list.width : 0);
   const chatHidden = Boolean(codeWorkspace && panels.workspace && code.chatHidden);
   const workspaceForShortcut = activeWorkspace ?? workspaces[0]?.id;
 
@@ -135,7 +137,25 @@ function Home() {
   return (
     <div className="shell" data-chat-hidden={chatHidden || undefined}>
       <Rail />
-      <div className="panel panel--list" data-open={panels.list}>
+      <div
+        className="panel panel--list"
+        data-open={panels.list}
+        data-dragging={list.dragging || undefined}
+        style={{ "--list-width": `${list.width}px` } as CSSProperties}
+      >
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: pointer-only resize edge; the default width is one double-click away */}
+        <div
+          className="list-resize"
+          title={t("code-resize")}
+          onPointerDown={list.start}
+          onDoubleClick={list.reset}
+        >
+          {list.dragging && (
+            <span className="code-resize__label">
+              {t("code-resize-width", { width: list.width })}
+            </span>
+          )}
+        </div>
         <ThreadList
           threads={threads}
           primaryId={primaryId}

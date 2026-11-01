@@ -6422,3 +6422,125 @@ button.sent-files__image {
   outline: none;
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
+
+.code-file__meta {
+  flex: none;
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.code-file__body[data-preview] {
+  padding: 0;
+}
+
+.code-markdown {
+  padding: 18px 24px 32px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--color-ink);
+}
+
+.code-image {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(45deg, var(--color-ground) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-ground) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-ground) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-ground) 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+}
+
+.code-image__button {
+  max-width: 100%;
+  max-height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.code-image__button img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 260px);
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px var(--color-scrim);
+}
+
+.code-image__hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-size: 11.5px;
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+  pointer-events: none;
+}
+
+.code-image:hover .code-image__hint {
+  opacity: 1;
+}
+
+.panel--list {
+  position: relative;
+  flex-basis: var(--list-width, 300px);
+  overflow: visible;
+}
+
+.panel--list[data-open="false"] {
+  flex-basis: 0;
+  overflow: hidden;
+}
+
+.panel--list > .threads {
+  width: var(--list-width, 300px);
+}
+
+.panel--list[data-dragging] {
+  transition: none;
+}
+
+.list-resize {
+  position: absolute;
+  z-index: 3;
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px !important;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.list-resize:hover,
+.panel--list[data-dragging] .list-resize {
+  background: var(--color-accent-soft);
+}
+
+.panel--list[data-open="false"] .list-resize {
+  display: none;
+}
+
+.list-resize .code-resize__label {
+  left: auto;
+  right: 14px;
+}

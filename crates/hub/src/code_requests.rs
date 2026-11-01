@@ -186,6 +186,14 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 git: workspace::info(&found).await,
             })
         }
+        Request::WorkspaceImage { workspace_id, path } => {
+            let found = load(state, workspace_id).await?;
+            let target = workspace::resolve(&found, &path);
+            if !target.inside {
+                return Err(bad_request("outside the workspace"));
+            }
+            image(&target.path)
+        }
         Request::StopCommand { command_id } => {
             crate::commands::stop(state, &command_id);
             Ok(Response::Ack)
@@ -214,5 +222,37 @@ fn read(path: &Path) -> Handled {
         text,
         truncated,
         binary: false,
+    })
+}
+
+const IMAGE_BYTES: u64 = 25 * 1024 * 1024;
+
+fn image(path: &Path) -> Handled {
+    let ext = path
+        .extension()
+        .map(|ext| ext.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    let mime = match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        "ico" => "image/x-icon",
+        "bmp" => "image/bmp",
+        "avif" => "image/avif",
+        _ => return Err(bad_request("not an image")),
+    };
+    let size = std::fs::metadata(path)
+        .map_err(|failure| bad_request(&failure.to_string()))?
+        .len();
+    if size > IMAGE_BYTES {
+        return Err(bad_request("image too large"));
+    }
+    let bytes = std::fs::read(path).map_err(|failure| bad_request(&failure.to_string()))?;
+    let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes);
+    Ok(Response::WorkspaceImage {
+        url: format!("data:{mime};base64,{encoded}"),
+        bytes: size,
     })
 }

@@ -20,13 +20,12 @@ function load(): Saved {
 }
 
 const RAIL = 72;
-const LIST = 300;
 
-export function useCodeWidth(listOpen: boolean) {
+export function useCodeWidth(listWidth: number) {
   const [saved, setSaved] = useState<Saved>(load);
   const [dragging, setDragging] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
-  const leftEdge = useCallback(() => RAIL + (listOpen ? LIST : 0), [listOpen]);
+  const leftEdge = useCallback(() => RAIL + listWidth, [listWidth]);
 
   useEffect(() => {
     const resize = () => setWindowWidth(window.innerWidth);

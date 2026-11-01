@@ -86,4 +86,5 @@ export type Request =
   | { type: "list_branches"; workspaceId: string }
   | { type: "switch_branch"; workspaceId: string; name: string; create: boolean; stash: boolean }
   | { type: "pull_branch"; workspaceId: string }
-  | { type: "restore_stash"; workspaceId: string };
+  | { type: "restore_stash"; workspaceId: string }
+  | { type: "workspace_image"; workspaceId: string; path: string };

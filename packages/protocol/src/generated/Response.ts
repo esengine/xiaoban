@@ -65,4 +65,5 @@ export type Response =
   | { type: "git"; git: GitInfo }
   | { type: "commands"; commands: Array<CommandRun> }
   | { type: "command"; command: CommandRun }
-  | { type: "branches"; branches: Array<Branch> };
+  | { type: "branches"; branches: Array<Branch> }
+  | { type: "workspace_image"; url: string; bytes: number };

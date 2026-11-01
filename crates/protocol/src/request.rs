@@ -203,6 +203,10 @@ pub enum Request {
     RestoreStash {
         workspace_id: String,
     },
+    WorkspaceImage {
+        workspace_id: String,
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -334,6 +338,11 @@ pub enum Response {
     },
     Branches {
         branches: Vec<crate::Branch>,
+    },
+    WorkspaceImage {
+        url: String,
+        #[ts(type = "number")]
+        bytes: u64,
     },
 }
 
