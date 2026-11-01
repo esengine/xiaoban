@@ -11,6 +11,11 @@ import { planRecord, setPlanRecord } from "./records.ts";
 
 const HOUR = 60 * 60 * 1000;
 
+function nextDay(start: number): number {
+  const day = new Date(start);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getTime();
+}
+
 export function PlanCalendarButton({ plan }: { plan: Plan }) {
   const { t } = useI18n();
   const { ensure, sheet } = useCalendarTarget();
@@ -38,7 +43,7 @@ export function PlanCalendarButton({ plan }: { plan: Plan }) {
         const fields = {
           title: t("plan-calendar-event", { plan: plan.title, step: step.title }),
           start: date.start,
-          end: date.allDay ? date.start + 24 * HOUR : date.start + HOUR,
+          end: date.allDay ? nextDay(date.start) : date.start + HOUR,
           location: "",
           notes: step.detail ?? "",
           reminder: date.allDay ? null : 30,
