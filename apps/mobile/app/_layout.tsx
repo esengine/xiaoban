@@ -3,6 +3,7 @@ import { color } from "@xiaoban/tokens";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { HubProvider } from "../src/hub/HubProvider.tsx";
+import { Island } from "../src/hub/Island.tsx";
 import { translator } from "../src/i18n.ts";
 
 const { t } = translator;
@@ -11,6 +12,7 @@ export default function RootLayout() {
   return (
     <I18nProvider translator={translator}>
       <HubProvider>
+        <Island />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{

@@ -1,0 +1,91 @@
+import { confirmText } from "@xiaoban/client";
+import { useHubState } from "@xiaoban/client/react";
+import { useI18n } from "@xiaoban/i18n/react";
+import { useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
+import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
+import { useHubContext } from "./HubProvider.tsx";
+
+function useBackground(): boolean {
+  const [background, setBackground] = useState(AppState.currentState !== "active");
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (next) =>
+      setBackground(next !== "active"),
+    );
+    return () => subscription.remove();
+  }, []);
+  return background;
+}
+
+function Bridge({ store }: { store: NonNullable<ReturnType<typeof useHubContext>["store"]> }) {
+  const { t } = useI18n();
+  const state = useHubState(store);
+  const background = useBackground();
+  const running = Object.values(state.drafts).find((draft) => !draft.failure) ?? null;
+  const confirm = state.confirms[0] ?? null;
+  const last = useRef<{ turn: string | null; steps: number; title: string }>({
+    turn: null,
+    steps: 0,
+    title: "",
+  });
+  const title = (threadId: string) =>
+    state.threads.find((thread) => thread.id === threadId)?.title ?? t("app-name");
+
+  useEffect(() => {
+    const island = XiaobanHub?.island;
+    if (!island) return;
+    const push = (value: object) => island(JSON.stringify(value));
+    if (!background) {
+      push({ mode: "hidden" });
+      last.current = {
+        turn: running?.turnId ?? null,
+        steps: running?.steps.length ?? 0,
+        title: "",
+      };
+      return;
+    }
+    if (confirm) {
+      const text = confirmText(confirm, t);
+      push({
+        mode: "confirm",
+        title: text.title,
+        detail: text.detail ?? text.hint,
+        open: t("island-open"),
+      });
+      return;
+    }
+    if (running) {
+      const name = title(running.threadId);
+      const steps = running.steps.length;
+      if (last.current.turn === running.turnId && steps > last.current.steps) {
+        push({
+          mode: "row",
+          n: steps,
+          title: t("island-title", { title: name, n: steps }),
+          detail: "",
+        });
+      } else if (last.current.turn !== running.turnId) {
+        push({ mode: "compact", n: steps });
+      }
+      last.current = { turn: running.turnId, steps, title: name };
+      return;
+    }
+    if (last.current.turn) {
+      push({
+        mode: "done",
+        title: t("island-done", {
+          title: last.current.title || t("app-name"),
+          count: last.current.steps,
+        }),
+      });
+      last.current = { turn: null, steps: 0, title: "" };
+    }
+  });
+  return null;
+}
+
+export function Island() {
+  const { store } = useHubContext();
+  if (!store || !XiaobanHub) return null;
+  return <Bridge store={store} />;
+}

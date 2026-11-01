@@ -13,6 +13,11 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.transition.AutoTransition
+import android.transition.TransitionManager
+import android.view.animation.OvershootInterpolator
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -24,19 +29,29 @@ import android.widget.TextView
 
 object OperatorOverlay {
   private const val IDLE_MS = 8000L
+  private const val ROW_MS = 3000L
+  private const val DONE_MS = 3000L
+  private const val MORPH_MS = 460L
   private const val RING_MS = 700L
 
-  private enum class Mode { Hidden, Working, Paused, Handover }
+  private enum class Mode { Hidden, Compact, Working, Paused, Handover, Notice, Done }
 
   private val main = Handler(Looper.getMainLooper())
   private var frame: FrameLayout? = null
   private var ring: View? = null
   private var mode = Mode.Hidden
   @Volatile private var ignoreUntil = 0L
+  private var operating = false
+  private var steps = 0
   private val idle = Runnable {
-    if (mode == Mode.Working) hideNow()
+    if (mode == Mode.Working || mode == Mode.Compact) hideNow()
+    operating = false
     XiaobanOperator.idle()
   }
+  private val shrink = Runnable {
+    if (mode == Mode.Working) show(Mode.Compact) { context -> compact(context) }
+  }
+  private val fade = Runnable { if (mode == Mode.Done) hideNow() }
 
   private fun service(): XiaobanOperatorService? = XiaobanOperatorService.current
 
@@ -55,7 +70,46 @@ object OperatorOverlay {
 
   fun working(title: String, detail: String) = main.post {
     main.removeCallbacks(idle)
+    main.removeCallbacks(shrink)
+    operating = true
+    steps += 1
     show(Mode.Working) { context -> workingBar(context, title, detail) }
+    main.postDelayed(shrink, ROW_MS)
+  }
+
+  fun external(raw: String) = main.post {
+    if (operating) return@post
+    val state = org.json.JSONObject(raw)
+    main.removeCallbacks(shrink)
+    main.removeCallbacks(fade)
+    when (state.optString("mode")) {
+      "compact" -> {
+        steps = state.optInt("n", steps)
+        show(Mode.Compact) { context -> compact(context) }
+      }
+      "row" -> {
+        steps = state.optInt("n", steps)
+        show(Mode.Working) { context -> rowBar(context, state.optString("title"), state.optString("detail")) }
+        main.postDelayed(shrink, ROW_MS)
+      }
+      "confirm" -> {
+        buzz()
+        show(Mode.Notice) { context ->
+          handoverCard(context, state.optString("title"), state.optString("detail"), "", state.optString("open"))
+        }
+      }
+      "done" -> {
+        show(Mode.Done) { context -> doneBar(context, state.optString("title")) }
+        main.postDelayed(fade, DONE_MS)
+      }
+      else -> hideNow()
+    }
+  }
+
+  private fun buzz() {
+    val service = service() ?: return
+    val vibrator = service.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
+    runCatching { vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)) }
   }
 
   fun idleLater() = main.post {
@@ -70,6 +124,8 @@ object OperatorOverlay {
 
   fun handover(title: String, body: String, okLabel: String, backLabel: String) = main.post {
     main.removeCallbacks(idle)
+    main.removeCallbacks(shrink)
+    buzz()
     show(Mode.Handover) { context -> handoverCard(context, title, body, okLabel, backLabel) }
   }
 
@@ -81,6 +137,7 @@ object OperatorOverlay {
     frame?.let { view -> runCatching { manager?.removeView(view) } }
     frame = null
     mode = Mode.Hidden
+    steps = 0
   }
 
   private fun show(next: Mode, build: (Context) -> View) {
@@ -115,8 +172,19 @@ object OperatorOverlay {
       manager.addView(created, params)
       frame = created
     }
+    if (holder.childCount > 0) {
+      TransitionManager.beginDelayedTransition(
+        holder,
+        AutoTransition().apply {
+          duration = MORPH_MS
+          interpolator = OvershootInterpolator(1.1f)
+        },
+      )
+    }
     holder.removeAllViews()
-    holder.addView(build(service), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    val content = build(service)
+    val width = if (next == Mode.Compact) dp(service, 132f).toInt() else ViewGroup.LayoutParams.MATCH_PARENT
+    holder.addView(content, FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL))
     mode = next
   }
 
@@ -206,6 +274,51 @@ object OperatorOverlay {
     layoutParams = LinearLayout.LayoutParams(size, size)
   }
 
+  private fun compact(context: Context): View = LinearLayout(context).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    background = round(context, color(context, R.color.xiaoban_ink), 18f)
+    elevation = dp(context, 8f)
+    val pad = dp(context, 6f).toInt()
+    setPadding(pad, pad, dp(context, 10f).toInt(), pad)
+    minimumHeight = dp(context, 36f).toInt()
+    addView(FaceView(context).apply {
+      background = round(context, color(context, R.color.xiaoban_accent), 8f)
+      val size = dp(context, 24f).toInt()
+      layoutParams = LinearLayout.LayoutParams(size, size)
+    })
+    addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+    addView(RingView2(context, steps).apply {
+      val size = dp(context, 20f).toInt()
+      layoutParams = LinearLayout.LayoutParams(size, size)
+    })
+    setOnClickListener { openApp(context) }
+  }
+
+  private fun rowBar(context: Context, title: String, detail: String): View = bar(context).apply {
+    addView(face(context))
+    addView(texts(context, title, detail))
+    setOnClickListener { openApp(context) }
+  }
+
+  private fun doneBar(context: Context, title: String): View = bar(context).apply {
+    addView(IconView(context, IconView.Kind.Tick).apply {
+      background = round(context, color(context, R.color.xiaoban_done), 15f)
+      val size = dp(context, 30f).toInt()
+      layoutParams = LinearLayout.LayoutParams(size, size)
+    })
+    addView(texts(context, title, ""))
+    setOnClickListener { openApp(context) }
+  }
+
+  private fun openApp(context: Context) {
+    hideNow()
+    context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { intent ->
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      context.startActivity(intent)
+    }
+  }
+
   private fun workingBar(context: Context, title: String, detail: String): View = bar(context).apply {
     addView(face(context))
     addView(texts(context, title, detail))
@@ -245,14 +358,8 @@ object OperatorOverlay {
           topMargin = dp(context, 10f).toInt()
         }
         val ok = pill(context, okLabel, true) { hideNow() }
-        val back = pill(context, backLabel, false) {
-          hideNow()
-          context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { intent ->
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-          }
-        }
-        for (button in listOf(ok, back)) {
+        val back = pill(context, backLabel, okLabel.isEmpty()) { openApp(context) }
+        for (button in if (okLabel.isEmpty()) listOf(back) else listOf(ok, back)) {
           button.layoutParams = LinearLayout.LayoutParams(0, dp(context, 38f).toInt(), 1f).apply {
             marginEnd = dp(context, 4f).toInt()
             marginStart = dp(context, 4f).toInt()
@@ -308,7 +415,7 @@ object OperatorOverlay {
   }
 
   class IconView(context: Context, private val kind: Kind) : View(context) {
-    enum class Kind { Pause, Stop }
+    enum class Kind { Pause, Stop, Tick }
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -322,11 +429,46 @@ object OperatorOverlay {
           canvas.drawRoundRect(cx - unit * 5f, cy - unit * 6f, cx - unit * 1.5f, cy + unit * 6f, unit, unit, paint)
           canvas.drawRoundRect(cx + unit * 1.5f, cy - unit * 6f, cx + unit * 5f, cy + unit * 6f, unit, unit, paint)
         }
+        Kind.Tick -> {
+          paint.color = context.getColor(R.color.xiaoban_surface)
+          paint.style = Paint.Style.STROKE
+          paint.strokeWidth = unit * 2.6f
+          paint.strokeCap = Paint.Cap.ROUND
+          val path = Path().apply {
+            moveTo(cx - unit * 6f, cy + unit * 0.5f)
+            lineTo(cx - unit * 1.5f, cy + unit * 5f)
+            lineTo(cx + unit * 7f, cy - unit * 4.5f)
+          }
+          canvas.drawPath(path, paint)
+          paint.style = Paint.Style.FILL
+        }
         Kind.Stop -> {
           paint.color = context.getColor(R.color.xiaoban_ink)
           canvas.drawRoundRect(cx - unit * 5f, cy - unit * 5f, cx + unit * 5f, cy + unit * 5f, unit * 1.5f, unit * 1.5f, paint)
         }
       }
+    }
+  }
+
+  private class RingView2(context: Context, private val steps: Int) : View(context) {
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      style = Paint.Style.STROKE
+      color = context.getColor(R.color.xiaoban_glass)
+    }
+    private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      style = Paint.Style.STROKE
+      strokeCap = Paint.Cap.ROUND
+      color = context.getColor(R.color.xiaoban_surface)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+      val stroke = width * 0.14f
+      track.strokeWidth = stroke
+      arc.strokeWidth = stroke
+      val box = RectF(stroke, stroke, width - stroke, height - stroke)
+      canvas.drawOval(box, track)
+      val fraction = if (steps <= 0) 0.08f else steps / (steps + 3f)
+      canvas.drawArc(box, -90f, 360f * fraction, false, arc)
     }
   }
 }

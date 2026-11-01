@@ -32,6 +32,10 @@ class XiaobanHubModule : Module() {
       XiaobanOperator.strings = JSONObject(strings)
     }
 
+    Function("island") { state: String ->
+      OperatorOverlay.external(state)
+    }
+
     Function("operatorReady") {
       XiaobanOperatorService.current != null
     }

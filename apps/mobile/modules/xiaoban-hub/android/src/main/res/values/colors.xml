@@ -6,4 +6,5 @@
   <color name="xiaoban_text_soft">#D5D9E3</color>
   <color name="xiaoban_text_muted">#B9BECB</color>
   <color name="xiaoban_glass">#26FFFFFF</color>
+  <color name="xiaoban_done">#3FB37F</color>
 </resources>
