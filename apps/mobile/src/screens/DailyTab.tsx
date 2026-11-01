@@ -3,6 +3,7 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Plan, Sky } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
+import { router } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,20 +24,43 @@ function greetingKey(hour: number) {
 function Card({
   title,
   note,
+  open,
   children,
 }: {
   title: string;
   note?: string | undefined;
+  open?: { label: string; href: "/kitchen" | "/ledger" | "/weather" } | undefined;
   children: React.ReactNode;
 }) {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHead}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        {note ? <Text style={styles.note}>{note}</Text> : null}
-      </View>
-      {children}
+  const head = (
+    <View style={styles.cardHead}>
+      <Text style={styles.cardTitle}>{title}</Text>
+      {note ? <Text style={styles.note}>{note}</Text> : null}
+      {open ? (
+        <>
+          <View style={styles.flex} />
+          <Text style={styles.open}>{open.label}</Text>
+        </>
+      ) : null}
     </View>
+  );
+  if (!open) {
+    return (
+      <View style={styles.card}>
+        {head}
+        {children}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      style={styles.card}
+      accessibilityRole="button"
+      onPress={() => router.push(open.href)}
+    >
+      {head}
+      {children}
+    </Pressable>
   );
 }
 
@@ -143,7 +167,11 @@ export function DailyTab({ store }: { store: HubStore }) {
       </View>
 
       {report && (
-        <Card title={t("weather-title")} note={place?.city}>
+        <Card
+          title={t("weather-title")}
+          note={place?.city}
+          open={{ label: t("daily-open-weather"), href: "/weather" }}
+        >
           <View style={styles.weatherNow}>
             <Text style={styles.big}>
               {t("weather-degrees", { value: String(report.now.temp) })}
@@ -162,7 +190,7 @@ export function DailyTab({ store }: { store: HubStore }) {
         </Card>
       )}
 
-      <Card title={t("daily-food")}>
+      <Card title={t("daily-food")} open={{ label: t("daily-open-kitchen"), href: "/kitchen" }}>
         {dishes.length > 0 ? (
           <View style={styles.dishes}>
             {dishes.slice(0, 3).map((dish) => (
@@ -181,7 +209,7 @@ export function DailyTab({ store }: { store: HubStore }) {
         )}
       </Card>
 
-      <Card title={t("daily-money")}>
+      <Card title={t("daily-money")} open={{ label: t("daily-open-ledger"), href: "/ledger" }}>
         {spent !== null && ledger && ledger.entries.length > 0 ? (
           <>
             <View style={styles.moneyLine}>
@@ -241,6 +269,7 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardTitle: { fontSize: 13, fontWeight: "700", color: color.ink },
   note: { fontSize: 12, color: color.faint },
+  open: { fontSize: 12, color: color.accent },
   hint: { fontSize: 12.5, lineHeight: 19, color: color.muted },
   weatherNow: { flexDirection: "row", alignItems: "center", gap: 10 },
   big: { fontSize: 24, fontWeight: "700", color: color.ink },
