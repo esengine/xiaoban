@@ -23,6 +23,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
+import { PlanCalendarButton } from "../../src/calendar/PlanCalendar.tsx";
 import { Bubble, bubbleStyles } from "../../src/chat/Bubble.tsx";
 import { Composer } from "../../src/chat/Composer.tsx";
 import { ConfirmCard } from "../../src/chat/ConfirmCard.tsx";
@@ -417,6 +418,7 @@ export default function ThreadScreen() {
           open={planOpen ?? plan.status === "draft"}
           onToggle={() => setPlanOpen(!(planOpen ?? plan.status === "draft"))}
           ball={planBallSupported ? { on: ballThread === id, onPress: toggleBall } : undefined}
+          calendar={<PlanCalendarButton plan={plan} />}
         />
       )}
       <FlatList<Row>

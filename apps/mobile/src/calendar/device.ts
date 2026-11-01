@@ -35,6 +35,7 @@ export interface EventFields {
   notes: string;
   reminder: number | null;
   url?: string | undefined;
+  allDay?: boolean;
 }
 
 const KEY = "xiaoban.calendar";
@@ -161,6 +162,7 @@ function details(fields: EventFields) {
     endDate: new Date(Math.max(fields.end, fields.start)),
     location: fields.location,
     notes: fields.notes,
+    ...(fields.allDay ? { allDay: true } : {}),
     ...(fields.url ? { url: fields.url } : {}),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     alarms: fields.reminder === null ? [] : [{ relativeOffset: -fields.reminder }],

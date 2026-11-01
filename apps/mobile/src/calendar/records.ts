@@ -20,6 +20,7 @@ export interface TripRecord {
 interface Records {
   events: Record<string, EventRecord>;
   trips: Record<string, TripRecord>;
+  plans?: Record<string, Record<string, string>>;
 }
 
 const listeners = new Set<() => void>();
@@ -66,6 +67,15 @@ export function tripRecord(id: string): TripRecord | null {
 export function setTripRecord(id: string, record: TripRecord): void {
   const current = load();
   save({ ...current, trips: { ...current.trips, [id]: record } });
+}
+
+export function planRecord(threadId: string): Record<string, string> {
+  return load().plans?.[threadId] ?? {};
+}
+
+export function setPlanRecord(threadId: string, events: Record<string, string>): void {
+  const current = load();
+  save({ ...current, plans: { ...(current.plans ?? {}), [threadId]: events } });
 }
 
 function useRecords<T>(read: () => T): T {
