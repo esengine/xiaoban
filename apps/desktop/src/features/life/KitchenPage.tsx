@@ -6,9 +6,9 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Dish, Kitchen } from "@xiaoban/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { SideChat } from "../chat/SideChat.tsx";
 import { recency } from "../chat/time.ts";
 import { FridgeItems } from "./FridgeItems.tsx";
-import { KitchenChat } from "./KitchenChat.tsx";
 import { KeepTag, WeekMenu } from "./WeekMenu.tsx";
 
 const IMAGE = /\.(png|jpe?g|heic|webp|gif)$/i;
@@ -412,7 +412,17 @@ export function KitchenPage({
               <Shopping kitchen={kitchen} />
             ))}
         </div>
-        {threadId && <KitchenChat threadId={threadId} />}
+        {threadId && (
+          <SideChat
+            threadId={threadId}
+            labels={{
+              title: t("kitchen-chat"),
+              note: t("kitchen-chat-note"),
+              hint: t("kitchen-chat-hint"),
+              placeholder: t("kitchen-chat-placeholder"),
+            }}
+          />
+        )}
       </div>
     </main>
   );

@@ -51,6 +51,7 @@ export type Request =
       baseUrl: string | null;
       label: string | null;
     }
+  | { type: "select_model"; provider: ProviderId; model: string }
   | { type: "preferences" }
   | { type: "set_autonomy"; level: AutonomyLevel }
   | { type: "remember"; subject: string; value: string }
@@ -186,6 +187,9 @@ export type Request =
   | { type: "save_export"; path: string; data: string }
   | { type: "export_doc"; id: string; format: DocFormat; path: string }
   | { type: "set_daily_layout"; layout: DailyLayout }
+  | { type: "context_usage"; threadId: string }
+  | { type: "compact_thread"; threadId: string }
+  | { type: "set_auto_compact"; percent: number | null }
   | { type: "locate_place" }
   | { type: "update_place"; id: string; label: string | null; location: WeatherPlace | null }
   | { type: "set_home_place"; id: string }

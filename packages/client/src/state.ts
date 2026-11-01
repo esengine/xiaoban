@@ -1,6 +1,7 @@
 import type {
   Archived,
   CommandRun,
+  CompactPhase,
   ConfirmRequest,
   Deck,
   DeckSummary,
@@ -72,6 +73,7 @@ export interface HubState {
   hub: HubInfo | null;
   usedMemories: string[];
   archived: Record<string, Archived>;
+  compacting: Readonly<Record<string, CompactPhase>>;
   olderMessages: Record<string, boolean>;
   galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
@@ -106,6 +108,7 @@ export const initialHubState: HubState = {
   hub: null,
   usedMemories: [],
   archived: {},
+  compacting: {},
   olderMessages: {},
   galaxies: [],
   model: null,
@@ -176,6 +179,11 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           ...state.confirms.filter((confirm) => confirm.id !== event.confirm.id),
           event.confirm,
         ],
+      };
+    case "thread_compacting":
+      return {
+        ...state,
+        compacting: { ...state.compacting, [event.threadId]: event.phase },
       };
     case "thread_archived":
       return {

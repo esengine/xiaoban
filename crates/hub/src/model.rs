@@ -200,3 +200,31 @@ pub async fn configure(
         failure: None,
     })
 }
+
+pub async fn select(
+    state: &SharedState,
+    provider: ProviderId,
+    model: String,
+) -> Result<Response, ProtocolError> {
+    let Some(api_key) = load_secret(&state.secrets, provider).await? else {
+        return Err(ProtocolError::new(
+            ErrorCode::BadRequest,
+            "this provider has no saved key",
+        ));
+    };
+    let keep = provider == ProviderId::Custom;
+    let store = &state.store;
+    let base_url = if keep { store.setting(BASE_URL_KEY).await? } else { None };
+    let label = if keep { store.setting(LABEL_KEY).await? } else { None };
+    configure(
+        state,
+        Selection {
+            provider: Some(provider),
+            api_key,
+            model: Some(model),
+            base_url,
+            label,
+        },
+    )
+    .await
+}

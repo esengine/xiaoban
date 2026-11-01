@@ -333,6 +333,13 @@ export function ThreadList({
                 disabled: isUnread || thread.id === activeId,
                 onSelect: () => mark(thread.id),
               },
+              {
+                label: t("thread-menu-compact"),
+                onSelect: () => {
+                  onSelect(thread.id);
+                  void store.compact(thread.id).catch(() => undefined);
+                },
+              },
               "separator",
               {
                 label: t("menu-delete-thread"),

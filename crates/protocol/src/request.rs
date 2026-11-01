@@ -70,6 +70,10 @@ pub enum Request {
         base_url: Option<String>,
         label: Option<String>,
     },
+    SelectModel {
+        provider: ProviderId,
+        model: String,
+    },
     Preferences,
     SetAutonomy {
         level: AutonomyLevel,
@@ -469,6 +473,15 @@ pub enum Request {
     SetDailyLayout {
         layout: crate::DailyLayout,
     },
+    ContextUsage {
+        thread_id: String,
+    },
+    CompactThread {
+        thread_id: String,
+    },
+    SetAutoCompact {
+        percent: Option<u8>,
+    },
     LocatePlace,
     UpdatePlace {
         id: String,
@@ -675,6 +688,9 @@ pub enum Response {
     },
     DailyLayout {
         layout: crate::DailyLayout,
+    },
+    ContextUsage {
+        usage: crate::ContextUsage,
     },
     Doc {
         doc: crate::Doc,

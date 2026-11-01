@@ -93,6 +93,10 @@ pub enum Event {
         thread_id: String,
         archived: crate::Archived,
     },
+    ThreadCompacting {
+        thread_id: String,
+        phase: crate::CompactPhase,
+    },
     TurnBackgrounded {
         turn_id: String,
     },
@@ -147,9 +151,10 @@ impl Event {
             Self::MessageCreated { message } | Self::TurnCompleted { message, .. } => {
                 Some(&message.thread_id)
             }
-            Self::TurnStarted { thread_id, .. } | Self::ThreadDeleted { thread_id } => {
-                Some(thread_id)
-            }
+            Self::TurnStarted { thread_id, .. }
+            | Self::ThreadDeleted { thread_id }
+            | Self::ThreadArchived { thread_id, .. }
+            | Self::ThreadCompacting { thread_id, .. } => Some(thread_id),
             Self::Thinking { .. }
             | Self::TextDelta { .. }
             | Self::ReasoningDelta { .. }
@@ -178,7 +183,6 @@ impl Event {
             | Self::WeatherAlert { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
-            Self::ThreadArchived { thread_id, .. } => Some(thread_id),
         }
     }
 }
@@ -190,10 +194,19 @@ impl Event {
     rename_all_fields = "camelCase"
 )]
 pub enum StepResult {
-    Found { count: u32, sources: Vec<String> },
-    Page { title: String },
-    Saved { version: u32 },
-    Matched { names: Vec<String> },
+    Found {
+        count: u32,
+        sources: Vec<String>,
+    },
+    Page {
+        title: String,
+    },
+    Saved {
+        version: u32,
+    },
+    Matched {
+        names: Vec<String>,
+    },
     Failed,
     Done,
     Ran {

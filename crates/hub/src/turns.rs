@@ -9,8 +9,8 @@ use xiaoban_agent::{
 };
 use xiaoban_i18n::keys;
 use xiaoban_protocol::{
-    ContextNote, ErrorCode, Event, Failure, FileInfo, FileMode, Message, ProtocolError, ProviderId,
-    Quote, Role,
+    CompactPhase, ContextNote, ErrorCode, Event, Failure, FileInfo, FileMode, Message,
+    ProtocolError, ProviderId, Quote, Role,
 };
 use xiaoban_store::{Epoch, EpochReason, NewMessage, StoreError};
 
@@ -30,7 +30,7 @@ pub struct Turns {
 }
 
 impl Turns {
-    fn claim(&self, thread_id: &str, turn_id: &str) -> Option<CancellationToken> {
+    pub(crate) fn claim(&self, thread_id: &str, turn_id: &str) -> Option<CancellationToken> {
         let mut running = self.running.lock().unwrap();
         if running.by_thread.contains_key(thread_id) {
             return None;
@@ -45,7 +45,7 @@ impl Turns {
         Some(token)
     }
 
-    fn release(&self, turn_id: &str) {
+    pub(crate) fn release(&self, turn_id: &str) {
         let mut running = self.running.lock().unwrap();
         if let Some((thread_id, _)) = running.by_turn.remove(turn_id)
             && running
@@ -522,6 +522,89 @@ pub async fn begin_epoch(
             carried.iter().map(to_wire).collect(),
         )
         .await
+}
+
+pub const COMPACT_PREFIX: &str = "compact-";
+
+pub async fn compact(state: &SharedState, thread_id: String) -> Result<(), ProtocolError> {
+    if !context_usage(state, &thread_id).await.can_compact {
+        state.publish(Event::ThreadCompacting {
+            thread_id,
+            phase: CompactPhase::Skipped,
+        });
+        return Ok(());
+    }
+    let hold = format!("{COMPACT_PREFIX}{}", uuid::Uuid::now_v7());
+    state.turns.claim(&thread_id, &hold).ok_or_else(|| {
+        ProtocolError::new(
+            ErrorCode::Busy,
+            "a reply is still in progress in this thread",
+        )
+    })?;
+    state.publish(Event::ThreadCompacting {
+        thread_id: thread_id.clone(),
+        phase: CompactPhase::Started,
+    });
+    let state = state.clone();
+    tokio::spawn(async move {
+        let phase = match compact_now(&state, &thread_id).await {
+            Some((from, to)) => CompactPhase::Finished { from, to },
+            None => CompactPhase::Failed,
+        };
+        state.turns.release(&hold);
+        state.publish(Event::ThreadCompacting { thread_id, phase });
+    });
+    Ok(())
+}
+
+pub async fn context_usage(state: &SharedState, thread_id: &str) -> xiaoban_protocol::ContextUsage {
+    let entries = state
+        .store
+        .latest_epoch(thread_id.to_owned())
+        .await
+        .ok()
+        .flatten()
+        .map(|(_, entries)| entries)
+        .unwrap_or_default();
+    let compacting = state
+        .turns
+        .running_in(thread_id)
+        .is_some_and(|id| id.starts_with(COMPACT_PREFIX));
+    crate::archive::usage(state, thread_id, &parse_transcript(&entries), compacting).await
+}
+
+fn weight(messages: &[ChatMessage]) -> usize {
+    messages
+        .iter()
+        .map(|message| message.content.chars().count())
+        .sum()
+}
+
+async fn compact_now(state: &SharedState, thread_id: &str) -> Option<(u8, u8)> {
+    let workspace = crate::workspace::for_thread(state, thread_id).await;
+    let scene = crate::state::scene_of(state, thread_id).await;
+    let base = state.base_fingerprint_for(workspace.as_ref(), scene);
+    let (epoch, entries) = state
+        .store
+        .latest_epoch(thread_id.to_owned())
+        .await
+        .ok()??;
+    let transcript = parse_transcript(&entries);
+    let (from, before) = crate::archive::peak(state, thread_id).await;
+    let carried = crate::archive::archive(state, thread_id, &transcript).await?;
+    let reason = if epoch.prefix_fingerprint == base {
+        EpochReason::Compacted
+    } else {
+        EpochReason::PrefixChanged
+    };
+    begin_epoch(state, thread_id, reason, carried.clone())
+        .await
+        .ok()?;
+    let total = weight(transcript.entries()).max(1);
+    let estimate = u64::from(before) * weight(&carried) as u64 / total as u64;
+    let estimate = u32::try_from(estimate).unwrap_or(u32::MAX);
+    crate::archive::remember_peak(state, thread_id, estimate).await;
+    Some((from, crate::archive::percent(state, estimate)))
 }
 
 async fn current_epoch(

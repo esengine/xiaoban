@@ -411,3 +411,29 @@ pub enum Location {
     Denied,
     Unavailable,
 }
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextUsage {
+    pub used: u32,
+    pub window: u32,
+    pub auto_percent: Option<u8>,
+    pub can_compact: bool,
+    pub compacting: bool,
+    pub summary: Option<String>,
+    pub compactions: u32,
+    pub archived: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+pub enum CompactPhase {
+    Started,
+    Finished { from: u8, to: u8 },
+    Skipped,
+    Failed,
+}

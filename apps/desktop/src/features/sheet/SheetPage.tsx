@@ -4,7 +4,7 @@ import type { ChartKind, SheetChart, SheetOp, SheetTab, Workbook } from "@xiaoba
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useHub } from "../../app/hub.tsx";
-import { KitchenChat } from "../life/KitchenChat.tsx";
+import { SideChat } from "../chat/SideChat.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { cellName, colName, openInExcel, parseRange, revealSheet, toNumber } from "./sheetFiles.ts";
 
@@ -816,7 +816,7 @@ export function SheetPage({ sheetId, onBack }: { sheetId: string; onBack: () => 
           </div>
         </section>
         {book.threadId && (
-          <KitchenChat
+          <SideChat
             threadId={book.threadId}
             labels={{
               title: t("kitchen-chat"),

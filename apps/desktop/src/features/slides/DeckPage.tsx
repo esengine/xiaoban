@@ -12,7 +12,7 @@ import type {
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useHub } from "../../app/hub.tsx";
-import { KitchenChat } from "../life/KitchenChat.tsx";
+import { SideChat } from "../chat/SideChat.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
 import { exportPngs, exportPptx } from "./deckExport.ts";
 import { Present } from "./Present.tsx";
@@ -551,7 +551,7 @@ export function DeckPage({
           )}
         </section>
         {deck.threadId && (
-          <KitchenChat
+          <SideChat
             threadId={deck.threadId}
             labels={{
               title: t("kitchen-chat"),

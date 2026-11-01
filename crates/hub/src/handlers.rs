@@ -102,6 +102,15 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             };
             configure(state, local, selection).await
         }
+        Request::SelectModel { provider, model } => {
+            if !local {
+                return Err(ProtocolError::new(
+                    ErrorCode::Unauthorized,
+                    "providers can only be configured on the hub's own machine",
+                ));
+            }
+            model::select(state, provider, model).await
+        }
         Request::UsageSummary => usage(state).await,
         Request::Preferences => Ok(Response::Preferences {
             preferences: preferences::load(state).await?,
@@ -230,7 +239,20 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::RestoreDocVersion { .. }
         | Request::DocVersionBlocks { .. }
         | Request::ExportDoc { .. }) => crate::doc::handle(state, local, request).await,
-        request @ (Request::DailyLayout | Request::SetDailyLayout { .. }) => crate::daily::handle(state, request).await,
+        request @ (Request::DailyLayout | Request::SetDailyLayout { .. }) => {
+            crate::daily::handle(state, request).await
+        }
+        Request::ContextUsage { thread_id } => Ok(Response::ContextUsage {
+            usage: turns::context_usage(state, &thread_id).await,
+        }),
+        Request::CompactThread { thread_id } => {
+            state.store.thread(thread_id.clone()).await?;
+            turns::compact(state, thread_id).await.map(|()| Response::Ack)
+        }
+        Request::SetAutoCompact { percent } => {
+            crate::archive::set_auto_percent(state, percent).await;
+            Ok(Response::Ack)
+        }
         request @ (Request::Weather { .. }
         | Request::SearchPlaces { .. }
         | Request::AddPlace { .. }

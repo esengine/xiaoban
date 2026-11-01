@@ -5,6 +5,7 @@ import type { CommandRun } from "./CommandRun.ts";
 import type { CommitInfo } from "./CommitInfo.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
 import type { ConflictFile } from "./ConflictFile.ts";
+import type { ContextUsage } from "./ContextUsage.ts";
 import type { DailyLayout } from "./DailyLayout.ts";
 import type { Deck } from "./Deck.ts";
 import type { DeckSummary } from "./DeckSummary.ts";
@@ -97,6 +98,7 @@ export type Response =
   | { type: "ledger_year"; year: LedgerYear }
   | { type: "weather"; weather: WeatherView }
   | { type: "daily_layout"; layout: DailyLayout }
+  | { type: "context_usage"; usage: ContextUsage }
   | { type: "doc"; doc: Doc }
   | { type: "doc_summary"; summary: DocSummary }
   | { type: "doc_blocks"; blocks: Array<DocBlock> }

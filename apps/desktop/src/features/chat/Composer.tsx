@@ -3,7 +3,7 @@ import { useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote, Thread } from "@xiaoban/protocol";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
 import { AttachRow, useVisionChoice, VisionNotice } from "../attach/Attachments.tsx";
@@ -16,6 +16,8 @@ import { QuoteBlock } from "./QuoteBlock.tsx";
 interface Props {
   threadId: string;
   busy: boolean;
+  footer?: ReactNode | undefined;
+  placeholder?: string | undefined;
   attachments: AttachmentsState;
   quote: Quote | null;
   onClearQuote: () => void;
@@ -109,6 +111,8 @@ function Listening({
 export function Composer({
   threadId,
   busy,
+  footer,
+  placeholder,
   attachments,
   quote,
   onClearQuote,
@@ -388,7 +392,9 @@ export function Composer({
                   else return;
                   event.preventDefault();
                 }}
-                placeholder={busy ? t("composer-placeholder-busy") : t("composer-placeholder")}
+                placeholder={
+                  busy ? t("composer-placeholder-busy") : (placeholder ?? t("composer-placeholder"))
+                }
                 autoComplete="off"
               />
             </label>
@@ -432,6 +438,7 @@ export function Composer({
           </div>
         </form>
       )}
+      {footer && <div className="composer__footer">{footer}</div>}
     </div>
   );
 }

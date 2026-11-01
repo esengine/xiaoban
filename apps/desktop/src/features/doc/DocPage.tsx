@@ -4,7 +4,7 @@ import type { BlockKind, Doc, DocBlock } from "@xiaoban/protocol";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useHub } from "../../app/hub.tsx";
-import { KitchenChat } from "../life/KitchenChat.tsx";
+import { SideChat } from "../chat/SideChat.tsx";
 import { countChars, openInWord, plainText, revealExport } from "./docFiles.ts";
 
 const ESCAPE: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
@@ -666,7 +666,7 @@ export function DocPage({
           </div>
         </section>
         {current.threadId && (
-          <KitchenChat
+          <SideChat
             threadId={current.threadId}
             labels={{
               title: t("kitchen-chat"),

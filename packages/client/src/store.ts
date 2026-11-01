@@ -9,6 +9,7 @@ import type {
   ConflictChoice,
   ConflictFile,
   ContextNote,
+  ContextUsage,
   DailyLayout,
   Deck,
   DeckSummary,
@@ -205,6 +206,18 @@ export class HubStore {
         baseUrl: input.baseUrl ?? null,
         label: input.label ?? null,
       },
+      "provider_configured",
+    );
+    if (!failure) this.#update((state) => ({ ...state, model: active, modelLoaded: true }));
+    return { model: active, failure };
+  }
+
+  async selectModel(
+    provider: ProviderId,
+    model: string,
+  ): Promise<{ model: ModelInfo | null; failure: Failure | null }> {
+    const { model: active, failure } = await this.client.request(
+      { type: "select_model", provider, model },
       "provider_configured",
     );
     if (!failure) this.#update((state) => ({ ...state, model: active, modelLoaded: true }));
@@ -709,6 +722,22 @@ export class HubStore {
   async exportDoc(id: string, format: DocFormat, path: string): Promise<string> {
     const result = await this.client.request({ type: "export_doc", id, format, path }, "exported");
     return result.path;
+  }
+
+  async contextUsage(threadId: string): Promise<ContextUsage> {
+    const { usage } = await this.client.request(
+      { type: "context_usage", threadId },
+      "context_usage",
+    );
+    return usage;
+  }
+
+  async compact(threadId: string): Promise<void> {
+    await this.client.request({ type: "compact_thread", threadId }, "ack");
+  }
+
+  async setAutoCompact(percent: number | null): Promise<void> {
+    await this.client.request({ type: "set_auto_compact", percent }, "ack");
   }
 
   async dailyLayout(): Promise<DailyLayout> {

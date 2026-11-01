@@ -6,7 +6,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { CategoryTotal, Expense, ImportRow, Ledger } from "@xiaoban/protocol";
 import { useEffect, useMemo, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
-import { KitchenChat } from "./KitchenChat.tsx";
+import { SideChat } from "../chat/SideChat.tsx";
 import {
   addDays,
   isoDay,
@@ -837,7 +837,7 @@ export function LedgerPage({ onBack, onOpenWeek }: { onBack: () => void; onOpenW
             ))}
         </div>
         {threadId && (
-          <KitchenChat
+          <SideChat
             threadId={threadId}
             labels={{
               title: t("kitchen-chat"),

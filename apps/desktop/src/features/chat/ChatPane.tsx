@@ -29,10 +29,13 @@ import { SheetCard } from "../sheet/SheetCard.tsx";
 import { DeckCard, WritingDecks } from "../slides/DeckCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
+import { CompactStatus, SummaryNote } from "./CompactStatus.tsx";
 import { Composer } from "./Composer.tsx";
+import { ContextMeter } from "./ContextMeter.tsx";
 import { BackgroundCard, DraftBubble } from "./DraftBubble.tsx";
 import { flyToMe } from "./flyToMe.ts";
 import { InlineText } from "./InlineText.tsx";
+import { ModelMenu } from "./ModelMenu.tsx";
 import { PanelToggle } from "./PanelToggle.tsx";
 import { plain } from "./plain.ts";
 import {
@@ -44,7 +47,6 @@ import {
 } from "./QuoteBlock.tsx";
 import { RichText } from "./RichText.tsx";
 import { SubthreadCards } from "./SubthreadCards.tsx";
-import { ThinkingMenu } from "./ThinkingMenu.tsx";
 import { overSidebar } from "./ThreadList.tsx";
 import { MemoryChips, TraceSummary } from "./Trace.tsx";
 import { type Row, toRows } from "./versions.ts";
@@ -55,22 +57,32 @@ const SUGGESTIONS: readonly PlainMessageKey[] = [
   "home-suggestion-weekend",
 ];
 
+export interface SideLabels {
+  title: string;
+  note: string;
+  hint: string;
+  placeholder: string;
+}
+
 interface Props {
   threadId: string;
   primary: boolean;
-  listOpen: boolean;
-  workspaceOpen: boolean;
-  onToggleList: () => void;
-  onToggleWorkspace: () => void;
-  quote: Quote | null;
-  onQuote: (quote: Quote | null) => void;
-  onNewThreadWith: (quote: Quote) => void;
-  onOpenTrip: (tripId: string, version: number | null) => void;
-  onOpenDoc: (docId: string, print?: boolean) => void;
-  onOpenSheet: (sheetId: string) => void;
-  onOpenDeck: (deckId: string, action?: "present" | "pptx" | "pdf") => void;
-  onOpenThread: (threadId: string) => void;
+  side?: { labels: SideLabels; extra?: ReactNode };
+  listOpen?: boolean;
+  workspaceOpen?: boolean;
+  onToggleList?: () => void;
+  onToggleWorkspace?: () => void;
+  quote?: Quote | null;
+  onQuote?: (quote: Quote | null) => void;
+  onNewThreadWith?: (quote: Quote) => void;
+  onOpenTrip?: (tripId: string, version: number | null) => void;
+  onOpenDoc?: (docId: string, print?: boolean) => void;
+  onOpenSheet?: (sheetId: string) => void;
+  onOpenDeck?: (deckId: string, action?: "present" | "pptx" | "pdf") => void;
+  onOpenThread?: (threadId: string) => void;
 }
+
+const nothing = () => undefined;
 
 interface Queued {
   id: number;
@@ -196,8 +208,24 @@ function ReplyFooter({
   );
 }
 
-export function ChatPane(props: Props) {
-  const { threadId, primary, quote, onQuote } = props;
+export function ChatPane(full: Props) {
+  const props = {
+    listOpen: false,
+    workspaceOpen: false,
+    onToggleList: nothing,
+    onToggleWorkspace: nothing,
+    onNewThreadWith: nothing,
+    onOpenTrip: nothing,
+    onOpenDoc: nothing,
+    onOpenSheet: nothing,
+    onOpenDeck: nothing,
+    onOpenThread: nothing,
+    ...full,
+  };
+  const { threadId, primary, side } = props;
+  const [ownQuote, setOwnQuote] = useState<Quote | null>(null);
+  const quote = props.onQuote ? (props.quote ?? null) : ownQuote;
+  const onQuote = props.onQuote ?? setOwnQuote;
   const { t, locale } = useI18n();
   const store = useHub();
   const state = useHubState(store);
@@ -253,15 +281,16 @@ export function ChatPane(props: Props) {
   }, [workspace, pins, messages]);
   const waitingHere = queued.filter((item) => item.threadId === threadId);
   const nextQueued = waitingHere[0];
+  const holding = state.compacting[threadId]?.kind === "started";
   useEffect(() => {
-    if (running || !nextQueued) return;
+    if (running || holding || !nextQueued) return;
     setQueued((list) => list.filter((item) => item.id !== nextQueued.id));
     void store.send(nextQueued.threadId, nextQueued.text, {
       quote: nextQueued.quote,
       files: nextQueued.files,
       threads: nextQueued.threads,
     });
-  }, [running, nextQueued, store]);
+  }, [running, holding, nextQueued, store]);
   const end = useRef<HTMLLIElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const flown = useRef(new Set<string>());
@@ -308,6 +337,7 @@ export function ChatPane(props: Props) {
   const [showLoading, setShowLoading] = useState(false);
   const hasOlder = state.olderMessages[threadId] ?? false;
   const archived = state.archived[threadId];
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
   const folded = Boolean(archived) && !unfolded[threadId];
   const loadOlder = () => {
@@ -563,29 +593,31 @@ export function ChatPane(props: Props) {
 
   return (
     <RefsContext value={refsValue}>
-      <main className="chat">
-        <header className="chat__header">
-          <PanelToggle side="list" open={props.listOpen} onToggle={props.onToggleList} />
-          <div className="chat__heading">
-            <h1 className="chat__title">{title}</h1>
-            <p className="chat__subtitle">
-              {state.status === "open" ? (
-                <>
-                  {primary && t("chat-subtitle-lead")}
-                  <ThinkingMenu threadId={threadId} model={model} />
-                </>
+      <main className="chat" data-side={side ? true : undefined} aria-label={side?.labels.title}>
+        {side ? (
+          <header className="chat__side-head">
+            <b>{side.labels.title}</b>
+            <span>{side.labels.note}</span>
+          </header>
+        ) : (
+          <header className="chat__header">
+            <PanelToggle side="list" open={props.listOpen} onToggle={props.onToggleList} />
+            <div className="chat__heading">
+              <h1 className="chat__title">{title}</h1>
+              {state.status !== "open" ? (
+                <p className="chat__subtitle">{subtitle}</p>
               ) : (
-                subtitle
+                primary && <p className="chat__subtitle">{t("chat-subtitle-lead")}</p>
               )}
-            </p>
-          </div>
-          <PanelToggle
-            side="workspace"
-            open={props.workspaceOpen}
-            onToggle={props.onToggleWorkspace}
-          />
-        </header>
-        <Pins items={pinItems} />
+            </div>
+            <PanelToggle
+              side="workspace"
+              open={props.workspaceOpen}
+              onToggle={props.onToggleWorkspace}
+            />
+          </header>
+        )}
+        {!side && <Pins items={pinItems} />}
         <ol ref={list} className="chat__messages" aria-live="polite" onScroll={onScroll}>
           {showLoading && (
             <li className="older-loading" aria-live="polite">
@@ -596,10 +628,16 @@ export function ChatPane(props: Props) {
           {archived && folded && (
             <li className="archive-divider">
               <span>{t("archive-folded", { count: archived.count })}</span>
+              <button type="button" onClick={() => setSummaryOpen(!summaryOpen)}>
+                {t("archive-summary")}
+              </button>
               <button type="button" onClick={() => unfold(true)}>
                 {t("archive-expand")}
               </button>
             </li>
+          )}
+          {archived && summaryOpen && (
+            <SummaryNote threadId={threadId} onClose={() => setSummaryOpen(false)} />
           )}
           {archived && !folded && (
             <li className="archived-block">
@@ -642,7 +680,11 @@ export function ChatPane(props: Props) {
                 <ConfirmCard confirm={confirm} />
               </li>
             ))}
-          {fresh && messages.length > 0 && (
+          {side && messages.length === 0 && trailing.length === 0 && (
+            <li className="chat__side-hint">{side.labels.hint}</li>
+          )}
+          {side?.extra && <li className="chat__side-extra">{side.extra}</li>}
+          {!side && fresh && messages.length > 0 && (
             <li className="suggestions">
               {SUGGESTIONS.map((key) => (
                 <button
@@ -656,19 +698,21 @@ export function ChatPane(props: Props) {
               ))}
             </li>
           )}
+          <CompactStatus threadId={threadId} />
           <li ref={end} className="chat__end" aria-hidden="true" />
         </ol>
-        <BranchBar threadId={threadId} />
+        {!side && <BranchBar threadId={threadId} />}
         <Composer
-          busy={Boolean(running)}
+          busy={Boolean(running) || holding}
+          placeholder={side?.labels.placeholder}
           quote={quote}
           onClearQuote={() => quoteWith(null)}
           attachments={attachments}
           threadId={threadId}
           onSend={async (text, threadRefs) => {
             const files = attachments.ready.map((file) => file.path);
-            if (running) {
-              if (isCancel(text, t("composer-cancel-words"))) {
+            if (running || holding) {
+              if (running && isCancel(text, t("composer-cancel-words"))) {
                 await store.cancel(running.turnId);
                 return;
               }
@@ -684,6 +728,14 @@ export function ChatPane(props: Props) {
             attachments.clear();
           }}
           onStop={() => (running ? store.cancel(running.turnId) : Promise.resolve())}
+          footer={
+            state.status === "open" && (
+              <>
+                <ModelMenu threadId={threadId} />
+                <ContextMeter threadId={threadId} />
+              </>
+            )
+          }
         />
         {dragging > 0 && <DropZone count={dragging} />}
         {searchDialog && (

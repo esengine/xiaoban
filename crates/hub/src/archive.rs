@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use xiaoban_agent::{ChatMessage, ChatRole, NoTools, StablePrefix, Transcript};
 use xiaoban_i18n::keys;
-use xiaoban_protocol::{ContextNote, Event, Message, ProviderId, Role};
+use xiaoban_protocol::{ContextNote, ContextUsage, Event, Message, ProviderId, Role};
 
 use crate::state::SharedState;
 
@@ -15,6 +15,8 @@ const RATIO_KEY: &str = "context.archive_ratio";
 const PEAK_KEY: &str = "context.peak.";
 const BEFORE_KEY: &str = "archive.before.";
 const SUMMARY_KEY: &str = "archive.summary.";
+const COUNT_KEY: &str = "archive.count.";
+const OFF: &str = "off";
 const KEEP_TURNS: usize = 10;
 const CHUNK_CHARS: usize = 100_000;
 const TOOL_CHARS: usize = 300;
@@ -30,6 +32,17 @@ fn window(state: &SharedState) -> u32 {
         Some(ProviderId::Deepseek) => DEEPSEEK_WINDOW,
         _ => SAFE_WINDOW,
     }
+}
+
+async fn whole(state: &SharedState, key: String) -> u32 {
+    state
+        .store
+        .setting_owned(key)
+        .await
+        .ok()
+        .flatten()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0)
 }
 
 async fn number(state: &SharedState, key: String) -> Option<f64> {
@@ -51,15 +64,92 @@ pub async fn remember_peak(state: &SharedState, thread_id: &str, peak: u32) {
     }
 }
 
+pub async fn auto_percent(state: &SharedState) -> Option<u8> {
+    let raw = state
+        .store
+        .setting_owned(RATIO_KEY.to_owned())
+        .await
+        .ok()
+        .flatten();
+    if raw.as_deref() == Some(OFF) {
+        return None;
+    }
+    let ratio = raw
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|ratio| (0.1..=0.95).contains(ratio))
+        .unwrap_or(DEFAULT_RATIO);
+    let wanted = (ratio * 100.0).round();
+    (10..=95).find(|percent| f64::from(*percent) >= wanted)
+}
+
+pub async fn set_auto_percent(state: &SharedState, percent: Option<u8>) {
+    let value = percent.map_or_else(
+        || OFF.to_owned(),
+        |percent| (f64::from(percent.clamp(10, 95)) / 100.0).to_string(),
+    );
+    let _ = state
+        .store
+        .set_setting_owned(RATIO_KEY.to_owned(), value)
+        .await;
+}
+
+pub fn percent(state: &SharedState, tokens: u32) -> u8 {
+    let window = u64::from(window(state)).max(1);
+    (u64::from(tokens) * 100 / window).min(100) as u8
+}
+
+pub async fn peak(state: &SharedState, thread_id: &str) -> (u8, u32) {
+    let tokens = whole(state, format!("{PEAK_KEY}{thread_id}")).await;
+    (percent(state, tokens), tokens)
+}
+
 pub async fn due(state: &SharedState, thread_id: &str) -> bool {
+    let Some(auto) = auto_percent(state).await else {
+        return false;
+    };
     let peak = number(state, format!("{PEAK_KEY}{thread_id}"))
         .await
         .unwrap_or(0.0);
-    let ratio = number(state, RATIO_KEY.to_owned())
+    peak >= f64::from(window(state)) * f64::from(auto) / 100.0
+}
+
+pub fn can_compact(transcript: &Transcript) -> bool {
+    split_at(transcript.entries()).is_some()
+}
+
+pub async fn usage(
+    state: &SharedState,
+    thread_id: &str,
+    transcript: &Transcript,
+    compacting: bool,
+) -> ContextUsage {
+    let (_, used) = peak(state, thread_id).await;
+    let summary = state
+        .store
+        .setting_owned(format!("{SUMMARY_KEY}{thread_id}"))
         .await
-        .filter(|ratio| (0.1..=0.95).contains(ratio))
-        .unwrap_or(DEFAULT_RATIO);
-    peak >= f64::from(window(state)) * ratio
+        .ok()
+        .flatten()
+        .filter(|summary| !summary.trim().is_empty());
+    let compactions = whole(state, format!("{COUNT_KEY}{thread_id}")).await;
+    let archived = match boundary(state, thread_id).await {
+        Some(before) => state
+            .store
+            .count_messages_before(thread_id.to_owned(), before)
+            .await
+            .unwrap_or(0),
+        None => 0,
+    };
+    ContextUsage {
+        used,
+        window: window(state),
+        auto_percent: auto_percent(state).await,
+        can_compact: !compacting && can_compact(transcript),
+        compacting,
+        summary,
+        compactions,
+        archived,
+    }
 }
 
 pub async fn boundary(state: &SharedState, thread_id: &str) -> Option<i64> {
@@ -171,6 +261,13 @@ pub async fn archive(
         .await;
     let _ = store
         .set_setting_owned(format!("{PEAK_KEY}{thread_id}"), "0".to_owned())
+        .await;
+    let compactions = whole(state, format!("{COUNT_KEY}{thread_id}")).await;
+    let _ = store
+        .set_setting_owned(
+            format!("{COUNT_KEY}{thread_id}"),
+            (compactions + 1).to_string(),
+        )
         .await;
     let count = store
         .count_messages_before(thread_id.to_owned(), before)
