@@ -1,6 +1,7 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import type { DiffHunk, DiffLine, FileDiff } from "@xiaoban/protocol";
 import { useState } from "react";
+import { Chevron } from "../chat/ThreadList.tsx";
 import { highlightLine } from "./highlight.ts";
 
 type Mode = "unified" | "split";
@@ -121,9 +122,7 @@ export function FileHead({
   return (
     <div className="diff-file__head">
       <button type="button" className="diff-file__toggle" aria-expanded={open} onClick={onToggle}>
-        <span className="diff-file__arrow" aria-hidden="true">
-          {open ? "▾" : "▸"}
-        </span>
+        <Chevron open={open} />
         <span className="diff-file__path">{file.path}</span>
         <span className="diff-file__added">{t("code-added", { count: file.added })}</span>
         <span className="diff-file__removed">{t("code-removed", { count: file.removed })}</span>

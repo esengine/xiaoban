@@ -4981,11 +4981,6 @@ button.sent-files__image {
   cursor: pointer;
 }
 
-.workspace-group__arrow {
-  width: 10px;
-  font-size: 10px;
-  color: var(--color-faint);
-}
 
 .workspace-group__name {
   font-size: 12px;
@@ -5405,12 +5400,6 @@ button.sent-files__image {
   color: var(--color-success);
 }
 
-.code-tree__arrow {
-  flex: none;
-  width: 10px;
-  font-size: 10px;
-  color: var(--color-faint);
-}
 
 .code-tree__name {
   min-width: 0;
@@ -5535,10 +5524,6 @@ button.sent-files__image {
   cursor: pointer;
 }
 
-.diff-file__arrow {
-  font-size: 10px;
-  color: var(--color-faint);
-}
 
 .diff-file__path {
   min-width: 0;
@@ -6141,10 +6126,6 @@ button.sent-files__image {
   cursor: pointer;
 }
 
-.terminal__caret {
-  flex: none;
-  color: var(--color-faint);
-}
 
 .terminal__cursor {
   display: inline-block;
@@ -6164,5 +6145,36 @@ button.sent-files__image {
 @keyframes blink {
   50% {
     opacity: 0;
+  }
+}
+
+.chevron {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--color-faint);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.chevron[data-open] {
+  transform: rotate(90deg);
+}
+
+.chevron[data-hidden] {
+  visibility: hidden;
+}
+
+.terminal .chevron {
+  color: var(--dark-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
   }
 }

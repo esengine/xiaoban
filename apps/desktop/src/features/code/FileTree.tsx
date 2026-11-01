@@ -3,7 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { DirEntry, FileDiff, Workspace } from "@xiaoban/protocol";
 import { type MouseEvent, useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
-import { FolderIcon } from "../chat/ThreadList.tsx";
+import { Chevron, FolderIcon } from "../chat/ThreadList.tsx";
 
 interface Props {
   workspace: Workspace;
@@ -122,10 +122,8 @@ export function FileTree({ workspace, changes, active, onOpen, onMenu, onCollaps
                 onClick={() => (entry.dir ? toggle(entry.path) : onOpen(entry.path))}
                 onContextMenu={(event) => onMenu(event, entry)}
               >
-                <span className="code-tree__arrow" aria-hidden="true">
-                  {entry.dir ? (open.has(entry.path) ? "▾" : "▸") : ""}
-                </span>
-                {entry.dir ? <FolderIcon /> : <FileIcon />}
+                <Chevron open={open.has(entry.path)} hidden={!entry.dir} />
+                {entry.dir ? <FolderIcon open={open.has(entry.path)} /> : <FileIcon />}
                 <span className="code-tree__name">{entry.name}</span>
                 {mark && (
                   <span className="code-tree__mark">

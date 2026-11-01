@@ -2,6 +2,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { CommandRun, Workspace } from "@xiaoban/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { Chevron } from "../chat/ThreadList.tsx";
 import { useCommands } from "./useCode.ts";
 
 function useNow(active: boolean): number {
@@ -122,9 +123,7 @@ export function Terminal({ workspace }: { workspace: Workspace }) {
                   run={run}
                   onStop={() => void store.stopCommand(run.id).catch(() => undefined)}
                 />
-                <span className="terminal__caret" aria-hidden="true">
-                  {open ? "▾" : "▸"}
-                </span>
+                <Chevron open={open} />
               </button>
               {open && (
                 <pre className="terminal__output">

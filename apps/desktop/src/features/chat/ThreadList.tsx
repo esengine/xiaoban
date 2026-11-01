@@ -66,7 +66,29 @@ function useFolderDrop(onFolders: (paths: string[]) => void) {
   return over;
 }
 
-export function FolderIcon() {
+export function Chevron({ open, hidden = false }: { open: boolean; hidden?: boolean }) {
+  return (
+    <svg
+      className="chevron"
+      data-open={open || undefined}
+      data-hidden={hidden || undefined}
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+    >
+      <path d="M6 4l4 4-4 4" />
+    </svg>
+  );
+}
+
+export function FolderIcon({ open = false }: { open?: boolean }) {
+  if (open) {
+    return (
+      <svg className="folder-icon" aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M3 19V6h6l2 2h8v3" />
+        <path d="M3 19l3-8h16l-3 8z" />
+      </svg>
+    );
+  }
   return (
     <svg className="folder-icon" aria-hidden="true" viewBox="0 0 24 24">
       <path d="M3 6h6l2 2h10v11H3z" />
@@ -421,9 +443,7 @@ export function ThreadList({
                       aria-expanded={open}
                       onClick={() => setCollapsed((current) => toggle(current, workspace.id))}
                     >
-                      <span className="workspace-group__arrow" aria-hidden="true">
-                        {open ? "▾" : "▸"}
-                      </span>
+                      <Chevron open={open} />
                       <FolderIcon />
                       {renamingWorkspace === workspace.id ? (
                         <input
