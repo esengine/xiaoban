@@ -314,6 +314,18 @@ pub enum Request {
     WeekToShopping {
         start: String,
     },
+    SetFridgeItem {
+        name: String,
+        amount: String,
+    },
+    RemoveFridgeItem {
+        name: String,
+        shop: bool,
+    },
+    WeekItemGone {
+        start: String,
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

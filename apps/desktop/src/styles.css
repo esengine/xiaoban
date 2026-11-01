@@ -9125,3 +9125,140 @@ button.sent-files__image {
 .week-day[data-takeout] .dish__cover {
   background: linear-gradient(135deg, var(--color-line-soft), var(--color-line-strong));
 }
+
+.kitchen-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+}
+
+.kitchen-item__name {
+  padding: 4px 9px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kitchen-item__remove {
+  display: none;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  margin-left: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-line);
+  color: var(--color-ink-mid);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.kitchen-item:hover,
+.kitchen-item[data-open] {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.kitchen-item[data-open] {
+  border: 2px solid var(--color-accent);
+  margin: -1px;
+}
+
+.kitchen-item:hover .kitchen-item__remove,
+.kitchen-item:focus-within .kitchen-item__remove {
+  display: inline-flex;
+}
+
+.kitchen-item__remove:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-ink);
+}
+
+.fridge-edit {
+  position: fixed;
+  z-index: 60;
+  width: 240px;
+  box-sizing: border-box;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px var(--color-scrim);
+  color: var(--color-ink);
+  cursor: default;
+}
+
+.fridge-edit b {
+  font-size: 13px;
+}
+
+.fridge-edit__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.fridge-edit__row input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+.fridge-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.code-status-button[data-danger] {
+  color: var(--color-danger-ink);
+}
+
+.fridge-stale {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-attention-soft);
+  color: var(--color-attention-ink);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.week-buy__gone {
+  display: none;
+  flex: none;
+  font-size: 12px;
+}
+
+.week-buy__row[data-have] {
+  margin: 0 -8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+}
+
+.week-buy__row[data-have]:hover {
+  background: var(--color-ground);
+  color: var(--color-ink);
+}
+
+.week-buy__row[data-have]:hover .week-buy__gone {
+  display: inline;
+}

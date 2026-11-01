@@ -7,6 +7,7 @@ import type { Dish, Kitchen } from "@xiaoban/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { recency } from "../chat/time.ts";
+import { FridgeItems } from "./FridgeItems.tsx";
 import { KitchenChat } from "./KitchenChat.tsx";
 import { KeepTag, WeekMenu } from "./WeekMenu.tsx";
 
@@ -110,6 +111,9 @@ function Tonight({
       })()
     : null;
 
+  const staleDays = kitchen.photoAt ? Math.floor((Date.now() - kitchen.photoAt) / 86_400_000) : 0;
+  const stale = staleDays >= 3;
+
   const pickPhoto = async () => {
     if (!isTauri()) return;
     const chosen = await open({
@@ -142,24 +146,15 @@ function Tonight({
               <span className="kitchen-photo__when">{t("kitchen-photo-when", { when })}</span>
             )}
           </div>
+          {stale && kitchen.fridge.length > 0 && (
+            <p className="fridge-stale">{t("fridge-stale", { days: staleDays })}</p>
+          )}
           {kitchen.fridge.length > 0 ? (
-            <div className="kitchen-items">
-              {kitchen.fridge.map((item) => (
-                <span
-                  key={item.name}
-                  className="kitchen-item"
-                  data-used={used.has(item.name) || undefined}
-                >
-                  {item.amount
-                    ? t("kitchen-item", { name: item.name, amount: item.amount })
-                    : item.name}
-                </span>
-              ))}
-            </div>
+            <FridgeItems items={kitchen.fridge} used={used} />
           ) : (
             <p className="life-card__hint">{t("kitchen-fridge-empty")}</p>
           )}
-          {kitchen.fridge.length > 0 && <p className="life-card__hint">{t("kitchen-used-hint")}</p>}
+          {kitchen.fridge.length > 0 && <p className="life-card__hint">{t("fridge-hint")}</p>}
         </section>
         <section className="life-card">
           <div className="life-card__head">

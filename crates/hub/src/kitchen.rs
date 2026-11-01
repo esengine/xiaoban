@@ -160,6 +160,23 @@ pub async fn clear_bought(state: &SharedState) -> Kitchen {
     save(state, kitchen).await
 }
 
+pub async fn set_fridge(state: &SharedState, name: &str, amount: String) -> Kitchen {
+    let mut kitchen = load(state).await;
+    if let Some(item) = kitchen.fridge.iter_mut().find(|item| item.name == name) {
+        amount.trim().clone_into(&mut item.amount);
+    }
+    save(state, kitchen).await
+}
+
+pub async fn remove_fridge(state: &SharedState, name: &str, shop: bool) -> Kitchen {
+    let mut kitchen = load(state).await;
+    kitchen.fridge.retain(|item| item.name != name);
+    if shop {
+        add_item(&mut kitchen, ShoppingItem { name: name.to_owned(), ..ShoppingItem::default() });
+    }
+    save(state, kitchen).await
+}
+
 pub fn add_item(kitchen: &mut Kitchen, item: ShoppingItem) {
     let name = item.name.trim().to_owned();
     if name.is_empty() {
@@ -419,6 +436,9 @@ pub async fn handle(
         Request::DismissTimer { id } => crate::cooking::dismiss(state, &id).await,
         Request::FinishCooking => crate::cooking::finish(state).await,
         Request::WeekToShopping { start } => crate::week::to_shopping(state, &start).await,
+        Request::SetFridgeItem { name, amount } => set_fridge(state, &name, amount).await,
+        Request::RemoveFridgeItem { name, shop } => remove_fridge(state, &name, shop).await,
+        Request::WeekItemGone { start, name } => crate::week::gone(state, &start, &name).await,
         Request::ResetKitchen => {
             let _ = state.store.set_setting_owned(THREAD_KEY.to_owned(), String::new()).await;
             let _ = state.store.set_setting_owned(KEY.to_owned(), String::new()).await;

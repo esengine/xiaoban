@@ -55,7 +55,7 @@ function Empty({ onPlan }: { onPlan: () => void }) {
   );
 }
 
-function Buy({ plan }: { plan: WeekPlan }) {
+function Buy({ plan, onSay }: { plan: WeekPlan; onSay: (text: string) => void }) {
   const { t } = useI18n();
   const store = useHub();
   const groups = new Map<string, WeekPlan["buy"]>();
@@ -94,7 +94,16 @@ function Buy({ plan }: { plan: WeekPlan }) {
                     : [item.amount, item.note].filter(Boolean).join(t("daily-dot"))}
                 </span>
                 {item.have ? (
-                  <span className="keep-tag" data-keep="none" />
+                  <button
+                    type="button"
+                    className="code-link week-buy__gone"
+                    onClick={() => {
+                      void store.weekItemGone(plan.start, item.name).catch(() => undefined);
+                      onSay(t("week-gone-message", { name: item.name }));
+                    }}
+                  >
+                    {t("week-gone")}
+                  </button>
                 ) : (
                   <KeepTag keep={item.keep} />
                 )}
@@ -278,7 +287,7 @@ export function WeekMenu({
               )}
             </section>
           )}
-          <Buy plan={plan} />
+          <Buy plan={plan} onSay={onSay} />
         </>
       )}
     </div>

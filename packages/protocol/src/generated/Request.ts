@@ -126,4 +126,7 @@ export type Request =
   | { type: "extend_timer"; id: string; seconds: number }
   | { type: "dismiss_timer"; id: string }
   | { type: "finish_cooking" }
-  | { type: "week_to_shopping"; start: string };
+  | { type: "week_to_shopping"; start: string }
+  | { type: "set_fridge_item"; name: string; amount: string }
+  | { type: "remove_fridge_item"; name: string; shop: boolean }
+  | { type: "week_item_gone"; start: string; name: string };

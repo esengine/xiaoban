@@ -269,6 +269,18 @@ pub async fn to_shopping(state: &SharedState, start: &str) -> Kitchen {
     save(state, kitchen).await
 }
 
+pub async fn gone(state: &SharedState, start: &str, name: &str) -> Kitchen {
+    let mut kitchen = load(state).await;
+    kitchen.fridge.retain(|item| item.name != name);
+    if let Some(plan) = kitchen.weeks.iter_mut().find(|plan| plan.start == start)
+        && let Some(item) = plan.buy.iter_mut().find(|item| item.name == name)
+    {
+        item.have = false;
+        plan.added = false;
+    }
+    save(state, kitchen).await
+}
+
 pub fn context(kitchen: &Kitchen) -> Value {
     let start = this_monday();
     let week = |start: &str| {
