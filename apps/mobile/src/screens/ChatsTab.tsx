@@ -5,8 +5,10 @@ import type { Thread } from "@xiaoban/protocol";
 import { color, dark } from "@xiaoban/tokens";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { markRead, markUnread, useUnread } from "../hub/unread.ts";
+import { Sheet, SheetAction } from "../life/LifeUI.tsx";
 import { firstChar, toneOf } from "../ui/format.ts";
 import { Icon } from "../ui/Icon.tsx";
 import { useWhen } from "../ui/useWhen.ts";
@@ -24,6 +26,7 @@ const TONES: [Tone, Tone, Tone, Tone, Tone] = [
 type Filter = "all" | "confirm" | "running";
 
 export function openThread(id: string) {
+  markRead(id);
   router.push({ pathname: "/thread/[id]", params: { id } });
 }
 
@@ -34,6 +37,10 @@ export function ChatsTab({ store }: { store: HubStore }) {
   const when = useWhen();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState<string | null>(null);
+  const [menu, setMenu] = useState<Thread | null>(null);
+  const [renaming, setRenaming] = useState<Thread | null>(null);
+  const [name, setName] = useState("");
+  const unread = useUnread();
   useEffect(() => {
     if (state.status !== "open") return;
     void store.listPlans().catch(() => undefined);
@@ -203,7 +210,12 @@ export function ChatsTab({ store }: { store: HubStore }) {
             const tone: Tone = TONES[toneOf(item.id, TONES.length)] ?? TONES[0];
             const label = tag(item);
             return (
-              <Pressable style={styles.row} onPress={() => openThread(item.id)}>
+              <Pressable
+                style={styles.row}
+                onPress={() => openThread(item.id)}
+                onLongPress={() => setMenu(item)}
+                delayLongPress={350}
+              >
                 <View style={[styles.mark, { backgroundColor: tone.bg }]}>
                   <Text style={[styles.markText, { color: tone.fg }]}>{firstChar(name)}</Text>
                 </View>
@@ -213,6 +225,7 @@ export function ChatsTab({ store }: { store: HubStore }) {
                       {name}
                     </Text>
                     <Text style={styles.time}>{when(item.updatedAt)}</Text>
+                    {unread.has(item.id) && <View style={styles.unread} />}
                   </View>
                   <View style={styles.sub}>
                     {label && (
@@ -235,6 +248,75 @@ export function ChatsTab({ store }: { store: HubStore }) {
           }}
         />
       </View>
+      <Sheet open={menu !== null} onClose={() => setMenu(null)}>
+        <SheetAction
+          label={t("menu-open")}
+          onPress={() => {
+            if (menu) openThread(menu.id);
+            setMenu(null);
+          }}
+        />
+        <SheetAction
+          label={t("menu-rename")}
+          onPress={() => {
+            setName(menu?.title ?? "");
+            setRenaming(menu);
+            setMenu(null);
+          }}
+        />
+        <SheetAction
+          label={t("menu-mark-unread")}
+          disabled={menu !== null && unread.has(menu.id)}
+          onPress={() => {
+            if (menu) markUnread(menu.id);
+            setMenu(null);
+          }}
+        />
+        <SheetAction
+          label={t("menu-delete-thread")}
+          danger
+          onPress={() => {
+            const target = menu;
+            setMenu(null);
+            if (!target) return;
+            Alert.alert(
+              t("delete-thread-title", { title: target.title ?? t("thread-untitled") }),
+              t("delete-thread-body"),
+              [
+                { text: t("dialog-cancel"), style: "cancel" },
+                {
+                  text: t("delete-thread-confirm"),
+                  style: "destructive",
+                  onPress: () => void store.deleteThread(target.id).catch(() => undefined),
+                },
+              ],
+            );
+          }}
+        />
+      </Sheet>
+      <Sheet open={renaming !== null} onClose={() => setRenaming(null)}>
+        <Text style={styles.renameTitle}>{t("menu-rename")}</Text>
+        <TextInput
+          autoFocus
+          style={styles.renameInput}
+          value={name}
+          onChangeText={setName}
+          selectTextOnFocus
+          accessibilityLabel={t("menu-rename")}
+        />
+        <Pressable
+          style={[styles.renameSave, !name.trim() && styles.renameDisabled]}
+          disabled={!name.trim()}
+          onPress={() => {
+            const target = renaming;
+            setRenaming(null);
+            if (target) void store.renameThread(target.id, name.trim()).catch(() => undefined);
+          }}
+          accessibilityRole="button"
+        >
+          <Text style={styles.renameSaveText}>{t("thread-rename-save")}</Text>
+        </Pressable>
+      </Sheet>
     </View>
   );
 }
@@ -350,4 +432,24 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   last: { flex: 1, fontSize: 13, color: color.muted },
+  unread: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.accent },
+  renameTitle: { fontSize: 16, fontWeight: "700", color: color.ink, paddingVertical: 4 },
+  renameInput: {
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: color.accent,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: color.ink,
+  },
+  renameSave: {
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: color.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  renameDisabled: { opacity: 0.4 },
+  renameSaveText: { fontSize: 15, fontWeight: "500", color: color.surface },
 });

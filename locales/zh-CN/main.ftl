@@ -1959,3 +1959,4 @@ models-ok = 已连通
 models-get-key = 去申请密钥 ›
 models-icon-credit = 图标来自 LobeHub 图标库，商标归各服务商所有。
 me-model = 模型
+thread-rename-save = 保存

@@ -1968,3 +1968,4 @@ models-ok = Connected
 models-get-key = Get a key ›
 models-icon-credit = Icons from the LobeHub icon set; trademarks belong to their owners.
 me-model = Model
+thread-rename-save = Save
