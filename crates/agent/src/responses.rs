@@ -20,7 +20,7 @@ pub struct Responses {
 impl Responses {
     pub fn new(config: OpenAiConfig) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: crate::http_client(),
             config,
         }
     }

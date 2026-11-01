@@ -57,7 +57,7 @@ pub struct DeepseekWeb {
 impl DeepseekWeb {
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::builder()
+            client: xiaoban_agent::http_builder()
                 .timeout(TIMEOUT)
                 .build()
                 .unwrap_or_default(),

@@ -86,7 +86,7 @@ pub struct Found {
 fn client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
+        xiaoban_agent::http_builder()
             .timeout(TIMEOUT)
             .user_agent(concat!("Xiaoban/", env!("CARGO_PKG_VERSION"), " (local desktop app)"))
             .build()

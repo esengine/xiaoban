@@ -63,7 +63,7 @@ fn cache() -> &'static Mutex<HashMap<String, Raw>> {
 fn client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
+        xiaoban_agent::http_builder()
             .timeout(Duration::from_secs(10))
             .build()
             .unwrap_or_default()

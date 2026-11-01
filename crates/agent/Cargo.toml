@@ -19,6 +19,9 @@ tokio-util.workspace = true
 tracing.workspace = true
 xiaoban-protocol.workspace = true
 
+[target.'cfg(target_os = "android")'.dependencies]
+webpki-root-certs = "1"
+
 [dev-dependencies]
 axum.workspace = true
 

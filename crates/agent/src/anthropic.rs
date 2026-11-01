@@ -21,7 +21,7 @@ pub struct Anthropic {
 impl Anthropic {
     pub fn new(config: OpenAiConfig) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: crate::http_client(),
             config,
         }
     }

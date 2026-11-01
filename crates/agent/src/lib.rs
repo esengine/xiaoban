@@ -1,6 +1,7 @@
 mod anthropic;
 mod connector;
 mod error;
+mod http;
 mod openai;
 mod prompt;
 mod provider;
@@ -13,6 +14,7 @@ mod turn;
 pub use anthropic::Anthropic;
 pub use connector::{Connector, HttpConnector};
 pub use error::AgentError;
+pub use http::{http_builder, http_client};
 pub use openai::{OpenAiCompatible, OpenAiConfig};
 pub use prompt::{
     PrefixReuse, StablePrefix, Transcript, assemble, assemble_with, prefix_reuse, user_wire,

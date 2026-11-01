@@ -181,7 +181,7 @@ pub fn render_result(result: &Value) -> String {
 fn http() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
+        xiaoban_agent::http_builder()
             .connect_timeout(Duration::from_secs(15))
             .user_agent(concat!("Xiaoban/", env!("CARGO_PKG_VERSION")))
             .build()
