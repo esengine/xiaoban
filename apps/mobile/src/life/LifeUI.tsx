@@ -465,6 +465,8 @@ export const life = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 15,
     color: color.ink,
+    paddingVertical: 0,
+    textAlignVertical: "center",
   },
   fieldRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   fieldLabel: { fontSize: 12, color: color.faint, width: 36 },

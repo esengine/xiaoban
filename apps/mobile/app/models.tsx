@@ -402,6 +402,8 @@ const styles = StyleSheet.create({
   field: { gap: 4 },
   fieldLabel: { fontSize: 12, color: color.muted },
   input: {
+    paddingVertical: 0,
+    textAlignVertical: "center",
     height: 40,
     borderWidth: 1,
     borderColor: color.line,

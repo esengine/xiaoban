@@ -704,6 +704,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontSize: 14,
     color: color.ink,
+    paddingVertical: 0,
+    textAlignVertical: "center",
   },
   rhythm: {
     marginTop: 6,

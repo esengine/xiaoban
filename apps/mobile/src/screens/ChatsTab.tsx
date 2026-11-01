@@ -341,6 +341,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   search: {
+    paddingVertical: 0,
+    textAlignVertical: "center",
     marginHorizontal: 16,
     marginBottom: 10,
     height: 40,
