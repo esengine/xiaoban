@@ -1103,3 +1103,4 @@ daily-food-start = Open kitchen
 daily-more-title = More will show up here
 daily-more-body = Schedule and reminders, spending, plan progress, things Xiaoban did for you. Say "help me track spending" or "remind me to pay rent on Friday" to start.
 tool-kitchen-dish-photo = The common English name of the dish, used to find a photo, like "Mapo tofu".
+kitchen-listening = Listening… release ⌥ Space or click the mic again

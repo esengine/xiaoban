@@ -2,7 +2,9 @@ import { draftsForThread, useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { MicIcon } from "../chat/Composer.tsx";
 import { RichText } from "../chat/RichText.tsx";
+import { useVoice } from "../voice/useVoice.ts";
 
 export function KitchenChat({ threadId }: { threadId: string }) {
   const { t } = useI18n();
@@ -13,6 +15,40 @@ export function KitchenChat({ threadId }: { threadId: string }) {
   const running = drafts.find((draft) => !draft.failure);
   const [text, setText] = useState("");
   const end = useRef<HTMLDivElement>(null);
+  const holding = useRef(false);
+  const { locale } = useI18n();
+  const voice = useVoice(locale, (spoken) => {
+    setText((current) => (current.trim() ? `${current.trimEnd()} ${spoken}` : spoken));
+  });
+  const { state: listen, start, finish, cancel } = voice;
+  const listening = listen.phase === "listening" || listen.phase === "finishing";
+
+  useEffect(() => {
+    if (!voice.available) return;
+    const down = (event: KeyboardEvent) => {
+      if (event.code === "Space" && event.altKey && !event.repeat && listen.phase === "idle") {
+        event.preventDefault();
+        holding.current = true;
+        void start();
+      } else if (event.key === "Escape" && listening) {
+        holding.current = false;
+        cancel();
+      }
+    };
+    const up = (event: KeyboardEvent) => {
+      if (event.code === "Space" && holding.current) {
+        event.preventDefault();
+        holding.current = false;
+        finish();
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, [voice.available, listen.phase, listening, start, finish, cancel]);
 
   useEffect(() => {
     if (state.status === "open") void store.loadMessages(threadId).catch(() => undefined);
@@ -53,17 +89,32 @@ export function KitchenChat({ threadId }: { threadId: string }) {
         )}
         <div ref={end} />
       </div>
-      <label className="kitchen-chat__input">
-        <span className="visually-hidden">{t("kitchen-chat")}</span>
-        <input
-          value={text}
-          placeholder={t("kitchen-chat-placeholder")}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.nativeEvent.isComposing) send();
-          }}
-        />
-      </label>
+      <div className="kitchen-chat__bar">
+        <label className="kitchen-chat__input">
+          <span className="visually-hidden">{t("kitchen-chat")}</span>
+          <input
+            value={listening && "text" in listen && listen.text ? listen.text : text}
+            placeholder={listening ? t("kitchen-listening") : t("kitchen-chat-placeholder")}
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.nativeEvent.isComposing) send();
+            }}
+          />
+        </label>
+        {voice.available && (
+          <button
+            type="button"
+            className="kitchen-chat__mic"
+            data-listening={listening || undefined}
+            aria-label={t("voice-start", { shortcut: t("voice-shortcut") })}
+            title={t("voice-start", { shortcut: t("voice-shortcut") })}
+            disabled={listen.phase === "starting" || voice.blocked !== null}
+            onClick={() => (listening ? finish() : void start())}
+          >
+            <MicIcon size={18} />
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

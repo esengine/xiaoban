@@ -37,7 +37,7 @@ const BLOCKS: Record<VoiceBlock, { message: PlainMessageKey; settings: string | 
   unavailable: { message: "voice-unavailable", settings: null },
 };
 
-function MicIcon({ size }: { size: number }) {
+export function MicIcon({ size }: { size: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" className="mic-icon">
       <rect x="9" y="3" width="6" height="11" rx="3" />

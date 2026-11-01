@@ -1094,3 +1094,4 @@ daily-food-start = 打开厨房
 daily-more-title = 更多会慢慢出现在这里
 daily-more-body = 日程和提醒、记账、计划进度、小伴替你办的事。跟小伴说「帮我记账」「提醒我周五交房租」就能开始。
 tool-kitchen-dish-photo = 这道菜常见的英文名，用来找图片，如「Mapo tofu」「Stir-fried potato strips」。
+kitchen-listening = 在听……说完松开 ⌥ 空格，或再点一下麦克风
