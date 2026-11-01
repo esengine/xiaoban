@@ -253,6 +253,7 @@ export function ThreadList({
     if (title && title !== titleOf(thread)) void store.renameThread(thread.id, title);
   };
   const renameKeys = (event: KeyboardEvent<HTMLInputElement>, thread: Thread) => {
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter") finishRename(thread, event.currentTarget.value);
     if (event.key === "Escape") setRenaming(null);
   };
@@ -350,7 +351,9 @@ export function ThreadList({
                   onClick={(event) => event.stopPropagation()}
                   onBlur={(event) => finishRename(thread, event.currentTarget.value)}
                   onKeyDown={(event) => renameKeys(event, thread)}
-                  ref={(field) => field?.select()}
+                  // biome-ignore lint/a11y/noAutofocus: renaming starts from an explicit menu choice
+                  autoFocus
+                  onFocus={(event) => event.currentTarget.select()}
                 />
               ) : (
                 <span className="thread-row__title">{title}</span>
@@ -437,35 +440,44 @@ export function ThreadList({
                     className="workspace-group__head"
                     onContextMenu={(event) => workspaceMenu(event, workspace)}
                   >
-                    <button
-                      type="button"
-                      className="workspace-group__toggle"
-                      aria-expanded={open}
-                      onClick={() => setCollapsed((current) => toggle(current, workspace.id))}
-                    >
-                      <Chevron open={open} />
-                      <FolderIcon />
-                      {renamingWorkspace === workspace.id ? (
+                    {renamingWorkspace === workspace.id ? (
+                      <div className="workspace-group__toggle" data-renaming>
+                        <Chevron open={open} />
+                        <FolderIcon />
                         <input
-                          className="thread-row__rename"
+                          className="workspace-group__rename"
                           defaultValue={workspace.name}
                           aria-label={t("menu-rename")}
-                          onClick={(event) => event.stopPropagation()}
+                          // biome-ignore lint/a11y/noAutofocus: renaming starts from an explicit menu choice
+                          autoFocus
+                          onFocus={(event) => event.currentTarget.select()}
                           onBlur={(event) =>
                             finishWorkspaceRename(workspace, event.currentTarget.value)
                           }
                           onKeyDown={(event) => {
-                            if (event.key === "Enter")
-                              finishWorkspaceRename(workspace, event.currentTarget.value);
-                            if (event.key === "Escape") setRenamingWorkspace(null);
+                            if (event.nativeEvent.isComposing) return;
+                            if (event.key === "Enter") event.currentTarget.blur();
+                            if (event.key === "Escape") {
+                              event.currentTarget.value = workspace.name;
+                              event.currentTarget.blur();
+                            }
                           }}
-                          ref={(field) => field?.select()}
                         />
-                      ) : (
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="workspace-group__toggle"
+                        aria-expanded={open}
+                        onClick={() => setCollapsed((current) => toggle(current, workspace.id))}
+                        onDoubleClick={() => setRenamingWorkspace(workspace.id)}
+                      >
+                        <Chevron open={open} />
+                        <FolderIcon />
                         <span className="workspace-group__name">{workspace.name}</span>
-                      )}
-                      <span className="workspace-group__path">{tilde(workspace.path)}</span>
-                    </button>
+                        <span className="workspace-group__path">{tilde(workspace.path)}</span>
+                      </button>
+                    )}
                     <span className="workspace-group__meta">
                       {groupBusy(workspace) && <span className="workspace-group__dot" />}
                       <span>{count}</span>
