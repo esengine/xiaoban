@@ -44,6 +44,7 @@ impl HubHandle {
 }
 
 impl Hub {
+    #[allow(clippy::too_many_lines)]
     pub async fn start(config: HubConfig, runtime: HubRuntime) -> Result<HubHandle, HubError> {
         let store = if let Some(dir) = &config.data_dir {
             std::fs::create_dir_all(dir)?;
@@ -87,6 +88,7 @@ impl Hub {
             doc_tools: crate::doc::edit_specs(&localizer),
             sheet_tools: crate::sheet::edit_specs(&localizer),
             deck_tools: crate::slides::edit_specs(&localizer),
+            capabilities: crate::capability::Capabilities::new(config.data_dir.as_deref()),
             code_reads: std::sync::Mutex::default(),
             running_commands: std::sync::Mutex::default(),
             github_cache: crate::github::Cache::default(),
@@ -121,6 +123,7 @@ impl Hub {
             .then(|| discovery::advertise(&info, addr.port()))
             .flatten();
 
+        crate::capability::restore(&state).await;
         let shutdown = CancellationToken::new();
         watch(&state, &shutdown);
         let app = Router::new().route("/ws", get(upgrade)).with_state(state);
@@ -161,6 +164,12 @@ fn watch(state: &SharedState, shutdown: &CancellationToken) {
     crate::tidy::watch(Arc::clone(state), shutdown.clone());
     crate::week::watch(Arc::clone(state), shutdown.clone());
     crate::weather_page::watch(Arc::clone(state), shutdown.clone());
+    let owned = Arc::clone(state);
+    let stop = shutdown.clone();
+    tokio::spawn(async move {
+        stop.cancelled().await;
+        owned.capabilities.shutdown().await;
+    });
     let state = Arc::clone(state);
     tokio::spawn(async move { crate::cooking::rearm(&state).await });
 }

@@ -486,6 +486,24 @@ pub enum Request {
         thread_id: String,
         action: crate::PlanAction,
     },
+    FindCapabilities {
+        query: String,
+    },
+    ListCapabilities,
+    InstallCapability {
+        id: String,
+        #[serde(default)]
+        secrets: std::collections::HashMap<String, String>,
+        #[serde(default)]
+        acknowledged_risk: bool,
+    },
+    SetCapabilityEnabled {
+        id: String,
+        enabled: bool,
+    },
+    RemoveCapability {
+        id: String,
+    },
     CompactThread {
         thread_id: String,
     },
@@ -707,6 +725,12 @@ pub enum Response {
     },
     Plans {
         plans: Vec<crate::Plan>,
+    },
+    Capabilities {
+        capabilities: Vec<crate::Capability>,
+    },
+    Capability {
+        capability: crate::Capability,
     },
     Doc {
         doc: crate::Doc,

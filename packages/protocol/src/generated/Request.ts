@@ -194,6 +194,16 @@ export type Request =
   | { type: "plan"; threadId: string }
   | { type: "list_plans" }
   | { type: "plan_action"; threadId: string; action: PlanAction }
+  | { type: "find_capabilities"; query: string }
+  | { type: "list_capabilities" }
+  | {
+      type: "install_capability";
+      id: string;
+      secrets: { [key in string]: string };
+      acknowledgedRisk: boolean;
+    }
+  | { type: "set_capability_enabled"; id: string; enabled: boolean }
+  | { type: "remove_capability"; id: string }
   | { type: "compact_thread"; threadId: string }
   | { type: "set_auto_compact"; percent: number | null }
   | { type: "locate_place" }

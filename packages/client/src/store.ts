@@ -2,6 +2,7 @@ import type {
   Allowance,
   AutonomyLevel,
   Branch,
+  Capability,
   CellEdit,
   CommandRun,
   CommitInfo,
@@ -748,6 +749,43 @@ export class HubStore {
     const { plan } = await this.client.request({ type: "plan_action", threadId, action }, "plan");
     this.#update((state) => ({ ...state, plans: { ...state.plans, [threadId]: plan } }));
     return plan;
+  }
+
+  async findCapabilities(query: string): Promise<Capability[]> {
+    const { capabilities } = await this.client.request(
+      { type: "find_capabilities", query },
+      "capabilities",
+    );
+    return capabilities;
+  }
+
+  async listCapabilities(): Promise<Capability[]> {
+    const { capabilities } = await this.client.request(
+      { type: "list_capabilities" },
+      "capabilities",
+    );
+    this.#update((state) => ({ ...state, capabilities }));
+    return capabilities;
+  }
+
+  async installCapability(
+    id: string,
+    secrets: Record<string, string> = {},
+    acknowledgedRisk = false,
+  ): Promise<Capability> {
+    const { capability } = await this.client.request(
+      { type: "install_capability", id, secrets, acknowledgedRisk },
+      "capability",
+    );
+    return capability;
+  }
+
+  async setCapabilityEnabled(id: string, enabled: boolean): Promise<void> {
+    await this.client.request({ type: "set_capability_enabled", id, enabled }, "ack");
+  }
+
+  async removeCapability(id: string): Promise<void> {
+    await this.client.request({ type: "remove_capability", id }, "ack");
   }
 
   async contextUsage(threadId: string): Promise<ContextUsage> {

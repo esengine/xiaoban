@@ -1,3 +1,4 @@
+mod capability;
 mod code;
 mod daily;
 mod doc;
@@ -15,6 +16,7 @@ mod request;
 mod trip;
 mod weather;
 
+pub use capability::*;
 pub use code::*;
 pub use daily::*;
 pub use doc::*;

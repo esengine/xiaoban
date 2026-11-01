@@ -11,10 +11,11 @@ impl Prompts {
         let localizer = Localizer::new(locale);
         Self {
             chat: format!(
-                "{}\n\n{}\n\n{}",
+                "{}\n\n{}\n\n{}\n\n{}",
                 localizer.text(keys::PROMPT_SYSTEM),
                 localizer.text(keys::PROMPT_MEMORY_POLICY),
-                localizer.text(keys::PROMPT_TOOL_POLICY)
+                localizer.text(keys::PROMPT_TOOL_POLICY),
+                localizer.text(keys::PROMPT_CAPABILITY_POLICY)
             ),
             interpret_answer: localizer.text(keys::PROMPT_INTERPRET_ANSWER),
         }

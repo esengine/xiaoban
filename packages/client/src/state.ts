@@ -1,5 +1,6 @@
 import type {
   Archived,
+  Capability,
   CommandRun,
   CompactPhase,
   ConfirmRequest,
@@ -76,6 +77,9 @@ export interface HubState {
   archived: Record<string, Archived>;
   compacting: Readonly<Record<string, CompactPhase>>;
   plans: Readonly<Record<string, Plan | null>>;
+  capabilities: Capability[];
+  foundCapabilities: Readonly<Record<string, Capability[]>>;
+  usedCapabilities: Readonly<Record<string, string[]>>;
   olderMessages: Record<string, boolean>;
   galaxies: MemoryGalaxy[];
   model: ModelInfo | null;
@@ -112,6 +116,9 @@ export const initialHubState: HubState = {
   archived: {},
   compacting: {},
   plans: {},
+  capabilities: [],
+  foundCapabilities: {},
+  usedCapabilities: {},
   olderMessages: {},
   galaxies: [],
   model: null,
@@ -185,6 +192,26 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "plan_updated":
       return { ...state, plans: { ...state.plans, [event.threadId]: event.plan } };
+    case "capabilities_changed":
+      return { ...state, capabilities: event.capabilities };
+    case "capabilities_found":
+      return {
+        ...state,
+        foundCapabilities: { ...state.foundCapabilities, [event.turnId]: event.capabilities },
+      };
+    case "capability_used": {
+      const used = state.usedCapabilities[event.turnId] ?? [];
+      return {
+        ...state,
+        capabilities: state.capabilities.map((capability) =>
+          capability.id === event.id ? { ...capability, uses: event.uses } : capability,
+        ),
+        usedCapabilities: {
+          ...state.usedCapabilities,
+          [event.turnId]: used.includes(event.id) ? used : [...used, event.id],
+        },
+      };
+    }
     case "thread_compacting":
       return {
         ...state,
