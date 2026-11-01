@@ -1,0 +1,4 @@
+<resources>
+  <string name="xiaoban_operator_label">小伴辅助服务</string>
+  <string name="xiaoban_operator_description">只在你交代任务时，替你在别的应用里点按和输入。不录屏、不截图；遇到付款、密码、验证码会停下交给你。</string>
+</resources>

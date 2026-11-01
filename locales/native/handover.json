@@ -1,0 +1,30 @@
+{
+  "labels": [
+    "支付",
+    "付款",
+    "提交订单",
+    "确认下单",
+    "立即下单",
+    "Pay",
+    "Place order",
+    "Submit order",
+    "Confirm order"
+  ],
+  "packages": [
+    "com.eg.android.AlipayGphone",
+    "com.tencent.mm",
+    "com.tencent.mobileqq",
+    "com.unionpay",
+    "com.icbc",
+    "com.chinamworld.main",
+    "com.chinamworld.bocmbci",
+    "cmb.pb",
+    "com.android.bankabc",
+    "com.bankcomm.Bankcomm",
+    "com.ecitic.bank.mobile",
+    "com.spdbccc.app",
+    "com.cib.cibmb",
+    "com.webank.wemoney"
+  ],
+  "packageWords": ["bank", "wallet", "pay"]
+}

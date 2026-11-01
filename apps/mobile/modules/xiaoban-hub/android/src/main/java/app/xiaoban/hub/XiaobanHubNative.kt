@@ -10,4 +10,7 @@ object XiaobanHubNative {
 
   @JvmStatic
   external fun stop()
+
+  @JvmStatic
+  fun call(request: String): String = XiaobanOperator.handle(request)
 }

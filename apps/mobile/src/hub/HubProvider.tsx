@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { Platform } from "react-native";
+import handover from "../../../../locales/native/handover.json";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { fetchKeys, type Keys, loadKeys, saveKey } from "./keys.ts";
 import {
@@ -43,6 +44,25 @@ export class MissingDeviceToken extends Error {
 const HubContext = createContext<HubContextValue | null>(null);
 const platform = Platform.OS === "ios" ? "ios" : "android";
 
+function operatorStrings(t: ReturnType<typeof useI18n>["t"]): string {
+  return JSON.stringify({
+    working: t("operate-working", { n: "{n}" }),
+    "working-press": t("operate-press", { label: "{label}" }),
+    "working-fill": t("operate-fill", { label: "{label}" }),
+    "paused-title": t("operate-paused-title"),
+    "paused-detail": t("operate-paused-detail", { n: "{n}" }),
+    resume: t("operate-resume"),
+    end: t("operate-end"),
+    pause: t("operate-pause"),
+    stop: t("operate-stop"),
+    "handover-title": t("operate-handover-title"),
+    "handover-body": t("operate-handover-body", { label: "{label}" }),
+    "handover-ok": t("operate-handover-ok"),
+    "handover-back": t("operate-handover-back"),
+    handover,
+  });
+}
+
 async function startLocal(locale: string, keys: Keys, name: string): Promise<number | null> {
   if (!XiaobanHub) return null;
   try {
@@ -74,6 +94,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      XiaobanHub?.setStrings(operatorStrings(t));
       const [session, stored] = await Promise.all([loadSession(), loadKeys()]);
       const port = await startLocal(locale, stored, deviceName);
       if (cancelled) return;
@@ -99,7 +120,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [createStore, deviceName, locale]);
+  }, [createStore, deviceName, locale, t]);
 
   useEffect(() => () => local?.client.close(), [local]);
   useEffect(() => () => remote?.client.close(), [remote]);

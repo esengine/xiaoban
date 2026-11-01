@@ -1,0 +1,9 @@
+<resources>
+  <color name="xiaoban_ink">#15171C</color>
+  <color name="xiaoban_surface">#FFFFFF</color>
+  <color name="xiaoban_accent">#3451D1</color>
+  <color name="xiaoban_accent_glow">#333451D1</color>
+  <color name="xiaoban_text_soft">#D5D9E3</color>
+  <color name="xiaoban_text_muted">#B9BECB</color>
+  <color name="xiaoban_glass">#26FFFFFF</color>
+</resources>

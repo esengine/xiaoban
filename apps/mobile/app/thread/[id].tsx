@@ -112,7 +112,18 @@ export default function ThreadScreen() {
   const drafts = draftsForThread(state, id);
   const running = drafts.find((draft) => !draft.failure);
   const messages = state.messages[id] ?? [];
-  const confirms = state.confirms.filter((confirm) => confirm.threadId === id);
+  const confirms = state.confirms.filter(
+    (confirm) => confirm.threadId === id && confirm.kind.kind !== "permissions",
+  );
+  const consent = state.confirms.find(
+    (confirm) => confirm.threadId === id && confirm.kind.kind === "permissions",
+  );
+  const shown = useRef<string | null>(null);
+  useEffect(() => {
+    if (!consent || shown.current === consent.id) return;
+    shown.current = consent.id;
+    router.push({ pathname: "/consent", params: { confirm: consent.id } });
+  }, [consent]);
 
   useEffect(() => {
     if (state.status === "open") void store.loadMessages(id).catch(() => undefined);
