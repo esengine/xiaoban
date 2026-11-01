@@ -20,4 +20,11 @@ impl Prompts {
             interpret_answer: localizer.text(keys::PROMPT_INTERPRET_ANSWER),
         }
     }
+
+    pub fn for_phone(locale: Locale) -> Self {
+        let mut prompts = Self::for_locale(locale);
+        let localizer = Localizer::new(locale);
+        prompts.chat = format!("{}\n\n{}", prompts.chat, localizer.text(keys::PROMPT_PHONE));
+        prompts
+    }
 }

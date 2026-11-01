@@ -64,7 +64,7 @@ pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) ->
     let (operator, apps) = hands();
     let runtime_config = HubRuntime {
         locale,
-        prompts: Prompts::for_locale(locale),
+        prompts: Prompts::for_phone(locale),
         connector: Arc::new(HttpConnector),
         secrets: secrets_from(secrets_json),
         locator: Arc::new(NoLocator),
@@ -108,6 +108,26 @@ mod android {
 
     use crate::operator::Bridge;
 
+    #[link(name = "log")]
+    unsafe extern "C" {
+        fn __android_log_write(
+            priority: std::ffi::c_int,
+            tag: *const std::ffi::c_char,
+            text: *const std::ffi::c_char,
+        ) -> std::ffi::c_int;
+    }
+
+    const WARN: std::ffi::c_int = 5;
+
+    pub fn log(text: &str) {
+        let Ok(text) = std::ffi::CString::new(text.replace('\0', " ")) else {
+            return;
+        };
+        unsafe {
+            __android_log_write(WARN, c"XiaobanHub".as_ptr(), text.as_ptr());
+        }
+    }
+
     fn bridge(env: &JNIEnv<'_>, class: &JClass<'_>) -> Option<Bridge> {
         let vm = env.get_java_vm().ok()?;
         let class = env.new_global_ref(class).ok()?;
@@ -126,7 +146,9 @@ mod android {
             let reply = match reply {
                 Ok(reply) => JString::from(reply),
                 Err(error) => {
+                    let _ = env.exception_describe();
                     let _ = env.exception_clear();
+                    log(&format!("bridge call failed: {error}"));
                     return Err(error.to_string());
                 }
             };
@@ -153,15 +175,18 @@ mod android {
         let locale = text(&mut env, &locale);
         let secrets = text(&mut env, &secrets);
         let name = text(&mut env, &name);
-        if super::BRIDGE.get().is_none()
-            && let Some(bridge) = bridge(&env, &class)
-        {
-            let _ = super::BRIDGE.set(bridge);
+        if super::BRIDGE.get().is_none() {
+            match bridge(&env, &class) {
+                Some(bridge) => {
+                    let _ = super::BRIDGE.set(bridge);
+                }
+                None => log("could not set up the bridge to the operator"),
+            }
         }
         match super::start(data_dir.into(), &locale, &secrets, &name) {
             Ok(port) => jint::from(port),
             Err(error) => {
-                tracing::error!(%error, "could not start the phone hub");
+                log(&format!("could not start the phone hub: {error}"));
                 -1
             }
         }

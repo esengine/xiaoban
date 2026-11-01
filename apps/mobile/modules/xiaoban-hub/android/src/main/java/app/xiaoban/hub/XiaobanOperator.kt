@@ -9,11 +9,13 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
 
 object XiaobanOperator {
+  private const val TAG = "XiaobanOperator"
   private const val SETTLE_MS = 3000L
   private const val PAUSE_LIMIT_MS = 10 * 60 * 1000L
   private const val STOP_MEMORY_MS = 8000L
@@ -41,8 +43,9 @@ object XiaobanOperator {
 
   fun handle(raw: String): String {
     val request = JSONObject(raw)
+    val op = request.optString("op")
     return try {
-      when (request.optString("op")) {
+      when (op) {
         "ready" -> JSONObject().put("ready", XiaobanOperatorService.current != null)
         "apps" -> apps()
         "open" -> open(request.getString("app"))
@@ -51,8 +54,9 @@ object XiaobanOperator {
         "keys" -> keys(request.getString("keys"))
         "type" -> type(request.getString("text"))
         else -> failure("unknown request")
-      }.toString()
+      }.also { reply -> if (reply.has("error")) Log.w(TAG, "$op: ${reply.optString("error")}") }.toString()
     } catch (error: Exception) {
+      Log.w(TAG, "$op failed", error)
       failure(error.message ?: "the phone could not do that").toString()
     }
   }
@@ -99,6 +103,7 @@ object XiaobanOperator {
       .filter { (id, _) -> id != source.packageName && !blocked(id) }
       .sortedBy { it.second }
       .forEach { (id, name) -> list.put(JSONObject().put("id", id).put("name", name)) }
+    Log.i(TAG, "apps: ${list.length()}")
     return JSONObject().put("apps", list)
   }
 
