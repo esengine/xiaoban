@@ -128,6 +128,9 @@ pub enum Event {
     DocUpdated {
         summary: crate::DocSummary,
     },
+    SheetUpdated {
+        summary: crate::WorkbookSummary,
+    },
     WeatherAlert {
         title: String,
         body: String,
@@ -167,6 +170,7 @@ impl Event {
             | Self::PrepDue { .. }
             | Self::LedgerChanged
             | Self::DocUpdated { .. }
+            | Self::SheetUpdated { .. }
             | Self::WeatherAlert { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),

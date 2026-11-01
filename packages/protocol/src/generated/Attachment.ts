@@ -8,4 +8,5 @@ export type Attachment =
   | { kind: "subthreads"; threadIds: Array<string> }
   | { kind: "report"; threadId: string; title: string }
   | { kind: "changes"; files: Array<ChangedFile> }
-  | { kind: "doc"; docId: string };
+  | { kind: "doc"; docId: string }
+  | { kind: "sheet"; sheetId: string };

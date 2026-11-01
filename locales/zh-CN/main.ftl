@@ -1524,3 +1524,15 @@ doc-export-note = 存到「下载」，导出后在访达里显示
 doc-marks-count = 小伴这次改了 { $count } 处（标绿的地方）
 doc-marks-keep-all = 全部保留
 doc-marks-undo-all = 全部撤回
+prompt-sheet = 这是一张表格的对话，表格内容在背景说明里：每行开头是行号，列从 A 开始数；公式显示为「结果 [=公式]」。用户要改时用 sheet_edit，一次给出所有改动：set 从某个格子开始写一块（每行一个数组，可以写 = 开头的公式，比如 =F2*3、=SUM(B2:B9)、=MIN(F2:F8)，能用公式就用公式，原数据改了会跟着变）；insert_rows / insert_cols 在某格的行或列前插入；delete_rows / delete_cols 删掉某个范围；sort 按某列排序（第一行是表头不动）；add_tab 加一张表；rename_tab 改表名；chart 画图（labels 是名字所在的范围，values 是数字所在的范围）。改完回一句话，不要把表格再贴一遍。
+sheet-context-label = 表格《{ $title }》的内容
+sheet-version-first = 小伴做的第一版
+sheet-version-imported = 从你发来的文件打开
+tool-sheet-create-description = 用户要的是表格（比价、清单、预算、对比、名单、排班……），或数据多于几行时，做成一张表而不是在聊天里画表格。一次给出全部数据，可以有几张表；需要计算的格子写成 = 开头的公式。
+tool-sheet-title = 表格的标题。
+tool-sheet-tab = 工作表的名字。
+tool-sheet-rows = 每行一个数组，第一行是表头；需要计算的格子写 = 开头的公式（如 =F2*3、=SUM(B2:B9)）。
+tool-sheet-edit-description = 改表格：一次给出所有改动，改完存一版，改过的格子标绿。
+tool-sheet-op = set 写一块、insert_rows / insert_cols 插入、delete_rows / delete_cols 删除、sort 排序、add_tab 加表、rename_tab 改表名、chart 画图。
+tool-sheet-cell = 格子位置，如 H1；insert_rows 用这一行，insert_cols / sort 用这一列。
+tool-sheet-range = 范围，如 F2:F8。

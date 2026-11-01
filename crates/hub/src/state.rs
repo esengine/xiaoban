@@ -54,6 +54,7 @@ pub struct HubState {
     pub ledger_tools: Vec<ToolSpec>,
     pub life_tools: Vec<ToolSpec>,
     pub doc_tools: Vec<ToolSpec>,
+    pub sheet_tools: Vec<ToolSpec>,
     pub running_commands: std::sync::Mutex<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>,
     pub github_cache: crate::github::Cache,
     pub reverted: std::sync::Mutex<std::collections::HashMap<(String, String), Reverted>>,
@@ -66,6 +67,7 @@ pub enum Scene {
     Kitchen,
     Ledger,
     Doc,
+    Sheet,
 }
 
 pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
@@ -75,6 +77,8 @@ pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
         Scene::Ledger
     } else if crate::doc::is_doc_thread(state, thread_id).await {
         Scene::Doc
+    } else if crate::sheet::is_sheet_thread(state, thread_id).await {
+        Scene::Sheet
     } else {
         Scene::Chat
     }
@@ -91,6 +95,7 @@ impl HubState {
             Scene::Kitchen => Some((xiaoban_i18n::keys::PROMPT_KITCHEN, &self.kitchen_tools)),
             Scene::Ledger => Some((xiaoban_i18n::keys::PROMPT_LEDGER, &self.ledger_tools)),
             Scene::Doc => Some((xiaoban_i18n::keys::PROMPT_DOC, &self.doc_tools)),
+            Scene::Sheet => Some((xiaoban_i18n::keys::PROMPT_SHEET, &self.sheet_tools)),
             Scene::Chat => None,
         };
         if let Some((prompt, extra)) = special {

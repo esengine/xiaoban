@@ -388,6 +388,48 @@ pub enum Request {
         id: String,
         version: u32,
     },
+    Sheet {
+        id: String,
+    },
+    SheetSummary {
+        id: String,
+    },
+    OpenSheet {
+        id: String,
+    },
+    SetCells {
+        id: String,
+        tab_id: String,
+        edits: Vec<crate::CellEdit>,
+    },
+    SheetChange {
+        id: String,
+        tab_id: String,
+        change: crate::SheetOp,
+    },
+    ResolveSheetMarks {
+        id: String,
+        keep: bool,
+    },
+    RestoreSheetVersion {
+        id: String,
+        version: u32,
+    },
+    SheetVersionTabs {
+        id: String,
+        version: u32,
+    },
+    ExportSheet {
+        id: String,
+        format: crate::SheetFormat,
+        tab_id: String,
+        path: String,
+    },
+    ImportSheet {
+        thread_id: String,
+        file_id: String,
+        name: String,
+    },
     ExportDoc {
         id: String,
         format: crate::DocFormat,
@@ -611,6 +653,15 @@ pub enum Response {
     },
     DocBlocks {
         blocks: Vec<crate::DocBlock>,
+    },
+    Workbook {
+        workbook: crate::Workbook,
+    },
+    WorkbookSummary {
+        summary: crate::WorkbookSummary,
+    },
+    SheetTabs {
+        tabs: Vec<crate::SheetTab>,
     },
     Exported {
         path: String,

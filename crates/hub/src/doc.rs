@@ -555,7 +555,7 @@ fn docx(doc: &Doc, path: &std::path::Path) -> Result<(), String> {
     file.build().pack(out).map_err(|error| error.to_string())
 }
 
-fn unique(path: &std::path::Path) -> std::path::PathBuf {
+pub(crate) fn unique(path: &std::path::Path) -> std::path::PathBuf {
     if !path.exists() {
         return path.to_path_buf();
     }

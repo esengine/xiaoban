@@ -1533,3 +1533,15 @@ doc-export-note = Saved to Downloads and shown in Finder
 doc-marks-count = Xiaoban changed { $count } places (in green)
 doc-marks-keep-all = Keep all
 doc-marks-undo-all = Undo all
+prompt-sheet = This is a spreadsheet's conversation; its content is in the context notes: each line starts with the row number and columns count from A; formulas show as "result [=formula]". When the user asks for changes, use sheet_edit with all changes at once: set writes a block starting at a cell (one array per row, formulas starting with = such as =F2*3, =SUM(B2:B9), =MIN(F2:F8); prefer formulas so results follow the data); insert_rows / insert_cols insert before a cell's row or column; delete_rows / delete_cols delete a range; sort sorts by a column (row 1 is the header and stays); add_tab adds a sheet; rename_tab renames; chart draws a chart (labels is the range of names, values the range of numbers). Reply with one sentence; never paste the table again.
+sheet-context-label = Content of the spreadsheet "{ $title }"
+sheet-version-first = First version by Xiaoban
+sheet-version-imported = Opened from your file
+tool-sheet-create-description = When the user wants a table (price comparison, checklist, budget, roster, comparison…) or the data is more than a few rows, make a spreadsheet instead of drawing a table in chat. Give all the data at once, possibly several sheets; write cells that need calculation as formulas starting with =.
+tool-sheet-title = Spreadsheet title.
+tool-sheet-tab = Sheet name.
+tool-sheet-rows = One array per row, the first row is the header; cells that need calculation are formulas starting with = (e.g. =F2*3, =SUM(B2:B9)).
+tool-sheet-edit-description = Edit the spreadsheet with all changes at once; it is saved as a new version and changed cells are shown in green.
+tool-sheet-op = set writes a block, insert_rows / insert_cols insert, delete_rows / delete_cols delete, sort, add_tab, rename_tab, chart.
+tool-sheet-cell = A cell such as H1; insert_rows uses its row, insert_cols / sort use its column.
+tool-sheet-range = A range such as F2:F8.

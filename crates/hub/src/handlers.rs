@@ -202,6 +202,16 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             ErrorCode::Unauthorized,
             "only the hub's own machine can be located",
         )),
+        request @ (Request::Sheet { .. }
+        | Request::SheetSummary { .. }
+        | Request::OpenSheet { .. }
+        | Request::SetCells { .. }
+        | Request::SheetChange { .. }
+        | Request::ResolveSheetMarks { .. }
+        | Request::RestoreSheetVersion { .. }
+        | Request::SheetVersionTabs { .. }
+        | Request::ExportSheet { .. }
+        | Request::ImportSheet { .. }) => crate::sheet::handle(state, local, request).await,
         request @ (Request::Doc { .. }
         | Request::DocSummary { .. }
         | Request::OpenDoc { .. }

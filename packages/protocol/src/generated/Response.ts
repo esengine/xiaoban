@@ -28,12 +28,15 @@ import type { OperatePermissions } from "./OperatePermissions.ts";
 import type { Preferences } from "./Preferences.ts";
 import type { ProviderOption } from "./ProviderOption.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
+import type { SheetTab } from "./SheetTab.ts";
 import type { Thread } from "./Thread.ts";
 import type { Trip } from "./Trip.ts";
 import type { TripCalendar } from "./TripCalendar.ts";
 import type { Usage } from "./Usage.ts";
 import type { WeatherPlace } from "./WeatherPlace.ts";
 import type { WeatherView } from "./WeatherView.ts";
+import type { Workbook } from "./Workbook.ts";
+import type { WorkbookSummary } from "./WorkbookSummary.ts";
 import type { Workspace } from "./Workspace.ts";
 import type { WorkspaceSettings } from "./WorkspaceSettings.ts";
 
@@ -94,6 +97,9 @@ export type Response =
   | { type: "doc"; doc: Doc }
   | { type: "doc_summary"; summary: DocSummary }
   | { type: "doc_blocks"; blocks: Array<DocBlock> }
+  | { type: "workbook"; workbook: Workbook }
+  | { type: "workbook_summary"; summary: WorkbookSummary }
+  | { type: "sheet_tabs"; tabs: Array<SheetTab> }
   | { type: "exported"; path: string }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }

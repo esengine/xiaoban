@@ -43,7 +43,7 @@ pub fn key_of(row: &ImportRow) -> String {
     }
 }
 
-fn decode(bytes: &[u8]) -> String {
+pub(crate) fn decode(bytes: &[u8]) -> String {
     let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     match std::str::from_utf8(bytes) {
         Ok(text) => text.to_owned(),
@@ -51,7 +51,7 @@ fn decode(bytes: &[u8]) -> String {
     }
 }
 
-fn split_csv(text: &str) -> Vec<Vec<String>> {
+pub(crate) fn split_csv(text: &str) -> Vec<Vec<String>> {
     let mut rows = Vec::new();
     let mut row = Vec::new();
     let mut cell = String::new();

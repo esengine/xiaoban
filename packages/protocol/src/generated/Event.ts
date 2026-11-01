@@ -15,6 +15,7 @@ import type { PrepTask } from "./PrepTask.ts";
 import type { StepResult } from "./StepResult.ts";
 import type { Thread } from "./Thread.ts";
 import type { Usage } from "./Usage.ts";
+import type { WorkbookSummary } from "./WorkbookSummary.ts";
 import type { Workspace } from "./Workspace.ts";
 
 export type Event =
@@ -57,4 +58,5 @@ export type Event =
   | { type: "prep_due"; task: PrepTask }
   | { type: "ledger_changed" }
   | { type: "doc_updated"; summary: DocSummary }
+  | { type: "sheet_updated"; summary: WorkbookSummary }
   | { type: "weather_alert"; title: string; body: string };
