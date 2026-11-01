@@ -147,6 +147,7 @@ export default function ConsentScreen() {
         >
           <Text style={[styles.openText, agreed && styles.openTextOn]}>{t("consent-open")}</Text>
         </Pressable>
+        <Text style={styles.openHint}>{t("consent-open-hint")}</Text>
         <Pressable onPress={() => answer("no")} accessibilityRole="button">
           <Text style={styles.later}>{t("consent-later")}</Text>
         </Pressable>
@@ -225,4 +226,5 @@ const styles = StyleSheet.create({
   openText: { fontSize: 15, fontWeight: "500", color: color.muted },
   openTextOn: { color: color.surface },
   later: { fontSize: 12, color: color.inkMid },
+  openHint: { fontSize: 12, lineHeight: 18, color: color.muted, textAlign: "center" },
 });

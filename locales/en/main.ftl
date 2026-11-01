@@ -1986,3 +1986,4 @@ models-desk-banner = Xiaoban does not supply models. Keys stay in this computer'
 models-save = Test and save
 models-replaced = Connected and saved
 models-kept = { $reason }. Your previous settings are still in use
+consent-open-hint = On the page that opens, switch on "Xiaoban assistant", then come back and Xiaoban continues where it left off
