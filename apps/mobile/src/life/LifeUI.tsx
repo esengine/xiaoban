@@ -86,25 +86,29 @@ export function ChatBar({
   threadId,
   placeholder,
   top,
+  disabled = false,
+  onSend,
 }: {
   store: HubStore;
   threadId: string | null;
   placeholder: string;
   top?: ReactNode;
+  disabled?: boolean;
+  onSend?: (text: string) => Promise<unknown>;
 }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const send = () => {
     const value = text.trim();
-    if (!value || !threadId) return;
+    if (!value || !threadId || disabled) return;
     setText("");
-    void store
-      .send(threadId, value)
-      .then(() => openScene(threadId))
-      .catch(() => setText(value));
+    const sent = onSend
+      ? onSend(value)
+      : store.send(threadId, value).then(() => openScene(threadId));
+    void sent.catch(() => setText(value));
   };
-  const ready = Boolean(text.trim() && threadId);
+  const ready = Boolean(text.trim() && threadId && !disabled);
   return (
     <View style={[styles.bar, top ? styles.barRaised : null]}>
       {top}

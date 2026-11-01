@@ -58,6 +58,9 @@ export const color = {
   faded: "#8A90A0",
   checkOff: "#C4C8D2",
   sheetScrim: "#15171C55",
+  mapGround: "#EEF0EC",
+  mapPark: "#DCEAD6",
+  mapWater: "#CFE0EE",
 } as const;
 
 export const dark = {
