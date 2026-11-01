@@ -1976,3 +1976,7 @@ model-current-short = Current
 model-row-thinking = { $model } · Thinking { $effort }
 models-manage-link = Manage models and keys
 context-used = Context { $percent }% used
+attach-camera = Take a photo
+attach-photos = Choose from photos
+attach-file = Choose a file
+attach-failed = Upload failed

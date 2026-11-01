@@ -47,6 +47,7 @@ interface Queued {
   id: number;
   text: string;
   quote: Quote | null;
+  files: string[];
 }
 
 interface Regenerating {
@@ -146,7 +147,7 @@ export default function ThreadScreen() {
   useEffect(() => {
     if (running || holding || next === undefined) return;
     setQueued((items) => items.slice(1));
-    void store.send(id, next.text, { quote: next.quote }).catch(() => undefined);
+    void store.send(id, next.text, { quote: next.quote, files: next.files }).catch(() => undefined);
   }, [running, holding, next, store, id]);
 
   useEffect(() => {
@@ -199,7 +200,7 @@ export default function ThreadScreen() {
       ? activeModelName(state.model)
       : "";
 
-  const send = (text: string, sentQuote: Quote | null = quote) => {
+  const send = (text: string, sentQuote: Quote | null = quote, files: string[] = []) => {
     stick.current = true;
     if (running || holding) {
       if (running && isCancel(text, t("composer-cancel-words"))) {
@@ -207,9 +208,9 @@ export default function ThreadScreen() {
         return;
       }
       counter += 1;
-      setQueued((items) => [...items, { id: counter, text, quote: sentQuote }]);
+      setQueued((items) => [...items, { id: counter, text, quote: sentQuote, files }]);
     } else {
-      void store.send(id, text, { quote: sentQuote }).catch(() => undefined);
+      void store.send(id, text, { quote: sentQuote, files }).catch(() => undefined);
     }
     setQuote(null);
   };
@@ -399,7 +400,7 @@ export default function ThreadScreen() {
         stoppable={Boolean(running)}
         quote={quote}
         onClearQuote={() => setQuote(null)}
-        onSend={(text) => send(text)}
+        onSend={(text, files) => send(text, quote, files)}
         onStop={() => {
           if (running) void store.cancel(running.turnId).catch(() => undefined);
         }}

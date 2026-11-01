@@ -1967,3 +1967,7 @@ model-current-short = 当前
 model-row-thinking = { $model } · 思考 { $effort }
 models-manage-link = 管理模型和密钥
 context-used = 上下文用了 { $percent }%
+attach-camera = 拍照
+attach-photos = 从相册选
+attach-file = 选文件
+attach-failed = 没传上

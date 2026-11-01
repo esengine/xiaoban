@@ -3,11 +3,18 @@ import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHubStore } from "../hub/HubProvider.tsx";
 import { Icon } from "../ui/Icon.tsx";
+import {
+  AttachmentStrip,
+  AttachSheet,
+  useAttachments,
+  useVisionChoice,
+  VisionNotice,
+} from "./Attachments.tsx";
 import { ContextCard, ContextRing, percentOf, useContextUsage } from "./Context.tsx";
 import { ModelSheet } from "./ModelSheet.tsx";
 import { QuoteChip } from "./QuoteChip.tsx";
@@ -26,7 +33,7 @@ export function Composer({
   stoppable: boolean;
   quote: Quote | null;
   onClearQuote: () => void;
-  onSend: (text: string) => void;
+  onSend: (text: string, files: string[]) => void;
   onStop: () => void;
 }) {
   const { t } = useI18n();
@@ -38,15 +45,29 @@ export function Composer({
   const [models, setModels] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [usage, setUsage] = useContextUsage(threadId);
+  const attachments = useAttachments(store);
+  const [attaching, setAttaching] = useState(false);
+  const vision = useVisionChoice(store);
+  const [visionAccepted, setVisionAccepted] = useState(false);
+  const hasAny = attachments.items.length > 0;
+  useEffect(() => {
+    if (!hasAny) setVisionAccepted(false);
+  }, [hasAny]);
+  const waitingVision = attachments.hasImages && vision === "ask" && !visionAccepted;
   const active = state.model;
   const effort = state.threads.find((thread) => thread.id === threadId)?.thinking ?? "auto";
-  const ready = text.trim().length > 0;
+  const ready =
+    (text.trim().length > 0 || attachments.paths.length > 0) &&
+    !attachments.uploading &&
+    !waitingVision;
 
   const send = () => {
+    if (!ready) return;
     const trimmed = text.trim();
-    if (!trimmed) return;
     setText("");
-    onSend(trimmed);
+    const files = attachments.paths;
+    attachments.clear();
+    onSend(trimmed, files);
   };
   const compact = () => {
     if (!usage) return;
@@ -69,7 +90,25 @@ export function Composer({
       {contextOpen && usage ? <ContextCard usage={usage} onCompact={compact} /> : null}
       <View style={[styles.box, focused && styles.boxFocused]}>
         {quote ? <QuoteChip quote={quote} tone="light" onRemove={onClearQuote} /> : null}
+        <AttachmentStrip items={attachments.items} onRemove={attachments.remove} />
+        {attachments.hasImages ? (
+          <VisionNotice
+            choice={vision}
+            accepted={visionAccepted}
+            onAccept={() => setVisionAccepted(true)}
+            onTextOnly={attachments.dropImages}
+          />
+        ) : null}
         <View style={styles.line}>
+          <Pressable
+            style={styles.add}
+            accessibilityRole="button"
+            accessibilityLabel={t("attach-add")}
+            disabled={attachments.full}
+            onPress={() => setAttaching(true)}
+          >
+            <Icon name="plus" color={attachments.full ? color.faint : color.inkMid} size={20} />
+          </Pressable>
           <TextInput
             style={styles.input}
             placeholder={busy ? t("composer-placeholder-busy") : t("chat-placeholder")}
@@ -132,6 +171,11 @@ export function Composer({
         </View>
       ) : null}
       <ModelSheet threadId={threadId} open={models} onClose={() => setModels(false)} />
+      <AttachSheet
+        open={attaching}
+        onClose={() => setAttaching(false)}
+        onPick={(kind) => void attachments.pick(kind).catch(() => undefined)}
+      />
     </View>
   );
 }
@@ -146,7 +190,6 @@ const styles = StyleSheet.create({
   box: {
     gap: 8,
     padding: 6,
-    paddingLeft: 12,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: color.line,
@@ -154,6 +197,7 @@ const styles = StyleSheet.create({
   },
   boxFocused: { borderColor: color.accent },
   line: { flexDirection: "row", alignItems: "flex-end", gap: 6 },
+  add: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   input: {
     flex: 1,
     minWidth: 0,
