@@ -548,7 +548,7 @@ fn csv(tab: &SheetTab) -> String {
         .join("\n")
 }
 
-fn xlsx(book: &Workbook, path: &std::path::Path) -> Result<(), String> {
+fn xlsx(book: &Workbook) -> Result<Vec<u8>, String> {
     use rust_xlsxwriter::{Chart, ChartType, Format, Workbook as Xlsx};
     let mut file = Xlsx::new();
     let bold = Format::new().set_bold();
@@ -596,7 +596,7 @@ fn xlsx(book: &Workbook, path: &std::path::Path) -> Result<(), String> {
             sheet.insert_chart(at, 0, &made).map_err(|error| error.to_string())?;
         }
     }
-    file.save(path).map_err(|error| error.to_string())
+    file.save_to_buffer().map_err(|error| error.to_string())
 }
 
 type Tabs = Vec<(String, Vec<Vec<String>>)>;
@@ -642,21 +642,40 @@ async fn import(state: &SharedState, thread_id: &str, file_id: &str, name: &str)
     Ok(Response::Workbook { workbook: open(state, &book.id).await? })
 }
 
+fn exported(book: &Workbook, format: SheetFormat, tab_id: &str) -> Result<Vec<u8>, String> {
+    match format {
+        SheetFormat::Xlsx => xlsx(book),
+        SheetFormat::Csv => {
+            let tab = book.tabs.iter().find(|tab| tab.id == tab_id).or(book.tabs.first()).cloned().unwrap_or_default();
+            Ok(format!("\u{feff}{}", csv(&tab)).into_bytes())
+        }
+    }
+}
+
+async fn render(book: Workbook, format: SheetFormat, tab_id: String) -> Result<Vec<u8>, ProtocolError> {
+    tokio::task::spawn_blocking(move || exported(&book, format, &tab_id))
+        .await
+        .unwrap_or_else(|_| Err("stopped".to_owned()))
+        .map_err(|failure| ProtocolError::new(ErrorCode::Internal, failure))
+}
+
 async fn export(state: &SharedState, id: &str, format: SheetFormat, tab_id: &str, path: &str) -> Result<Response, ProtocolError> {
     let book = load(state, id).await.ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "table not found"))?;
     let target = crate::doc::unique(std::path::Path::new(path));
-    let result = match format {
-        SheetFormat::Xlsx => {
-            let target = target.clone();
-            tokio::task::spawn_blocking(move || xlsx(&book, &target)).await.unwrap_or_else(|_| Err("stopped".to_owned()))
-        }
-        SheetFormat::Csv => {
-            let tab = book.tabs.iter().find(|tab| tab.id == tab_id).or(book.tabs.first()).cloned().unwrap_or_default();
-            std::fs::write(&target, format!("\u{feff}{}", csv(&tab))).map_err(|error| error.to_string())
-        }
-    };
-    result.map_err(|failure| ProtocolError::new(ErrorCode::Internal, failure))?;
+    let bytes = render(book, format, tab_id.to_owned()).await?;
+    std::fs::write(&target, bytes).map_err(|error| ProtocolError::new(ErrorCode::Internal, error.to_string()))?;
     Ok(Response::Exported { path: target.to_string_lossy().into_owned() })
+}
+
+async fn export_data(state: &SharedState, id: &str, format: SheetFormat, tab_id: &str) -> Result<Response, ProtocolError> {
+    let book = load(state, id).await.ok_or_else(|| ProtocolError::new(ErrorCode::NotFound, "table not found"))?;
+    let (ext, mime) = match format {
+        SheetFormat::Xlsx => ("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        SheetFormat::Csv => ("csv", "text/csv"),
+    };
+    let name = crate::doc::file_name(&book.title, ext);
+    let bytes = render(book, format, tab_id.to_owned()).await?;
+    Ok(crate::doc::export_data(name, mime, &bytes))
 }
 
 pub async fn handle(state: &SharedState, local: bool, request: Request) -> Result<Response, ProtocolError> {
@@ -673,7 +692,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Resul
         | Request::ResolveSheetMarks { id, .. }
         | Request::RestoreSheetVersion { id, .. }
         | Request::SheetVersionTabs { id, .. }
-        | Request::ExportSheet { id, .. } => id.clone(),
+        | Request::ExportSheet { id, .. }
+        | Request::ExportSheetData { id, .. } => id.clone(),
         _ => return Err(ProtocolError::new(ErrorCode::BadRequest, "not a table request")),
     };
     match request {
@@ -692,6 +712,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Resul
             }
             return export(state, &id, format, &tab_id, &path).await;
         }
+        Request::ExportSheetData { format, tab_id, .. } => return export_data(state, &id, format, &tab_id).await,
         _ => {}
     }
     let mut book = load(state, &id).await.ok_or_else(missing)?;
@@ -797,9 +818,23 @@ mod tests {
         let mut book = Workbook { tabs: vec![tab(&[&["name", "price"], &["x", "10"], &["y", "=B2*2"]])], ..Workbook::default() };
         book.tabs[0].charts.push(SheetChart { id: "c".into(), kind: ChartKind::Bar, title: "p".into(), labels: "A2:A3".into(), values: "B2:B3".into() });
         let path = std::env::temp_dir().join(format!("sheet-test-{}.xlsx", new_id()));
-        xlsx(&book, &path).unwrap();
-        assert!(std::fs::metadata(&path).unwrap().len() > 3000);
+        let bytes = xlsx(&book).unwrap();
+        assert!(bytes.len() > 3000);
+        std::fs::write(&path, bytes).unwrap();
         let back = read_file(&path).unwrap();
         assert_eq!(back[0].1[1][0], "x");
+    }
+
+    #[test]
+    fn csv_export_picks_the_tab_and_starts_with_a_bom() {
+        let mut second = tab(&[&["a,b", "2"]]);
+        second.id = "second".into();
+        second.name = "second".into();
+        let book = Workbook { tabs: vec![tab(&[&["first"]]), second], ..Workbook::default() };
+        let bytes = exported(&book, SheetFormat::Csv, "second").unwrap();
+        assert_eq!(String::from_utf8(bytes).unwrap(), "\u{feff}\"a,b\",2");
+        let fallback = exported(&book, SheetFormat::Csv, "missing").unwrap();
+        assert_eq!(String::from_utf8(fallback).unwrap(), "\u{feff}first");
+        assert!(exported(&book, SheetFormat::Xlsx, "").unwrap().starts_with(b"PK"));
     }
 }

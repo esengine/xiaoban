@@ -192,6 +192,8 @@ export type Request =
   | { type: "search_images"; query: string }
   | { type: "save_export"; path: string; data: string }
   | { type: "export_doc"; id: string; format: DocFormat; path: string }
+  | { type: "export_doc_data"; id: string; format: DocFormat }
+  | { type: "export_sheet_data"; id: string; format: SheetFormat; tabId: string }
   | { type: "notify_settings" }
   | { type: "set_notify_settings"; settings: NotifySettings }
   | { type: "set_daily_layout"; layout: DailyLayout }
