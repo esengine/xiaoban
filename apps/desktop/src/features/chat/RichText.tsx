@@ -194,7 +194,11 @@ export const RichText = memo(function RichText({ text }: { text: string }) {
   return (
     <div className="rich">
       <Markdown
-        remarkPlugins={[remarkGfm, remarkInlineTags, remarkGithubRefs]}
+        remarkPlugins={[
+          remarkGfm,
+          remarkInlineTags,
+          [remarkGithubRefs, { headers: t("ref-table-headers") }],
+        ]}
         remarkRehypeOptions={{
           footnoteLabel: t("rich-footnotes"),
           footnoteBackLabel: t("rich-footnote-back"),

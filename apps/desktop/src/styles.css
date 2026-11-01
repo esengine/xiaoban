@@ -7141,16 +7141,9 @@ button.sent-files__image {
   color: var(--color-danger-ink);
 }
 
-.rich__table table {
-  width: max-content;
-  min-width: 100%;
-}
-
 .rich__table th,
 .rich__table td {
-  min-width: 3em;
-  max-width: 360px;
-  overflow-wrap: normal;
+  overflow-wrap: break-word;
   word-break: normal;
   vertical-align: top;
 }

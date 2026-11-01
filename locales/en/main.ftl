@@ -1018,3 +1018,4 @@ workspace-settings-write-hint = Folders it may change are readable too
 workspace-settings-done = Done
 workspace-remove-title = Remove "{ $name }" from the list?
 workspace-remove-body = It only leaves the sidebar; the folder and conversations are not deleted.
+ref-table-headers = #, PR, Issue, No., Number, PR #, Issue #

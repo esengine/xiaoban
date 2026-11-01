@@ -1009,3 +1009,4 @@ workspace-settings-write-hint = 能改的文件夹也能读
 workspace-settings-done = 完成
 workspace-remove-title = 把「{ $name }」从列表移除？
 workspace-remove-body = 只是不在左栏显示，文件夹和对话记录都不会删。
+ref-table-headers = #, PR, Issue, 编号, PR 编号, Issue 编号, No., Number
