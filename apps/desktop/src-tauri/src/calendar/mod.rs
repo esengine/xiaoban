@@ -9,6 +9,7 @@ mod macos;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
 pub enum SyncOutcome {
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     Added {
         added: usize,
     },
@@ -22,6 +23,7 @@ pub enum SyncOutcome {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     Denied,
     Failed,
 }

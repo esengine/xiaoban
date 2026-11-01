@@ -64,6 +64,7 @@ pub fn system() -> SystemApps {
     SystemApps::default()
 }
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn home() -> Option<PathBuf> {
     std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from)
 }

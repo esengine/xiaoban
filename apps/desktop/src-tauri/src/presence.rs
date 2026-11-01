@@ -16,11 +16,12 @@ impl xiaoban_hub::Presence for SystemPresence {
 
 #[cfg(target_os = "windows")]
 impl xiaoban_hub::Presence for SystemPresence {
+    #[allow(unsafe_code)]
     fn idle_seconds(&self) -> Option<u64> {
         use windows_sys::Win32::System::SystemInformation::GetTickCount;
         use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
         let mut info = LASTINPUTINFO {
-            cbSize: u32::try_from(std::mem::size_of::<LASTINPUTINFO>()).ok()?,
+            cbSize: u32::try_from(size_of::<LASTINPUTINFO>()).ok()?,
             dwTime: 0,
         };
         if unsafe { GetLastInputInfo(&raw mut info) } == 0 {

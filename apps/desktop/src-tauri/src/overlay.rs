@@ -1,6 +1,7 @@
 use tauri::{AppHandle, LogicalPosition, LogicalSize, WebviewUrl, WebviewWindowBuilder};
 
 pub const LABEL: &str = "operate-overlay";
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub const POINTER_EVENT: &str = "operate://pointer";
 
 pub fn create(app: &AppHandle) -> tauri::Result<()> {

@@ -5,26 +5,34 @@ use tauri::AppHandle;
 #[allow(unsafe_code)]
 mod macos;
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub const LEVEL_EVENT: &str = "voice://level";
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub const TRANSCRIPT_EVENT: &str = "voice://transcript";
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub const ENDED_EVENT: &str = "voice://ended";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StartOutcome {
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     Listening,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     MicrophoneDenied,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     SpeechDenied,
     Unavailable,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum EndReason {
     DictationOff,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub struct Transcript {
     pub text: String,
     pub done: bool,

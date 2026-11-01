@@ -36,4 +36,5 @@ writeFileSync(
 execFileSync("pnpm", ["exec", "biome", "format", "--write", generated], {
   cwd: root,
   stdio: "inherit",
+  shell: process.platform === "win32",
 });

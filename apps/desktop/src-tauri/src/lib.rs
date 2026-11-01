@@ -67,6 +67,7 @@ pub fn run() {
         .expect("failed to build the desktop app");
 
     app.run(|handle, event| {
+        #[cfg(target_os = "macos")]
         if let RunEvent::Reopen { .. } = event {
             island::show_main(handle);
         }

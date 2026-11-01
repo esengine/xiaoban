@@ -400,7 +400,7 @@ impl StdioTransport {
 #[derive(Debug)]
 enum Transport {
     Http(HttpTransport),
-    Stdio(StdioTransport),
+    Stdio(Box<StdioTransport>),
 }
 
 #[derive(Debug)]
@@ -434,7 +434,7 @@ impl Client {
 
     pub async fn connect_stdio(command: Command) -> Result<Self, McpError> {
         let client = Self {
-            transport: Transport::Stdio(StdioTransport::spawn(command)?),
+            transport: Transport::Stdio(Box::new(StdioTransport::spawn(command)?)),
             next: AtomicU64::new(1),
         };
         client.initialize(STDIO_START_TIMEOUT).await?;
