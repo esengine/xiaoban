@@ -133,6 +133,10 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             });
             Ok(Response::Ack)
         }
+        Request::StopCommand { command_id } => {
+            crate::commands::stop(state, &command_id);
+            Ok(Response::Ack)
+        }
         _ => Err(bad_request("not a workspace request")),
     }
 }

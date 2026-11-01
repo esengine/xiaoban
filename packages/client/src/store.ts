@@ -443,6 +443,10 @@ export class HubStore {
     return commands;
   }
 
+  async stopCommand(commandId: string): Promise<void> {
+    await this.client.request({ type: "stop_command", commandId }, "ack");
+  }
+
   async runCommand(workspaceId: string, command: string): Promise<void> {
     await this.client.request({ type: "run_command", workspaceId, command }, "ack");
   }

@@ -81,4 +81,5 @@ export type Request =
   | { type: "revert_change"; threadId: string; path: string; hunk: number | null }
   | { type: "git_info"; workspaceId: string }
   | { type: "list_commands"; workspaceId: string }
-  | { type: "run_command"; workspaceId: string; command: string };
+  | { type: "run_command"; workspaceId: string; command: string }
+  | { type: "stop_command"; commandId: string };

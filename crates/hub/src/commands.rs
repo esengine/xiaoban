@@ -2,6 +2,8 @@ use std::path::Path;
 use std::process::Stdio;
 use std::time::Duration;
 
+use std::sync::{Arc, Mutex};
+
 use tokio::io::AsyncReadExt;
 use tokio_util::sync::CancellationToken;
 use xiaoban_protocol::{CommandRun, Event, Workspace};
@@ -9,6 +11,7 @@ use xiaoban_protocol::{CommandRun, Event, Workspace};
 use crate::state::SharedState;
 
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
+const LIVE_EVERY: Duration = Duration::from_millis(300);
 const RESULT_CHARS: usize = 12_000;
 const CHAINING: [&str; 8] = [";", "&&", "||", "|", ">", "<", "`", "$("];
 
@@ -110,41 +113,57 @@ pub async fn run(
     });
     let dir = crate::workspace::root(workspace);
     let mut child = shell(command, &dir).spawn().map_err(|failure| failure.to_string())?;
-    let mut stdout = child.stdout.take();
-    let mut stderr = child.stderr.take();
-    let read_out = async {
-        let mut buf = Vec::new();
-        if let Some(pipe) = stdout.as_mut() {
-            let _ = pipe.read_to_end(&mut buf).await;
+    let stop = cancel.child_token();
+    state
+        .running_commands
+        .lock()
+        .unwrap()
+        .insert(started.id.clone(), stop.clone());
+    let output = Arc::new(Mutex::new(Vec::<u8>::new()));
+    let pump = |pipe: Option<Box<dyn tokio::io::AsyncRead + Unpin + Send>>| {
+        let output = Arc::clone(&output);
+        async move {
+            let Some(mut pipe) = pipe else { return };
+            let mut chunk = vec![0_u8; 4096];
+            while let Ok(read) = pipe.read(&mut chunk).await {
+                if read == 0 {
+                    break;
+                }
+                output.lock().unwrap().extend_from_slice(&chunk[..read]);
+            }
         }
-        buf
     };
-    let read_err = async {
-        let mut buf = Vec::new();
-        if let Some(pipe) = stderr.as_mut() {
-            let _ = pipe.read_to_end(&mut buf).await;
+    let out = pump(child.stdout.take().map(|pipe| Box::new(pipe) as Box<dyn tokio::io::AsyncRead + Unpin + Send>));
+    let err = pump(child.stderr.take().map(|pipe| Box::new(pipe) as Box<dyn tokio::io::AsyncRead + Unpin + Send>));
+    let live = async {
+        let mut shown = 0;
+        loop {
+            tokio::time::sleep(LIVE_EVERY).await;
+            let text = {
+                let bytes = output.lock().unwrap();
+                if bytes.len() == shown {
+                    continue;
+                }
+                shown = bytes.len();
+                String::from_utf8_lossy(&bytes).into_owned()
+            };
+            let mut partial = started.clone();
+            partial.output = text;
+            state.publish(Event::CommandUpdated { command: partial });
         }
-        buf
     };
     let waited = async {
-        let (out, err, status) = tokio::join!(read_out, read_err, child.wait());
-        (out, err, status)
+        let ((), (), status) = tokio::join!(out, err, child.wait());
+        status.ok().and_then(|status| status.code())
     };
-    let (exit_code, output, timed_out) = tokio::select! {
-        (out, err, status) = waited => {
-            let mut text = String::from_utf8_lossy(&out).into_owned();
-            let err = String::from_utf8_lossy(&err);
-            if !err.trim().is_empty() {
-                if !text.is_empty() && !text.ends_with('\n') {
-                    text.push('\n');
-                }
-                text.push_str(&err);
-            }
-            (status.ok().and_then(|status| status.code()), text, false)
-        }
-        () = tokio::time::sleep(DEFAULT_TIMEOUT) => (None, String::new(), true),
-        () = cancel.cancelled() => (None, String::new(), false),
+    let (exit_code, timed_out) = tokio::select! {
+        code = waited => (code, false),
+        () = live => (None, false),
+        () = tokio::time::sleep(DEFAULT_TIMEOUT) => (None, true),
+        () = stop.cancelled() => (None, false),
     };
+    state.running_commands.lock().unwrap().remove(&started.id);
+    let output = String::from_utf8_lossy(&output.lock().unwrap()).into_owned();
     let finished = state
         .store
         .finish_command(started.id, exit_code, output)
@@ -179,6 +198,16 @@ pub fn for_model(finished: &Finished) -> String {
         "truncated": count > RESULT_CHARS,
     })
     .to_string()
+}
+
+pub fn stop(state: &SharedState, command_id: &str) -> bool {
+    state
+        .running_commands
+        .lock()
+        .unwrap()
+        .get(command_id)
+        .map(CancellationToken::cancel)
+        .is_some()
 }
 
 #[cfg(test)]

@@ -183,6 +183,9 @@ pub enum Request {
         workspace_id: String,
         command: String,
     },
+    StopCommand {
+        command_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

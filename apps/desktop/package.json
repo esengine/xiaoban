@@ -19,6 +19,7 @@
     "@xiaoban/protocol": "workspace:*",
     "@xiaoban/provider-icons": "workspace:*",
     "@xiaoban/tokens": "workspace:*",
+    "highlight.js": "^11.12.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-markdown": "^10.1.0",

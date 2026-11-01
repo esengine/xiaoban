@@ -1,28 +1,39 @@
 import { useI18n } from "@xiaoban/i18n/react";
 import type { DiffHunk, DiffLine, FileDiff } from "@xiaoban/protocol";
 import { useState } from "react";
+import { highlightLine } from "./highlight.ts";
 
 type Mode = "unified" | "split";
 
-function Line({ line }: { line: DiffLine }) {
+function Painted({ text, path }: { text: string; path: string }) {
+  return (
+    <span
+      className="diff-line__text"
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: highlight.js escapes the source text
+      dangerouslySetInnerHTML={{ __html: highlightLine(text, path) }}
+    />
+  );
+}
+
+function Line({ line, path }: { line: DiffLine; path: string }) {
   const sign = line.kind === "added" ? "+" : line.kind === "removed" ? "-" : "";
   return (
     <div className="diff-line" data-kind={line.kind}>
       <span className="diff-line__no">{line.old ?? ""}</span>
       <span className="diff-line__no">{line.new ?? ""}</span>
       <span className="diff-line__sign">{sign}</span>
-      <span className="diff-line__text">{line.text}</span>
+      <Painted text={line.text} path={path} />
     </div>
   );
 }
 
-function Side({ line, side }: { line: DiffLine | null; side: "old" | "new" }) {
+function Side({ line, side, path }: { line: DiffLine | null; side: "old" | "new"; path: string }) {
   if (!line) return <div className="diff-line" data-kind="empty" />;
   const kind = line.kind === "same" ? "same" : side === "old" ? "removed" : "added";
   return (
     <div className="diff-line" data-kind={kind}>
       <span className="diff-line__no">{side === "old" ? line.old : line.new}</span>
-      <span className="diff-line__text">{line.text}</span>
+      <Painted text={line.text} path={path} />
     </div>
   );
 }
@@ -53,10 +64,12 @@ function pairs(hunk: DiffHunk): [DiffLine | null, DiffLine | null][] {
 
 export function HunkView({
   hunk,
+  path,
   mode,
   action,
 }: {
   hunk: DiffHunk;
+  path: string;
   mode: Mode;
   action: { label: string; onClick: () => void } | null;
 }) {
@@ -74,15 +87,15 @@ export function HunkView({
       {mode === "unified" ? (
         hunk.lines.map((line, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no identity of their own
-          <Line key={index} line={line} />
+          <Line key={index} line={line} path={path} />
         ))
       ) : (
         <div className="diff-split">
           {pairs(hunk).map(([left, right], index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no identity of their own
             <div key={index} className="diff-split__row">
-              <Side line={left} side="old" />
-              <Side line={right} side="new" />
+              <Side line={left} side="old" path={path} />
+              <Side line={right} side="new" path={path} />
             </div>
           ))}
         </div>
@@ -192,6 +205,7 @@ export function DiffView({
                     <HunkView
                       key={`${hunk.oldStart}-${hunk.newStart}`}
                       hunk={hunk}
+                      path={file.path}
                       mode={mode}
                       action={{
                         label: t("code-revert-hunk"),

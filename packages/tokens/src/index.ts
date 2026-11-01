@@ -40,6 +40,7 @@ export const color = {
   panelSoft: "#FBFBFC",
   terminalOk: "#6BBF8E",
   terminalFail: "#F08A8A",
+  synKeyword: "#7A3E9D",
 } as const;
 
 export const dark = {

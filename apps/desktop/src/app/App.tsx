@@ -3,10 +3,11 @@ import { listen } from "@tauri-apps/api/event";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote } from "@xiaoban/protocol";
-import { useCallback, useEffect, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { ChatPane } from "../features/chat/ChatPane.tsx";
 import { ThreadList } from "../features/chat/ThreadList.tsx";
 import { CodePanel } from "../features/code/CodePanel.tsx";
+import { useCodeWidth } from "../features/code/useCodeWidth.ts";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
@@ -82,6 +83,13 @@ function Home() {
 
   const activeWorkspace = threads.find((thread) => thread.id === activeId)?.workspaceId ?? null;
   const codeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspace) ?? null;
+  const code = useCodeWidth(
+    useCallback(
+      () => document.querySelector(".panel--list")?.getBoundingClientRect().right ?? 72,
+      [],
+    ),
+  );
+  const chatHidden = Boolean(codeWorkspace && panels.workspace && code.chatHidden);
   const workspaceForShortcut = activeWorkspace ?? workspaces[0]?.id;
 
   useEffect(() => {
@@ -130,7 +138,7 @@ function Home() {
   }
 
   return (
-    <div className="shell">
+    <div className="shell" data-chat-hidden={chatHidden || undefined}>
       <Rail />
       <div className="panel panel--list" data-open={panels.list}>
         <ThreadList
@@ -161,7 +169,26 @@ function Home() {
         <main className="chat" aria-busy="true" />
       )}
       {activeId && codeWorkspace ? (
-        <div className="panel panel--code" data-open={panels.workspace}>
+        <div
+          className="panel panel--code"
+          data-open={panels.workspace}
+          data-full={chatHidden || undefined}
+          data-dragging={code.dragging || undefined}
+          style={{ "--code-width": `${code.width}px` } as CSSProperties}
+        >
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: pointer-only resize edge; the default width is one double-click away */}
+          <div
+            className="code-resize"
+            title={t("code-resize")}
+            onPointerDown={code.start}
+            onDoubleClick={code.reset}
+          >
+            {code.dragging && (
+              <span className="code-resize__label">
+                {t("code-resize-width", { width: Math.round(code.width) })}
+              </span>
+            )}
+          </div>
           <CodePanel
             key={codeWorkspace.id}
             threadId={activeId}

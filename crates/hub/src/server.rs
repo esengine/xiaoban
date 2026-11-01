@@ -78,6 +78,7 @@ impl Hub {
             code_tools: crate::code_tools::specs(&localizer),
             git_tools: crate::code_tools::git_specs(&localizer),
             code_reads: std::sync::Mutex::default(),
+            running_commands: std::sync::Mutex::default(),
             prompts: runtime.prompts,
             localizer,
             connector: runtime.connector,

@@ -4,12 +4,44 @@ import { useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { useCommands } from "./useCode.ts";
 
-function Status({ run }: { run: CommandRun }) {
+function useNow(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [active]);
+  return now;
+}
+
+function Status({ run, onStop }: { run: CommandRun; onStop: () => void }) {
   const { t } = useI18n();
-  if (run.durationMs === null) {
-    return <span className="terminal__state">{t("code-terminal-running")}</span>;
+  const running = run.durationMs === null;
+  const now = useNow(running);
+  if (running) {
+    const seconds = Math.max(1, Math.round((now - run.startedAt) / 1000));
+    return (
+      <>
+        <span className="terminal__state" data-tone="running">
+          <span className="terminal__pulse" aria-hidden="true" />
+          {t("code-terminal-running-for", { seconds })}
+        </span>
+        <button
+          type="button"
+          className="terminal__stop"
+          onClick={(event) => {
+            event.stopPropagation();
+            onStop();
+          }}
+        >
+          {t("code-terminal-stop")}
+        </button>
+      </>
+    );
   }
-  const seconds = t("code-seconds", { seconds: Math.max(1, Math.round(run.durationMs / 1000)) });
+  const seconds = t("code-seconds", {
+    seconds: Math.max(1, Math.round((run.durationMs ?? 0) / 1000)),
+  });
   if (run.exitCode === 0) {
     return (
       <span className="terminal__state" data-tone="ok">
@@ -31,44 +63,90 @@ export function Terminal({ workspace }: { workspace: Workspace }) {
   const { t } = useI18n();
   const store = useHub();
   const runs = useCommands(workspace);
-  const [open, setOpen] = useState<string | null>(null);
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [command, setCommand] = useState("");
-  const end = useRef<HTMLDivElement>(null);
+  const [queue, setQueue] = useState<string[]>([]);
+  const list = useRef<HTMLDivElement>(null);
+  const latest = runs.at(-1);
+  const busy = runs.some((run) => run.byUser && run.durationMs === null);
+
+  const isOpen = (run: CommandRun) =>
+    toggled[run.id] ??
+    (run.id === latest?.id ||
+      (run.exitCode !== 0 && run.durationMs !== null && run.exitCode !== null));
+
+  const lastOutput = latest?.output.length ?? 0;
+  useEffect(() => {
+    void lastOutput;
+    const box = list.current;
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [lastOutput, runs.length]);
 
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
-  }, [runs.length]);
+    if (busy || queue.length === 0) return;
+    const [next, ...rest] = queue;
+    setQueue(rest);
+    if (next) void store.runCommand(workspace.id, next).catch(() => undefined);
+  }, [busy, queue, store, workspace.id]);
 
   const submit = () => {
     const text = command.trim();
     if (!text) return;
     setCommand("");
-    void store.runCommand(workspace.id, text).catch(() => undefined);
+    setQueue((current) => [...current, text]);
   };
 
   return (
     <div className="terminal">
-      <div className="terminal__list">
+      <div className="terminal__list" ref={list}>
         {runs.length === 0 && <p className="terminal__hint">{t("code-terminal-empty")}</p>}
-        {runs.map((run) => (
-          <div key={run.id} className="terminal__run">
-            <button
-              type="button"
-              className="terminal__row"
-              aria-expanded={open === run.id}
-              onClick={() => setOpen(open === run.id ? null : run.id)}
+        {runs.map((run) => {
+          const open = isOpen(run);
+          return (
+            <div
+              key={run.id}
+              className="terminal__run"
+              data-running={run.durationMs === null || undefined}
             >
-              <span className="terminal__who">
-                {run.byUser ? t("code-terminal-you") : t("code-terminal-agent")}
-              </span>
-              <span className="terminal__command">{run.command}</span>
-              <Status run={run} />
-            </button>
-            {open === run.id && <pre className="terminal__output">{run.output}</pre>}
+              <button
+                type="button"
+                className="terminal__row"
+                aria-expanded={open}
+                onClick={() => setToggled((current) => ({ ...current, [run.id]: !open }))}
+              >
+                <span className="terminal__who" data-you={run.byUser || undefined}>
+                  {run.byUser ? t("code-terminal-you") : t("code-terminal-agent")}
+                </span>
+                <span className="terminal__command">{run.command}</span>
+                <Status
+                  run={run}
+                  onStop={() => void store.stopCommand(run.id).catch(() => undefined)}
+                />
+                <span className="terminal__caret" aria-hidden="true">
+                  {open ? "▾" : "▸"}
+                </span>
+              </button>
+              {open && (
+                <pre className="terminal__output">
+                  {run.output}
+                  {run.durationMs === null && (
+                    <span className="terminal__cursor" aria-hidden="true" />
+                  )}
+                </pre>
+              )}
+            </div>
+          );
+        })}
+        {queue.map((text, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: queued commands may repeat
+          <div key={index} className="terminal__row" data-queued>
+            <span className="terminal__who" data-you>
+              {t("code-terminal-you")}
+            </span>
+            <span className="terminal__command">{text}</span>
+            <span className="terminal__state">{t("code-terminal-queued")}</span>
           </div>
         ))}
-        {runs.length > 0 && <p className="terminal__hint">{t("code-terminal-hint")}</p>}
-        <div ref={end} />
       </div>
       <label className="terminal__input">
         <span className="terminal__who" data-you>
@@ -76,7 +154,7 @@ export function Terminal({ workspace }: { workspace: Workspace }) {
         </span>
         <input
           value={command}
-          placeholder={t("code-terminal-input")}
+          placeholder={busy ? t("code-terminal-input-busy") : t("code-terminal-input")}
           spellCheck={false}
           onChange={(event) => setCommand(event.target.value)}
           onKeyDown={(event) => {

@@ -2,8 +2,9 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { FileDiff, Workspace } from "@xiaoban/protocol";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { highlightLines } from "./highlight.ts";
 
 interface Picked {
   from: number;
@@ -61,6 +62,7 @@ export function FileView({
   );
   const lines = file?.text.split("\n") ?? [];
   if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  const painted = useMemo(() => highlightLines(file?.text ?? "", path), [file?.text, path]);
 
   const select = () => {
     const selection = window.getSelection();
@@ -140,7 +142,11 @@ export function FileView({
                   data-picked={inPick || undefined}
                 >
                   <span className="code-line__no">{number}</span>
-                  <span className="code-line__text">{text || " "}</span>
+                  <span
+                    className="code-line__text"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: highlight.js escapes the source text
+                    dangerouslySetInnerHTML={{ __html: painted[index] || text || " " }}
+                  />
                 </div>
               );
             })}

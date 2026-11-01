@@ -158,7 +158,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::RevertChange { .. }
         | Request::GitInfo { .. }
         | Request::ListCommands { .. }
-        | Request::RunCommand { .. }) => crate::code_requests::handle(state, local, request).await,
+        | Request::RunCommand { .. }
+        | Request::StopCommand { .. }) => crate::code_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
