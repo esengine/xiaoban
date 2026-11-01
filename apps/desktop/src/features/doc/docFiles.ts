@@ -1,14 +1,8 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { downloadDir, join } from "@tauri-apps/api/path";
 import type { HubStore } from "@xiaoban/client";
+import { fileName } from "@xiaoban/client";
 import type { DocFormat } from "@xiaoban/protocol";
-
-const UNSAFE = /[\\/:*?"<>|\n\r\t]/g;
-
-export function fileName(title: string, ext: string) {
-  const base = title.replace(UNSAFE, " ").trim().slice(0, 60);
-  return `${base || "document"}.${ext}`;
-}
 
 export async function exportDoc(
   store: HubStore,
@@ -32,4 +26,4 @@ export async function openInWord(store: HubStore, id: string, title: string) {
   if (path) await invoke("file_open", { path });
 }
 
-export { countChars, plainText } from "@xiaoban/client";
+export { countChars, fileName, plainText } from "@xiaoban/client";

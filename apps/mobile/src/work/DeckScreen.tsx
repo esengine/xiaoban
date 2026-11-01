@@ -1,16 +1,24 @@
-import type { HubStore } from "@xiaoban/client";
+import { fileName, type HubStore } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { Deck } from "@xiaoban/protocol";
+import { buildPptxBase64, deckIcons, iconKey, type PptxIcon } from "@xiaoban/slides/pptx";
 import { color, dark } from "@xiaoban/tokens";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { ChatBar, LifeHeader } from "../life/LifeUI.tsx";
+import { ChatBar, LifeHeader, life, Sheet, SheetAction } from "../life/LifeUI.tsx";
 import { Working } from "../life/Working.tsx";
+import { MIME, saveExport, useExporter } from "./exportFile.ts";
+import IconRaster from "./IconRaster.tsx";
 import SlideFrame from "./SlideFrame.tsx";
 import SlideStrip from "./SlideStrip.tsx";
+import { ShareButton } from "./WorkUI.tsx";
 
 const THUMB_W = 72;
+const RASTER_WAIT = 8000;
+
+type Raster = { icons: PptxIcon[]; onDone: (pngs: (string | null)[]) => Promise<void> };
 
 export function DeckScreen({ store, deckId }: { store: HubStore; deckId: string }) {
   const { t } = useI18n();
@@ -20,6 +28,9 @@ export function DeckScreen({ store, deckId }: { store: HubStore; deckId: string 
   const [index, setIndex] = useState(0);
   const [before, setBefore] = useState(false);
   const [turn, setTurn] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [raster, setRaster] = useState<Raster | null>(null);
+  const exporter = useExporter(() => setSharing(false));
   const count = current?.slides.length ?? 0;
   const page = useRef({ index, count });
   page.current = { index, count };
@@ -47,6 +58,31 @@ export function DeckScreen({ store, deckId }: { store: HubStore; deckId: string 
       }).panHandlers,
     [],
   );
+
+  const rasterize = (icons: PptxIcon[]) =>
+    new Promise<(string | null)[]>((resolve) => {
+      if (icons.length === 0) {
+        resolve([]);
+        return;
+      }
+      const finish = (pngs: (string | null)[]) => {
+        clearTimeout(timer);
+        setRaster(null);
+        resolve(pngs);
+      };
+      const timer = setTimeout(() => finish([]), RASTER_WAIT);
+      setRaster({ icons, onDone: async (pngs) => finish(pngs) });
+    });
+
+  const exportPptx = async (source: Deck) => {
+    const icons = deckIcons(source);
+    const pngs = await rasterize(icons);
+    const found = new Map(icons.map((icon, index) => [iconKey(icon), pngs[index] ?? null]));
+    const data = await buildPptxBase64(source, {
+      icon: async (name, tint) => found.get(iconKey({ name, color: tint })) ?? null,
+    });
+    return saveExport({ name: fileName(source.title, "pptx"), mime: MIME.pptx, data });
+  };
 
   if (!current) {
     return (
@@ -92,7 +128,22 @@ export function DeckScreen({ store, deckId }: { store: HubStore; deckId: string 
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <LifeHeader title={current.title} sub={sub} onDark close />
+      <LifeHeader
+        title={current.title}
+        sub={sub}
+        onDark
+        close
+        right={
+          <ShareButton
+            label={t("doc-phone-share")}
+            onDark
+            onPress={() => {
+              exporter.clear();
+              setSharing(true);
+            }}
+          />
+        }
+      />
       <View style={styles.top}>
         {shown ? (
           <View style={[styles.stage, { width: stageWidth, height: stageHeight }]}>
@@ -222,12 +273,32 @@ export function DeckScreen({ store, deckId }: { store: HubStore; deckId: string 
           ) : null
         }
       />
+      <Sheet open={sharing} onClose={() => setSharing(false)}>
+        <Text style={life.sheetTitle}>{current.title}</Text>
+        <SheetAction
+          label={exporter.busy === "pptx" ? t("export-phone-busy") : t("slides-export-pptx")}
+          disabled={current.writing || count === 0 || exporter.busy !== null}
+          onPress={() => exporter.start("pptx", () => exportPptx(current))}
+        />
+        {exporter.failed ? (
+          <Text style={[life.hint, styles.failed]}>{t("export-phone-failed")}</Text>
+        ) : null}
+      </Sheet>
+      {raster ? (
+        <IconRaster
+          icons={raster.icons}
+          onDone={raster.onDone}
+          dom={{ style: styles.raster, scrollEnabled: false }}
+        />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.ink },
+  failed: { color: color.dangerInk },
+  raster: { position: "absolute", width: 1, height: 1, opacity: 0 },
   flex: { flex: 1 },
   top: { paddingHorizontal: 16, paddingTop: 20, gap: 12 },
   stage: { borderRadius: 10, overflow: "hidden", backgroundColor: color.surface },
