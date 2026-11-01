@@ -6875,6 +6875,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "xiaoban-mobile"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "jni 0.21.1",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "xiaoban-agent",
+ "xiaoban-hub",
+ "xiaoban-i18n",
+ "xiaoban-protocol",
+]
+
+[[package]]
 name = "xiaoban-protocol"
 version = "0.1.0"
 dependencies = [
