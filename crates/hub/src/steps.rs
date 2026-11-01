@@ -67,8 +67,34 @@ pub fn detail(call: &ToolCall) -> Option<String> {
     }
 }
 
+const TAIL_LINES: usize = 12;
+
+fn ran(output: &Value) -> StepResult {
+    if let Some(error) = output.get("error").and_then(Value::as_str) {
+        return if error.contains("did not allow") {
+            StepResult::Declined
+        } else {
+            StepResult::Failed
+        };
+    }
+    let text = output.get("output").and_then(Value::as_str).unwrap_or_default();
+    let lines: Vec<&str> = text.trim_end().lines().collect();
+    let tail = lines[lines.len().saturating_sub(TAIL_LINES)..].join("\n");
+    StepResult::Ran {
+        exit_code: output
+            .get("exit_code")
+            .and_then(Value::as_i64)
+            .and_then(|code| i32::try_from(code).ok()),
+        timed_out: output.get("timed_out").and_then(Value::as_bool).unwrap_or(false),
+        tail,
+    }
+}
+
 pub fn result(call: &ToolCall, output: &str) -> StepResult {
     let output: Value = serde_json::from_str(output).unwrap_or(Value::Null);
+    if call.function.name == crate::code_tools::RUN_COMMAND {
+        return ran(&output);
+    }
     if output.get("error").is_some() {
         return StepResult::Failed;
     }

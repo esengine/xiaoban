@@ -165,4 +165,10 @@ pub enum StepResult {
     Matched { names: Vec<String> },
     Failed,
     Done,
+    Ran {
+        exit_code: Option<i32>,
+        timed_out: bool,
+        tail: String,
+    },
+    Declined,
 }

@@ -78,12 +78,24 @@ export function stepResult(t: T, step: TraceStep): string | null {
       return t(step.tool === "read_page" ? "step-failed-page" : "step-failed");
     case "done":
       return null;
+    case "ran":
+      return result.exitCode === 0
+        ? t("step-ran-ok")
+        : result.timedOut
+          ? t("step-ran-timeout")
+          : t("step-ran-failed", { code: result.exitCode ?? 0 });
+    case "declined":
+      return t("step-declined");
   }
 }
 
 function StepIcon({ step }: { step: TraceStep }) {
   if (!step.result) return <span className="trace-step__now" aria-hidden="true" />;
-  if (step.result.kind === "failed") {
+  if (
+    step.result.kind === "failed" ||
+    step.result.kind === "declined" ||
+    (step.result.kind === "ran" && step.result.exitCode !== 0)
+  ) {
     return (
       <span className="trace-step__icon trace-step__icon--failed" aria-hidden="true">
         <svg aria-hidden="true" viewBox="0 0 24 24">

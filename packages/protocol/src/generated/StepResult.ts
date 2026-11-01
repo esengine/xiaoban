@@ -6,4 +6,6 @@ export type StepResult =
   | { kind: "saved"; version: number }
   | { kind: "matched"; names: Array<string> }
   | { kind: "failed" }
-  | { kind: "done" };
+  | { kind: "done" }
+  | { kind: "ran"; exitCode: number | null; timedOut: boolean; tail: string }
+  | { kind: "declined" };

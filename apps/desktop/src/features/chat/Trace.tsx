@@ -4,7 +4,9 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Memory } from "@xiaoban/protocol";
 import { motion } from "@xiaoban/tokens";
 import { useEffect, useState } from "react";
+import { showCode } from "../code/CodePanel.tsx";
 import { isBetweenSteps, StepList, stepText } from "./Steps.tsx";
+import { Chevron } from "./ThreadList.tsx";
 
 const TOOL_NAMES: Record<string, PlainMessageKey> = {
   remember: "tool-name-remember",
@@ -82,6 +84,64 @@ export function WorkingLine({
   );
 }
 
+function CommandPill({ step }: { step: TraceStep }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const result = step.result;
+  if (!result || (result.kind !== "ran" && result.kind !== "declined")) return null;
+  const command = step.detail ?? "";
+  if (result.kind === "declined") {
+    return (
+      <span className="command-pill" data-tone="declined">
+        {t("command-pill-declined", { command })}
+      </span>
+    );
+  }
+  if (result.exitCode === 0) {
+    return (
+      <button
+        type="button"
+        className="command-pill"
+        data-tone="ok"
+        onClick={() => showCode("terminal")}
+      >
+        {t("command-pill-ok", { command })}
+      </button>
+    );
+  }
+  return (
+    <span className="command-pill__wrap">
+      <button
+        type="button"
+        className="command-pill"
+        data-tone="failed"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        {result.timedOut
+          ? t("command-pill-timeout", { command })
+          : t("command-pill-failed", { command, code: result.exitCode ?? 0 })}
+        <Chevron open={open} />
+      </button>
+      {open && result.tail && <pre className="command-pill__tail">{result.tail}</pre>}
+    </span>
+  );
+}
+
+export function CommandPills({ steps }: { steps: readonly TraceStep[] }) {
+  const commands = steps.filter(
+    (step) => step.result?.kind === "ran" || step.result?.kind === "declined",
+  );
+  if (commands.length === 0) return null;
+  return (
+    <li className="command-pills">
+      {commands.map((step) => (
+        <CommandPill key={step.callId} step={step} />
+      ))}
+    </li>
+  );
+}
+
 export function TraceSummary({ trace }: { trace: TurnTrace }) {
   const { t } = useI18n();
   const name = useToolName();
@@ -89,26 +149,29 @@ export function TraceSummary({ trace }: { trace: TurnTrace }) {
   if (trace.tools.length === 0) return null;
   const names = [...new Set(trace.tools.map(name))].join(t("trace-joiner"));
   return (
-    <li className="trace">
-      <button
-        type="button"
-        className="trace__summary"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        {t("trace-summary", { names, count: trace.tools.length })}
-      </button>
-      {open &&
-        (trace.steps.length > 0 ? (
-          <StepList steps={trace.steps} />
-        ) : (
-          <ol className="trace__steps">
-            {trace.tools.map((tool, index) => (
-              <li key={index}>{name(tool)}</li>
-            ))}
-          </ol>
-        ))}
-    </li>
+    <>
+      <li className="trace">
+        <button
+          type="button"
+          className="trace__summary"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {t("trace-summary", { names, count: trace.tools.length })}
+        </button>
+        {open &&
+          (trace.steps.length > 0 ? (
+            <StepList steps={trace.steps} />
+          ) : (
+            <ol className="trace__steps">
+              {trace.tools.map((tool, index) => (
+                <li key={index}>{name(tool)}</li>
+              ))}
+            </ol>
+          ))}
+      </li>
+      <CommandPills steps={trace.steps} />
+    </>
   );
 }
 
