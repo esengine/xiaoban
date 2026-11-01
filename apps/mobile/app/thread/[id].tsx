@@ -13,6 +13,7 @@ import {
   Alert,
   FlatList,
   type HostInstance,
+  Keyboard,
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -116,6 +117,12 @@ export default function ThreadScreen() {
   const [regenerating, setRegenerating] = useState<Regenerating | null>(null);
   const list = useRef<FlatList<Row>>(null);
   const stick = useRef(true);
+  useEffect(() => {
+    const shown = Keyboard.addListener("keyboardDidShow", () => {
+      if (stick.current) requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
+    });
+    return () => shown.remove();
+  }, []);
   const primary = state.preferences?.primaryThreadId === id;
   const thread = state.threads.find((item) => item.id === id);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
@@ -365,6 +372,9 @@ export default function ThreadScreen() {
             contentSize.height - contentOffset.y - layoutMeasurement.height < STICK_DISTANCE;
         }}
         scrollEventThrottle={100}
+        onLayout={() => {
+          if (stick.current) list.current?.scrollToEnd({ animated: false });
+        }}
         onContentSizeChange={() => {
           if (stick.current) list.current?.scrollToEnd({ animated: false });
         }}
