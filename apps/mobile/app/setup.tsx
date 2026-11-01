@@ -81,7 +81,10 @@ export default function SetupScreen() {
           : { provider: provider.id, apiKey: key },
       );
       if (failure) setError(failureKey(failure.kind));
-      else await keySaved(provider.id, key);
+      else {
+        await local.completeOnboarding().catch(() => undefined);
+        await keySaved(provider.id, key);
+      }
     } catch (cause) {
       setError(describeError(cause));
     } finally {

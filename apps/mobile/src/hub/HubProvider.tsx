@@ -125,6 +125,22 @@ export function HubProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => local?.client.close(), [local]);
   useEffect(() => () => remote?.client.close(), [remote]);
 
+  const hasKeys = Object.keys(keys).length > 0;
+  useEffect(() => {
+    if (!local || !hasKeys) return;
+    const finish = async () => {
+      const preferences = await local.client.request({ type: "preferences" }, "preferences");
+      if (!preferences.preferences.onboarded) {
+        await local.completeOnboarding();
+        await local.refreshPreferences();
+      }
+    };
+    if (local.client.status === "open") void finish().catch(() => undefined);
+    return local.client.onStatus((status) => {
+      if (status === "open") void finish().catch(() => undefined);
+    });
+  }, [local, hasKeys]);
+
   useEffect(() => {
     if (!remote) {
       setRemoteOpen(false);
