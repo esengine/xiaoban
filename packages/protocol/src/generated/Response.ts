@@ -4,6 +4,7 @@ import type { Branch } from "./Branch.ts";
 import type { CommandRun } from "./CommandRun.ts";
 import type { CommitInfo } from "./CommitInfo.ts";
 import type { ConfirmRequest } from "./ConfirmRequest.ts";
+import type { ConflictFile } from "./ConflictFile.ts";
 import type { Device } from "./Device.ts";
 import type { DirEntry } from "./DirEntry.ts";
 import type { Failure } from "./Failure.ts";
@@ -73,4 +74,5 @@ export type Response =
   | { type: "commits"; commits: Array<CommitInfo> }
   | { type: "commit_draft"; message: string | null }
   | { type: "pull_request"; url: string }
+  | { type: "conflicts"; files: Array<ConflictFile> }
   | { type: "workspace_image"; url: string; bytes: number };

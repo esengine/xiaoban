@@ -220,7 +220,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::DraftCommit { .. }
         | Request::Commit { .. }
         | Request::InitGit { .. }
-        | Request::CreatePullRequest { .. }) => git_request(state, local, request).await,
+        | Request::CreatePullRequest { .. }
+        | Request::Conflicts { .. }
+        | Request::ResolveConflict { .. }
+        | Request::FinishMerge { .. }
+        | Request::AbortMerge { .. }) => git_request(state, local, request).await,
         Request::StopCommand { command_id } => {
             crate::commands::stop(state, &command_id);
             Ok(Response::Ack)
@@ -292,6 +296,7 @@ fn changed(state: &SharedState, workspace: &Workspace) {
     });
 }
 
+#[allow(clippy::too_many_lines)]
 async fn git_request(state: &SharedState, local: bool, request: Request) -> Handled {
     use crate::git_ops;
     match request {
@@ -353,6 +358,50 @@ async fn git_request(state: &SharedState, local: bool, request: Request) -> Hand
             changed(state, &found);
             Ok(Response::PullRequest {
                 url: result.map_err(|failure| bad_request(&failure))?,
+            })
+        }
+        Request::Conflicts { workspace_id } => {
+            let found = load(state, workspace_id).await?;
+            Ok(Response::Conflicts {
+                files: crate::conflicts::files(&found).await,
+            })
+        }
+        Request::ResolveConflict {
+            workspace_id,
+            path,
+            index,
+            choice,
+            text,
+        } => {
+            only_here(local)?;
+            let found = load(state, workspace_id).await?;
+            let result = crate::conflicts::resolve(&found, &path, index, choice, text.as_deref()).await;
+            changed(state, &found);
+            result.map_err(|failure| bad_request(&failure))?;
+            Ok(Response::Conflicts {
+                files: crate::conflicts::files(&found).await,
+            })
+        }
+        Request::FinishMerge { workspace_id } | Request::AbortMerge { workspace_id } if !local => {
+            let _ = workspace_id;
+            Err(bad_request("only available on this computer"))
+        }
+        Request::FinishMerge { workspace_id } => {
+            let found = load(state, workspace_id).await?;
+            let result = crate::conflicts::finish(&found).await;
+            changed(state, &found);
+            result.map_err(|failure| bad_request(&failure))?;
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
+            })
+        }
+        Request::AbortMerge { workspace_id } => {
+            let found = load(state, workspace_id).await?;
+            let result = crate::conflicts::abort(&found).await;
+            changed(state, &found);
+            result.map_err(|failure| bad_request(&failure))?;
+            Ok(Response::Git {
+                git: workspace::info(&found).await,
             })
         }
         _ => Err(bad_request("not a git request")),

@@ -173,7 +173,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::DraftCommit { .. }
         | Request::Commit { .. }
         | Request::InitGit { .. }
-        | Request::CreatePullRequest { .. }) => crate::code_requests::handle(state, local, request).await,
+        | Request::CreatePullRequest { .. }
+        | Request::Conflicts { .. }
+        | Request::ResolveConflict { .. }
+        | Request::FinishMerge { .. }
+        | Request::AbortMerge { .. }) => crate::code_requests::handle(state, local, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

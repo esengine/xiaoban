@@ -7,6 +7,7 @@ mod changes;
 mod code_requests;
 mod code_tools;
 mod commands;
+mod conflicts;
 mod config;
 mod confirms;
 mod discovery;

@@ -226,6 +226,8 @@ pub async fn info(workspace: &Workspace) -> GitInfo {
         behind: 0,
         changed: Vec::new(),
         stash: None,
+        operation: None,
+        conflicts: Vec::new(),
     };
     if !info.installed || !is_repository(&dir).await {
         return info;
@@ -256,9 +258,13 @@ pub async fn info(workspace: &Workspace) -> GitInfo {
                 .collect()
         })
         .unwrap_or_default();
+    info.operation = crate::conflicts::operation(&dir).map(str::to_owned);
     for line in lines {
         if line.len() < 4 {
             continue;
+        }
+        if crate::conflicts::conflicted(line) {
+            info.conflicts.push(line[3..].trim_matches('"').to_owned());
         }
         let code = &line[..2];
         let path = line[3..].rsplit(" -> ").next().unwrap_or_default().trim_matches('"').to_owned();

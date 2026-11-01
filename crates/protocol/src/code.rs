@@ -86,6 +86,38 @@ pub struct GitInfo {
     pub changed: Vec<ChangedFile>,
     #[serde(default)]
     pub stash: Option<String>,
+    #[serde(default)]
+    pub operation: Option<String>,
+    #[serde(default)]
+    pub conflicts: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ConflictChoice {
+    Ours,
+    Theirs,
+    Both,
+    Text,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictBlock {
+    pub index: u32,
+    pub line: u32,
+    pub ours: Vec<String>,
+    pub theirs: Vec<String>,
+    pub base: Option<Vec<String>>,
+    pub ours_label: String,
+    pub theirs_label: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictFile {
+    pub path: String,
+    pub blocks: Vec<ConflictBlock>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

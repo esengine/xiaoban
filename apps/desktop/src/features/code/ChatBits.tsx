@@ -45,7 +45,7 @@ export function BranchBar({ threadId }: { threadId: string }) {
             onClick={() => setMenu(!menu)}
           >
             <BranchIcon />
-            {git.branch}
+            <span className="branch-bar__name">{git.branch}</span>
             <svg className="branch-bar__more" aria-hidden="true" viewBox="0 0 16 16">
               <path d="M4 6l4 4 4-4" />
             </svg>

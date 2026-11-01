@@ -3,7 +3,7 @@ import { type PointerEvent, useCallback, useEffect, useState } from "react";
 const KEY = "xiaoban.code.width";
 const DEFAULT = 680;
 const MIN = 420;
-const CHAT_MIN = 360;
+const CHAT_MIN = 440;
 const COLLAPSE_AFTER = 80;
 
 interface Saved {

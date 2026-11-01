@@ -246,6 +246,23 @@ pub enum Request {
     CreatePullRequest {
         workspace_id: String,
     },
+    Conflicts {
+        workspace_id: String,
+    },
+    ResolveConflict {
+        workspace_id: String,
+        path: String,
+        index: u32,
+        choice: crate::ConflictChoice,
+        #[serde(default)]
+        text: Option<String>,
+    },
+    FinishMerge {
+        workspace_id: String,
+    },
+    AbortMerge {
+        workspace_id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -393,6 +410,9 @@ pub enum Response {
     },
     PullRequest {
         url: String,
+    },
+    Conflicts {
+        files: Vec<crate::ConflictFile>,
     },
     WorkspaceImage {
         url: String,
