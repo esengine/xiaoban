@@ -11176,3 +11176,314 @@ button.sent-files__image {
     display: none;
   }
 }
+
+.sheet-card__icon {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.sheet-card__preview {
+  width: calc(100% - 32px);
+  margin: 0 16px 6px;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+.sheet-card__preview th {
+  padding: 0 0 4px;
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--color-memory-other);
+  text-align: left;
+}
+
+.sheet-card__preview td {
+  padding: 4px 0;
+  border-top: 1px solid var(--color-line-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-card__more {
+  display: block;
+  padding: 0 16px 12px;
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.sent-files__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-ground);
+}
+
+.sheet-formula {
+  height: 34px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.sheet-formula__name {
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--color-line-soft);
+  color: var(--color-ink-mid);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.sheet-formula__input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--color-ink);
+  outline: none;
+}
+
+.sheet-formula__input[data-formula] {
+  color: var(--color-accent);
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.sheet-compare,
+.sheet-marks {
+  margin: 12px 20px 0;
+  max-width: none;
+}
+
+.sheet__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 18px 0;
+}
+
+.sheet-grid {
+  display: inline-block;
+  border-right: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+  font-size: 12.5px;
+}
+
+.sheet-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sheet-grid__corner,
+.sheet-grid__col,
+.sheet-grid__num,
+.sheet-cell {
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  min-width: 64px;
+  max-width: 320px;
+  border-right: 1px solid var(--color-line-soft);
+  border-bottom: 1px solid var(--color-line-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-weight: 400;
+}
+
+.sheet-grid__corner,
+.sheet-grid__col,
+.sheet-grid__num {
+  position: sticky;
+  background: var(--color-ground);
+  color: var(--color-memory-other);
+  font-size: 11px;
+  text-align: center;
+  z-index: 1;
+}
+
+.sheet-grid__col {
+  top: 0;
+}
+
+.sheet-grid__num {
+  left: 0;
+  min-width: 40px;
+}
+
+.sheet-grid__corner {
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.sheet-grid__col[data-on],
+.sheet-grid__num[data-on] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.sheet-cell {
+  position: relative;
+  cursor: cell;
+}
+
+.sheet-cell[data-header] {
+  font-weight: 700;
+  background: var(--color-panel-soft);
+}
+
+.sheet-cell[data-number] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-cell[data-error] {
+  color: var(--color-danger-ink);
+}
+
+.sheet-cell[data-selected] {
+  background: var(--color-accent-wash);
+}
+
+.sheet-cell[data-marked] {
+  background: var(--color-diff-added);
+  box-shadow: inset 0 -2px 0 var(--color-diff-added-bar);
+}
+
+.sheet-cell[data-active] {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.sheet-cell__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 140px;
+  padding: 0 7px;
+  box-sizing: border-box;
+  border: 2px solid var(--color-accent);
+  background: var(--color-surface);
+  font: inherit;
+  color: var(--color-ink);
+  outline: none;
+  z-index: 3;
+}
+
+.sheet__charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 14px 0 0 20px;
+}
+
+.sheet-chart {
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sheet-chart__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.sheet-chart__bar {
+  fill: var(--color-ledger2);
+}
+
+.sheet-chart__line {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+.sheet-chart__dot {
+  fill: var(--color-accent);
+}
+
+.sheet-chart__value,
+.sheet-chart__label,
+.sheet-chart__legend {
+  font-size: 10.5px;
+  fill: var(--color-ink-mid);
+}
+
+.sheet-chart__label {
+  fill: var(--color-memory-other);
+}
+
+.sheet-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  flex: none;
+}
+
+.sheet-tabs__tab {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: none;
+  color: var(--color-faint);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.sheet-tabs__tab[aria-selected="true"] {
+  background: var(--color-surface);
+  border-color: var(--color-line);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.sheet-tabs__rename {
+  width: 120px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--color-accent);
+  border-radius: 0 0 8px 8px;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.sheet-status {
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+  font-size: 12px;
+  color: var(--color-ink-mid);
+}

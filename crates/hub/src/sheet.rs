@@ -400,7 +400,7 @@ fn apply_change(book: &mut Workbook, change: Change) -> bool {
     let range = parse_range(&change.range);
     let op = match change.op.as_str() {
         "set" => {
-            let Some((row, col)) = parse_ref(&change.cell) else {
+            let Some((row, col)) = parse_ref(&change.cell).or_else(|| range.map(|(start, _)| start)) else {
                 return false;
             };
             for (dr, line) in rows_from(change.rows).into_iter().enumerate() {
@@ -468,13 +468,19 @@ impl HubTools<'_> {
         if saved.is_some_and(|tabs| tabs.iter().map(|tab| &tab.cells).ne(book.tabs.iter().map(|tab| &tab.cells))) {
             snapshot(state, &mut book, state.localizer.text(keys::DOC_VERSION_USER), true).await;
         }
-        let applied = args.changes.into_iter().map(|change| apply_change(&mut book, change)).filter(|ok| *ok).count();
+        let results: Vec<bool> = args.changes.into_iter().map(|change| apply_change(&mut book, change)).collect();
+        let applied = results.iter().filter(|ok| **ok).count();
+        let skipped: Vec<usize> = results.iter().enumerate().filter(|(_, ok)| !**ok).map(|(index, _)| index).collect();
         for tab in &mut book.tabs {
             tidy(tab);
         }
         snapshot(state, &mut book, args.note, false).await;
         save(state, &mut book).await;
-        json!({ "applied": applied, "version": book.version, "hint": "changed cells are shown in green; reply in one short sentence" }).to_string()
+        if skipped.is_empty() {
+            json!({ "applied": applied, "version": book.version, "hint": "changed cells are shown in green; reply in one short sentence" }).to_string()
+        } else {
+            json!({ "applied": applied, "skipped": skipped, "version": book.version, "hint": "the changes at these indexes were not applied (check op, tab and cell); fix them in another sheet_edit call before replying" }).to_string()
+        }
     }
 }
 
@@ -762,6 +768,15 @@ mod tests {
         apply_op(&mut sheet, &SheetOp::Sort { col: 1, desc: false });
         let names: Vec<&str> = sheet.cells.iter().map(|row| row[0].as_str()).collect();
         assert_eq!(names, ["name", "y", "z", "x"]);
+    }
+
+    #[test]
+    fn set_accepts_a_range_as_the_start() {
+        let mut book = Workbook { tabs: vec![tab(&[&["price"], &["10"]])], ..Workbook::default() };
+        let ok = apply_change(&mut book, Change { op: "set".into(), range: "B1:B2".into(), rows: vec![vec![json!("x")], vec![json!("=A2*2")]], ..Change::default() });
+        assert!(ok);
+        tidy(&mut book.tabs[0]);
+        assert_eq!(book.tabs[0].values[1][1], "20");
     }
 
     #[test]

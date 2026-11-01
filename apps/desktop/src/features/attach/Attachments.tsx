@@ -363,12 +363,16 @@ function SentImage({ file, onOpen }: { file: FileInfo; onOpen: (target: Element)
   );
 }
 
+const SHEET_FILE = /\.(xlsx|xls|csv)$/i;
+
 export function SentFiles({
   files,
   onLookAgain,
+  onOpenSheet,
 }: {
   files: FileInfo[];
   onLookAgain?: ((file: FileInfo, path: string) => void) | undefined;
+  onOpenSheet?: ((file: FileInfo) => void) | undefined;
 }) {
   const { t } = useI18n();
   const store = useHub();
@@ -408,20 +412,26 @@ export function SentFiles({
         </div>
       )}
       {documents.map((file) => (
-        <FileCard
-          key={file.id}
-          name={file.name}
-          meta={meta(file)}
-          locate={() => store.filePath(file.id, file.name)}
-          onLookAgain={
-            onLookAgain &&
-            (() =>
-              void store
-                .filePath(file.id, file.name)
-                .then((path) => onLookAgain(file, path))
-                .catch(() => undefined))
-          }
-        />
+        <span key={file.id} className="sent-files__row">
+          <FileCard
+            name={file.name}
+            meta={meta(file)}
+            locate={() => store.filePath(file.id, file.name)}
+            onLookAgain={
+              onLookAgain &&
+              (() =>
+                void store
+                  .filePath(file.id, file.name)
+                  .then((path) => onLookAgain(file, path))
+                  .catch(() => undefined))
+            }
+          />
+          {onOpenSheet && SHEET_FILE.test(file.name) && (
+            <button type="button" className="code-status-button" onClick={() => onOpenSheet(file)}>
+              {t("sheet-open-in-xiaoban")}
+            </button>
+          )}
+        </span>
       ))}
     </div>
   );

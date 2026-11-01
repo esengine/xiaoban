@@ -19,6 +19,7 @@ import { WeatherPage } from "../features/life/WeatherPage.tsx";
 import { ContextMenuProvider } from "../features/menu/ContextMenu.tsx";
 import { Onboarding } from "../features/onboarding/Onboarding.tsx";
 import { OperateConsent } from "../features/operate/OperateConsent.tsx";
+import { SheetPage } from "../features/sheet/SheetPage.tsx";
 import { Rail, type View } from "../features/shell/Rail.tsx";
 import { TripWorkbench } from "../features/trip/TripWorkbench.tsx";
 import { ImageViewerProvider } from "../features/viewer/ImageViewer.tsx";
@@ -43,6 +44,7 @@ function Home() {
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [trip, setTrip] = useState<OpenTrip | null>(null);
   const [docView, setDocView] = useState<{ docId: string; print: boolean } | null>(null);
+  const [sheetView, setSheetView] = useState<string | null>(null);
   const [view, setView] = useState<
     "chat" | "daily" | "kitchen" | "week" | "cook" | "ledger" | "weather"
   >("chat");
@@ -159,6 +161,21 @@ function Home() {
     );
   }
 
+  if (sheetView) {
+    return (
+      <div className="shell">
+        <Rail
+          onNavigate={(next) => {
+            setSheetView(null);
+            navigate(next);
+          }}
+        />
+        <SheetPage sheetId={sheetView} onBack={() => setSheetView(null)} />
+        {consent && <OperateConsent key={consent.id} confirm={consent} />}
+      </div>
+    );
+  }
+
   if (docView) {
     return (
       <div className="shell">
@@ -241,6 +258,7 @@ function Home() {
           onOpenThread={setSelected}
           onOpenTrip={openTrip}
           onOpenDoc={(docId, print) => setDocView({ docId, print: Boolean(print) })}
+          onOpenSheet={setSheetView}
         />
       ) : (
         <main className="chat" aria-busy="true" />

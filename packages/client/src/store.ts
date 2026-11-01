@@ -2,6 +2,7 @@ import type {
   Allowance,
   AutonomyLevel,
   Branch,
+  CellEdit,
   CommandRun,
   CommitInfo,
   ConfirmChoice,
@@ -36,6 +37,9 @@ import type {
   Quote,
   Response,
   ServiceStatus,
+  SheetFormat,
+  SheetOp,
+  SheetTab,
   ThinkingEffort,
   Thread,
   Trip,
@@ -44,6 +48,8 @@ import type {
   WeatherPlace,
   WeatherRules,
   WeatherView,
+  Workbook,
+  WorkbookSummary,
   Workspace,
   WorkspaceSettings,
 } from "@xiaoban/protocol";
@@ -61,6 +67,9 @@ export class HubStore {
     this.client = client;
     client.onEvent((event) => {
       this.#update((state) => applyEvent(state, event));
+      if (event.type === "sheet_updated" && this.#state.sheet?.id === event.summary.id) {
+        void this.loadSheet(event.summary.id).catch(() => undefined);
+      }
       if (event.type === "doc_updated" && this.#state.doc?.id === event.summary.id) {
         void this.loadDoc(event.summary.id).catch(() => undefined);
       }
@@ -526,6 +535,65 @@ export class HubStore {
 
   cancelImport(month: string): Promise<void> {
     return this.#ledgerRequest({ type: "cancel_import", month });
+  }
+
+  async sheetSummary(id: string): Promise<WorkbookSummary> {
+    const { summary } = await this.client.request(
+      { type: "sheet_summary", id },
+      "workbook_summary",
+    );
+    this.#update((state) => ({ ...state, sheets: { ...state.sheets, [id]: summary } }));
+    return summary;
+  }
+
+  async #sheetRequest(request: Parameters<HubClient["request"]>[0]): Promise<Workbook> {
+    const { workbook } = await this.client.request(request, "workbook");
+    this.#update((state) => ({ ...state, sheet: workbook }));
+    return workbook;
+  }
+
+  loadSheet(id: string): Promise<Workbook> {
+    return this.#sheetRequest({ type: "sheet", id });
+  }
+
+  openSheet(id: string): Promise<Workbook> {
+    return this.#sheetRequest({ type: "open_sheet", id });
+  }
+
+  importSheet(threadId: string, fileId: string, name: string): Promise<Workbook> {
+    return this.#sheetRequest({ type: "import_sheet", threadId, fileId, name });
+  }
+
+  setCells(id: string, tabId: string, edits: CellEdit[]): Promise<Workbook> {
+    return this.#sheetRequest({ type: "set_cells", id, tabId, edits });
+  }
+
+  sheetChange(id: string, tabId: string, change: SheetOp): Promise<Workbook> {
+    return this.#sheetRequest({ type: "sheet_change", id, tabId, change });
+  }
+
+  resolveSheetMarks(id: string, keep: boolean): Promise<Workbook> {
+    return this.#sheetRequest({ type: "resolve_sheet_marks", id, keep });
+  }
+
+  restoreSheetVersion(id: string, version: number): Promise<Workbook> {
+    return this.#sheetRequest({ type: "restore_sheet_version", id, version });
+  }
+
+  async sheetVersionTabs(id: string, version: number): Promise<SheetTab[]> {
+    const { tabs } = await this.client.request(
+      { type: "sheet_version_tabs", id, version },
+      "sheet_tabs",
+    );
+    return tabs;
+  }
+
+  async exportSheet(id: string, format: SheetFormat, tabId: string, path: string): Promise<string> {
+    const result = await this.client.request(
+      { type: "export_sheet", id, format, tabId, path },
+      "exported",
+    );
+    return result.path;
   }
 
   async docSummary(id: string): Promise<DocSummary> {

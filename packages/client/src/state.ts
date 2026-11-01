@@ -20,6 +20,8 @@ import type {
   Thread,
   Trip,
   WeatherView,
+  Workbook,
+  WorkbookSummary,
   Workspace,
 } from "@xiaoban/protocol";
 import type { ConnectionStatus } from "./client.ts";
@@ -91,6 +93,8 @@ export interface HubState {
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
   doc: Doc | null;
+  sheets: Readonly<Record<string, WorkbookSummary>>;
+  sheet: Workbook | null;
 }
 
 export const initialHubState: HubState = {
@@ -121,6 +125,8 @@ export const initialHubState: HubState = {
   weather: null,
   docs: {},
   doc: null,
+  sheets: {},
+  sheet: null,
 };
 
 export const tripKey = (tripId: string, version: number): string => `${tripId}@${version}`;
@@ -384,6 +390,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       };
     case "kitchen_updated":
       return { ...state, kitchen: event.kitchen };
+    case "sheet_updated":
+      return { ...state, sheets: { ...state.sheets, [event.summary.id]: event.summary } };
     case "doc_updated":
       return { ...state, docs: { ...state.docs, [event.summary.id]: event.summary } };
     case "timer_fired":

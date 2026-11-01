@@ -49,7 +49,7 @@ pub fn show(value: f64) -> String {
     if (value - value.round()).abs() < 1e-9 && value.abs() < 1e15 {
         return format!("{}", value.round() as i64);
     }
-    let text = format!("{value:.6}");
+    let text = format!("{value:.2}");
     text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
@@ -330,6 +330,7 @@ mod tests {
         assert_eq!(out[3][0], "990");
         assert_eq!(out[3][1], "6810");
         assert_eq!(out[4][0], "1135");
+        assert_eq!(show(134.079_543), "134.08");
         assert_eq!(out[4][1], "3.33");
     }
 

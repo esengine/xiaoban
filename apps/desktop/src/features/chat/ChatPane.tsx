@@ -25,6 +25,7 @@ import { useWorkspaceOf } from "../code/useCode.ts";
 import { DocCard, WritingDocs } from "../doc/DocCard.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
+import { SheetCard } from "../sheet/SheetCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { Composer } from "./Composer.tsx";
@@ -65,6 +66,7 @@ interface Props {
   onNewThreadWith: (quote: Quote) => void;
   onOpenTrip: (tripId: string, version: number | null) => void;
   onOpenDoc: (docId: string, print?: boolean) => void;
+  onOpenSheet: (sheetId: string) => void;
   onOpenThread: (threadId: string) => void;
 }
 
@@ -475,6 +477,9 @@ export function ChatPane(props: Props) {
         />
       );
     }
+    if (attachment?.kind === "sheet") {
+      return <SheetCard sheetId={attachment.sheetId} onOpen={props.onOpenSheet} />;
+    }
     if (attachment?.kind === "doc") {
       return <DocCard docId={attachment.docId} onOpen={props.onOpenDoc} />;
     }
@@ -499,6 +504,12 @@ export function ChatPane(props: Props) {
           message={message}
           delivered={message.id === delivered}
           onContextMenu={(event) => menuFor(event, message, null)}
+          onOpenSheet={(file) =>
+            void store
+              .importSheet(threadId, file.id, file.name)
+              .then((book) => props.onOpenSheet(book.id))
+              .catch(() => undefined)
+          }
           onLookAgain={
             running
               ? undefined
@@ -682,11 +693,13 @@ function UserItem({
   delivered,
   onContextMenu,
   onLookAgain,
+  onOpenSheet,
 }: {
   message: Message;
   delivered: boolean;
   onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
   onLookAgain: ((file: FileInfo, path: string) => void) | undefined;
+  onOpenSheet: (file: FileInfo) => void;
 }) {
   const { t } = useI18n();
   const store = useHub();
@@ -704,7 +717,7 @@ function UserItem({
     <>
       {message.files.length > 0 && (
         <li className="sent-files-row">
-          <SentFiles files={message.files} onLookAgain={onLookAgain} />
+          <SentFiles files={message.files} onLookAgain={onLookAgain} onOpenSheet={onOpenSheet} />
         </li>
       )}
       <li
