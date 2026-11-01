@@ -11,13 +11,13 @@ use xiaoban_agent::{
     ProviderPreset, RecordingProvider, ScriptedProvider, prefix_reuse,
 };
 use xiaoban_hub::{
-    ActFailure, AppEntry, Apps, Day, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig,
+    ActFailure, AppEntry, Apps, Day, FixedAgenda, FixedLocator, FixedWeather, Forecast, Hit, Hub, HubConfig,
     HubHandle, HubRuntime, MemorySecrets, NoRouter, Operator, Page, Prompts, Router, SecretStore,
     ServiceError, Snapshot, UiAction, UiElement, Web,
 };
 use xiaoban_i18n::Locale;
 use xiaoban_protocol::{
-    Attachment, AutonomyLevel, ClientFrame, ConfirmChoice, ConfirmKind, ContextNote, Coord,
+    AgendaItem, Attachment, AutonomyLevel, ClientFrame, ConfirmChoice, ConfirmKind, ContextNote, Coord,
     Credential, DeviceHello, DocFormat, ErrorCode, Event, FailureKind, Interpretation, Location,
     OperatePermissions, PROTOCOL_VERSION, Platform, ProtocolError, ProviderId, Request, Response,
     Role, ServerFrame, ServiceId, SheetFormat, Sky, TravelMode, TripLeg,
@@ -155,6 +155,7 @@ fn runtime_with(
             latitude: None,
             longitude: None,
         })),
+        agenda: Arc::new(xiaoban_hub::NoAgenda),
         presence: Arc::new(xiaoban_hub::NoPresence),
         weather: Arc::new(FixedWeather(Forecast {
             place: "杭州".into(),
@@ -1285,6 +1286,67 @@ fn save_trip_call() -> ModelChunk {
             }]
         }),
     )
+}
+
+#[tokio::test]
+async fn proposed_events_become_cards_and_the_calendar_can_be_read() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "propose_event",
+            &serde_json::json!({
+                "title": "带孩子打疫苗",
+                "date": "2026-11-12",
+                "start": "15:00",
+                "location": "社区卫生服务中心",
+                "reminder": 60,
+            }),
+        )],
+        vec![tool_call(
+            "read_calendar",
+            &serde_json::json!({ "date": "2026-11-12" }),
+        )],
+        vec![ModelChunk::Text("记下了".into())],
+    ]));
+    let mut runtime = runtime(provider.clone());
+    runtime.agenda = Arc::new(FixedAgenda(vec![AgendaItem {
+        title: "孩子家长会".into(),
+        start: 1_794_483_000_000,
+        end: 1_794_486_600_000,
+        all_day: false,
+        location: String::new(),
+        calendar: "我的日历".into(),
+    }]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "下周三下午三点带孩子去打疫苗", Vec::new()).await;
+
+    let message = latest_message_with(&mut client, &thread, |attachment| {
+        matches!(attachment, Attachment::Event { .. })
+    })
+    .await;
+    let Some(Attachment::Event { event }) = message.attachment else {
+        panic!("expected an event card");
+    };
+    assert_eq!(event.title, "带孩子打疫苗");
+    assert_eq!(event.reminder, Some(60));
+    assert_eq!(event.end - event.start, 60 * 60 * 1000);
+
+    let read = provider.requests()[2]
+        .messages
+        .iter()
+        .any(|message| message.content.contains("孩子家长会"));
+    assert!(read, "the calendar should be handed to the model");
+
+    let Response::TripCalendar { calendar } = client
+        .request(Request::EventCalendar { event: event.clone() })
+        .await
+    else {
+        panic!("expected a calendar");
+    };
+    assert_eq!(calendar.events.len(), 1);
+    assert!(calendar.ics.contains("TRIGGER:-PT60M"));
+    hub.shutdown().await;
 }
 
 fn search_call() -> ModelChunk {

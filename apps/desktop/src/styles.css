@@ -2028,6 +2028,76 @@ button.quote-block__main {
   margin-top: var(--space-sm);
 }
 
+.event-card {
+  margin-top: 10px;
+  width: 320px;
+  max-width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.event-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 15px;
+  color: var(--color-ink);
+}
+
+.event-card__head .button-icon {
+  stroke: var(--color-accent);
+}
+
+.event-card__rows {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+  font-size: 13px;
+}
+
+.event-card__rows dt {
+  color: var(--color-faded);
+}
+
+.event-card__rows dd {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.event-card__add {
+  align-self: stretch;
+}
+
+.event-card__status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.event-card__status--done {
+  color: var(--color-success);
+}
+
+.event-card__link {
+  margin-left: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
 .service-card {
   margin-top: 10px;
   width: 440px;

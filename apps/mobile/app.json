@@ -51,6 +51,12 @@
           ]
         }
       ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Adds the events you confirm to your calendar and reads it to answer what is coming up. Nothing is uploaded."
+        }
+      ],
       "./plugins/with-short-object-paths.js",
       "expo-sharing"
     ],

@@ -124,6 +124,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs.push(crate::plan::spec(localizer));
     specs.push(crate::recipes::spec(localizer));
     specs.extend(crate::capability::specs(localizer));
+    specs.extend(crate::agenda::specs(localizer));
     specs
 }
 
@@ -679,6 +680,7 @@ impl ToolRunner for HubTools<'_> {
                 | OPEN_APP
                 | SAVE_TRIP
                 | SAVE_PLACE_DETAIL
+                | crate::agenda::PROPOSE_EVENT
                 | crate::operate_tools::LOOK_AT_APP
                 | crate::operate_tools::CLICK
                 | crate::operate_tools::TYPE_TEXT
@@ -760,6 +762,7 @@ impl ToolRunner for HubTools<'_> {
                 name if crate::kitchen::is_tool(name) => self.kitchen_tool(name, arguments).await,
                 name if crate::ledger::is_tool(name) => self.ledger_tool(name, arguments).await,
                 crate::life::LIFE => self.life(arguments).await,
+                name if crate::agenda::is_tool(name) => self.agenda_tool(name, arguments).await,
                 crate::plan::PLAN => self.plan(arguments).await,
                 crate::recipes::RECIPE => self.recipe(arguments).await,
                 crate::capability::FIND => self.find_capability(arguments).await,

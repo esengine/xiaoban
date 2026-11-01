@@ -40,6 +40,7 @@ pub async fn start(
         connector: Arc::new(HttpConnector),
         secrets: Arc::new(KeyringSecrets::new(KEYCHAIN_SERVICE)),
         locator,
+        agenda: Arc::new(xiaoban_hub::NoAgenda),
         presence: Arc::new(crate::presence::SystemPresence),
         weather: Arc::new(OpenMeteo::for_locale(locale)),
         router: Arc::new(NoRouter),

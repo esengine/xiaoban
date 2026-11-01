@@ -27,6 +27,9 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 calendar: crate::calendar::build(&trip),
             })
         }
+        Request::EventCalendar { event } => Ok(Response::TripCalendar {
+            calendar: crate::calendar::single(&event),
+        }),
         _ => Err(ProtocolError::new(
             ErrorCode::BadRequest,
             "not a trip request",

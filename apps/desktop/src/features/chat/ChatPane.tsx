@@ -30,6 +30,7 @@ import { PlanCard } from "../plan/PlanCard.tsx";
 import { usePlanDock } from "../plan/usePlanDock.ts";
 import { SheetCard } from "../sheet/SheetCard.tsx";
 import { DeckCard, WritingDecks } from "../slides/DeckCard.tsx";
+import { EventCard } from "../trip/EventCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { CompactStatus, SummaryNote } from "./CompactStatus.tsx";
@@ -518,6 +519,9 @@ export function ChatPane(full: Props) {
           }}
         />
       );
+    }
+    if (attachment?.kind === "event") {
+      return <EventCard event={attachment.event} />;
     }
     if (attachment?.kind === "deck") {
       return <DeckCard deckId={attachment.deckId} onOpen={props.onOpenDeck} />;

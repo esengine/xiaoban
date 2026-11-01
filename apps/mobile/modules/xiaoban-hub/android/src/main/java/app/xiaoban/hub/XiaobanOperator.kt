@@ -64,6 +64,7 @@ object XiaobanOperator {
         "keys" -> keys(request.getString("keys"))
         "type" -> type(request.getString("text"))
         "locate" -> PhoneLocation.locate(context ?: service())
+        "calendar" -> PhoneCalendar.read(context ?: service(), request.getLong("from"), request.getLong("to"))
         "notify" -> XiaobanNotices.notify(context ?: service(), request)
         "withdraw" -> XiaobanNotices.withdraw(context ?: service(), request.getString("id"))
         else -> failure("unknown request")

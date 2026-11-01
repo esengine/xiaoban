@@ -54,6 +54,7 @@ export type { DocSummary } from "./DocSummary.ts";
 export type { DocVersionInfo } from "./DocVersionInfo.ts";
 export type { ErrorCode } from "./ErrorCode.ts";
 export type { Event } from "./Event.ts";
+export type { EventDraft } from "./EventDraft.ts";
 export type { Expense } from "./Expense.ts";
 export type { ExpenseSource } from "./ExpenseSource.ts";
 export type { Failure } from "./Failure.ts";
