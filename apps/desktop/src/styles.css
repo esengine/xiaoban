@@ -5741,8 +5741,8 @@ button.sent-files__image {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--dark-ground);
-  color: var(--dark-text-soft);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
   font-family: var(--font-mono);
   font-variant-ligatures: none;
   font-size: 12px;
@@ -5760,7 +5760,7 @@ button.sent-files__image {
   gap: 8px;
   padding: 7px 12px;
   border: 0;
-  border-bottom: 1px solid var(--dark-line);
+  border-bottom: 1px solid var(--color-line-soft);
   background: none;
   color: inherit;
   font: inherit;
@@ -5770,11 +5770,11 @@ button.sent-files__image {
 
 .terminal__who {
   flex: none;
-  color: var(--dark-text-muted);
+  color: var(--color-faint);
 }
 
 .terminal__who[data-you] {
-  color: var(--color-terminal-ok);
+  color: var(--color-accent);
 }
 
 .terminal__command {
@@ -5783,33 +5783,34 @@ button.sent-files__image {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--dark-text);
+  color: var(--color-ink);
 }
 
 .terminal__state {
   flex: none;
-  color: var(--dark-text-muted);
+  color: var(--color-faint);
 }
 
 .terminal__state[data-tone="ok"] {
-  color: var(--color-terminal-ok);
+  color: var(--color-success);
 }
 
 .terminal__state[data-tone="failed"] {
-  color: var(--color-terminal-fail);
+  color: var(--color-danger-ink);
 }
 
 .terminal__state span {
-  color: var(--dark-text-muted);
+  color: var(--color-faint);
 }
 
 .terminal__output {
   margin: 0;
   padding: 8px 12px 12px;
-  border-bottom: 1px solid var(--dark-line);
+  border-bottom: 1px solid var(--color-line-soft);
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--dark-text-soft);
+  color: var(--color-ink-soft);
+  background: var(--color-ground);
   font: inherit;
   line-height: 1.6;
 }
@@ -5817,7 +5818,7 @@ button.sent-files__image {
 .terminal__hint {
   margin: 0;
   padding: 8px 12px;
-  color: var(--dark-text-muted);
+  color: var(--color-faint);
   font-family: var(--font-family);
 }
 
@@ -5827,7 +5828,7 @@ button.sent-files__image {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-top: 1px solid var(--dark-line);
+  border-top: 1px solid var(--color-line-soft);
 }
 
 .terminal__input input {
@@ -5835,13 +5836,13 @@ button.sent-files__image {
   min-width: 0;
   border: 0;
   background: none;
-  color: var(--dark-text);
+  color: var(--color-ink);
   font: inherit;
   outline: none;
 }
 
 .terminal__input input::placeholder {
-  color: var(--dark-text-muted);
+  color: var(--color-faint);
 }
 
 .branch-bar {
@@ -6094,31 +6095,31 @@ button.sent-files__image {
 }
 
 .terminal__run[data-running] > .terminal__row {
-  background: var(--dark-raised);
+  background: var(--color-accent-wash);
 }
 
 .terminal__state[data-tone="running"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--dark-attention-text);
+  color: var(--color-attention-ink);
 }
 
 .terminal__pulse {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--dark-attention-text);
+  background: var(--color-attention);
   animation: pulse 1.2s ease-in-out infinite;
 }
 
 .terminal__stop {
   flex: none;
   padding: 0 6px;
-  border: 1px solid var(--dark-line-strong);
+  border: 1px solid var(--color-line-strong);
   border-radius: 6px;
-  background: none;
-  color: var(--dark-text-muted);
+  background: var(--color-surface);
+  color: var(--color-ink-mid);
   font: inherit;
   cursor: pointer;
 }
@@ -6129,7 +6130,7 @@ button.sent-files__image {
   height: 13px;
   margin-left: 2px;
   vertical-align: -2px;
-  background: var(--dark-text-soft);
+  background: var(--color-ink-soft);
   animation: blink 1s steps(1) infinite;
 }
 
@@ -6166,7 +6167,7 @@ button.sent-files__image {
 }
 
 .terminal .chevron {
-  color: var(--dark-text-muted);
+  color: var(--color-faint);
 }
 
 @media (prefers-reduced-motion: reduce) {

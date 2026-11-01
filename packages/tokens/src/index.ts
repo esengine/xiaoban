@@ -38,8 +38,6 @@ export const color = {
   changeSoft: "#FBF0D9",
   codePick: "#DCE3FA",
   panelSoft: "#FBFBFC",
-  terminalOk: "#6BBF8E",
-  terminalFail: "#F08A8A",
   synKeyword: "#7A3E9D",
 } as const;
 
