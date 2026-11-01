@@ -19,7 +19,20 @@
         "backgroundColor": "#3451D1"
       }
     },
-    "plugins": ["expo-router", "expo-secure-store", "expo-status-bar", "expo-localization"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-localization",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },
