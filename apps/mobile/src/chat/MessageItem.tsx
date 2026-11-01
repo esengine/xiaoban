@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { type HostInstance, Pressable, View } from "react-native";
 import { TripCard } from "../trip/TripCard.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
+import { SentFiles } from "./SentFiles.tsx";
 
 export function MessageItem({
   message,
@@ -22,9 +23,14 @@ export function MessageItem({
       collapsable={false}
       style={user ? bubbleStyles.userShell : bubbleStyles.assistantShell}
     >
-      <Pressable delayLongPress={350} onLongPress={() => onLongPress(ref.current)}>
-        <Bubble from={message.role} text={message.text} quote={message.quote} footer={footer} />
-      </Pressable>
+      <SentFiles files={message.files} align={user ? "flex-end" : "flex-start"} />
+      {message.text || message.quote || message.files.length === 0 ? (
+        <Pressable delayLongPress={350} onLongPress={() => onLongPress(ref.current)}>
+          <Bubble from={message.role} text={message.text} quote={message.quote} footer={footer} />
+        </Pressable>
+      ) : (
+        footer
+      )}
       {message.attachment?.kind === "trip" ? (
         <TripCard tripId={message.attachment.tripId} version={message.attachment.version} />
       ) : null}
