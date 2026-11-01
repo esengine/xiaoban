@@ -15,12 +15,16 @@ import { MascotFace } from "../components/Mascot.tsx";
 import { useHubStore } from "../hub/HubProvider.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
 import { Caret, FadeIn, Shimmer } from "./Motion.tsx";
-import { Rich } from "./Rich.tsx";
 import { isBetweenSteps, stepText } from "./Steps.tsx";
 import { WorkingLine } from "./Trace.tsx";
 import { useElapsed } from "./useElapsed.ts";
 
 const UNREACHABLE = new Set(["network", "model"]);
+const REASONING_TAIL = 3000;
+
+function tail(text: string): string {
+  return text.length > REASONING_TAIL ? `…${text.slice(-REASONING_TAIL)}` : text;
+}
 
 function Reasoning({ draft }: { draft: Draft }) {
   const { t } = useI18n();
@@ -58,7 +62,7 @@ function Reasoning({ draft }: { draft: Draft }) {
             style={styles.reasoningScroll}
             onContentSizeChange={() => box.current?.scrollToEnd({ animated: false })}
           >
-            <Rich text={draft.reasoning ?? ""} style={styles.reasoningText} />
+            <Text style={styles.reasoningText}>{tail(draft.reasoning ?? "")}</Text>
           </ScrollView>
         </FadeIn>
       )}

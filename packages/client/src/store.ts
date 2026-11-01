@@ -77,15 +77,19 @@ const PAGE = 50;
 
 export type ExportedFile = { name: string; mime: string; data: string };
 
+const STREAM_FRAME_MS = 100;
+
 export class HubStore {
   readonly client: HubClient;
   #state: HubState = initialHubState;
   readonly #listeners = new Set<() => void>();
+  #pending: ReturnType<typeof setTimeout> | null = null;
 
   constructor(client: HubClient) {
     this.client = client;
     client.onEvent((event) => {
-      this.#update((state) => applyEvent(state, event));
+      const streaming = event.type === "text_delta" || event.type === "reasoning_delta";
+      this.#update((state) => applyEvent(state, event), streaming);
       if (event.type === "deck_updated" && this.#state.deck?.id === event.summary.id) {
         void this.loadDeck(event.summary.id).catch(() => undefined);
       }
@@ -1396,10 +1400,22 @@ export class HubStore {
     ]).catch(() => undefined);
   }
 
-  #update(next: (state: HubState) => HubState): void {
+  #update(next: (state: HubState) => HubState, soon = false): void {
     const updated = next(this.#state);
     if (updated === this.#state) return;
     this.#state = updated;
+    if (soon) {
+      this.#pending ??= setTimeout(() => this.#notify(), STREAM_FRAME_MS);
+      return;
+    }
+    this.#notify();
+  }
+
+  #notify(): void {
+    if (this.#pending !== null) {
+      clearTimeout(this.#pending);
+      this.#pending = null;
+    }
     for (const listener of this.#listeners) listener();
   }
 }
