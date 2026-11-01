@@ -107,6 +107,7 @@ async fn assign(
     .await
     .map_err(|failure| failure.detail)?;
     state.pauses.expect_report(&turn_id);
+    state.publish(Event::DailyFeedChanged);
     Ok(turn_id)
 }
 
@@ -248,7 +249,10 @@ pub fn report(state: &SharedState, child_id: &str, answer: &str) {
             )
             .await;
             match attempt {
-                Ok(_) => return,
+                Ok(_) => {
+                    state.publish(Event::DailyFeedChanged);
+                    return;
+                }
                 Err(failure) if failure.code == xiaoban_protocol::ErrorCode::Busy => {
                     tokio::time::sleep(REPORT_WAIT).await;
                 }

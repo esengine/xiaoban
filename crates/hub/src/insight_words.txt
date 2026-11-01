@@ -1,0 +1,3 @@
+takeout=外卖,美团,饿了么,饿了吗,takeout,take-out,take out,delivery,uber eats,doordash,grubhub,deliveroo,foodpanda
+outdoor=公园,步道,徒步,爬山,登山,山顶,湖边,西湖,海边,海滩,沙滩,露营,野餐,骑行,古镇,园林,动物园,游乐园,植物园,观景台,景区,茶园,户外,park,hike,hiking,trail,beach,picnic,camping,garden,zoo,lake,mountain,outdoor
+perishable=菠菜,生菜,青菜,小白菜,油麦菜,空心菜,韭菜,豆芽,蘑菇,香菇,金针菇,豆腐,牛奶,酸奶,鱼,虾,鸡肉,猪肉,牛肉,肉馅,草莓,葡萄,香蕉,桃,西红柿,番茄,黄瓜,西兰花,spinach,lettuce,greens,sprouts,mushroom,tofu,milk,yogurt,fish,shrimp,chicken,pork,beef,mince,berries,strawberr,banana,tomato,cucumber,broccoli

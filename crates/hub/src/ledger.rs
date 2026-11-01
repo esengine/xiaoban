@@ -209,6 +209,24 @@ async fn between(state: &SharedState, from: jiff::civil::Date, to: jiff::civil::
     out
 }
 
+pub async fn recent(state: &SharedState, days: i64) -> Vec<Expense> {
+    let Ok(today) = jiff::Timestamp::from_millisecond(now_ms()).map(|stamp| stamp.to_zoned(zone()).date()) else {
+        return Vec::new();
+    };
+    let from = today.checked_sub(jiff::Span::new().days(days)).unwrap_or(today);
+    between(state, from, today).await
+}
+
+pub async fn unmute(state: &SharedState, category: &str) {
+    let mut meta = meta(state).await;
+    let before = meta.muted.len();
+    meta.muted.retain(|key| key != category);
+    if meta.muted.len() != before {
+        save_meta(state, &meta).await;
+        changed(state);
+    }
+}
+
 pub async fn view_range(state: &SharedState, from: &str, to: &str) -> Ledger {
     let parse = |value: &str| value.trim().parse::<jiff::civil::Date>().ok();
     let (Some(mut from), Some(mut to)) = (parse(from), parse(to)) else {
@@ -699,6 +717,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
         Request::CommitImport { .. } => {
             let mut meta = meta(state).await;
             if let Some(preview) = meta.import.take() {
+                let file = preview.file.clone();
                 let fallback = state.localizer.text(keys::LEDGER_OTHER);
                 let items: Vec<Expense> = preview
                     .rows
@@ -714,7 +733,11 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
                         note: row.payee,
                     })
                     .collect();
+                let count = items.len();
                 add(state, items).await;
+                if count > 0 {
+                    crate::insights::record_import(state, count, &file, thread(state).await).await;
+                }
             }
             save_meta(state, &meta).await;
             changed(state);

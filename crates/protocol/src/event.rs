@@ -170,6 +170,10 @@ pub enum Event {
     NoticeWithdrawn {
         id: String,
     },
+    DailyFeedChanged,
+    InsightAlert {
+        insight: crate::Insight,
+    },
 }
 
 impl Event {
@@ -213,6 +217,8 @@ impl Event {
             | Self::DeckUpdated { .. }
             | Self::WeatherAlert { .. }
             | Self::NoticeWithdrawn { .. }
+            | Self::DailyFeedChanged
+            | Self::InsightAlert { .. }
             | Self::CapabilitiesChanged { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::Notify { notice } => notice.thread_id.as_deref(),

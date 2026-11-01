@@ -67,6 +67,21 @@ impl Store {
         .await
     }
 
+    pub async fn recent_trips(&self, limit: u32) -> Result<Vec<Trip>> {
+        self.with(move |conn| {
+            let mut statement = conn.prepare(
+                "SELECT t.data FROM trips t WHERE t.version = (SELECT MAX(version) FROM trips WHERE id = t.id) ORDER BY t.created_at DESC LIMIT ?1",
+            )?;
+            let rows = statement.query_map([limit], |row| row.get::<_, String>(0))?;
+            let mut trips = Vec::new();
+            for data in rows {
+                trips.push(decode(&data?)?);
+            }
+            Ok(trips)
+        })
+        .await
+    }
+
     pub async fn decline_service(&self, thread_id: String, service: ServiceId) -> Result<()> {
         self.with(move |conn| {
             conn.execute(

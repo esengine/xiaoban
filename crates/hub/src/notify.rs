@@ -448,6 +448,19 @@ async fn draft_for(
             choices: Vec::new(),
             reply: false,
         }),
+        Event::InsightAlert { insight } => Some(Draft {
+            id: crate::insights::notice_id(&insight.id),
+            category: NotifyCategory::Remind,
+            title: l.text(keys::INSIGHT_TAG),
+            body: insight.text,
+            thread_id: match insight.action {
+                xiaoban_protocol::InsightAction::Say { thread_id, .. }
+                | xiaoban_protocol::InsightAction::Open { thread_id, .. } => thread_id,
+            },
+            confirm_id: None,
+            choices: Vec::new(),
+            reply: false,
+        }),
         _ => None,
     }
 }
