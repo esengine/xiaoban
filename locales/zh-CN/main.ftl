@@ -825,7 +825,6 @@ code-status-clean = 没有未提交的改动
 code-status-no-git = 没用 git 管理
 code-file-changed = 小伴改过
 code-see-changes = 看改动
-code-ask = 问小伴
 code-add-input = 加到输入框
 code-copy = 复制
 code-copy-path = 复制路径

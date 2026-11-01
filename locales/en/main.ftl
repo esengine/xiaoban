@@ -834,7 +834,6 @@ code-status-clean = No uncommitted changes
 code-status-no-git = Not a git repository
 code-file-changed = Changed by Xiaoban
 code-see-changes = See changes
-code-ask = Ask Xiaoban
 code-add-input = Add to message
 code-copy = Copy
 code-copy-path = Copy path

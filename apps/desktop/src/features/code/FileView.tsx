@@ -156,9 +156,6 @@ export function FileView({
         {picked && (
           <div className="code-pick" style={{ top: picked.top, left: picked.left }}>
             <button type="button" onClick={() => quote(true)}>
-              {t("code-ask")}
-            </button>
-            <button type="button" onClick={() => quote(false)}>
               {t("code-add-input")}
             </button>
             <button
