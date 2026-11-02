@@ -106,7 +106,7 @@ pub fn todo_wake_at(
 }
 pub use runtime::HubRuntime;
 pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};
-pub use server::{Hub, HubHandle, LocalLink};
+pub use server::{Hub, HubHandle, LocalLink, lazy_packs_by_default};
 pub use services::{DeepseekWeb, Hit, Page, ServiceError, Web};
 pub use presence::{NoPresence, Presence};
 pub use weather::{Day, FixedWeather, Forecast, Now, OpenMeteo, Weather, WeatherError};

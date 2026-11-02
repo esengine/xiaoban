@@ -48,6 +48,12 @@ impl LocalLink {
     }
 }
 
+/// The setting the shipped apps start with: tools load on demand, unless `XIAOBAN_LAZY_PACKS=0`.
+/// A hub started in code (the tests, for one) keeps every tool until `set_lazy_packs` says otherwise.
+pub fn lazy_packs_by_default() -> bool {
+    std::env::var("XIAOBAN_LAZY_PACKS").map_or(true, |value| value != "0")
+}
+
 impl HubHandle {
     /// Leave tool packs a conversation has not loaded out of its requests. Off by default.
     pub fn set_lazy_packs(&self, on: bool) {

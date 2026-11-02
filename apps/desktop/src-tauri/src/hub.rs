@@ -61,6 +61,7 @@ pub async fn start(
         advertise: true,
     };
     let handle = Hub::start(config, runtime).await?;
+    handle.set_lazy_packs(xiaoban_hub::lazy_packs_by_default());
     Ok(RunningHub {
         endpoint: handle.ws_url(),
         handle: Mutex::new(Some(handle)),

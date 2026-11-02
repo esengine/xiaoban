@@ -143,6 +143,7 @@ async fn main() -> anyhow::Result<()> {
         runtime,
     )
     .await?;
+    hub.set_lazy_packs(xiaoban_hub::lazy_packs_by_default());
 
     tokio::signal::ctrl_c().await?;
     hub.shutdown().await;

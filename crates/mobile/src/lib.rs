@@ -118,6 +118,7 @@ pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) ->
         advertise: false,
     };
     let handle = runtime().block_on(Hub::start(config, runtime_config(locale, secrets_json)))?;
+    handle.set_lazy_packs(xiaoban_hub::lazy_packs_by_default());
     if let Some(bridge) = BRIDGE.get() {
         runtime().spawn(notices::forward(handle.link(), bridge.clone(), Localizer::new(locale)));
         runtime().spawn(keeper::watch(handle.link(), bridge.clone(), Localizer::new(locale)));
