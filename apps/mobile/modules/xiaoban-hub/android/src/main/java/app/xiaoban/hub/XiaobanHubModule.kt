@@ -1,9 +1,12 @@
 package app.xiaoban.hub
 
+import android.app.AppOpsManager
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
+import android.net.Uri
 import android.os.Bundle
+import android.os.Process
 import android.provider.Settings
 import android.widget.Toast
 import expo.modules.kotlin.exception.Exceptions
@@ -165,6 +168,28 @@ class XiaobanHubModule : Module() {
 
     Function("operatorReady") {
       XiaobanOperatorService.current != null
+    }
+
+    // Android 13 and later lock the accessibility switch for an app that was not installed from a
+    // store, until the user allows restricted settings on its info page.
+    Function("operatorRestricted") {
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || XiaobanOperatorService.current != null) {
+        false
+      } else {
+        runCatching {
+          val ops = context.getSystemService(AppOpsManager::class.java)
+          ops.checkOpNoThrow("android:access_restricted_settings", Process.myUid(), context.packageName) !=
+            AppOpsManager.MODE_ALLOWED
+        }.getOrDefault(false)
+      }
+    }
+
+    Function("openAppDetails") {
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      context.startActivity(intent)
     }
 
     Function("openOperatorSettings") { detailHint: String, listHint: String ->

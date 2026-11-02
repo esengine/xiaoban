@@ -38,6 +38,7 @@ export default function ConsentScreen() {
   const store = useHubStore();
   const { confirm, ball } = useLocalSearchParams<{ confirm?: string; ball?: string }>();
   const [agreed, setAgreed] = useState(false);
+  const [restricted, setRestricted] = useState(() => Boolean(XiaobanHub?.operatorRestricted?.()));
   const answered = useRef(false);
 
   const answer = (choice: "yes" | "no") => {
@@ -51,7 +52,9 @@ export default function ConsentScreen() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
-      if (next === "active" && XiaobanHub?.operatorReady()) answer("yes");
+      if (next !== "active") return;
+      setRestricted(Boolean(XiaobanHub?.operatorRestricted?.()));
+      if (XiaobanHub?.operatorReady()) answer("yes");
     });
     return () => subscription.remove();
   });
@@ -140,18 +143,38 @@ export default function ConsentScreen() {
         </Pressable>
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + 22 }]}>
+        {restricted ? (
+          <View style={styles.restricted}>
+            <Text style={styles.restrictedTitle}>{t("consent-restricted-title")}</Text>
+            <Text style={styles.restrictedBody}>{t("consent-restricted-1")}</Text>
+            <Text style={styles.restrictedBody}>{t("consent-restricted-2")}</Text>
+            <Text style={styles.restrictedBody}>{t("consent-restricted-3")}</Text>
+            <Pressable
+              onPress={() =>
+                XiaobanHub?.openOperatorSettings(t("consent-toast-detail"), t("consent-toast-list"))
+              }
+              accessibilityRole="button"
+            >
+              <Text style={styles.restrictedLink}>{t("consent-restricted-try")}</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <Pressable
           style={[styles.open, agreed && styles.openOn]}
           disabled={!agreed}
           onPress={() =>
-            XiaobanHub?.openOperatorSettings(t("consent-toast-detail"), t("consent-toast-list"))
+            restricted
+              ? XiaobanHub?.openAppDetails?.()
+              : XiaobanHub?.openOperatorSettings(t("consent-toast-detail"), t("consent-toast-list"))
           }
           accessibilityRole="button"
           accessibilityState={{ disabled: !agreed }}
         >
-          <Text style={[styles.openText, agreed && styles.openTextOn]}>{t("consent-open")}</Text>
+          <Text style={[styles.openText, agreed && styles.openTextOn]}>
+            {t(restricted ? "consent-restricted-open" : "consent-open")}
+          </Text>
         </Pressable>
-        <Text style={styles.openHint}>{t("consent-open-hint")}</Text>
+        {restricted ? null : <Text style={styles.openHint}>{t("consent-open-hint")}</Text>}
         <Pressable onPress={() => answer("no")} accessibilityRole="button">
           <Text style={styles.later}>{t("consent-later")}</Text>
         </Pressable>
@@ -230,5 +253,14 @@ const styles = StyleSheet.create({
   openText: { fontSize: 15, fontWeight: "500", color: color.muted },
   openTextOn: { color: color.surface },
   later: { fontSize: 12, color: color.inkMid },
+  restricted: {
+    gap: 4,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: color.attentionSoft,
+  },
+  restrictedTitle: { fontSize: 13, fontWeight: "700", color: color.attentionInk },
+  restrictedBody: { fontSize: 12, lineHeight: 19, color: color.attentionInk },
+  restrictedLink: { marginTop: 4, fontSize: 12, fontWeight: "600", color: color.accentStrong },
   openHint: { fontSize: 12, lineHeight: 18, color: color.muted, textAlign: "center" },
 });

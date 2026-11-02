@@ -12,6 +12,8 @@ interface XiaobanHubNative {
   planBall?(state: string): void;
   turnDone(title: string): boolean;
   operatorReady(): boolean;
+  operatorRestricted?(): boolean;
+  openAppDetails?(): void;
   openOperatorSettings(detailHint: string, listHint: string): void;
   openRecognizerSettings(hint: string): void;
   notify(request: string): string;
