@@ -613,7 +613,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
             Ok(Response::MailList { items })
         }
         Request::MailOriginal { id } => Ok(Response::MailOriginal {
-            original: original(state, &id).await?,
+            original: Box::new(original(state, &id).await?),
         }),
         _ => Ok(Response::MailStatus { status: status(state).await }),
     }
@@ -803,7 +803,7 @@ impl HubTools<'_> {
         let items = saved(self.state).await.items;
         let found = search(&items, args.query.as_deref().unwrap_or_default(), category, days, now_ms());
         if let [only] = found.as_slice() {
-            self.attach(Attachment::Mail { mail: only.clone() });
+            self.attach(Attachment::Mail { mail: Box::new(only.clone()) });
         }
         json!({
             "mails": found.iter().map(brief).collect::<Vec<_>>(),
@@ -819,7 +819,7 @@ impl HubTools<'_> {
         let Some(item) = find(self.state, &args.id).await else {
             return failure("unknown mail id; call search_mail first and use an id it returned");
         };
-        self.attach(Attachment::Mail { mail: item.clone() });
+        self.attach(Attachment::Mail { mail: Box::new(item.clone()) });
         match original(self.state, &item.id).await {
             Ok(found) => json!({
                 "mail": brief(&item),
@@ -847,13 +847,13 @@ impl HubTools<'_> {
             return failure("text must not be empty");
         }
         self.attach(Attachment::MailDraft {
-            draft: MailDraft {
+            draft: Box::new(MailDraft {
                 mail_id: item.id.clone(),
                 to: item.from_address.clone(),
                 to_name: item.from_name.clone(),
                 subject: reply_subject(&item.subject),
                 text: body,
-            },
+            }),
         });
         json!({
             "shown": true,

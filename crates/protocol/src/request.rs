@@ -933,7 +933,7 @@ pub enum Response {
         items: Vec<crate::MailItem>,
     },
     MailOriginal {
-        original: crate::MailOriginal,
+        original: Box<crate::MailOriginal>,
     },
 }
 

@@ -31,6 +31,28 @@ export {
   viewBox,
 } from "./floorplan.ts";
 export { keyLabel, remarkInlineTags } from "./inlineTags.ts";
+export {
+  MAIL_CATEGORIES,
+  MAIL_CATEGORY_KEYS,
+  MAIL_FAILURE_KEYS,
+  MAIL_PROVIDERS,
+  type MailAction,
+  type MailActionKind,
+  type MailEvent,
+  type MailProviderInfo,
+  mailActions,
+  mailEvent,
+  mailLine,
+  mailMeta,
+  mailMoney,
+  mailProvider,
+  mailSay,
+  mailSender,
+  mailTargetThread,
+  mailTripText,
+  mailtoUrl,
+  mailWhen,
+} from "./mail.ts";
 export { activeModelName, modelName } from "./modelName.ts";
 export {
   failedText,

@@ -35,6 +35,11 @@ import type {
   Ledger,
   LedgerYear,
   Location,
+  MailCategory,
+  MailItem,
+  MailOriginal,
+  MailProvider,
+  MailStatus,
   Memory,
   MemoryGalaxy,
   Message,
@@ -1066,6 +1071,46 @@ export class HubStore {
     return feed;
   }
 
+  async loadMailStatus(): Promise<MailStatus> {
+    const { status } = await this.client.request({ type: "mail_status" }, "mail_status");
+    this.#update((state) => ({ ...state, mailStatus: status }));
+    return status;
+  }
+
+  async connectMail(
+    provider: MailProvider,
+    address: string,
+    password: string,
+    host: string | null,
+  ): Promise<MailStatus> {
+    const { status } = await this.client.request(
+      { type: "connect_mail", provider, address, password, host },
+      "mail_status",
+    );
+    if (status.connected) this.#update((state) => ({ ...state, mailStatus: status }));
+    return status;
+  }
+
+  async disconnectMail(): Promise<MailStatus> {
+    const { status } = await this.client.request({ type: "disconnect_mail" }, "mail_status");
+    this.#update((state) => ({
+      ...state,
+      mailStatus: status,
+      dailyFeed: state.dailyFeed ? { ...state.dailyFeed, mail: null } : state.dailyFeed,
+    }));
+    return status;
+  }
+
+  async mailList(category: MailCategory | null): Promise<MailItem[]> {
+    const { items } = await this.client.request({ type: "mail_list", category }, "mail_list");
+    return items;
+  }
+
+  async mailOriginal(id: string): Promise<MailOriginal> {
+    const { original } = await this.client.request({ type: "mail_original", id }, "mail_original");
+    return original;
+  }
+
   async loadWeather(placeId: string | null = null): Promise<WeatherView> {
     const { weather } = await this.client.request({ type: "weather", placeId }, "weather");
     this.#update((state) => ({ ...state, weather }));
@@ -1397,6 +1442,7 @@ export class HubStore {
       this.refreshDevices(),
       this.refreshServices(),
       this.refreshConfirms(),
+      this.loadMailStatus(),
     ]).catch(() => undefined);
   }
 

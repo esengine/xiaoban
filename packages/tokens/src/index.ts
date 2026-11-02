@@ -64,6 +64,9 @@ export const color = {
   mapGround: "#EEF0EC",
   mapPark: "#DCEAD6",
   mapWater: "#CFE0EE",
+  accentTint: "#E8EEFF",
+  neutralTint: "#F1F2F5",
+  successLine: "#BFE3CF",
 } as const;
 
 export const dark = {
