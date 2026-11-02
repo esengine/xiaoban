@@ -1,0 +1,5 @@
+{
+  "sensitiveUrl": "login|signin|sign-in|passport|auth|oauth|pay|cashier|checkout|order/confirm|trade|wxpay|alipay",
+  "authWords": "登录|登陆|sign in|log in|支付|付款|收银台|结算",
+  "sensitiveText": "验证码|支付密码|输入密码|请输入密码|身份证号|银行卡号|扫码登录|scan to log in"
+}

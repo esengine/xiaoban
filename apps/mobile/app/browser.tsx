@@ -1,10 +1,10 @@
-import type { BrowserAction, BrowserPage } from "@xiaoban/protocol";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { BrowserAction, BrowserPage } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
@@ -29,7 +29,15 @@ function hostOf(url: string): string {
   }
 }
 
-function Glyph({ d, size = 20, stroke = color.inkMid }: { d: string; size?: number; stroke?: string }) {
+function Glyph({
+  d,
+  size = 20,
+  stroke = color.inkMid,
+}: {
+  d: string;
+  size?: number;
+  stroke?: string;
+}) {
   return (
     <Svg
       width={size}
@@ -52,7 +60,7 @@ export default function BrowserScreen() {
   const store = useHubStore();
   const { preferences } = useHubState(store);
   const insets = useSafeAreaInsets();
-  const web = useRef<WebView>(null);
+  const web = useRef<ComponentRef<typeof WebView>>(null);
   const [source, setSource] = useState(start ?? "about:blank");
   const [url, setUrl] = useState(start ?? "");
   const [title, setTitle] = useState("");
@@ -204,7 +212,9 @@ export default function BrowserScreen() {
     const body = `${page.url}\n${page.title}\n\n${page.text.slice(0, ASK_TEXT_LIMIT)}`;
     void store
       .send(primary, t("browser-ask-prompt"), {
-        context: [{ label: t("browser-ask-label", { title: page.title || hostOf(page.url) }), body }],
+        context: [
+          { label: t("browser-ask-label", { title: page.title || hostOf(page.url) }), body },
+        ],
       })
       .catch(() => undefined);
     openThread(primary);
@@ -324,7 +334,11 @@ export default function BrowserScreen() {
         >
           <Glyph d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5" />
         </Pressable>
-        <Pressable style={styles.askChip} accessibilityRole="button" onPress={() => void askAbout()}>
+        <Pressable
+          style={styles.askChip}
+          accessibilityRole="button"
+          onPress={() => void askAbout()}
+        >
           <Text style={styles.askText}>{t("browser-ask")}</Text>
         </Pressable>
         <Pressable
@@ -381,7 +395,14 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.accent },
   bannerText: { flex: 1, fontSize: 12, color: color.surface },
   stop: { fontSize: 12, color: color.attention },
-  progress: { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: color.accent },
+  progress: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: color.accent,
+  },
   bar: {
     flexDirection: "row",
     alignItems: "center",

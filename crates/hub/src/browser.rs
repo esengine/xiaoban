@@ -16,7 +16,7 @@ pub const BROWSE: &str = "browse";
 const WORDS: &str = include_str!("browser_words.txt");
 const WAIT: Duration = Duration::from_secs(25);
 const MAX_TEXT: usize = 6000;
-const PRIVATE_FIELDS: [&str; 6] = ["password", "密码", "验证码", "身份证", "手机号", "银行卡"];
+const PRIVATE: &str = include_str!("browser_private.txt");
 
 #[derive(Debug, Default)]
 pub struct Browser {
@@ -86,7 +86,12 @@ pub fn blocked_label(label: &str) -> bool {
 
 pub fn private_field(element: &BrowserElement) -> bool {
     let label = element.label.to_lowercase();
-    element.role == "password" || PRIVATE_FIELDS.iter().any(|word| label.contains(word))
+    element.role == "password"
+        || PRIVATE
+            .lines()
+            .map(str::trim)
+            .filter(|word| !word.is_empty())
+            .any(|word| label.contains(word))
 }
 
 pub fn spec(l: &Localizer) -> ToolSpec {

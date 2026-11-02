@@ -2,10 +2,10 @@ import { I18nProvider } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { BrowserBridge } from "../src/browser/BrowserBridge.tsx";
 import { HubProvider } from "../src/hub/HubProvider.tsx";
 import { Island } from "../src/hub/Island.tsx";
 import { Notices } from "../src/hub/Notices.tsx";
-import { BrowserBridge } from "../src/browser/BrowserBridge.tsx";
 import { PlanBall } from "../src/hub/PlanBall.tsx";
 import { translator } from "../src/i18n.ts";
 
@@ -45,7 +45,10 @@ export default function RootLayout() {
             name="background"
             options={{ headerShown: false, title: t("background-title") }}
           />
-          <Stack.Screen name="browser" options={{ headerShown: false, title: t("browser-title") }} />
+          <Stack.Screen
+            name="browser"
+            options={{ headerShown: false, title: t("browser-title") }}
+          />
           <Stack.Screen
             name="md/[id]"
             options={{ headerShown: false, title: t("md-card-untitled") }}

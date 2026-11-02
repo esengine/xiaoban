@@ -1,6 +1,8 @@
-const SENSITIVE_URL = /(login|signin|sign-in|passport|auth|oauth|pay|cashier|checkout|order\/confirm|trade|wxpay|alipay)/i;
-const AUTH_WORDS = /登录|登陆|sign in|log in|支付|付款|收银台|结算/;
-const SENSITIVE_TEXT = /(验证码|支付密码|输入密码|请输入密码|身份证号|银行卡号|扫码登录|scan to log in)/;
+import words from "../../../../locales/native/browser-words.json";
+
+const SENSITIVE_URL = new RegExp(words.sensitiveUrl, "i");
+const AUTH_WORDS = new RegExp(words.authWords, "i");
+const SENSITIVE_TEXT = new RegExp(words.sensitiveText);
 
 export const PAGE_SCRIPT = `
 (function () {

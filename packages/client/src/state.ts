@@ -492,6 +492,7 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "weather_alert":
     case "daily_feed_changed":
     case "insight_alert":
+    case "browser_command":
       return state;
     case "mail_status_changed":
       return { ...state, mailStatus: event.status };
