@@ -24,6 +24,7 @@ enum Answer {
         thread_id: String,
         text: String,
     },
+    StopAll,
 }
 
 fn category_key(category: NotifyCategory) -> Key {
@@ -105,6 +106,12 @@ pub async fn deliver(link: &LocalLink, raw: &str) -> Value {
             files: Vec::new(),
             threads: Vec::new(),
         },
+        Answer::StopAll => {
+            for turn_id in crate::keeper::running() {
+                let _ = link.request(Request::CancelTurn { turn_id }).await;
+            }
+            return json!({ "ok": true });
+        }
     };
     match link.request(request).await {
         Ok(_) => json!({ "ok": true }),

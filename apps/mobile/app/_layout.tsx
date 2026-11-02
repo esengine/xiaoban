@@ -40,6 +40,10 @@ export default function RootLayout() {
             options={{ headerShown: false, title: t("html-view-title") }}
           />
           <Stack.Screen
+            name="background"
+            options={{ headerShown: false, title: t("background-title") }}
+          />
+          <Stack.Screen
             name="md/[id]"
             options={{ headerShown: false, title: t("md-card-untitled") }}
           />

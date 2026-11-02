@@ -14,7 +14,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Speech from "expo-speech";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -42,6 +42,7 @@ import { usePlanNotices } from "../../src/chat/planNotice.ts";
 import { isCancel, toGroups } from "../../src/chat/rows.ts";
 import { ThoughtToggle } from "../../src/chat/ThoughtToggle.tsx";
 import { MemoryChips, TraceSummary } from "../../src/chat/Trace.tsx";
+import { useBackgroundAsk } from "../../src/hub/BackgroundAsk.tsx";
 import { useHubStore } from "../../src/hub/HubProvider.tsx";
 import { planBallSupported, setPlanBall, usePlanBall } from "../../src/hub/planBallStore.ts";
 import { shortToast } from "../../src/hub/shortToast.ts";
@@ -165,6 +166,11 @@ export default function ThreadScreen() {
   }, [id, state.status, store]);
 
   const plan = state.plans[id];
+  const runBackground = useCallback(
+    (turnId: string) => void store.background(turnId).catch(() => undefined),
+    [store],
+  );
+  const askBackground = useBackgroundAsk(runBackground);
   const planNotices = usePlanNotices(id, plan);
   const [planOpen, setPlanOpen] = useState<boolean | null>(params.plan === "open" ? true : null);
   const ballThread = usePlanBall();
@@ -413,7 +419,7 @@ export default function ThreadScreen() {
             draft={row.draft}
             question={row.question}
             onRetry={() => retry(row.draft.turnId)}
-            onBackground={() => void store.background(row.draft.turnId).catch(() => undefined)}
+            onBackground={() => askBackground.request(row.draft.turnId)}
           />
         );
       case "queued":
@@ -517,6 +523,7 @@ export default function ThreadScreen() {
         actions={actions}
         onClose={() => setMenu(null)}
       />
+      {askBackground.sheet}
     </KeyboardAvoidingView>
   );
 }

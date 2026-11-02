@@ -62,11 +62,58 @@ class XiaobanHubModule : Module() {
       XiaobanOperator.context = context.applicationContext
       val dir = File(context.filesDir, "hub")
       dir.mkdirs()
+      HubBoot.save(context.applicationContext, locale, secrets, name)
       XiaobanHubNative.start(dir.absolutePath, locale, secrets, name)
     }
 
     AsyncFunction("stop") {
+      appContext.reactContext?.applicationContext?.let { context ->
+        HubBoot.forget(context)
+        HubKeeper.wake(context, null)
+      }
       XiaobanHubNative.stop()
+    }
+
+    Function("backgroundStatus") {
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val power = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+      val notices = context.getSystemService(android.app.NotificationManager::class.java).areNotificationsEnabled()
+      mapOf(
+        "notifications" to notices,
+        "battery" to power.isIgnoringBatteryOptimizations(context.packageName),
+        "exactAlarms" to HubKeeper.exactAlarms(context),
+        "xiaomi" to Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true),
+      )
+    }
+
+    Function("openBackgroundSetting") { kind: String ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val pkg = context.packageName
+      val uri = android.net.Uri.parse("package:$pkg")
+      val candidates = when (kind) {
+        "battery" -> listOf(
+          Intent("miui.intent.action.HIDDEN_APPS_CONFIG_ACTIVITY").putExtra("package_name", pkg).putExtra("package_label", context.applicationInfo.loadLabel(context.packageManager)),
+          Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, uri),
+          Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri),
+        )
+        "autostart" -> listOf(
+          Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+          Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri),
+        )
+        "alarms" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          listOf(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, uri), Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri))
+        } else {
+          listOf(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri))
+        }
+        "notifications" -> listOf(
+          Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg),
+          Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri),
+        )
+        else -> listOf(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri))
+      }
+      candidates.any { intent ->
+        runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+      }
     }
 
     Function("setStrings") { strings: String ->

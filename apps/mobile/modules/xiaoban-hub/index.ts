@@ -17,6 +17,13 @@ interface XiaobanHubNative {
   notify(request: string): string;
   withdrawNotice(id: string): void;
   setForeground(active: boolean): void;
+  backgroundStatus?(): {
+    notifications: boolean;
+    battery: boolean;
+    exactAlarms: boolean;
+    xiaomi: boolean;
+  };
+  openBackgroundSetting?(kind: string): boolean;
   addListener(event: "onNoticeAnswer", listener: (event: { answer: string }) => void): Subscription;
   addListener(event: "onPlanBall", listener: (event: { action: string }) => void): Subscription;
 }

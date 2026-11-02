@@ -15,6 +15,7 @@ static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static RUNNING: Mutex<Option<HubHandle>> = Mutex::new(None);
 static BRIDGE: OnceLock<operator::Bridge> = OnceLock::new();
 
+mod keeper;
 mod notices;
 mod operator;
 
@@ -106,6 +107,7 @@ pub fn start(data_dir: PathBuf, locale: &str, secrets_json: &str, name: &str) ->
     let handle = runtime().block_on(Hub::start(config, runtime_config(locale, secrets_json)))?;
     if let Some(bridge) = BRIDGE.get() {
         runtime().spawn(notices::forward(handle.link(), bridge.clone(), Localizer::new(locale)));
+        runtime().spawn(keeper::watch(handle.link(), bridge.clone(), Localizer::new(locale)));
     }
     let port = handle.addr.port();
     *running = Some(handle);

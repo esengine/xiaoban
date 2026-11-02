@@ -69,6 +69,8 @@ object XiaobanOperator {
         "calendar" -> PhoneCalendar.read(context ?: service(), request.getLong("from"), request.getLong("to"))
         "notify" -> XiaobanNotices.notify(context ?: service(), request)
         "withdraw" -> XiaobanNotices.withdraw(context ?: service(), request.getString("id"))
+        "keep" -> HubKeeper.keep(context ?: service(), request)
+        "wake" -> HubKeeper.wake(context ?: service(), if (request.isNull("at")) null else request.optLong("at"))
         else -> failure("unknown request")
       }.also { reply -> if (reply.has("error")) Log.w(TAG, "$op: ${reply.optString("error")}") }.toString()
     } catch (error: Exception) {
