@@ -9,6 +9,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SkyIcon } from "../life/LifeIcons.tsx";
 import { DoneCard, NoticedCard } from "../life/Noticed.tsx";
+import { MailTodayCard } from "../mail/MailToday.tsx";
 import { TodoDailyCard } from "../todo/TodoDailyCard.tsx";
 import { moneyFormat } from "../ui/format.ts";
 import { openThread } from "./ChatsTab.tsx";
@@ -209,6 +210,8 @@ export function DailyTab({ store }: { store: HubStore }) {
       {(dailyFeed?.insights ?? []).slice(0, 2).map((insight) => (
         <NoticedCard key={insight.id} store={store} insight={insight} />
       ))}
+
+      {dailyFeed?.mail ? <MailTodayCard store={store} today={dailyFeed.mail} /> : null}
 
       {dailyFeed && dailyFeed.done.length > 0 ? <DoneCard items={dailyFeed.done} /> : null}
 

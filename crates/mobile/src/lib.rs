@@ -11,6 +11,8 @@ use xiaoban_hub::{
 use xiaoban_i18n::{Locale, Localizer};
 use xiaoban_protocol::ProviderId;
 
+const NAMED_PREFIX: &str = "named:";
+
 static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static RUNNING: Mutex<Option<HubHandle>> = Mutex::new(None);
 static BRIDGE: OnceLock<operator::Bridge> = OnceLock::new();
@@ -64,7 +66,9 @@ fn secrets_from(json: &str) -> Arc<MemorySecrets> {
     let secrets = Arc::new(MemorySecrets::default());
     let keys: HashMap<String, String> = serde_json::from_str(json).unwrap_or_default();
     for (provider, key) in keys {
-        if let Some(provider) = ProviderId::parse(&provider) {
+        if let Some(name) = provider.strip_prefix(NAMED_PREFIX) {
+            let _ = secrets.save_named(name, Some(&key));
+        } else if let Some(provider) = ProviderId::parse(&provider) {
             let _ = secrets.save(provider, &key);
         }
     }
@@ -86,6 +90,7 @@ fn runtime_config(locale: Locale, secrets_json: &str) -> HubRuntime {
         apps,
         operator,
         web: Arc::new(DeepseekWeb::new()),
+        mail: Arc::new(xiaoban_hub::ImapMail),
         fallback: None,
         auto_titles: true,
         auto_thinking: true,

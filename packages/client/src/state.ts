@@ -16,6 +16,7 @@ import type {
   HubInfo,
   Kitchen,
   Ledger,
+  MailStatus,
   Memory,
   MemoryGalaxy,
   Message,
@@ -111,6 +112,7 @@ export interface HubState {
   ledger: Ledger | null;
   ledgerTick: number;
   dailyFeed: DailyFeed | null;
+  mailStatus: MailStatus | null;
   weather: WeatherView | null;
   docs: Readonly<Record<string, DocSummary>>;
   recipes: Readonly<Record<string, RecipeView>>;
@@ -158,6 +160,7 @@ export const initialHubState: HubState = {
   ledger: null,
   ledgerTick: 0,
   dailyFeed: null,
+  mailStatus: null,
   weather: null,
   docs: {},
   recipes: {},
@@ -490,6 +493,8 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
     case "daily_feed_changed":
     case "insight_alert":
       return state;
+    case "mail_status_changed":
+      return { ...state, mailStatus: event.status };
     case "ledger_changed":
       return { ...state, ledgerTick: state.ledgerTick + 1 };
     case "command_updated": {

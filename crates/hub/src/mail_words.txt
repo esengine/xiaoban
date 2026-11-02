@@ -1,0 +1,11 @@
+code=验证码,校验码,动态码,动态密码,验证代码,安全码,确认码,登录码,verification code,security code,one-time code,one time code,one-time password,login code,sign-in code,otp,passcode
+bill=账单,对账单,还款,应还,最低还款,缴费,欠费,电费,水费,燃气费,话费,物业费,扣款,bill,statement,payment due,amount due,invoice
+trip=行程单,电子客票,火车票,机票,航班,车次,出票,登机,值机,改签,候补,购票成功,行程确认,酒店预订,预订确认,itinerary,boarding pass,flight,e-ticket,check-in,booking confirmation,reservation
+parcel=快递,包裹,已发货,发货通知,正在派送,派送中,配送,待取件,取件码,签收,物流,运单,shipped,out for delivery,delivered,tracking,your package,on its way
+promo=促销,优惠,特惠,折扣,限时,领券,优惠券,会员日,大促,秒杀,抽奖,福利,newsletter,sale,% off,deal,offer,promotion,coupon,webinar
+reply=请确认,请回复,麻烦您,是否方便,能否,请问,盼复,回复我,please confirm,please reply,let me know,could you,can you,would you
+bill_from=cmbchina.com,icbc.com.cn,ccb.com,boc.cn,bankcomm.com,abchina.com,spdb.com.cn,citicbank.com,cebbank.com,cmbc.com.cn,pingan.com,cib.com.cn,hxb.com.cn,cgbchina.com.cn,psbc.com,95555,creditcard,statement
+trip_from=12306.cn,ctrip.com,trip.com,qunar.com,fliggy.com,alitrip.com,umetrip.com,ceair.com,csair.com,airchina.com,hnair.com,xiamenair.com,juneyaoair.com,ch.com,ly.com,booking.com,airbnb,expedia,agoda
+parcel_from=sf-express.com,jd.com,cainiao.com,yto.net.cn,zto.com,sto.cn,yundaex.com,ems.com.cn,deppon.com,ups.com,fedex.com,dhl.com,usps.com
+notice_from=noreply,no-reply,no_reply,donotreply,do-not-reply,notification,notifications,newsletter,mailer,news@,marketing,promo
+reply_prefix=re:,回复:,回复：,答复:,答复：

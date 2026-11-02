@@ -334,6 +334,11 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::SetImportRow { .. }
         | Request::CommitImport { .. }
         | Request::CancelImport { .. }) => crate::ledger::handle(state, request).await,
+        request @ (Request::MailStatus
+        | Request::ConnectMail { .. }
+        | Request::DisconnectMail
+        | Request::MailList { .. }
+        | Request::MailOriginal { .. }) => crate::mail::handle(state, request).await,
         Request::CompleteOnboarding => {
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)

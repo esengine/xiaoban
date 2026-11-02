@@ -46,6 +46,7 @@ pub struct HubState {
     pub auto_titles: bool,
     pub auto_thinking: bool,
     pub web: Arc<dyn crate::services::Web>,
+    pub mail: crate::mail::Mail,
     pub events: broadcast::Sender<Event>,
     pub pairing: Pairing,
     pub turns: Turns,

@@ -126,6 +126,7 @@ async fn main() -> anyhow::Result<()> {
         apps: Arc::new(NoApps),
         operator: Arc::new(NoOperator),
         web: Arc::new(DeepseekWeb::new()),
+        mail: Arc::new(xiaoban_hub::ImapMail),
         fallback: configured(&args)?,
         auto_titles: true,
         auto_thinking: true,

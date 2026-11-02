@@ -280,4 +280,6 @@ pub enum Attachment {
     ScheduleRun { schedule_id: String, mark: crate::RunMark, #[ts(type = "number")] due_at: i64 },
     ScheduleFailed { schedule_id: String, reason: String },
     Todos { todo_ids: Vec<String> },
+    Mail { mail: Box<crate::MailItem> },
+    MailDraft { draft: Box<crate::MailDraft> },
 }

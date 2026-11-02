@@ -66,6 +66,9 @@ export const color = {
   mapWater: "#CFE0EE",
   todoOverdue: "#E5533D",
   todoRing: "#C5CAD5",
+  accentTint: "#E8EEFF",
+  neutralTint: "#F1F2F5",
+  successLine: "#BFE3CF",
 } as const;
 
 export const dark = {

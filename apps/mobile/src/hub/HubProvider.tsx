@@ -14,7 +14,15 @@ import { Platform } from "react-native";
 import aliases from "../../../../locales/native/app-aliases.json";
 import handover from "../../../../locales/native/handover.json";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
-import { fetchKeys, type Keys, loadKeys, saveKey } from "./keys.ts";
+import {
+  fetchKeys,
+  type Keys,
+  loadKeys,
+  loadNamed,
+  saveKey,
+  saveNamed,
+  withNamed,
+} from "./keys.ts";
 import {
   clearSession,
   hubUrl,
@@ -36,6 +44,7 @@ interface HubContextValue {
   pair: (address: string, code: string) => Promise<void>;
   unpair: () => Promise<void>;
   keySaved: (provider: ProviderId, key: string) => Promise<void>;
+  namedSaved: (name: string, value: string | null) => Promise<void>;
 }
 
 export class MissingDeviceToken extends Error {
@@ -68,7 +77,8 @@ function operatorStrings(t: ReturnType<typeof useI18n>["t"]): string {
 async function startLocal(locale: string, keys: Keys, name: string): Promise<number | null> {
   if (!XiaobanHub) return null;
   try {
-    const port = await XiaobanHub.start(locale, JSON.stringify(keys), name);
+    const named = await loadNamed().catch(() => ({}));
+    const port = await XiaobanHub.start(locale, JSON.stringify(withNamed(keys, named)), name);
     return port > 0 ? port : null;
   } catch {
     return null;
@@ -84,6 +94,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const [keys, setKeys] = useState<Keys>({});
   const deviceName = t(platform === "ios" ? "device-ios" : "device-android");
   const localRef = useRef<HubStore | null>(null);
+  const onComputerRef = useRef(false);
 
   const createStore = useCallback(
     (url: string, deviceId: string, credential: Credential) =>
@@ -195,7 +206,13 @@ export function HubProvider({ children }: { children: ReactNode }) {
     setKeys(await saveKey(provider, key));
   }, []);
 
+  const namedSaved = useCallback(async (name: string, value: string | null) => {
+    if (onComputerRef.current) return;
+    await saveNamed(name, value);
+  }, []);
+
   const onComputer = remote !== null && (remoteOpen || local === null);
+  onComputerRef.current = onComputer;
   const store = onComputer ? remote : (local ?? remote);
   const phase: Phase = !loaded
     ? "loading"
@@ -207,7 +224,17 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
   return (
     <HubContext
-      value={{ phase, store, local, onComputer, paired: remote !== null, pair, unpair, keySaved }}
+      value={{
+        phase,
+        store,
+        local,
+        onComputer,
+        paired: remote !== null,
+        pair,
+        unpair,
+        keySaved,
+        namedSaved,
+      }}
     >
       {children}
     </HubContext>

@@ -7,6 +7,8 @@ import { getRandomBytes } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 
 const KEYS = "xiaoban.keys";
+const NAMED = "xiaoban.named";
+const NAMED_PREFIX = "named:";
 const CONTEXT = new TextEncoder().encode("xiaoban provider keys v1");
 
 export type Keys = Partial<Record<ProviderId, string>>;
@@ -20,6 +22,27 @@ export async function saveKey(provider: ProviderId, key: string): Promise<Keys> 
   const keys = { ...(await loadKeys()), [provider]: key };
   await SecureStore.setItemAsync(KEYS, JSON.stringify(keys));
   return keys;
+}
+
+export type Named = Record<string, string>;
+
+export async function loadNamed(): Promise<Named> {
+  const raw = await SecureStore.getItemAsync(NAMED).catch(() => null);
+  return raw ? (JSON.parse(raw) as Named) : {};
+}
+
+export async function saveNamed(name: string, value: string | null): Promise<void> {
+  const named = await loadNamed();
+  if (value === null) delete named[name];
+  else named[name] = value;
+  await SecureStore.setItemAsync(NAMED, JSON.stringify(named));
+}
+
+export function withNamed(keys: Keys, named: Named): Record<string, string> {
+  const merged: Record<string, string> = {};
+  for (const [provider, key] of Object.entries(keys)) if (key) merged[provider] = key;
+  for (const [name, value] of Object.entries(named)) merged[`${NAMED_PREFIX}${name}`] = value;
+  return merged;
 }
 
 function toBase64(bytes: Uint8Array): string {

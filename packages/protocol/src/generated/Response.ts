@@ -28,6 +28,9 @@ import type { Kitchen } from "./Kitchen.ts";
 import type { Ledger } from "./Ledger.ts";
 import type { LedgerYear } from "./LedgerYear.ts";
 import type { Location } from "./Location.ts";
+import type { MailItem } from "./MailItem.ts";
+import type { MailOriginal } from "./MailOriginal.ts";
+import type { MailStatus } from "./MailStatus.ts";
 import type { Memory } from "./Memory.ts";
 import type { MemoryGalaxy } from "./MemoryGalaxy.ts";
 import type { Message } from "./Message.ts";
@@ -144,4 +147,7 @@ export type Response =
   | { type: "export_data"; name: string; mime: string; data: string }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
-  | { type: "workspace_image"; url: string; bytes: number };
+  | { type: "workspace_image"; url: string; bytes: number }
+  | { type: "mail_status"; status: MailStatus }
+  | { type: "mail_list"; items: Array<MailItem> }
+  | { type: "mail_original"; original: MailOriginal };
