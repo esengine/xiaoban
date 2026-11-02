@@ -26,6 +26,7 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   forget: { detail: "step-forget", plain: "step-forget-plain" },
   confirm: { detail: "step-confirm", plain: "step-confirm-plain" },
   ask_user: { detail: "step-ask_user", plain: "step-ask_user-plain" },
+  load_tools: { detail: "step-load_tools", plain: "step-load_tools-plain" },
   list_dir: { detail: "step-list_dir", plain: "step-list_dir-plain" },
   read_file: { detail: "step-read_file", plain: "step-read_file-plain" },
   search_files: { detail: "step-search_files", plain: "step-search_files-plain" },

@@ -6,7 +6,9 @@
 
 use std::collections::BTreeSet;
 
+use serde_json::json;
 use xiaoban_agent::ToolSpec;
+use xiaoban_i18n::{Localizer, keys};
 
 use crate::state::SharedState;
 
@@ -61,8 +63,6 @@ impl Pack {
             Self::Trip => &[
                 "save_trip",
                 "save_place_detail",
-                "weather",
-                "locate",
                 "check_price_in_app",
                 "note_app_price",
                 "log_trip_expense",
@@ -103,6 +103,58 @@ impl Pack {
     }
 }
 
+pub const LOAD_TOOLS: &str = "load_tools";
+
+fn describe(pack: Pack, l: &Localizer) -> String {
+    l.text(match pack {
+        Pack::Trip => keys::PACK_TRIP,
+        Pack::Home => keys::PACK_HOME,
+        Pack::Schedule => keys::PACK_SCHEDULE,
+        Pack::Computer => keys::PACK_COMPUTER,
+        Pack::Docs => keys::PACK_DOCS,
+        Pack::Kitchen => keys::PACK_KITCHEN,
+        Pack::Mail => keys::PACK_MAIL,
+        Pack::Files => keys::PACK_FILES,
+        Pack::Web => keys::PACK_WEB,
+    })
+}
+
+pub fn spec(l: &Localizer) -> ToolSpec {
+    ToolSpec {
+        name: LOAD_TOOLS.to_owned(),
+        description: l.text(keys::TOOL_LOAD_TOOLS_DESCRIPTION),
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "packs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "type": "string", "enum": Pack::ALL.map(Pack::id) },
+                    "description": l.text(keys::TOOL_LOAD_TOOLS_PACKS),
+                },
+            },
+            "required": ["packs"],
+        }),
+    }
+}
+
+/// The part of the system prompt that tells the model which packs it can still load.
+pub fn catalog(l: &Localizer, loaded: &PackSet) -> Option<String> {
+    let missing: Vec<String> = Pack::ALL
+        .into_iter()
+        .filter(|pack| !loaded.contains(pack))
+        .map(|pack| format!("- {}: {}", pack.id(), describe(pack, l)))
+        .collect();
+    if missing.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "{}\n{}",
+        l.text(keys::PROMPT_PACKS),
+        missing.join("\n")
+    ))
+}
+
 pub fn pack_of(tool: &str) -> Option<Pack> {
     Pack::ALL
         .into_iter()
@@ -126,6 +178,43 @@ pub fn filter<'a>(
         .collect()
 }
 
+#[derive(serde::Deserialize)]
+struct LoadArgs {
+    packs: Vec<String>,
+}
+
+impl crate::tools::HubTools<'_> {
+    pub(crate) async fn load_tools(&self, arguments: &str) -> String {
+        let Ok(args) = serde_json::from_str::<LoadArgs>(arguments) else {
+            return json!({ "error": "arguments must be {packs: [\"trip\", ...]}" }).to_string();
+        };
+        if !self.state.lazy_packs() {
+            return json!({ "note": "every tool is already available" }).to_string();
+        }
+        let mut wanted = Vec::new();
+        for id in &args.packs {
+            let Some(pack) = Pack::from_id(id) else {
+                let valid: Vec<&str> = Pack::ALL.iter().map(|pack| pack.id()).collect();
+                return json!({ "error": format!("no pack called {id}; the packs are {}", valid.join(", ")) }).to_string();
+            };
+            wanted.push(pack);
+        }
+        let added = load(self.state, self.thread_id, &wanted).await;
+        if !added.is_empty() {
+            self.pack_changed
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+        let ids = |packs: &[Pack]| packs.iter().map(|pack| pack.id()).collect::<Vec<_>>();
+        json!({
+            "loaded": ids(&added),
+            "already_loaded": ids(&wanted.iter().copied().filter(|pack| !added.contains(pack)).collect::<Vec<_>>()),
+            "tools": added.iter().flat_map(|pack| pack.tools().iter().copied()).collect::<Vec<_>>(),
+            "note": "the tools can be called from your next step",
+        })
+        .to_string()
+    }
+}
+
 fn key(thread_id: &str) -> String {
     format!("packs.{thread_id}")
 }
@@ -147,7 +236,6 @@ pub async fn loaded(state: &SharedState, thread_id: &str) -> PackSet {
 }
 
 /// Adds packs to a conversation for good; returns the ones that were not loaded before.
-#[allow(dead_code, reason = "the load_tools tool arrives in the next step")]
 pub async fn load(state: &SharedState, thread_id: &str, wanted: &[Pack]) -> Vec<Pack> {
     let mut current = loaded(state, thread_id).await;
     let added: Vec<Pack> = wanted

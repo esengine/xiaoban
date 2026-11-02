@@ -36,7 +36,9 @@ fn tools_for(localizer: &Localizer) -> BTreeMap<&'static str, Vec<ToolSpec>> {
     scenes.insert("core", {
         let mut tools = base.clone();
         tools.push(crate::life::spec(localizer));
-        crate::packs::filter(&tools, &crate::packs::PackSet::new())
+        let mut core = crate::packs::filter(&tools, &crate::packs::PackSet::new());
+        core.push(crate::packs::spec(localizer));
+        core
     });
     scenes.insert("code", {
         let mut tools: Vec<_> = base
@@ -144,7 +146,7 @@ fn the_fixed_prefix_stays_within_budget() {
     // (scene, budget in estimated tokens for tools plus the shared system prompt)
     let budgets = [
         ("chat", 28_000),
-        ("core", 7_500),
+        ("core", 6_500),
         ("code", 9_500),
         ("doc", 11_000),
     ];
@@ -153,7 +155,13 @@ fn the_fixed_prefix_stays_within_budget() {
         let prompt = estimate(&Prompts::for_locale(locale).chat);
         let scenes = tools_for(&localizer);
         for (scene, budget) in budgets {
-            let total: usize = scenes[scene].iter().map(size).sum::<usize>() + prompt;
+            let catalog = if scene == "core" {
+                crate::packs::catalog(&localizer, &crate::packs::PackSet::new())
+                    .map_or(0, |text| estimate(&text))
+            } else {
+                0
+            };
+            let total: usize = scenes[scene].iter().map(size).sum::<usize>() + prompt + catalog;
             assert!(
                 total <= budget,
                 "{scene} prefix is ~{total} tokens in {}, over its budget of {budget}",

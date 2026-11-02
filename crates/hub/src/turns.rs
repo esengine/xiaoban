@@ -754,7 +754,8 @@ async fn drive(
     let (tx, rx) = mpsc::channel(64);
     let forward = forward_events(state, turn_id, rx);
     let agent = crate::thinking::agent_for(&state.active().agent, effort);
-    let tools = HubTools::new(state, thread_id, turn_id, cancel.clone());
+    let tools = HubTools::new(state, thread_id, turn_id, cancel.clone())
+        .with_snapshot(epoch.memory_snapshot.clone());
     let outcome = agent
         .run_turn_with(
             &prefix,

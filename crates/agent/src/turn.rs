@@ -51,6 +51,13 @@ pub trait ToolRunner: Send + Sync {
     fn notes(&self) -> Vec<String> {
         Vec::new()
     }
+
+    /// A new prefix to use from the next step on, for a runner that changed which tools the
+    /// model can see (it loaded more of them). The conversation so far is unchanged, only the
+    /// tool list and system text in front of it differ.
+    fn reload(&self) -> BoxFuture<'_, Option<StablePrefix>> {
+        Box::pin(async { None })
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -267,6 +274,7 @@ impl Agent {
         cancel: CancellationToken,
     ) -> Result<TurnOutcome, AgentError> {
         let _ = events.send(TurnEvent::Thinking).await;
+        let mut prefix = prefix.clone();
         let mut tail = vec![first];
         let mut usage = Usage::default();
         let mut peak_input = 0;
@@ -276,7 +284,7 @@ impl Agent {
             let before = usage.input_tokens;
             let step = self
                 .stream_step(
-                    prefix,
+                    &prefix,
                     transcript,
                     &tail,
                     model.as_deref(),
@@ -299,6 +307,9 @@ impl Agent {
                 });
             }
             run_calls(&calls, tools, &events, &cancel, &mut seen, &mut tail).await?;
+            if let Some(fresh) = tools.reload().await {
+                prefix = fresh;
+            }
             let notes = [notes, tools.notes()].concat();
             if !notes.is_empty() {
                 tail.push(ChatMessage::new(ChatRole::User, notes.join("\n")));

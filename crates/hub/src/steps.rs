@@ -46,6 +46,11 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
         crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
         crate::operate_tools::DO_STEPS => text(&args, "summary"),
+        crate::packs::LOAD_TOOLS => args
+            .get("packs")
+            .and_then(Value::as_array)
+            .map(|list| list.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(" "))
+            .filter(|joined| !joined.is_empty()),
         crate::asks::ASK_USER => args
             .get("questions")
             .and_then(Value::as_array)

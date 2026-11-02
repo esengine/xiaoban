@@ -2190,6 +2190,130 @@ async fn a_plain_chat_only_sends_the_core_tools_when_packs_are_on_demand() {
 }
 
 #[tokio::test]
+async fn loading_a_pack_makes_its_tools_available_in_the_same_turn_and_after() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call("load_tools", &serde_json::json!({ "packs": ["nope"] }))],
+        vec![tool_call("load_tools", &serde_json::json!({ "packs": ["trip", "mail"] }))],
+        vec![ModelChunk::Text("好的".into())],
+        vec![ModelChunk::Text("接着".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    hub.set_lazy_packs(true);
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "帮我排杭州两日游", Vec::new()).await;
+
+    let requests = provider.requests();
+    let names = |index: usize| -> Vec<String> {
+        requests[index].tools.iter().map(|tool| tool.name.clone()).collect()
+    };
+    let system = |index: usize| requests[index].messages[0].content.clone();
+    assert!(names(0).iter().any(|name| name == "load_tools"));
+    assert!(!names(0).iter().any(|name| name == "save_trip"));
+    assert!(system(0).contains("- trip:"), "{}", system(0));
+    // A wrong pack name is an error and loads nothing.
+    assert!(requests[1].messages.last().unwrap().content.contains("no pack called nope"));
+    assert!(!names(1).iter().any(|name| name == "save_trip"));
+    // The next step of the same turn already has the trip and mail tools.
+    assert!(names(2).iter().any(|name| name == "save_trip"));
+    assert!(names(2).iter().any(|name| name == "search_mail"));
+    assert!(!names(2).iter().any(|name| name == "floorplan_edit"));
+    assert!(!system(2).contains("- trip:") && !system(2).contains("- mail:"));
+    assert!(system(2).contains("- home:"));
+    // The conversation carries over unchanged between those two requests.
+    assert_eq!(requests[2].messages.len(), requests[1].messages.len() + 2);
+
+    // The next turn keeps them: a fresh epoch starts with the same tools.
+    converse(&mut client, &thread, "再改一下第二天", Vec::new()).await;
+    let requests = provider.requests();
+    let last = requests.last().unwrap();
+    assert!(last.tools.iter().any(|tool| tool.name == "save_trip"));
+    assert!(last.messages.iter().any(|message| message.content.contains("帮我排杭州两日游")));
+    hub.shutdown().await;
+}
+
+/// Does the real model load the right pack on its own? Needs a key, costs a few cents:
+/// `LIVE_API_KEY=... cargo test -p xiaoban-hub --test flow live_pack_loading -- --ignored --nocapture`
+/// (`LIVE_BASE_URL` and `LIVE_MODEL` default to `DeepSeek`).
+#[tokio::test]
+#[ignore = "calls a real model"]
+async fn live_pack_loading() {
+    let Ok(api_key) = std::env::var("LIVE_API_KEY") else {
+        eprintln!("set LIVE_API_KEY to run this");
+        return;
+    };
+    let base_url = std::env::var("LIVE_BASE_URL").unwrap_or_else(|_| "https://api.deepseek.com".into());
+    let model = std::env::var("LIVE_MODEL").unwrap_or_else(|_| "deepseek-v4-flash".into());
+    // (what the user says, the pack that should get loaded, if any)
+    let cases = [
+        ("你好呀，今天心情不错", None),
+        ("用一句话解释一下 Rust 的借用检查", None),
+        ("帮我查一下杭州今天的天气", None),
+        ("帮我规划这个周末杭州两日游，带 6 岁的孩子，要有路线和预算", Some("trip")),
+        ("下周三下午三点提醒我带孩子去打疫苗", Some("schedule")),
+        ("帮我把本周的工作写成一份周报文档", Some("docs")),
+        ("看看我邮箱里有没有快递到了的邮件", Some("mail")),
+        ("今晚吃什么好，冰箱里有鸡蛋和西红柿", Some("kitchen")),
+    ];
+    let mut right = 0;
+    for (said, wanted) in cases {
+        let provider = RecordingProvider::wrap(xiaoban_agent::OpenAiCompatible::new(OpenAiConfig {
+            base_url: base_url.clone(),
+            api_key: api_key.clone(),
+            model: model.clone(),
+            api: xiaoban_protocol::ModelApi::OpenAi,
+        }));
+        let runtime = runtime_with(
+            provider.clone(),
+            &Prompts::for_locale(Locale::ZhCn).chat,
+            None,
+            Arc::new(MemorySecrets::default()),
+        );
+        let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+        hub.set_lazy_packs(true);
+        let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+        let thread = new_thread(&mut client).await;
+        let done = tokio::time::timeout(
+            Duration::from_secs(120),
+            converse(&mut client, &thread, said, Vec::new()),
+        )
+        .await;
+        let requests = provider.requests();
+        let last = requests.last().expect("a request");
+        let loaded: Vec<&str> = ["trip", "schedule", "docs", "mail", "kitchen"]
+            .into_iter()
+            .filter(|id| {
+                let probe = match *id {
+                    "trip" => "save_trip",
+                    "schedule" => "propose_event",
+                    "docs" => "doc_start",
+                    "mail" => "search_mail",
+                    _ => "recipe",
+                };
+                last.tools.iter().any(|tool| tool.name == probe)
+            })
+            .collect();
+        let ok = match wanted {
+            Some(pack) => loaded.contains(&pack),
+            None => loaded.is_empty(),
+        };
+        right += usize::from(ok);
+        println!(
+            "{} {said}
+    wanted {wanted:?}, loaded {loaded:?}, {} requests, finished: {}",
+            if ok { "ok  " } else { "MISS" },
+            requests.len(),
+            done.is_ok()
+        );
+        hub.shutdown().await;
+    }
+    println!("
+{right}/{} right", cases.len());
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator

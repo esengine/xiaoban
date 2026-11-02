@@ -28,6 +28,7 @@ pub struct HubState {
     pub store: Store,
     pub prompts: crate::prompts::Prompts,
     pub tools: Vec<ToolSpec>,
+    pub pack_tools: Vec<ToolSpec>,
     pub localizer: Localizer,
     pub connector: Arc<dyn Connector>,
     pub secrets: Arc<dyn SecretStore>,
@@ -135,8 +136,15 @@ impl HubState {
         }
         let Some(workspace) = workspace else {
             let mut tools = crate::packs::filter(self.tools.iter().chain(&self.life_tools), packs);
+            let mut system = self.prompts.chat.clone();
+            if self.lazy_packs()
+                && let Some(catalog) = crate::packs::catalog(&self.localizer, packs)
+            {
+                tools.extend(self.pack_tools.iter().cloned());
+                system = format!("{system}\n\n{catalog}");
+            }
             self.capabilities.extend(&mut tools);
-            return StablePrefix::compose(&self.prompts.chat, memory, tools);
+            return StablePrefix::compose(&system, memory, tools);
         };
         let system = format!(
             "{}\n\n{}",

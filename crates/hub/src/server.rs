@@ -114,6 +114,7 @@ impl Hub {
                 crate::sheet::with_create_spec(crate::doc::with_write_specs(crate::tools::specs(&localizer), &localizer), &localizer),
                 &localizer,
             ),
+            pack_tools: vec![crate::packs::spec(&localizer)],
             code_tools: crate::code_tools::specs(&localizer),
             git_tools: vec![crate::vcs_tools::git_spec(&localizer)],
             gh_tools: vec![crate::vcs_tools::gh_spec(&localizer)],

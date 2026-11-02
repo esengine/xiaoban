@@ -4,7 +4,7 @@ use futures_util::future::BoxFuture;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
-use xiaoban_agent::{ToolCall, ToolRunner, ToolSpec};
+use xiaoban_agent::{StablePrefix, ToolCall, ToolRunner, ToolSpec};
 use xiaoban_i18n::{Key as MessageKey, Localizer, keys};
 use xiaoban_protocol::{
     Attachment, CostCategory, Event, Location, MemoryCategory, MemoryKind, ServiceId,
@@ -440,6 +440,8 @@ pub struct HubTools<'a> {
     pub(crate) labels: Mutex<std::collections::HashMap<String, std::collections::HashMap<u32, String>>>,
     pub(crate) price_check: Mutex<Option<crate::price_check::PriceCheck>>,
     attachment: Mutex<Option<Attachment>>,
+    snapshot: Option<String>,
+    pub(crate) pack_changed: std::sync::atomic::AtomicBool,
 }
 
 impl Drop for HubTools<'_> {
@@ -468,7 +470,16 @@ impl<'a> HubTools<'a> {
             labels: Mutex::new(std::collections::HashMap::new()),
             price_check: Mutex::new(None),
             attachment: Mutex::new(None),
+            snapshot: None,
+            pack_changed: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+
+    /// The memory snapshot this turn started from, so a refreshed prefix keeps the same memory.
+    #[must_use]
+    pub fn with_snapshot(mut self, snapshot: Option<String>) -> Self {
+        self.snapshot = snapshot;
+        self
     }
 
     pub fn sub_agent(
@@ -785,6 +796,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::subthreads::MESSAGE_SUBTHREAD
                 | crate::operate_tools::CONFIRM
                 | crate::asks::ASK_USER
+                | crate::packs::LOAD_TOOLS
                 | crate::code_tools::WRITE_FILE
                 | crate::code_tools::EDIT_FILE
                 | crate::code_tools::RUN_COMMAND
@@ -826,6 +838,18 @@ impl ToolRunner for HubTools<'_> {
                 | crate::mail::READ
                 | crate::mail::DRAFT
         )
+    }
+
+    fn reload(&self) -> BoxFuture<'_, Option<StablePrefix>> {
+        Box::pin(async move {
+            if !self.pack_changed.swap(false, std::sync::atomic::Ordering::SeqCst) {
+                return None;
+            }
+            let workspace = crate::workspace::for_thread(self.state, self.thread_id).await;
+            let scene = crate::state::scene_of(self.state, self.thread_id).await;
+            let packs = crate::packs::loaded(self.state, self.thread_id).await;
+            Some(self.state.prefix_for(self.snapshot.as_deref(), workspace.as_ref(), scene, &packs))
+        })
     }
 
     fn concurrent(&self, call: &ToolCall) -> bool {
@@ -872,6 +896,7 @@ impl ToolRunner for HubTools<'_> {
                 crate::operate_tools::PRESS_KEYS => self.press_keys(arguments).await,
                 crate::operate_tools::DO_STEPS => self.do_steps(arguments).await,
                 crate::asks::ASK_USER => self.ask_user(arguments).await,
+                crate::packs::LOAD_TOOLS => self.load_tools(arguments).await,
                 crate::file_tools::FILE_SEARCH => self.file_search(arguments).await,
                 crate::file_tools::FILE_READ => self.file_read(arguments).await,
                 crate::file_tools::RECALL => self.recall(arguments).await,

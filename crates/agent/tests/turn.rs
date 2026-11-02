@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use futures_util::future::BoxFuture;
 use xiaoban_agent::{
     Agent, AgentError, ChatMessage, ChatRole, ModelChunk, NoTools, RecordingProvider,
-    ScriptedProvider, StablePrefix, ToolCall, ToolRunner, Transcript, TurnEvent, prefix_reuse,
+    ScriptedProvider, StablePrefix, ToolCall, ToolRunner, ToolSpec, Transcript, TurnEvent, prefix_reuse,
     user_wire,
 };
 use xiaoban_protocol::ContextNote;
@@ -442,4 +442,71 @@ async fn read_only_calls_in_one_step_run_together_and_come_back_in_order() {
         }
     }
     assert_eq!(finished, ["r1", "r2", "r3", "w1", "r4"]);
+}
+
+struct Loader {
+    swapped: Mutex<bool>,
+}
+
+impl ToolRunner for Loader {
+    fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String> {
+        Box::pin(async move {
+            if call.function.name == "load" {
+                *self.swapped.lock().unwrap() = true;
+            }
+            "ok".to_owned()
+        })
+    }
+
+    fn reload(&self) -> BoxFuture<'_, Option<StablePrefix>> {
+        let swapped = std::mem::take(&mut *self.swapped.lock().unwrap());
+        Box::pin(async move {
+            swapped.then(|| {
+                StablePrefix::compose(
+                    "system",
+                    None,
+                    vec![ToolSpec {
+                        name: "extra".into(),
+                        description: "added mid-turn".into(),
+                        parameters: serde_json::json!({ "type": "object" }),
+                    }],
+                )
+            })
+        })
+    }
+}
+
+#[tokio::test]
+async fn a_runner_can_change_the_tools_between_steps_of_one_turn() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![ModelChunk::ToolCallDelta {
+            index: 0,
+            id: Some("c1".into()),
+            name: Some("load".into()),
+            arguments: "{}".into(),
+        }],
+        vec![ModelChunk::Text("done".into())],
+    ]));
+    let agent = Agent::new(provider.clone());
+    let (tx, _rx) = mpsc::channel(64);
+    let outcome = agent
+        .run_turn(
+            &StablePrefix::compose("system", None, Vec::new()),
+            &Transcript::default(),
+            "go",
+            &Loader {
+                swapped: Mutex::new(false),
+            },
+            tx,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(outcome.text, "done");
+    let requests = provider.requests();
+    assert_eq!(requests[0].tools.len(), 0);
+    assert_eq!(requests[1].tools.len(), 1);
+    assert_eq!(requests[1].tools[0].name, "extra");
+    // The conversation itself carries over untouched.
+    assert_eq!(requests[1].messages.len(), requests[0].messages.len() + 2);
 }
