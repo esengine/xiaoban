@@ -47,6 +47,7 @@ pub async fn start(
         apps: Arc::new(crate::apps::system()),
         operator,
         web: Arc::new(DeepseekWeb::new()),
+        mail: Arc::new(xiaoban_hub::ImapMail),
         fallback: first_configured_from_env(),
         auto_titles: true,
         auto_thinking: true,

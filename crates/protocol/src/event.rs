@@ -183,6 +183,9 @@ pub enum Event {
     InsightAlert {
         insight: crate::Insight,
     },
+    MailStatusChanged {
+        status: crate::MailStatus,
+    },
 }
 
 impl Event {
@@ -229,6 +232,7 @@ impl Event {
             | Self::NoticeWithdrawn { .. }
             | Self::DailyFeedChanged
             | Self::InsightAlert { .. }
+            | Self::MailStatusChanged { .. }
             | Self::ScheduleUpdated { .. }
             | Self::ScheduleRemoved { .. }
             | Self::CapabilitiesChanged { .. } => None,

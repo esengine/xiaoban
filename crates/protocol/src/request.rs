@@ -646,6 +646,22 @@ pub enum Request {
     CancelImport {
         month: String,
     },
+    MailStatus,
+    ConnectMail {
+        provider: crate::MailProvider,
+        address: String,
+        password: String,
+        #[serde(default)]
+        host: Option<String>,
+    },
+    DisconnectMail,
+    MailList {
+        #[serde(default)]
+        category: Option<crate::MailCategory>,
+    },
+    MailOriginal {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -909,6 +925,15 @@ pub enum Response {
         url: String,
         #[ts(type = "number")]
         bytes: u64,
+    },
+    MailStatus {
+        status: crate::MailStatus,
+    },
+    MailList {
+        items: Vec<crate::MailItem>,
+    },
+    MailOriginal {
+        original: crate::MailOriginal,
     },
 }
 

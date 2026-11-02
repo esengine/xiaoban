@@ -140,6 +140,7 @@ impl Hub {
                 |dir| dir.join("files"),
             )),
             web: runtime.web,
+            mail: crate::mail::Mail::new(runtime.mail),
             auto_titles: runtime.auto_titles,
             auto_thinking: runtime.auto_thinking,
             active: std::sync::RwLock::new(active),
@@ -199,6 +200,7 @@ fn watch(state: &SharedState, shutdown: &CancellationToken) {
     crate::weather_page::watch(Arc::clone(state), shutdown.clone());
     crate::notify::watch(Arc::clone(state), shutdown.clone());
     crate::insights::watch(Arc::clone(state), shutdown.clone());
+    crate::mail::watch(Arc::clone(state), shutdown.clone());
     crate::schedules::watch(Arc::clone(state), shutdown.clone());
     let owned = Arc::clone(state);
     let stop = shutdown.clone();

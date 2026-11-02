@@ -175,6 +175,7 @@ fn runtime_with(
         apps: Arc::new(FakeApps::default()),
         operator: Arc::new(FakeOperator::default()),
         web: Arc::new(FakeWeb),
+        mail: Arc::new(xiaoban_hub::ImapMail),
         fallback,
         auto_titles: false,
         auto_thinking: false,
@@ -2974,5 +2975,199 @@ async fn scheduled_tasks_wait_for_start_then_run_report_and_record_failures() {
     assert!(!last.ok);
     assert!(last.reason.is_some_and(|reason| !reason.is_empty()));
     assert_eq!(after.runs, 2);
+    hub.shutdown().await;
+}
+
+#[derive(Debug)]
+struct FakeMail {
+    password: &'static str,
+    messages: Vec<(u32, String)>,
+}
+
+impl FakeMail {
+    fn raw(&self) -> Vec<xiaoban_hub::Raw> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        self.messages
+            .iter()
+            .map(|(uid, text)| xiaoban_hub::Raw {
+                uid: *uid,
+                at: Some(i64::try_from(now).unwrap()),
+                bytes: text.clone().into_bytes(),
+            })
+            .collect()
+    }
+
+    fn check(&self, login: &xiaoban_hub::Login) -> Result<(), xiaoban_hub::MailError> {
+        if login.password == self.password {
+            Ok(())
+        } else {
+            Err(xiaoban_hub::MailError::BadLogin)
+        }
+    }
+}
+
+impl xiaoban_hub::MailSource for FakeMail {
+    fn probe(&self, login: xiaoban_hub::Login, _: String) -> BoxFuture<'static, Result<u32, xiaoban_hub::MailError>> {
+        let result = self.check(&login).map(|()| u32::try_from(self.messages.len()).unwrap());
+        Box::pin(async move { result })
+    }
+
+    fn recent(
+        &self,
+        login: xiaoban_hub::Login,
+        _: String,
+        _: Option<(u32, u32)>,
+    ) -> BoxFuture<'static, Result<xiaoban_hub::Batch, xiaoban_hub::MailError>> {
+        let result = self.check(&login).map(|()| xiaoban_hub::Batch {
+            validity: 9,
+            total: u32::try_from(self.messages.len()).unwrap(),
+            messages: self.raw(),
+        });
+        Box::pin(async move { result })
+    }
+
+    fn original(
+        &self,
+        login: xiaoban_hub::Login,
+        _: u32,
+        uid: u32,
+    ) -> BoxFuture<'static, Result<Option<xiaoban_hub::Raw>, xiaoban_hub::MailError>> {
+        let result = self
+            .check(&login)
+            .map(|()| self.raw().into_iter().find(|raw| raw.uid == uid));
+        Box::pin(async move { result })
+    }
+}
+
+fn mail_text(from: &str, subject: &str, body: &str) -> String {
+    format!(
+        "From: {from}\r\nSubject: =?UTF-8?B?{}?=\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{body}\r\n",
+        base64_utf8(subject)
+    )
+}
+
+fn base64_utf8(text: &str) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let bytes = text.as_bytes();
+    let mut out = String::new();
+    for chunk in bytes.chunks(3) {
+        let n = (u32::from(chunk[0]) << 16)
+            | (u32::from(*chunk.get(1).unwrap_or(&0)) << 8)
+            | u32::from(*chunk.get(2).unwrap_or(&0));
+        for index in 0..4 {
+            if index <= chunk.len() {
+                out.push(char::from(TABLE[((n >> (18 - 6 * index)) & 63) as usize]));
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+async fn mail_status(client: &mut TestClient) -> xiaoban_protocol::MailStatus {
+    let Response::MailStatus { status } = client.request(Request::MailStatus).await else {
+        panic!("expected mail status");
+    };
+    status
+}
+
+async fn mail_list(client: &mut TestClient) -> Vec<xiaoban_protocol::MailItem> {
+    let Response::MailList { items } = client.request(Request::MailList { category: None }).await else {
+        panic!("expected mail list");
+    };
+    items
+}
+
+#[tokio::test]
+async fn mail_connects_read_only_drops_codes_and_forgets_everything_on_disconnect() {
+    let secrets = Arc::new(MemorySecrets::default());
+    let mut runtime = runtime_with(
+        ScriptedProvider::new([r#"{"mails":[]}"#]),
+        "system",
+        Some(deepseek(VALID_KEY)),
+        secrets.clone(),
+    );
+    runtime.mail = Arc::new(FakeMail {
+        password: "abcdefgh",
+        messages: vec![
+            (1, mail_text("ccsvc@message.cmbchina.com", "招商银行信用卡 10 月电子账单", "本期应还 ¥3,240.00")),
+            (2, mail_text("security@example.com", "您的登录验证码", "验证码 482913，5 分钟内有效")),
+            (3, mail_text("news@shop.example.com", "双十一限时特惠", "全场五折")),
+            (4, mail_text("service@jd.com", "京东：您的订单已发货", "洗烘一体机 已发货")),
+        ],
+    });
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+
+    let Response::MailStatus { status } = client
+        .request(Request::ConnectMail {
+            provider: xiaoban_protocol::MailProvider::Qq,
+            address: "12345678@qq.com".into(),
+            password: "wrong".into(),
+            host: None,
+        })
+        .await
+    else {
+        panic!("expected mail status");
+    };
+    assert!(!status.connected);
+    assert_eq!(status.failure, Some(xiaoban_protocol::MailFailure::BadPassword));
+    assert_eq!(secrets.load_named("mail:password").unwrap(), None);
+
+    let Response::MailStatus { status } = client
+        .request(Request::ConnectMail {
+            provider: xiaoban_protocol::MailProvider::Qq,
+            address: "12345678@qq.com".into(),
+            password: "abcd efgh".into(),
+            host: None,
+        })
+        .await
+    else {
+        panic!("expected mail status");
+    };
+    assert!(status.connected);
+    assert_eq!(status.total, 4);
+    assert_eq!(secrets.load_named("mail:password").unwrap().as_deref(), Some("abcdefgh"));
+
+    let mut settled = false;
+    for _ in 0..100 {
+        let status = mail_status(&mut client).await;
+        if !status.syncing && status.checked_at.is_some() {
+            settled = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert!(settled, "mail never finished syncing");
+    let items = mail_list(&mut client).await;
+    assert_eq!(items.len(), 3, "{items:?}");
+    assert!(items.iter().all(|item| !item.subject.contains("验证码")));
+    let bill = items.iter().find(|item| item.id == "9-1").unwrap();
+    assert_eq!(bill.category, xiaoban_protocol::MailCategory::Bill);
+    let Response::MailOriginal { original } = client.request(Request::MailOriginal { id: "9-4".into() }).await else {
+        panic!("expected original");
+    };
+    assert!(original.text.contains("洗烘一体机"));
+    let Response::DailyFeed { feed } = client.request(Request::DailyFeed).await else {
+        panic!("expected daily feed");
+    };
+    let today = feed.mail.expect("mail today");
+    assert_eq!(today.total, 3);
+    assert!(today.items.iter().any(|item| item.id == "9-4"));
+
+    let Response::MailStatus { status } = client.request(Request::DisconnectMail).await else {
+        panic!("expected mail status");
+    };
+    assert!(!status.connected);
+    assert!(mail_list(&mut client).await.is_empty());
+    assert_eq!(secrets.load_named("mail:password").unwrap(), None);
+    let Response::DailyFeed { feed } = client.request(Request::DailyFeed).await else {
+        panic!("expected daily feed");
+    };
+    assert_eq!(feed.mail, None);
     hub.shutdown().await;
 }

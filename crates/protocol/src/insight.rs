@@ -9,6 +9,7 @@ pub enum InsightKind {
     Takeout,
     LedgerUp,
     PlanStalled,
+    MailDue,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -91,4 +92,5 @@ pub struct DailyFeed {
     pub insights: Vec<Insight>,
     pub done: Vec<DoneItem>,
     pub muted: Vec<MutedInsight>,
+    pub mail: Option<crate::MailToday>,
 }

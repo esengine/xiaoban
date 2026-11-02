@@ -10,7 +10,7 @@ use tokio_util::sync::CancellationToken;
 use xiaoban_i18n::{Localizer, keys};
 use xiaoban_protocol::{
     CategoryTotal, DailyFeed, DoneItem, DoneSource, DoneStatus, Event, Expense, Ingredient, Insight,
-    InsightAction, InsightKind, InsightPage, MutedInsight, Plan, PlanStatus, ProtocolError, Request,
+    InsightAction, InsightKind, InsightPage, MailItem, MutedInsight, Plan, PlanStatus, ProtocolError, Request,
     Response, StepStatus, Trip,
 };
 use xiaoban_store::now_ms;
@@ -95,6 +95,7 @@ pub struct Facts {
     pub rain_tomorrow: Option<u8>,
     pub trips: Vec<Trip>,
     pub plans: Vec<Plan>,
+    pub mail_bills: Vec<MailItem>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -294,8 +295,50 @@ fn plan_stalled(facts: &Facts, l: &Localizer) -> Option<Candidate> {
     })
 }
 
+fn money(cents: i64) -> String {
+    let whole = cents / 100;
+    let digits = whole.to_string();
+    let mut grouped = String::new();
+    for (index, digit) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index).is_multiple_of(3) {
+            grouped.push(',');
+        }
+        grouped.push(digit);
+    }
+    match cents % 100 {
+        0 => grouped,
+        rest => format!("{grouped}.{rest:02}"),
+    }
+}
+
+fn mail_due(facts: &Facts, l: &Localizer) -> Option<Candidate> {
+    facts.mail_bills.iter().find_map(|item| {
+        let bill = item.bill.as_ref()?;
+        let due: Date = bill.due.as_deref()?.parse().ok()?;
+        let amount = l.format(keys::INSIGHT_MONEY, &[("amount", &money(bill.cents?))]);
+        let due_text = format!("{}/{}", due.month(), due.day());
+        let from = if item.from_name.is_empty() { item.from_address.clone() } else { item.from_name.clone() };
+        Some(Candidate {
+            kind: InsightKind::MailDue,
+            subject: item.id.clone(),
+            label: l.format(keys::INSIGHT_LABEL_MAIL, &[("title", &item.title)]),
+            text: l.format(
+                keys::INSIGHT_MAIL_DUE,
+                &[("title", &item.title), ("amount", &amount), ("due", &due_text), ("from", &from)],
+            ),
+            action_label: l.text(keys::INSIGHT_MAIL_ACT),
+            action: InsightAction::Say {
+                text: l.format(keys::INSIGHT_MAIL_SAY, &[("title", &item.title), ("amount", &amount), ("due", &due_text)]),
+                thread_id: None,
+            },
+            urgent: false,
+            until: facts.end_of(due),
+        })
+    })
+}
+
 pub fn detect(facts: &Facts, l: &Localizer) -> Vec<Candidate> {
-    [rain_outdoor(facts, l), fridge(facts, l), takeout(facts, l), ledger_up(facts, l), plan_stalled(facts, l)]
+    [rain_outdoor(facts, l), mail_due(facts, l), fridge(facts, l), takeout(facts, l), ledger_up(facts, l), plan_stalled(facts, l)]
         .into_iter()
         .flatten()
         .collect()
@@ -409,6 +452,7 @@ async fn facts(state: &SharedState) -> Facts {
         rain_tomorrow,
         trips: state.store.recent_trips(TRIPS).await.unwrap_or_default(),
         plans: crate::plan::list(state).await,
+        mail_bills: crate::mail::bills_due(state).await,
     }
 }
 
@@ -436,6 +480,19 @@ pub async fn refresh(state: &SharedState) {
     }
     if let Some(insight) = raised.filter(|insight| insight.urgent) {
         state.publish(Event::InsightAlert { insight });
+    }
+}
+
+pub async fn forget_kind(state: &SharedState, kind: InsightKind) {
+    let mut saved: Saved = read(state, KEY).await;
+    let gone: Vec<String> = saved.items.iter().filter(|item| item.kind == kind).map(|item| item.id.clone()).collect();
+    if gone.is_empty() {
+        return;
+    }
+    saved.items.retain(|item| item.kind != kind);
+    write(state, KEY, &saved).await;
+    for id in gone {
+        state.publish(Event::NoticeWithdrawn { id: notice_id(&id) });
     }
 }
 
@@ -551,6 +608,7 @@ async fn feed(state: &SharedState) -> DailyFeed {
         insights: saved.items.into_iter().filter(|item| item.until > now).collect(),
         done: done(state).await,
         muted,
+        mail: crate::mail::today(state).await,
     }
 }
 
@@ -788,5 +846,24 @@ mod tests {
         assert!(found.text.contains('4'), "{}", found.text);
         facts.photo_at = Some(NOW - DAY_MS);
         assert!(fridge(&facts, &zh()).is_none());
+    }
+
+    #[test]
+    fn a_mail_bill_due_soon_is_noticed_with_the_mail_numbers() {
+        let mut facts = facts();
+        let due = facts.today().unwrap().tomorrow().unwrap();
+        facts.mail_bills = vec![MailItem {
+            id: "7-1".into(),
+            from_name: "招商银行".into(),
+            title: "信用卡 10 月账单".into(),
+            bill: Some(xiaoban_protocol::MailBill { cents: Some(324_050), minimum_cents: None, due: Some(due.to_string()) }),
+            ..MailItem::default()
+        }];
+        let found = mail_due(&facts, &zh()).expect("bill noticed");
+        assert_eq!(found.subject, "7-1");
+        assert!(found.text.contains("3,240.50"), "{}", found.text);
+        assert!(found.text.contains("招商银行"), "{}", found.text);
+        assert_eq!(money(324_000), "3,240");
+        assert_eq!(money(5), "0.05");
     }
 }

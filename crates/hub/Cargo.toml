@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
+async-imap = { version = "0.12", default-features = false, features = ["runtime-tokio"] }
 axum.workspace = true
 base64 = "0.23.1"
 chacha20poly1305 = { version = "0.10", features = ["getrandom"] }
@@ -25,6 +26,7 @@ if-addrs.workspace = true
 ignore = "0.4.34"
 jiff.workspace = true
 keyring.workspace = true
+mail-parser = { version = "0.11", features = ["full_encoding"] }
 mdns-sd.workspace = true
 pdf-extract = { version = "0.12", default-features = false }
 regex = "1.13.1"
@@ -36,10 +38,12 @@ similar = "3.2.1"
 sys-locale.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["process", "fs", "io-util"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["aws_lc_rs", "tls12"] }
 tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
+webpki-root-certs = "1"
 x25519-dalek = { version = "2", features = ["getrandom", "static_secrets"] }
 xiaoban-agent.workspace = true
 xiaoban-i18n.workspace = true
