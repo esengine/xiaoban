@@ -170,6 +170,7 @@ fn trip_day(l: &Localizer) -> Value {
 pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     let mut specs = base_specs(localizer);
     specs.extend(crate::operate_tools::specs(localizer));
+    specs.push(crate::asks::spec(localizer));
     specs.extend(crate::price_check::specs(localizer));
     specs.push(crate::trip_spend::spec(localizer));
     specs.extend(crate::file_tools::specs(localizer));
@@ -783,6 +784,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::subthreads::OPEN_SUBTHREADS
                 | crate::subthreads::MESSAGE_SUBTHREAD
                 | crate::operate_tools::CONFIRM
+                | crate::asks::ASK_USER
                 | crate::code_tools::WRITE_FILE
                 | crate::code_tools::EDIT_FILE
                 | crate::code_tools::RUN_COMMAND
@@ -840,6 +842,7 @@ impl ToolRunner for HubTools<'_> {
                 crate::operate_tools::TYPE_TEXT => self.element_action(arguments, true).await,
                 crate::operate_tools::PRESS_KEYS => self.press_keys(arguments).await,
                 crate::operate_tools::DO_STEPS => self.do_steps(arguments).await,
+                crate::asks::ASK_USER => self.ask_user(arguments).await,
                 crate::file_tools::FILE_SEARCH => self.file_search(arguments).await,
                 crate::file_tools::FILE_READ => self.file_read(arguments).await,
                 crate::file_tools::RECALL => self.recall(arguments).await,

@@ -448,6 +448,20 @@ pub fn handle(state: &SharedState, request: Request) -> Result<Response, Protoco
         Request::PendingConfirms => Ok(Response::PendingConfirms {
             confirms: state.confirms.pending(),
         }),
+        Request::AnswerAsk { ask_id, answers } => match state.asks.answer(&ask_id, answers) {
+            Some(true) => Ok(Response::Ack),
+            Some(false) => Err(ProtocolError::new(
+                ErrorCode::BadRequest,
+                "those answers do not match the questions",
+            )),
+            None => Err(ProtocolError::new(
+                ErrorCode::NotFound,
+                "that question is no longer waiting",
+            )),
+        },
+        Request::PendingAsks => Ok(Response::PendingAsks {
+            asks: state.asks.pending(),
+        }),
         Request::OperateStatus => Ok(Response::OperateStatus {
             permissions: state.operator.permissions(),
         }),

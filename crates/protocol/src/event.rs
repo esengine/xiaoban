@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    ConfirmChoice, ConfirmRequest, Device, Failure, Memory, Message, ModelInfo, Thread, Usage,
+    AskAnswer, AskRequest, ConfirmChoice, ConfirmRequest, Device, Failure, Memory, Message, ModelInfo, Thread, Usage,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -80,6 +80,13 @@ pub enum Event {
     ConfirmResolved {
         confirm_id: String,
         choice: ConfirmChoice,
+    },
+    AskRequested {
+        ask: AskRequest,
+    },
+    AskResolved {
+        ask_id: String,
+        answers: Vec<AskAnswer>,
     },
     AgentProgress {
         turn_id: String,
@@ -227,6 +234,7 @@ impl Event {
             | Self::MemoriesUsed { .. }
             | Self::MemoryForgotten { .. }
             | Self::ConfirmResolved { .. }
+            | Self::AskResolved { .. }
             | Self::TurnPaused { .. }
             | Self::TurnBackgrounded { .. }
             | Self::AgentProgress { .. }
@@ -256,6 +264,7 @@ impl Event {
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::Notify { notice } => notice.thread_id.as_deref(),
             Self::ConfirmRequested { confirm } => Some(&confirm.thread_id),
+            Self::AskRequested { ask } => Some(&ask.thread_id),
         }
     }
 }

@@ -41,6 +41,7 @@ pub struct HubState {
     pub pages: Arc<dyn crate::pages::Pages>,
     pub browser: crate::browser::Browser,
     pub confirms: crate::confirms::Confirms,
+    pub asks: crate::asks::Asks,
     pub pauses: crate::pauses::Pauses,
     pub schedules: crate::schedules::Runs,
     pub todos: crate::todos::Book,

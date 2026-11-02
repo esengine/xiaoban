@@ -46,6 +46,11 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
         crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
         crate::operate_tools::DO_STEPS => text(&args, "summary"),
+        crate::asks::ASK_USER => args
+            .get("questions")
+            .and_then(Value::as_array)
+            .and_then(|list| list.first())
+            .and_then(|first| text(first, "text")),
         crate::code_tools::LIST_DIR
         | crate::code_tools::READ_FILE
         | crate::code_tools::WRITE_FILE

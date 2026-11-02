@@ -15,6 +15,7 @@ mod recipes;
 mod floorplan;
 mod week;
 mod config;
+mod asks;
 mod confirms;
 mod discovery;
 mod dish_photos;

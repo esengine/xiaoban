@@ -1949,6 +1949,130 @@ async fn operating_apps_asks_for_permission_apps_and_actions() {
     hub.shutdown().await;
 }
 
+async fn pending_ask(client: &mut TestClient) -> xiaoban_protocol::AskRequest {
+    for _ in 0..400 {
+        let Response::PendingAsks { asks } = client.request(Request::PendingAsks).await else {
+            panic!("expected asks");
+        };
+        if let Some(ask) = asks.into_iter().next() {
+            return ask;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("the model never asked");
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn asking_the_user_parks_the_turn_until_they_answer() {
+    use xiaoban_protocol::AskAnswer;
+
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "ask_user",
+            &serde_json::json!({
+                "questions": [
+                    {
+                        "text": "去程订哪一班？",
+                        "options": [
+                            { "label": "航班 B", "note": "¥2,280" },
+                            { "label": "航班 A" },
+                        ],
+                    },
+                    {
+                        "text": "周六想安排哪几类？",
+                        "multiple": true,
+                        "options": [{ "label": "骑行" }, { "label": "小吃" }],
+                    },
+                    { "text": "账本叫什么？" },
+                ],
+            }),
+        )],
+        vec![ModelChunk::Text("好，订航班 B".into())],
+    ]));
+    let runtime = runtime(provider.clone());
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "订国庆机票".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let ask = pending_ask(&mut client).await;
+    assert_eq!(ask.thread_id, thread);
+    assert_eq!(ask.questions.len(), 3);
+    assert_eq!(ask.questions[0].options[0].note.as_deref(), Some("¥2,280"));
+
+    let wrong = client
+        .try_request(Request::AnswerAsk {
+            ask_id: ask.id.clone(),
+            answers: vec![
+                AskAnswer::Chosen { labels: vec!["不存在".into()] },
+                AskAnswer::Skipped,
+                AskAnswer::Skipped,
+            ],
+        })
+        .await;
+    assert!(wrong.is_err(), "{wrong:?}");
+    let short = client
+        .try_request(Request::AnswerAsk {
+            ask_id: ask.id.clone(),
+            answers: vec![AskAnswer::Skipped],
+        })
+        .await;
+    assert!(short.is_err(), "{short:?}");
+
+    let Response::Ack = client
+        .request(Request::AnswerAsk {
+            ask_id: ask.id.clone(),
+            answers: vec![
+                AskAnswer::Chosen { labels: vec!["航班 B".into()] },
+                AskAnswer::Chosen { labels: Vec::new() },
+                AskAnswer::Typed { text: "新家装修".into() },
+            ],
+        })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    let gone = client
+        .try_request(Request::AnswerAsk {
+            ask_id: ask.id,
+            answers: vec![AskAnswer::Skipped; 3],
+        })
+        .await;
+    assert!(gone.is_err(), "{gone:?}");
+
+    for _ in 0..400 {
+        if provider.requests().len() >= 2 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let result = provider
+        .requests()
+        .last()
+        .unwrap()
+        .messages
+        .last()
+        .unwrap()
+        .content
+        .clone();
+    assert!(result.contains("航班 B"), "{result}");
+    assert!(result.contains("picked none"), "{result}");
+    assert!(result.contains("新家装修"), "{result}");
+    hub.shutdown().await;
+}
+
 #[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());

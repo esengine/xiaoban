@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    AutonomyLevel, ContextNote, Device, Failure, Location, Memory, Message, ModelInfo, Preferences,
+    AskAnswer, AskRequest, AutonomyLevel, ContextNote, Device, Failure, Location, Memory, Message, ModelInfo, Preferences,
     ProviderId, ProviderOption, Thread, Usage,
 };
 use crate::{
@@ -146,6 +146,11 @@ pub enum Request {
         choice: ConfirmChoice,
     },
     PendingConfirms,
+    AnswerAsk {
+        ask_id: String,
+        answers: Vec<AskAnswer>,
+    },
+    PendingAsks,
     OperateStatus,
     BackgroundTurn {
         turn_id: String,
@@ -811,6 +816,9 @@ pub enum Response {
     },
     PendingConfirms {
         confirms: Vec<ConfirmRequest>,
+    },
+    PendingAsks {
+        asks: Vec<AskRequest>,
     },
     OperateStatus {
         permissions: OperatePermissions,

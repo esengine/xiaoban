@@ -135,6 +135,7 @@ impl Hub {
             pages: runtime.pages,
             browser: crate::browser::Browser::default(),
             confirms: crate::confirms::Confirms::default(),
+            asks: crate::asks::Asks::default(),
             pauses: crate::pauses::Pauses::default(),
             schedules: crate::schedules::Runs::default(),
             todos: crate::todos::Book::default(),

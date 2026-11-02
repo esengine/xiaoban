@@ -1,5 +1,9 @@
 export type { Allowance } from "./Allowance.ts";
 export type { Archived } from "./Archived.ts";
+export type { AskAnswer } from "./AskAnswer.ts";
+export type { AskOption } from "./AskOption.ts";
+export type { AskQuestion } from "./AskQuestion.ts";
+export type { AskRequest } from "./AskRequest.ts";
 export type { Attachment } from "./Attachment.ts";
 export type { AutonomyLevel } from "./AutonomyLevel.ts";
 export type { BlockKind } from "./BlockKind.ts";

@@ -165,6 +165,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         }
         request @ (Request::AnswerConfirm { .. }
         | Request::PendingConfirms
+        | Request::AnswerAsk { .. }
+        | Request::PendingAsks
         | Request::OperateStatus
         | Request::PauseTurn { .. }
         | Request::BackgroundTurn { .. }
