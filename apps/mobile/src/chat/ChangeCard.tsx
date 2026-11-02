@@ -1,14 +1,23 @@
+import { extensionOfName } from "@xiaoban/client";
+import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { ChangedFile } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useHubStore } from "../hub/HubProvider.tsx";
+import { NOTE_EXTENSIONS, PAGE_EXTENSIONS } from "../workspace/useWorkspaceStore.ts";
+import { keepHtml, keepMarkdown } from "./htmlPages.ts";
 
 /** What this reply changed in the workspace, with a way to put it all back. */
 export function ChangeCard({ threadId, files }: { threadId: string; files: ChangedFile[] }) {
   const { t } = useI18n();
   const store = useHubStore();
+  const workspaceId = useHubState(store).threads.find(
+    (thread) => thread.id === threadId,
+  )?.workspaceId;
+  const [opening, setOpening] = useState<string | null>(null);
   const [reverted, setReverted] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState(false);
   const left = files.filter((file) => !reverted.has(file.path));
@@ -22,6 +31,31 @@ export function ChangeCard({ threadId, files }: { threadId: string; files: Chang
       } catch {
         setFailed(true);
       }
+    }
+  };
+
+  const openable = (path: string) => {
+    const extension = extensionOfName(path);
+    return PAGE_EXTENSIONS.includes(extension) || NOTE_EXTENSIONS.includes(extension);
+  };
+
+  const open = async (path: string) => {
+    if (!workspaceId || opening) return;
+    setOpening(path);
+    setFailed(false);
+    try {
+      const name = path.split("/").pop() ?? path;
+      if (PAGE_EXTENSIONS.includes(extensionOfName(path))) {
+        const html = await store.bundleWorkspacePage(workspaceId, path);
+        router.push({ pathname: "/html/[id]", params: { id: keepHtml(html), title: name } });
+      } else {
+        const file = await store.readWorkspaceFile(workspaceId, path);
+        router.push({ pathname: "/md/[id]", params: { id: keepMarkdown(file.text), title: name } });
+      }
+    } catch {
+      setFailed(true);
+    } finally {
+      setOpening(null);
     }
   };
 
@@ -55,6 +89,15 @@ export function ChangeCard({ threadId, files }: { threadId: string; files: Chang
                 <Text style={styles.minus}>{`−${file.removed}`}</Text>
               </>
             )}
+            {!gone && file.status !== "deleted" && openable(file.path) ? (
+              <Pressable
+                style={[styles.play, opening === file.path && styles.playBusy]}
+                accessibilityRole="button"
+                onPress={() => void open(file.path)}
+              >
+                <Text style={styles.playText}>{t("html-card-open")}</Text>
+              </Pressable>
+            ) : null}
           </View>
         );
       })}
@@ -101,5 +144,15 @@ const styles = StyleSheet.create({
   plus: { fontSize: 13, color: color.success },
   minus: { fontSize: 13, color: color.dangerInk },
   done: { fontSize: 12, color: color.faint },
+  play: {
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: color.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playBusy: { opacity: 0.6 },
+  playText: { fontSize: 12, fontWeight: "600", color: color.surface },
   failed: { fontSize: 12, color: color.dangerInk, marginTop: 6 },
 });
