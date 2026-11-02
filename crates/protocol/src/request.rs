@@ -258,6 +258,17 @@ pub enum Request {
         workspace_id: String,
         path: String,
     },
+    ExportWorkspace {
+        workspace_id: String,
+        /// Empty for the whole workspace as a zip.
+        path: String,
+    },
+    ImportWorkspace {
+        workspace_id: String,
+        name: String,
+        /// The file's bytes, base64.
+        data: String,
+    },
     GithubRefs {
         workspace_id: String,
         numbers: Vec<u32>,
@@ -999,6 +1010,10 @@ pub enum Response {
         name: String,
         exists: bool,
         git: crate::GitInfo,
+    },
+    WorkspaceImported {
+        saved: u32,
+        skipped: u32,
     },
     WorkspaceImage {
         url: String,

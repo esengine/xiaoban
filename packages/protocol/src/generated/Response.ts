@@ -152,6 +152,7 @@ export type Response =
   | { type: "export_data"; name: string; mime: string; data: string }
   | { type: "places"; places: Array<WeatherPlace> }
   | { type: "folder"; path: string; name: string; exists: boolean; git: GitInfo }
+  | { type: "workspace_imported"; saved: number; skipped: number }
   | { type: "workspace_image"; url: string; bytes: number }
   | { type: "mail_status"; status: MailStatus }
   | { type: "mail_list"; items: Array<MailItem> }

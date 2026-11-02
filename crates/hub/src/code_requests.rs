@@ -278,6 +278,52 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             }
             image(&target.path)
         }
+        Request::ExportWorkspace { workspace_id, path } => {
+            let found = load(state, workspace_id).await?;
+            let root = workspace::root(&found);
+            let file = if path.is_empty() {
+                None
+            } else {
+                let target = workspace::resolve(&found, &path);
+                if !target.inside {
+                    return Err(bad_request("outside the workspace"));
+                }
+                Some(target.path)
+            };
+            let name = found.name.clone();
+            let packed = tokio::task::spawn_blocking(move || {
+                crate::workspace_transfer::export(&root, file.as_deref(), &name)
+            })
+            .await
+            .map_err(|_| bad_request("could not export"))?
+            .map_err(|failure| bad_request(&failure))?;
+            Ok(crate::doc::export_data(packed.name, packed.mime, &packed.bytes))
+        }
+        Request::ImportWorkspace {
+            workspace_id,
+            name,
+            data,
+        } => {
+            use base64::Engine;
+            let found = load(state, workspace_id).await?;
+            let root = workspace::root(&found);
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(data)
+                .map_err(|_| bad_request("not valid data"))?;
+            let done = tokio::task::spawn_blocking(move || {
+                crate::workspace_transfer::import(&root, &name, &bytes)
+            })
+            .await
+            .map_err(|_| bad_request("could not import"))?
+            .map_err(|failure| bad_request(&failure))?;
+            if done.saved > 0 {
+                changed(state, &found);
+            }
+            Ok(Response::WorkspaceImported {
+                saved: done.saved,
+                skipped: done.skipped,
+            })
+        }
         Request::GithubRefs {
             workspace_id,
             numbers,

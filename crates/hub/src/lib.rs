@@ -42,6 +42,7 @@ mod network;
 mod notify;
 mod browser;
 mod page_bundle;
+mod workspace_transfer;
 mod pages;
 mod operate;
 mod operate_tools;

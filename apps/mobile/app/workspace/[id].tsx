@@ -4,10 +4,11 @@ import type { DirEntry } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LifeHeader } from "../../src/life/LifeUI.tsx";
+import { LifeHeader, Sheet, SheetAction } from "../../src/life/LifeUI.tsx";
 import { Icon } from "../../src/ui/Icon.tsx";
+import { importPicked, shareExport } from "../../src/workspace/transfer.ts";
 import { useWorkspaceStore } from "../../src/workspace/useWorkspaceStore.ts";
 
 /** The files of a workspace, a folder at a time. Read only: changes are made by asking. */
@@ -20,6 +21,8 @@ export default function WorkspaceFilesScreen() {
   const [folders, setFolders] = useState<Record<string, DirEntry[]>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [failed, setFailed] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [busy, setBusy] = useState(false);
   const workspace = state.workspaces.find((item) => item.id === id);
   const version = state.filesVersion[id] ?? 0;
 
@@ -42,6 +45,31 @@ export default function WorkspaceFilesScreen() {
     for (const path of Object.keys(open)) if (open[path]) void load(path);
   }, [state.status, version, load]);
 
+  const run = async (job: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await job();
+    } catch {
+      Alert.alert(t("ws-transfer-failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exportAll = () => run(async () => shareExport(await store.exportWorkspace(id)));
+
+  const importFiles = () =>
+    run(async () => {
+      const done = await importPicked(store, id);
+      if (!done) return;
+      void load("");
+      Alert.alert(
+        done.saved > 0 ? t("ws-import-done", { saved: done.saved }) : t("ws-import-none"),
+        done.skipped > 0 ? t("ws-import-skipped", { skipped: done.skipped }) : undefined,
+      );
+    });
+
   const toggle = (path: string) => {
     const next = !open[path];
     setOpen((current) => ({ ...current, [path]: next }));
@@ -60,7 +88,20 @@ export default function WorkspaceFilesScreen() {
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false, title: t("ws-files-title") }} />
-      <LifeHeader title={workspace?.name ?? t("ws-files-title")} sub={t("ws-files-title")} />
+      <LifeHeader
+        title={workspace?.name ?? t("ws-files-title")}
+        sub={t("ws-files-title")}
+        right={
+          <Pressable
+            style={styles.more}
+            accessibilityRole="button"
+            accessibilityLabel={t("chat-more")}
+            onPress={() => setMenu(true)}
+          >
+            <Icon name="more" color={color.ink} />
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
         {failed ? <Text style={styles.note}>{t("ws-file-failed")}</Text> : null}
         {!failed && folders[""] && folders[""].length === 0 ? (
@@ -102,6 +143,22 @@ export default function WorkspaceFilesScreen() {
         ) : null}
         <Text style={styles.hint}>{t("ws-files-hint")}</Text>
       </ScrollView>
+      <Sheet open={menu} onClose={() => setMenu(false)}>
+        <SheetAction
+          label={t("ws-export-all")}
+          onPress={() => {
+            setMenu(false);
+            void exportAll();
+          }}
+        />
+        <SheetAction
+          label={t("ws-import")}
+          onPress={() => {
+            setMenu(false);
+            void importFiles();
+          }}
+        />
+      </Sheet>
     </View>
   );
 }
@@ -109,6 +166,7 @@ export default function WorkspaceFilesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.ground },
   content: { paddingHorizontal: 14, paddingTop: 8, gap: 12 },
+  more: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   card: {
     backgroundColor: color.surface,
     borderRadius: 16,

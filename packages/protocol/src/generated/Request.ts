@@ -134,6 +134,23 @@ export type Request =
   | { type: "pull_branch"; workspaceId: string }
   | { type: "restore_stash"; workspaceId: string }
   | { type: "workspace_image"; workspaceId: string; path: string }
+  | {
+      type: "export_workspace";
+      workspaceId: string;
+      /**
+       * Empty for the whole workspace as a zip.
+       */
+      path: string;
+    }
+  | {
+      type: "import_workspace";
+      workspaceId: string;
+      name: string;
+      /**
+       * The file's bytes, base64.
+       */
+      data: string;
+    }
   | { type: "github_refs"; workspaceId: string; numbers: Array<number> }
   | { type: "thread_pins"; threadId: string }
   | { type: "pin_ref"; threadId: string; number: number; pinned: boolean }

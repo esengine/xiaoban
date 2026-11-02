@@ -1350,6 +1350,28 @@ export class HubStore {
     return html;
   }
 
+  /** The whole workspace as a zip (empty path), or one of its files. */
+  async exportWorkspace(workspaceId: string, path = ""): Promise<ExportedFile> {
+    const { name, mime, data } = await this.client.request(
+      { type: "export_workspace", workspaceId, path },
+      "export_data",
+    );
+    return { name, mime, data };
+  }
+
+  /** Put a file, or the files of a zip, into the workspace. Names already there are left alone. */
+  async importWorkspaceFile(
+    workspaceId: string,
+    name: string,
+    data: string,
+  ): Promise<{ saved: number; skipped: number }> {
+    const { saved, skipped } = await this.client.request(
+      { type: "import_workspace", workspaceId, name, data },
+      "workspace_imported",
+    );
+    return { saved, skipped };
+  }
+
   async workspaceImage(workspaceId: string, path: string): Promise<{ url: string; bytes: number }> {
     const { url, bytes } = await this.client.request(
       { type: "workspace_image", workspaceId, path },

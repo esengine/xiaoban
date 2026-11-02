@@ -7,6 +7,7 @@ import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { keepHtml, keepMarkdown } from "../../src/chat/htmlPages.ts";
 import { Icon } from "../../src/ui/Icon.tsx";
+import { shareExport } from "../../src/workspace/transfer.ts";
 import {
   IMAGE_EXTENSIONS,
   NOTE_EXTENSIONS,
@@ -43,6 +44,7 @@ export default function WorkspaceFileScreen() {
   const [loaded, setLoaded] = useState<Loaded>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -97,6 +99,18 @@ export default function WorkspaceFileScreen() {
     }
   };
 
+  const exportFile = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
+      await shareExport(await store.exportWorkspace(id, path));
+    } catch {
+      setPreviewFailed(true);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const rows = useMemo(
     () =>
       loaded.kind === "text"
@@ -135,6 +149,16 @@ export default function WorkspaceFileScreen() {
             accessibilityRole="button"
           >
             <Text style={styles.previewText}>{t("ws-file-preview")}</Text>
+          </Pressable>
+        ) : null}
+        {loaded.kind === "text" || loaded.kind === "image" || loaded.kind === "binary" ? (
+          <Pressable
+            style={[styles.back, sending && styles.previewBusy]}
+            onPress={() => void exportFile()}
+            accessibilityRole="button"
+            accessibilityLabel={t("ws-export-file")}
+          >
+            <Text style={styles.exportText}>{t("ws-export-file")}</Text>
           </Pressable>
         ) : (
           <View style={styles.back} />
@@ -186,7 +210,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: color.line,
   },
-  back: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  back: { minWidth: 44, height: 44, alignItems: "center", justifyContent: "center" },
   heading: { flex: 1, alignItems: "center" },
   title: { fontSize: 14, fontWeight: "700", color: color.ink, fontFamily: "monospace" },
   sub: { fontSize: 11, color: color.muted, marginTop: 1 },
@@ -199,6 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   previewBusy: { opacity: 0.6 },
+  exportText: { fontSize: 13, fontWeight: "600", color: color.accentStrong },
   previewText: { fontSize: 13, fontWeight: "600", color: color.surface },
   problem: { fontSize: 12, color: color.dangerInk, textAlign: "center", paddingTop: 8 },
   note: { fontSize: 13, color: color.muted, textAlign: "center", padding: 24 },

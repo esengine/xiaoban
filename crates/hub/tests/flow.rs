@@ -3412,6 +3412,69 @@ async fn a_workspace_page_comes_back_with_its_own_files_written_in() {
 }
 
 #[tokio::test]
+async fn a_workspace_goes_out_as_a_zip_and_files_come_in_without_replacing() {
+    use base64::Engine;
+    let data = std::env::temp_dir().join(format!("xiaoban-data-{}", uuid_like()));
+    let config = HubConfig {
+        data_dir: Some(data.clone()),
+        ..HubConfig::ephemeral()
+    };
+    let hub = Hub::start(config, runtime(ScriptedProvider::new(["好"]))).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+    let Response::Workspace { workspace } = client
+        .request(Request::NewWorkspace { name: "带走".into() })
+        .await
+    else {
+        panic!("expected workspace");
+    };
+    let folder = std::path::PathBuf::from(&workspace.path);
+    std::fs::write(folder.join("a.txt"), "mine").unwrap();
+    let Response::ExportData { name, mime, data: zipped } = client
+        .request(Request::ExportWorkspace {
+            workspace_id: workspace.id.clone(),
+            path: String::new(),
+        })
+        .await
+    else {
+        panic!("expected export data");
+    };
+    assert_eq!((name.as_str(), mime.as_str()), ("带走.zip", "application/zip"));
+    let Response::WorkspaceImported { saved, skipped } = client
+        .request(Request::ImportWorkspace {
+            workspace_id: workspace.id.clone(),
+            name: "back.zip".into(),
+            data: zipped,
+        })
+        .await
+    else {
+        panic!("expected import result");
+    };
+    assert_eq!((saved, skipped), (0, 1), "the file is already there, so it is left alone");
+    let Response::WorkspaceImported { saved, .. } = client
+        .request(Request::ImportWorkspace {
+            workspace_id: workspace.id.clone(),
+            name: "a.txt".into(),
+            data: base64::engine::general_purpose::STANDARD.encode("theirs"),
+        })
+        .await
+    else {
+        panic!("expected import result");
+    };
+    assert_eq!(saved, 1);
+    assert_eq!(std::fs::read_to_string(folder.join("a.txt")).unwrap(), "mine");
+    assert_eq!(std::fs::read_to_string(folder.join("a (2).txt")).unwrap(), "theirs");
+    let outside = client
+        .try_request(Request::ExportWorkspace {
+            workspace_id: workspace.id,
+            path: "../../x".into(),
+        })
+        .await;
+    assert!(outside.is_err(), "{outside:?}");
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(&data);
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator

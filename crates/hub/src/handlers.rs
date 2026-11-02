@@ -201,6 +201,8 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::PullBranch { .. }
         | Request::RestoreStash { .. }
         | Request::WorkspaceImage { .. }
+        | Request::ExportWorkspace { .. }
+        | Request::ImportWorkspace { .. }
         | Request::GithubRefs { .. }
         | Request::ThreadPins { .. }
         | Request::PinRef { .. }
