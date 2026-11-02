@@ -57,7 +57,12 @@ impl TestClient {
     }
 
     async fn recv(&mut self) -> ServerFrame {
-        let message = tokio::time::timeout(Duration::from_secs(5), self.ws.next())
+        // A real model can think quietly for a while; the live checks raise this.
+        let wait = std::env::var("XIAOBAN_TEST_FRAME_SECS")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(5);
+        let message = tokio::time::timeout(Duration::from_secs(wait), self.ws.next())
             .await
             .expect("timed out waiting for frame")
             .unwrap()
@@ -2234,14 +2239,22 @@ async fn loading_a_pack_makes_its_tools_available_in_the_same_turn_and_after() {
     hub.shutdown().await;
 }
 
-/// Does the real model load the right pack on its own? Needs a key, costs a few cents:
-/// `LIVE_API_KEY=... cargo test -p xiaoban-hub --test flow live_pack_loading -- --ignored --nocapture`
+/// Does the real model load the right pack on its own? Costs a few cents. Uses `LIVE_API_KEY`, or
+/// the key saved in the app:
+/// `cargo test -p xiaoban-hub --test flow live_pack_loading -- --ignored --nocapture`
 /// (`LIVE_BASE_URL` and `LIVE_MODEL` default to `DeepSeek`).
 #[tokio::test]
 #[ignore = "calls a real model"]
 async fn live_pack_loading() {
-    let Ok(api_key) = std::env::var("LIVE_API_KEY") else {
-        eprintln!("set LIVE_API_KEY to run this");
+    // The key comes from the environment, or else from the one the app keeps in the system keychain.
+    let api_key = std::env::var("LIVE_API_KEY").ok().or_else(|| {
+        xiaoban_hub::KeyringSecrets::new(xiaoban_hub::KEYCHAIN_SERVICE)
+            .load(ProviderId::Deepseek)
+            .ok()
+            .flatten()
+    });
+    let Some(api_key) = api_key else {
+        eprintln!("set LIVE_API_KEY, or configure a DeepSeek key in the app");
         return;
     };
     let base_url = std::env::var("LIVE_BASE_URL").unwrap_or_else(|_| "https://api.deepseek.com".into());
@@ -2268,7 +2281,7 @@ async fn live_pack_loading() {
         let runtime = runtime_with(
             provider.clone(),
             &Prompts::for_locale(Locale::ZhCn).chat,
-            None,
+            Some(deepseek(VALID_KEY)),
             Arc::new(MemorySecrets::default()),
         );
         let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
