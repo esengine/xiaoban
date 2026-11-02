@@ -88,6 +88,14 @@ export default function RootLayout() {
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />
           <Stack.Screen name="workspaces" options={{ headerShown: false, title: t("ws-title") }} />
+          <Stack.Screen
+            name="workspace/[id]"
+            options={{ headerShown: false, title: t("ws-files-title") }}
+          />
+          <Stack.Screen
+            name="workspace/file"
+            options={{ headerShown: false, title: t("ws-files-title") }}
+          />
         </Stack>
       </HubProvider>
     </I18nProvider>

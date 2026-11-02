@@ -100,6 +100,22 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
                 .map_err(|failure| bad_request(&failure))?;
             Ok(Response::Dir { entries })
         }
+        Request::BundleWorkspacePage { workspace_id, path } => {
+            let found = load(state, workspace_id).await?;
+            let target = workspace::resolve(&found, &path);
+            if !target.inside {
+                return Err(bad_request("outside the workspace"));
+            }
+            let root = workspace::root(&found);
+            let html = tokio::task::spawn_blocking(move || {
+                let text = std::fs::read_to_string(&target.path).map_err(|failure| failure.to_string())?;
+                Ok::<_, String>(crate::page_bundle::bundle(&text, &target.path, &root))
+            })
+            .await
+            .map_err(|_| bad_request("could not read the page"))?
+            .map_err(|failure| bad_request(&failure))?;
+            Ok(Response::WorkspacePage { html })
+        }
         Request::ReadWorkspaceFile { workspace_id, path } => {
             let found = load(state, workspace_id).await?;
             let target = workspace::resolve(&found, &path);

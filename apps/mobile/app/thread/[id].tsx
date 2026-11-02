@@ -123,6 +123,7 @@ function ThreadScreen() {
   const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
   const store = useHubStore();
+  const hubContext = useHubContext();
   const state = useHubState(store);
   const when = useWhen();
   const [quote, setQuote] = useState<Quote | null>(() => parseQuote(params.quote));
@@ -468,6 +469,23 @@ function ThreadScreen() {
             </Text>
           ) : null}
         </View>
+        {thread?.workspaceId ? (
+          <Pressable
+            style={styles.iconButton}
+            accessibilityLabel={t("ws-files-open")}
+            onPress={() =>
+              router.push({
+                pathname: "/workspace/[id]",
+                params: {
+                  id: thread.workspaceId ?? "",
+                  ...(hubContext.local === store ? { hub: "local" } : {}),
+                },
+              })
+            }
+          >
+            <Icon name="folder" color={color.ink} />
+          </Pressable>
+        ) : null}
         <Pressable style={styles.iconButton} accessibilityLabel={t("chat-more")} onPress={more}>
           <Icon name="more" color={color.ink} />
         </Pressable>

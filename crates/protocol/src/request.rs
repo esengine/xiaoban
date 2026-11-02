@@ -206,6 +206,11 @@ pub enum Request {
         workspace_id: String,
         path: String,
     },
+    /// A page in a workspace with its local style sheets, scripts and pictures written into it.
+    BundleWorkspacePage {
+        workspace_id: String,
+        path: String,
+    },
     ReadWorkspaceFile {
         workspace_id: String,
         path: String,
@@ -836,6 +841,9 @@ pub enum Response {
     },
     Dir {
         entries: Vec<crate::DirEntry>,
+    },
+    WorkspacePage {
+        html: String,
     },
     WorkspaceFile {
         text: String,

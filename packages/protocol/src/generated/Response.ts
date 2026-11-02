@@ -97,6 +97,7 @@ export type Response =
   | { type: "workspaces"; workspaces: Array<Workspace> }
   | { type: "workspace"; workspace: Workspace }
   | { type: "dir"; entries: Array<DirEntry> }
+  | { type: "workspace_page"; html: string }
   | { type: "workspace_file"; text: string; truncated: boolean; binary: boolean }
   | { type: "changes"; files: Array<FileDiff> }
   | { type: "git"; git: GitInfo }

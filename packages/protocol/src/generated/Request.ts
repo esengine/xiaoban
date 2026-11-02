@@ -121,6 +121,7 @@ export type Request =
   | { type: "rename_workspace"; workspaceId: string; name: string }
   | { type: "remove_workspace"; workspaceId: string }
   | { type: "list_dir"; workspaceId: string; path: string }
+  | { type: "bundle_workspace_page"; workspaceId: string; path: string }
   | { type: "read_workspace_file"; workspaceId: string; path: string }
   | { type: "thread_changes"; threadId: string }
   | { type: "revert_change"; threadId: string; path: string; hunk: number | null }

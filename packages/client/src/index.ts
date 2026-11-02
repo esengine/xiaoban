@@ -83,6 +83,7 @@ export {
 } from "./schedule.ts";
 export { extensionOf, firstLink, hostOf, shareKind, sizeText } from "./share.ts";
 export { summarize as summarizeAnswer } from "./askFlow.ts";
+export { extensionOfName, type Token, type TokenKind, tokenize } from "./codeColor.ts";
 export type {
   AgentState,
   AnsweredAsk,

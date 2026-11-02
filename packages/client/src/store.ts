@@ -1341,6 +1341,15 @@ export class HubStore {
     return { text, truncated, binary };
   }
 
+  /** A page in a workspace with its local style sheets, scripts and pictures written into it. */
+  async bundleWorkspacePage(workspaceId: string, path: string): Promise<string> {
+    const { html } = await this.client.request(
+      { type: "bundle_workspace_page", workspaceId, path },
+      "workspace_page",
+    );
+    return html;
+  }
+
   async workspaceImage(workspaceId: string, path: string): Promise<{ url: string; bytes: number }> {
     const { url, bytes } = await this.client.request(
       { type: "workspace_image", workspaceId, path },

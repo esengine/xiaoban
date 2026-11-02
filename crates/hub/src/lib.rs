@@ -41,6 +41,7 @@ mod model;
 mod network;
 mod notify;
 mod browser;
+mod page_bundle;
 mod pages;
 mod operate;
 mod operate_tools;

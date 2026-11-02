@@ -189,6 +189,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::RemoveWorkspace { .. }
         | Request::ListDir { .. }
         | Request::ReadWorkspaceFile { .. }
+        | Request::BundleWorkspacePage { .. }
         | Request::ThreadChanges { .. }
         | Request::RevertChange { .. }
         | Request::GitInfo { .. }

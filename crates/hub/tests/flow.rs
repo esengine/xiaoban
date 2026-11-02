@@ -3369,6 +3369,49 @@ async fn a_workspace_on_a_phone_says_what_the_phone_does_not_have() {
 }
 
 #[tokio::test]
+async fn a_workspace_page_comes_back_with_its_own_files_written_in() {
+    let data = std::env::temp_dir().join(format!("xiaoban-data-{}", uuid_like()));
+    let config = HubConfig {
+        data_dir: Some(data.clone()),
+        ..HubConfig::ephemeral()
+    };
+    let hub = Hub::start(config, runtime(ScriptedProvider::new(["好"]))).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+    let Response::Workspace { workspace } = client
+        .request(Request::NewWorkspace { name: "页面".into() })
+        .await
+    else {
+        panic!("expected workspace");
+    };
+    let folder = std::path::PathBuf::from(&workspace.path);
+    std::fs::write(folder.join("style.css"), "h1 { color: red }").unwrap();
+    std::fs::write(
+        folder.join("index.html"),
+        "<link rel=\"stylesheet\" href=\"style.css\"><h1>骑车</h1>",
+    )
+    .unwrap();
+    let Response::WorkspacePage { html } = client
+        .request(Request::BundleWorkspacePage {
+            workspace_id: workspace.id.clone(),
+            path: "index.html".into(),
+        })
+        .await
+    else {
+        panic!("expected a page");
+    };
+    assert_eq!(html, "<style>h1 { color: red }</style><h1>骑车</h1>");
+    let outside = client
+        .try_request(Request::BundleWorkspacePage {
+            workspace_id: workspace.id,
+            path: "../../outside.html".into(),
+        })
+        .await;
+    assert!(outside.is_err(), "{outside:?}");
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(&data);
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator
