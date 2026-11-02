@@ -343,6 +343,60 @@ pub fn confirm_text(l: &Localizer, kind: &ConfirmKind) -> (String, String, Vec<N
                 choice(Once, l.text(keys::CONFIRM_SAVE_ONCE), true),
             ],
         ),
+        ConfirmKind::SensitiveApp { app, category } => (
+            l.format(keys::CONFIRM_SENSITIVE_TITLE, &[("app", app)]),
+            l.text(if category == "chat" {
+                keys::CONFIRM_SENSITIVE_CHAT
+            } else {
+                keys::CONFIRM_SENSITIVE_PAY
+            }),
+            vec![
+                choice(No, l.text(keys::CONFIRM_SENSITIVE_NO), false),
+                choice(Once, l.text(keys::CONFIRM_SENSITIVE_ONCE), true),
+            ],
+        ),
+        ConfirmKind::SendMessage { to, text, .. } => (
+            l.format(keys::CONFIRM_SEND_TITLE, &[("to", to)]),
+            text.clone(),
+            vec![
+                choice(No, l.text(keys::CONFIRM_SEND_NO), false),
+                choice(Edit, l.text(keys::CONFIRM_SEND_EDIT), false),
+                choice(Yes, l.text(keys::CONFIRM_SEND_YES), true),
+            ],
+        ),
+        ConfirmKind::Pay {
+            payee,
+            amount,
+            round,
+            ..
+        } => (
+            l.text(if *round == 1 {
+                keys::CONFIRM_PAY_TITLE_1
+            } else {
+                keys::CONFIRM_PAY_TITLE_2
+            }),
+            format!("{payee} · {amount}"),
+            vec![
+                choice(
+                    No,
+                    l.text(if *round == 1 {
+                        keys::CONFIRM_PAY_NO_1
+                    } else {
+                        keys::CONFIRM_PAY_NO_2
+                    }),
+                    false,
+                ),
+                choice(
+                    Yes,
+                    l.text(if *round == 1 {
+                        keys::CONFIRM_PAY_YES_1
+                    } else {
+                        keys::CONFIRM_PAY_YES_2
+                    }),
+                    true,
+                ),
+            ],
+        ),
         ConfirmKind::Permissions => (
             l.text(keys::CONFIRM_PERMISSIONS_TITLE),
             l.text(keys::CONFIRM_PERMISSIONS_HINT),

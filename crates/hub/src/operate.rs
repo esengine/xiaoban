@@ -28,6 +28,8 @@ pub struct Snapshot {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UiAction {
     Press,
+    /// Pressing a send or pay button the user has just approved.
+    PressConfirmed,
     SetText(String),
 }
 
@@ -64,6 +66,9 @@ pub trait Operator: Debug + Send + Sync + 'static {
     fn is_phone(&self) -> bool {
         false
     }
+    /// Lets the device's own guard operate a chat or payment app it would otherwise refuse; only
+    /// the hub, after the user said yes, ever calls this.
+    fn grant(&self, _app_id: &str, _on: bool) {}
     /// Whether this device can look at and drive other apps at all. Opening them is separate.
     fn can_operate(&self) -> bool {
         true

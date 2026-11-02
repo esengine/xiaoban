@@ -24,6 +24,12 @@ pub enum ConfirmKind {
     ReadOutside { path: String, folder: String },
     WriteOutside { path: String, folder: String, preview: Vec<crate::DiffLine> },
     SaveFile { path: String, folder: String, preview: Vec<crate::DiffLine> },
+    /// Chat or payment app: may Xiaoban operate it for this one task?
+    SensitiveApp { app: String, category: String },
+    /// About to press send in a chat app: to whom, and exactly what.
+    SendMessage { app: String, to: String, text: String },
+    /// About to press the last payment button; asked twice (round 1, then round 2).
+    Pay { app: String, payee: String, amount: String, round: u8 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

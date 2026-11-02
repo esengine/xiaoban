@@ -54,7 +54,7 @@ static RULES: LazyLock<Rules> = LazyLock::new(|| {
     }
 });
 
-fn mentions(label: &str, word: &str) -> bool {
+pub(crate) fn mentions(label: &str, word: &str) -> bool {
     if !word.is_ascii() {
         return label.contains(word);
     }
@@ -169,6 +169,10 @@ impl HubTools<'_> {
             .lock()
             .unwrap()
             .saw_screen(app_id, &snapshot.app, texts);
+        self.screens
+            .lock()
+            .unwrap()
+            .insert(app_id.to_owned(), snapshot.elements.clone());
         self.labels.lock().unwrap().insert(
             app_id.to_owned(),
             snapshot

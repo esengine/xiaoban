@@ -8,7 +8,10 @@
     "Pay",
     "Place order",
     "Submit order",
-    "Confirm order"
+    "Confirm order",
+    "缴费",
+    "充值",
+    "Top up"
   ],
   "packages": [
     "com.eg.android.AlipayGphone",
@@ -26,5 +29,34 @@
     "com.cib.cibmb",
     "com.webank.wemoney"
   ],
-  "packageWords": ["bank", "wallet", "pay"]
+  "packageWords": [
+    "bank",
+    "wallet",
+    "pay"
+  ],
+  "chat": [
+    "com.tencent.mm",
+    "com.tencent.mobileqq"
+  ],
+  "pay": [
+    "com.eg.android.AlipayGphone"
+  ],
+  "sendLabels": [
+    "发送",
+    "Send"
+  ],
+  "neverLabels": [
+    "转账",
+    "发红包",
+    "红包",
+    "收款",
+    "群发",
+    "添加朋友",
+    "加好友",
+    "添加到通讯录",
+    "Transfer",
+    "Red packet",
+    "Add friend",
+    "Send money"
+  ]
 }

@@ -442,12 +442,19 @@ pub struct HubTools<'a> {
     pub(crate) price_check: Mutex<Option<crate::price_check::PriceCheck>>,
     attachment: Mutex<Option<Attachment>>,
     snapshot: Option<String>,
+    pub(crate) screens: Mutex<std::collections::HashMap<String, Vec<crate::operate::UiElement>>>,
+    pub(crate) granted: Mutex<Vec<String>>,
     pub(crate) pack_changed: std::sync::atomic::AtomicBool,
 }
 
 impl Drop for HubTools<'_> {
     fn drop(&mut self) {
         self.end_price_check();
+        // A grant to operate a chat or payment app lasts for this one task and no longer.
+        let granted = std::mem::take(&mut *self.granted.lock().unwrap());
+        for app in granted {
+            self.state.operator.grant(&app, false);
+        }
     }
 }
 
@@ -472,6 +479,8 @@ impl<'a> HubTools<'a> {
             price_check: Mutex::new(None),
             attachment: Mutex::new(None),
             snapshot: None,
+            screens: Mutex::new(std::collections::HashMap::new()),
+            granted: Mutex::new(Vec::new()),
             pack_changed: std::sync::atomic::AtomicBool::new(false),
         }
     }

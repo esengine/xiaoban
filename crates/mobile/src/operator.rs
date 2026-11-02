@@ -118,6 +118,9 @@ impl Operator for PhoneOperator {
     ) -> BoxFuture<'static, Result<(), ActFailure>> {
         let request = match action {
             UiAction::Press => json!({ "op": "act", "app": app_id, "index": index, "do": "press" }),
+            UiAction::PressConfirmed => {
+                json!({ "op": "act", "app": app_id, "index": index, "do": "press_confirmed" })
+            }
             UiAction::SetText(text) => {
                 json!({ "op": "act", "app": app_id, "index": index, "do": "set", "text": text })
             }
@@ -138,6 +141,10 @@ impl Operator for PhoneOperator {
 
     fn is_phone(&self) -> bool {
         true
+    }
+
+    fn grant(&self, app_id: &str, on: bool) {
+        let _ = ask(&self.bridge, &json!({ "op": "grant", "app": app_id, "on": on }));
     }
 
     fn status(&self, title: Option<String>) {

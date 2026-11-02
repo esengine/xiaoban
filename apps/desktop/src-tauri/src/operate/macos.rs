@@ -447,7 +447,7 @@ fn act(
         std::thread::sleep(POINTER_TRAVEL);
     }
     let direct = match action {
-        UiAction::Press => {
+        UiAction::Press | UiAction::PressConfirmed => {
             let status = unsafe { element.perform_action(&CFString::from_static_str("AXPress")) };
             status == AXError::Success
         }
@@ -476,7 +476,7 @@ fn act(
     show(true);
     let text = match action {
         UiAction::SetText(value) => Some(value.as_str()),
-        UiAction::Press => None,
+        UiAction::Press | UiAction::PressConfirmed => None,
     };
     Ok(by_hand(bundle, center, text)?)
 }

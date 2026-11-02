@@ -100,6 +100,45 @@ export function confirmText(confirm: ConfirmRequest, t: Translator["t"]) {
       ] satisfies ConfirmOption[],
     };
   }
+  if (kind.kind === "sensitive_app") {
+    return {
+      title: t("confirm-sensitive-title", { app: kind.app }),
+      hint: t(kind.category === "chat" ? "confirm-sensitive-chat" : "confirm-sensitive-pay"),
+      detail: "",
+      choices: [
+        { choice: "no", label: t("confirm-sensitive-no") },
+        { choice: "once", label: t("confirm-sensitive-once"), primary: true },
+      ] satisfies ConfirmOption[],
+    };
+  }
+  if (kind.kind === "send_message") {
+    return {
+      title: t("confirm-send-title", { to: kind.to }),
+      hint: "",
+      detail: kind.text,
+      choices: [
+        { choice: "no", label: t("confirm-send-no") },
+        { choice: "edit", label: t("confirm-send-edit") },
+        { choice: "yes", label: t("confirm-send-yes"), primary: true },
+      ] satisfies ConfirmOption[],
+    };
+  }
+  if (kind.kind === "pay") {
+    const first = kind.round === 1;
+    return {
+      title: t(first ? "confirm-pay-title-1" : "confirm-pay-title-2"),
+      hint: first ? "" : t("confirm-pay-hint-2"),
+      detail: `${kind.payee} · ${kind.amount}`,
+      choices: [
+        { choice: "no", label: t(first ? "confirm-pay-no-1" : "confirm-pay-no-2") },
+        {
+          choice: "yes",
+          label: t(first ? "confirm-pay-yes-1" : "confirm-pay-yes-2"),
+          primary: true,
+        },
+      ] satisfies ConfirmOption[],
+    };
+  }
   if (kind.kind === "save_file") {
     return {
       title: t("confirm-save-title"),

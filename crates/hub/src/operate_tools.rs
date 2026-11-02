@@ -54,7 +54,14 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
         spec(
             CLICK,
             l.text(keys::TOOL_CLICK_DESCRIPTION),
-            &json!({ "app": app, "element": element(l), "label": text(l, keys::TOOL_OPERATE_LABEL) }),
+            &json!({
+                "app": app,
+                "element": element(l),
+                "label": text(l, keys::TOOL_OPERATE_LABEL),
+                "to": text(l, keys::TOOL_OPERATE_TO),
+                "payee": text(l, keys::TOOL_OPERATE_PAYEE),
+                "amount": text(l, keys::TOOL_OPERATE_AMOUNT),
+            }),
             &["app", "element", "label"],
         ),
         spec(
@@ -93,6 +100,9 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
                             "label": text(l, keys::TOOL_OPERATE_LABEL),
                             "text": text(l, keys::TOOL_TYPE_TEXT_TEXT),
                             "keys": text(l, keys::TOOL_PRESS_KEYS_KEYS),
+                            "to": text(l, keys::TOOL_OPERATE_TO),
+                            "payee": text(l, keys::TOOL_OPERATE_PAYEE),
+                            "amount": text(l, keys::TOOL_OPERATE_AMOUNT),
                         },
                         "required": ["do"],
                         "additionalProperties": false,
@@ -127,6 +137,9 @@ struct ElementArgs {
     app: String,
     element: u32,
     text: Option<String>,
+    to: Option<String>,
+    payee: Option<String>,
+    amount: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -144,7 +157,15 @@ struct StepsArgs {
 #[derive(Deserialize)]
 #[serde(tag = "do", rename_all = "lowercase")]
 enum Step {
-    Click { element: u32 },
+    Click {
+        element: u32,
+        #[serde(default)]
+        to: Option<String>,
+        #[serde(default)]
+        payee: Option<String>,
+        #[serde(default)]
+        amount: Option<String>,
+    },
     Type { element: u32, text: String },
     Keys { keys: String },
     Text { text: String },
@@ -213,6 +234,20 @@ impl HubTools<'_> {
                 ));
             }
         }
+        if self.state.operator.is_phone() {
+            match crate::sensitive::category(&app.id) {
+                Some(crate::sensitive::Category::Refused) => {
+                    return Err(error(
+                        "this is a bank or wallet app: Xiaoban never reads or operates it. You may open it for the user with open_app; say so plainly and tell them which steps they must do themselves. Do not offer to operate it",
+                    ));
+                }
+                Some(category) => {
+                    self.sensitive_grant(&app, category).await?;
+                    return Ok(app);
+                }
+                None => {}
+            }
+        }
         let known = self.allowed_once.lock().unwrap().contains(&app.id)
             || allowed(self.state).await.contains(&app.id);
         if !known {
@@ -234,6 +269,183 @@ impl HubTools<'_> {
             }
         }
         Ok(app)
+    }
+
+    /// A chat or payment app is operated only when the user says yes to this task, and never for good.
+    async fn sensitive_grant(&self, app: &AppEntry, category: crate::sensitive::Category) -> Result<(), String> {
+        if self.granted.lock().unwrap().contains(&app.id) {
+            return Ok(());
+        }
+        let name = match category {
+            crate::sensitive::Category::Chat => "chat",
+            _ => "pay",
+        };
+        match self
+            .ask(ConfirmKind::SensitiveApp {
+                app: app.name.clone(),
+                category: name.to_owned(),
+            })
+            .await
+        {
+            ConfirmChoice::Once | ConfirmChoice::Yes | ConfirmChoice::Always => {
+                self.granted.lock().unwrap().push(app.id.clone());
+                self.state.operator.grant(&app.id, true);
+                Ok(())
+            }
+            ConfirmChoice::Edit | ConfirmChoice::No => Err(error(&format!(
+                "the user did not allow Xiaoban to operate {} this time. Tell them exactly that. You may offer to open it for them with open_app and say which steps they would do themselves. Do not guess other reasons such as a locked phone or missing permissions",
+                app.name
+            ))),
+        }
+    }
+
+    fn element_label(&self, app_id: &str, element: u32) -> Option<String> {
+        self.labels
+            .lock()
+            .unwrap()
+            .get(app_id)
+            .and_then(|labels| labels.get(&element).cloned())
+    }
+
+    /// Everything the screen last showed, as plain text to check claims against.
+    fn screen_texts(&self, app_id: &str) -> Vec<String> {
+        self.screens
+            .lock()
+            .unwrap()
+            .get(app_id)
+            .map(|elements| {
+                elements
+                    .iter()
+                    .flat_map(|element| std::iter::once(element.label.clone()).chain(element.value.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    fn typed_message(&self, app_id: &str) -> Option<String> {
+        self.screens
+            .lock()
+            .unwrap()
+            .get(app_id)?
+            .iter()
+            .rev()
+            .filter(|element| element.role == "text field")
+            .find_map(|element| element.value.clone().filter(|value| !value.trim().is_empty()))
+    }
+
+    fn chat_keys_guard(&self, app_id: &str, keys: &str) -> Result<(), String> {
+        if self.state.operator.is_phone()
+            && crate::sensitive::category(app_id) == Some(crate::sensitive::Category::Chat)
+            && crate::sensitive::is_enter(keys)
+        {
+            return Err("in a chat app a message is sent with the send button, so the user can be asked first; press that button and give the recipient in `to`".to_owned());
+        }
+        Ok(())
+    }
+
+    fn chat_text_guard(&self, app_id: &str, text: &str) -> Result<(), String> {
+        if self.state.operator.is_phone()
+            && crate::sensitive::category(app_id) == Some(crate::sensitive::Category::Chat)
+            && text.contains('\n')
+        {
+            return Err("a line break can send the message from the keyboard; type the message on one line and use the send button".to_owned());
+        }
+        Ok(())
+    }
+
+    /// Before a press on a phone: refuse what is never done, and have the user approve a send or a
+    /// payment, checked against what is really on the screen. `true` means the user approved it.
+    async fn confirm_press(
+        &self,
+        app: &AppEntry,
+        element: u32,
+        to: Option<&str>,
+        payee: Option<&str>,
+        amount: Option<&str>,
+    ) -> Result<bool, String> {
+        if !self.state.operator.is_phone() {
+            return Ok(false);
+        }
+        let Some(label) = self.element_label(&app.id, element) else {
+            return Ok(false);
+        };
+        if crate::sensitive::never_label(&label) {
+            return Err(format!(
+                "Xiaoban never presses \"{label}\" (money to other people, red packets, group sends, adding contacts). Tell the user they have to do that themselves"
+            ));
+        }
+        let screen = self.screen_texts(&app.id);
+        let shown: Vec<&str> = screen.iter().map(String::as_str).collect();
+        if crate::sensitive::pay_label(&label) {
+            return self.confirm_payment(app, payee, amount, &shown).await.map(|()| true);
+        }
+        let chat = crate::sensitive::category(&app.id) == Some(crate::sensitive::Category::Chat);
+        if chat && crate::sensitive::send_label(&label) {
+            return self.confirm_send(app, to, &shown).await.map(|()| true);
+        }
+        Ok(false)
+    }
+
+    async fn confirm_send(&self, app: &AppEntry, to: Option<&str>, shown: &[&str]) -> Result<(), String> {
+        let Some(text) = self.typed_message(&app.id) else {
+            return Err("there is no typed message on the screen to send; type it first, look at the app again, then press send".to_owned());
+        };
+        let Some(to) = to.filter(|name| !name.trim().is_empty()) else {
+            return Err("pressing send needs `to`: the name of the person or chat as it is shown at the top of this screen".to_owned());
+        };
+        if !crate::sensitive::name_shown(to, shown) {
+            return Err(format!("\"{to}\" is not on this screen; open the right chat and look at the app again before sending"));
+        }
+        match self
+            .ask(ConfirmKind::SendMessage {
+                app: app.name.clone(),
+                to: to.trim().to_owned(),
+                text,
+            })
+            .await
+        {
+            ConfirmChoice::Yes | ConfirmChoice::Once | ConfirmChoice::Always => Ok(()),
+            ConfirmChoice::Edit => Err("the user wants to change the message first; ask what to change and do not send it".to_owned()),
+            ConfirmChoice::No => Err("the user chose not to send it; do not send it".to_owned()),
+        }
+    }
+
+    async fn confirm_payment(
+        &self,
+        app: &AppEntry,
+        payee: Option<&str>,
+        amount: Option<&str>,
+        shown: &[&str],
+    ) -> Result<(), String> {
+        let (Some(payee), Some(amount)) = (
+            payee.filter(|name| !name.trim().is_empty()),
+            amount.filter(|value| !value.trim().is_empty()),
+        ) else {
+            return Err("this is the payment step; pressing it needs `payee` and `amount`, written exactly as this screen shows them".to_owned());
+        };
+        if !crate::sensitive::name_shown(payee, shown) {
+            return Err(format!("\"{payee}\" is not on this screen; do not make up who is paid, look at the app again"));
+        }
+        if !crate::sensitive::amount_shown(amount, shown) {
+            return Err(format!("{amount} is not an amount on this screen; do not make up how much is paid, look at the app again"));
+        }
+        for round in 1..=2u8 {
+            match self
+                .ask(ConfirmKind::Pay {
+                    app: app.name.clone(),
+                    payee: payee.trim().to_owned(),
+                    amount: amount.trim().to_owned(),
+                    round,
+                })
+                .await
+            {
+                ConfirmChoice::Yes | ConfirmChoice::Once | ConfirmChoice::Always => {}
+                ConfirmChoice::Edit | ConfirmChoice::No => {
+                    return Err("the user chose not to pay; do not press the payment button, tell them where you stopped".to_owned());
+                }
+            }
+        }
+        Ok(())
     }
 
     pub(crate) async fn look_at_app(&self, arguments: &str) -> String {
@@ -327,12 +539,28 @@ impl HubTools<'_> {
             return Err("stopped by the user".to_owned());
         }
         match &step {
-            Step::Click { element } => self.price_step_guard(&app.id, *element, false)?,
+            Step::Click { element, .. } => self.price_step_guard(&app.id, *element, false)?,
             Step::Type { element, .. } => self.price_step_guard(&app.id, *element, true)?,
-            Step::Keys { .. } | Step::Text { .. } => {}
+            Step::Keys { keys } => self.chat_keys_guard(&app.id, keys)?,
+            Step::Text { text } => self.chat_text_guard(&app.id, text)?,
         }
         match step {
-            Step::Click { element } => self.act(app, element, UiAction::Press).await,
+            Step::Click {
+                element,
+                to,
+                payee,
+                amount,
+            } => {
+                let approved = self
+                    .confirm_press(app, element, to.as_deref(), payee.as_deref(), amount.as_deref())
+                    .await?;
+                let action = if approved {
+                    UiAction::PressConfirmed
+                } else {
+                    UiAction::Press
+                };
+                self.act(app, element, action).await
+            }
             Step::Type { element, text } => self.act(app, element, UiAction::SetText(text)).await,
             Step::Keys { keys } => self.state.operator.keys(app.id.clone(), keys).await,
             Step::Text { text } => self.state.operator.type_into(app.id.clone(), text).await,
@@ -354,6 +582,9 @@ impl HubTools<'_> {
         let step = match (typing, args.text) {
             (false, _) => Step::Click {
                 element: args.element,
+                to: args.to,
+                payee: args.payee,
+                amount: args.amount,
             },
             (true, Some(text)) => Step::Type {
                 element: args.element,

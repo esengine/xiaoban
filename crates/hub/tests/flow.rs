@@ -2525,6 +2525,536 @@ async fn live_save_file() {
     hub.shutdown().await;
 }
 
+const ALIPAY: &str = "com.eg.android.AlipayGphone";
+const WECHAT: &str = "com.tencent.mm";
+const ICBC: &str = "com.icbc";
+
+#[derive(Debug)]
+struct PhoneApps;
+
+impl Apps for PhoneApps {
+    fn list(&self) -> BoxFuture<'static, Vec<AppEntry>> {
+        Box::pin(async {
+            [(ALIPAY, "支付宝"), (WECHAT, "微信"), (ICBC, "工商银行")]
+                .into_iter()
+                .map(|(id, name)| AppEntry {
+                    id: id.into(),
+                    name: name.into(),
+                    aliases: Vec::new(),
+                })
+                .collect()
+        })
+    }
+
+    fn open(&self, _id: String) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async { Ok(()) })
+    }
+}
+
+/// A phone: every app shows the same fixed screen, and what is done to it is written down.
+#[derive(Debug)]
+struct PhoneOperator {
+    screen: Vec<UiElement>,
+    events: std::sync::Mutex<Vec<String>>,
+}
+
+impl PhoneOperator {
+    fn new(screen: &[(&str, &str, Option<&str>)]) -> Arc<Self> {
+        let screen = screen
+            .iter()
+            .enumerate()
+            .map(|(index, (role, label, value))| UiElement {
+                index: u32::try_from(index).unwrap(),
+                role: (*role).into(),
+                label: (*label).into(),
+                value: value.map(str::to_owned),
+                disabled: false,
+            })
+            .collect();
+        Arc::new(Self {
+            screen,
+            events: std::sync::Mutex::default(),
+        })
+    }
+
+    fn events(&self) -> Vec<String> {
+        self.events.lock().unwrap().clone()
+    }
+}
+
+impl Operator for PhoneOperator {
+    fn permissions(&self) -> OperatePermissions {
+        OperatePermissions { control: true }
+    }
+
+    fn is_phone(&self) -> bool {
+        true
+    }
+
+    fn grant(&self, app_id: &str, on: bool) {
+        self.events
+            .lock()
+            .unwrap()
+            .push(format!("grant {app_id} {on}"));
+    }
+
+    fn snapshot(&self, app_id: String) -> BoxFuture<'static, Result<Snapshot, String>> {
+        self.events.lock().unwrap().push(format!("look {app_id}"));
+        let elements = self.screen.clone();
+        Box::pin(async move {
+            Ok(Snapshot {
+                app: "应用".into(),
+                window: None,
+                elements,
+                truncated: false,
+            })
+        })
+    }
+
+    fn act(
+        &self,
+        app_id: String,
+        index: u32,
+        action: UiAction,
+        _allow_mouse: bool,
+    ) -> BoxFuture<'static, Result<(), ActFailure>> {
+        let name = match action {
+            UiAction::Press => "press",
+            UiAction::PressConfirmed => "press_confirmed",
+            UiAction::SetText(_) => "set",
+        };
+        self.events
+            .lock()
+            .unwrap()
+            .push(format!("{name} {app_id} {index}"));
+        Box::pin(async { Ok(()) })
+    }
+
+    fn keys(&self, app_id: String, combo: String) -> BoxFuture<'static, Result<(), String>> {
+        self.events
+            .lock()
+            .unwrap()
+            .push(format!("keys {app_id} {combo}"));
+        Box::pin(async { Ok(()) })
+    }
+
+    fn type_into(&self, app_id: String, text: String) -> BoxFuture<'static, Result<(), String>> {
+        self.events
+            .lock()
+            .unwrap()
+            .push(format!("text {app_id} {text}"));
+        Box::pin(async { Ok(()) })
+    }
+}
+
+/// Runs one message through a hub whose phone shows `screen`, answering the cards as listed, and
+/// hands back what the model was told after each step plus what was done to the phone.
+async fn on_the_phone(
+    screen: &[(&str, &str, Option<&str>)],
+    script: Vec<Vec<ModelChunk>>,
+    mut answers: Vec<Answer>,
+) -> (Vec<String>, Vec<String>) {
+    let phone = PhoneOperator::new(screen);
+    let provider = RecordingProvider::new(ScriptedProvider::sequence(script));
+    let mut runtime = runtime(provider.clone());
+    runtime.operator = phone.clone();
+    runtime.apps = Arc::new(PhoneApps);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "帮我弄一下".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    answer_confirms(&mut client, &thread, &mut answers, 1).await;
+    assert!(answers.is_empty(), "every card in the script was shown");
+    // The grant is taken back once the turn is over.
+    let count = |phone: &PhoneOperator, end: &str| {
+        phone
+            .events()
+            .iter()
+            .filter(|event| event.ends_with(end))
+            .count()
+    };
+    for _ in 0..200 {
+        if count(&phone, " false") >= count(&phone, " true") {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let results = provider
+        .requests()
+        .iter()
+        .skip(1)
+        .map(|request| request.messages.last().unwrap().content.clone())
+        .collect();
+    let events = phone.events();
+    hub.shutdown().await;
+    (results, events)
+}
+
+/// Looking at the screen is not the point of these checks; what was pressed is.
+fn without_looking(events: Vec<String>) -> Vec<String> {
+    events
+        .into_iter()
+        .filter(|event| !event.starts_with("look"))
+        .collect()
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn click(app: &str, element: u32, label: &str, extra: serde_json::Value) -> Vec<ModelChunk> {
+    let mut arguments = serde_json::json!({ "app": app, "element": element, "label": label });
+    arguments
+        .as_object_mut()
+        .unwrap()
+        .extend(extra.as_object().unwrap().clone());
+    vec![tool_call("click", &arguments)]
+}
+
+fn look(app: &str) -> Vec<ModelChunk> {
+    vec![tool_call(
+        "look_at_app",
+        &serde_json::json!({ "app": app, "name": "x" }),
+    )]
+}
+
+const BILL: [(&str, &str, Option<&str>); 3] = [
+    ("text", "国网上海电力 · 10 月电费", None),
+    ("text", "应缴 ¥126.00", None),
+    ("button", "确认付款", None),
+];
+
+#[tokio::test]
+async fn paying_asks_twice_and_only_for_what_the_screen_shows() {
+    let script = vec![
+        look(ALIPAY),
+        click(ALIPAY, 2, "确认付款", serde_json::json!({})),
+        click(
+            ALIPAY,
+            2,
+            "确认付款",
+            serde_json::json!({ "payee": "国家电网", "amount": "126" }),
+        ),
+        click(
+            ALIPAY,
+            2,
+            "确认付款",
+            serde_json::json!({ "payee": "国网上海电力", "amount": "99" }),
+        ),
+        click(
+            ALIPAY,
+            2,
+            "确认付款",
+            serde_json::json!({ "payee": "国网上海电力", "amount": "¥126.00" }),
+        ),
+        vec![ModelChunk::Text("付了".into())],
+    ];
+    let answers: Vec<Answer> = vec![
+        (
+            |kind| matches!(kind, ConfirmKind::SensitiveApp { category, .. } if category == "pay"),
+            ConfirmChoice::Once,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::Pay { round: 1, amount, .. } if amount == "¥126.00"),
+            ConfirmChoice::Yes,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::Pay { round: 2, .. }),
+            ConfirmChoice::Yes,
+        ),
+    ];
+    let (results, events) = on_the_phone(&BILL, script, answers).await;
+    let events = without_looking(events);
+    assert!(
+        results[1].contains("needs `payee` and `amount`"),
+        "{results:?}"
+    );
+    assert!(results[2].contains("not on this screen"), "{results:?}");
+    assert!(
+        results[3].contains("not an amount on this screen"),
+        "{results:?}"
+    );
+    assert_eq!(
+        events,
+        [
+            format!("grant {ALIPAY} true"),
+            format!("press_confirmed {ALIPAY} 2"),
+            format!("grant {ALIPAY} false"),
+        ],
+        "only the last, fully confirmed attempt reached the phone"
+    );
+}
+
+#[tokio::test]
+async fn saying_no_to_the_second_payment_question_stops_the_payment() {
+    let script = vec![
+        look(ALIPAY),
+        click(
+            ALIPAY,
+            2,
+            "确认付款",
+            serde_json::json!({ "payee": "国网上海电力", "amount": "126" }),
+        ),
+        vec![ModelChunk::Text("没付".into())],
+    ];
+    let answers: Vec<Answer> = vec![
+        (
+            |kind| matches!(kind, ConfirmKind::SensitiveApp { .. }),
+            ConfirmChoice::Once,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::Pay { round: 1, .. }),
+            ConfirmChoice::Yes,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::Pay { round: 2, .. }),
+            ConfirmChoice::No,
+        ),
+    ];
+    let (results, events) = on_the_phone(&BILL, script, answers).await;
+    assert!(results[1].contains("chose not to pay"), "{results:?}");
+    assert!(
+        !events.iter().any(|event| event.starts_with("press")),
+        "{events:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_chat_or_payment_app_stays_shut_unless_the_user_says_yes_for_this_task() {
+    let script = vec![look(WECHAT), vec![ModelChunk::Text("好".into())]];
+    let answers: Vec<Answer> = vec![(
+        |kind| matches!(kind, ConfirmKind::SensitiveApp { category, .. } if category == "chat"),
+        ConfirmChoice::No,
+    )];
+    let (results, events) = on_the_phone(&BILL, script, answers).await;
+    assert!(
+        results[0].contains("did not allow Xiaoban to operate 微信 this time"),
+        "{results:?}"
+    );
+    assert!(
+        results[0].contains("Do not guess other reasons"),
+        "{results:?}"
+    );
+    assert!(events.is_empty(), "nothing was looked at or granted: {events:?}");
+
+    // Bank apps are never operated; there is no card to answer.
+    let script = vec![look(ICBC), vec![ModelChunk::Text("好".into())]];
+    let (results, events) = on_the_phone(&BILL, script, Vec::new()).await;
+    assert!(results[0].contains("bank or wallet app"), "{results:?}");
+    assert!(events.is_empty(), "{events:?}");
+}
+
+#[tokio::test]
+async fn a_message_is_sent_only_after_the_user_sees_who_and_what() {
+    let chat = [
+        ("text", "老婆", None),
+        ("text field", "消息", Some("今晚晚点回，8 点到家")),
+        ("button", "发送", None),
+        ("button", "转账", None),
+    ];
+    let script = vec![
+        look(WECHAT),
+        vec![tool_call(
+            "press_keys",
+            &serde_json::json!({ "app": WECHAT, "keys": "enter" }),
+        )],
+        click(WECHAT, 2, "发送", serde_json::json!({})),
+        click(WECHAT, 2, "发送", serde_json::json!({ "to": "张三" })),
+        click(WECHAT, 3, "转账", serde_json::json!({})),
+        click(WECHAT, 2, "发送", serde_json::json!({ "to": "老婆" })),
+        click(WECHAT, 2, "发送", serde_json::json!({ "to": "老婆" })),
+        vec![ModelChunk::Text("发了".into())],
+    ];
+    let answers: Vec<Answer> = vec![
+        (
+            |kind| matches!(kind, ConfirmKind::SensitiveApp { .. }),
+            ConfirmChoice::Once,
+        ),
+        (
+            |kind| {
+                matches!(kind, ConfirmKind::SendMessage { to, text, .. }
+                    if to == "老婆" && text == "今晚晚点回，8 点到家")
+            },
+            ConfirmChoice::Edit,
+        ),
+        (
+            |kind| matches!(kind, ConfirmKind::SendMessage { .. }),
+            ConfirmChoice::Yes,
+        ),
+    ];
+    let (results, events) = on_the_phone(&chat, script, answers).await;
+    let events = without_looking(events);
+    assert!(
+        results[1].contains("send button"),
+        "the keyboard cannot send: {results:?}"
+    );
+    assert!(results[2].contains("needs `to`"), "{results:?}");
+    assert!(results[3].contains("not on this screen"), "{results:?}");
+    assert!(results[4].contains("never presses"), "{results:?}");
+    assert!(
+        results[5].contains("change the message first"),
+        "{results:?}"
+    );
+    assert_eq!(
+        events,
+        [
+            format!("grant {WECHAT} true"),
+            format!("press_confirmed {WECHAT} 2"),
+            format!("grant {WECHAT} false"),
+        ]
+    );
+}
+
+/// What a real model does with "pay my electricity bill" on a fake phone showing a fake bill. Every
+/// card is answered: the app grant yes, the first payment question no, so nothing is ever paid.
+/// `XIAOBAN_TEST_FRAME_SECS=300 cargo test -p xiaoban-hub --test flow live_phone_pay -- --ignored --nocapture`
+#[tokio::test]
+#[ignore = "calls a real model"]
+async fn live_phone_pay() {
+    let api_key = std::env::var("LIVE_API_KEY").ok().or_else(|| {
+        xiaoban_hub::KeyringSecrets::new(xiaoban_hub::KEYCHAIN_SERVICE)
+            .load(ProviderId::Deepseek)
+            .ok()
+            .flatten()
+    });
+    let Some(api_key) = api_key else {
+        eprintln!("set LIVE_API_KEY, or configure a DeepSeek key in the app");
+        return;
+    };
+    let provider = RecordingProvider::wrap(xiaoban_agent::OpenAiCompatible::new(OpenAiConfig {
+        base_url: std::env::var("LIVE_BASE_URL")
+            .unwrap_or_else(|_| "https://api.deepseek.com".into()),
+        api_key,
+        model: std::env::var("LIVE_MODEL").unwrap_or_else(|_| "deepseek-v4-flash".into()),
+        api: xiaoban_protocol::ModelApi::OpenAi,
+    }));
+    let phone = PhoneOperator::new(&BILL);
+    let mut runtime = runtime_with(
+        provider.clone(),
+        &format!(
+            "{}\n\n{}",
+            Prompts::for_locale(Locale::ZhCn).chat,
+            Prompts::for_phone(Locale::ZhCn).chat
+        ),
+        Some(deepseek(VALID_KEY)),
+        Arc::new(MemorySecrets::default()),
+    );
+    runtime.operator = phone.clone();
+    runtime.apps = Arc::new(PhoneApps);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    hub.set_lazy_packs(true);
+    let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { turn_id, .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "电费快到期了帮我交".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let deadline = std::time::Instant::now() + Duration::from_secs(420);
+    while std::time::Instant::now() < deadline {
+        let Response::PendingConfirms { confirms } = client.request(Request::PendingConfirms).await
+        else {
+            panic!("expected confirms");
+        };
+        if let Response::PendingAsks { asks } = client.request(Request::PendingAsks).await {
+            for ask in asks {
+                let answers: Vec<xiaoban_protocol::AskAnswer> = ask
+                    .questions
+                    .iter()
+                    .map(|question| match question.options.first() {
+                        Some(option) => {
+                            println!("asked: {} -> {}", question.text, option.label);
+                            xiaoban_protocol::AskAnswer::Chosen { labels: vec![option.label.clone()] }
+                        }
+                        None => {
+                            println!("asked: {} -> 3307", question.text);
+                            xiaoban_protocol::AskAnswer::Typed { text: "3307".into() }
+                        }
+                    })
+                    .collect();
+                let _ = client
+                    .try_request(Request::AnswerAsk { ask_id: ask.id, answers })
+                    .await;
+            }
+        }
+        for confirm in confirms {
+            let choice = match &confirm.kind {
+                ConfirmKind::SensitiveApp { app, category } => {
+                    println!("card: operate {app}? ({category}) -> yes, this once");
+                    ConfirmChoice::Once
+                }
+                ConfirmKind::Pay {
+                    payee,
+                    amount,
+                    round,
+                    ..
+                } => {
+                    println!("card: pay {payee} {amount}, round {round} -> no");
+                    ConfirmChoice::No
+                }
+                other => {
+                    println!("card: {other:?} -> no");
+                    ConfirmChoice::No
+                }
+            };
+            let _ = client
+                .try_request(Request::AnswerConfirm {
+                    confirm_id: confirm.id,
+                    choice,
+                })
+                .await;
+        }
+        let Response::Messages { messages, .. } = client
+            .request(Request::ListMessages {
+                thread_id: thread.clone(),
+                before: None,
+                limit: None,
+            })
+            .await
+        else {
+            panic!("expected messages");
+        };
+        if messages.iter().any(|message| message.role == Role::Assistant) {
+            println!("reply: {}", messages.last().unwrap().text);
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    let _ = client.try_request(Request::CancelTurn { turn_id }).await;
+    let mut calls: Vec<String> = Vec::new();
+    for request in provider.requests() {
+        for message in &request.messages {
+            for call in &message.tool_calls {
+                let text = format!("{}({})", call.function.name, call.function.arguments);
+                if !calls.contains(&text) {
+                    calls.push(text);
+                }
+            }
+        }
+    }
+    println!("tools the model called: {calls:#?}");
+    println!("requests sent: {}", provider.requests().len());
+    println!("done to the phone: {:?}", phone.events());
+    hub.shutdown().await;
+}
+
 #[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());

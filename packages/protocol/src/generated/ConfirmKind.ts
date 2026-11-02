@@ -11,4 +11,7 @@ export type ConfirmKind =
   | { kind: "run_command"; command: string; cwd: string; rule: string }
   | { kind: "read_outside"; path: string; folder: string }
   | { kind: "write_outside"; path: string; folder: string; preview: Array<DiffLine> }
-  | { kind: "save_file"; path: string; folder: string; preview: Array<DiffLine> };
+  | { kind: "save_file"; path: string; folder: string; preview: Array<DiffLine> }
+  | { kind: "sensitive_app"; app: string; category: string }
+  | { kind: "send_message"; app: string; to: string; text: string }
+  | { kind: "pay"; app: string; payee: string; amount: string; round: number };
