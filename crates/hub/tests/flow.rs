@@ -2919,6 +2919,7 @@ async fn a_message_is_sent_only_after_the_user_sees_who_and_what() {
 /// `XIAOBAN_TEST_FRAME_SECS=300 cargo test -p xiaoban-hub --test flow live_phone_pay -- --ignored --nocapture`
 #[tokio::test]
 #[ignore = "calls a real model"]
+#[allow(clippy::too_many_lines)]
 async fn live_phone_pay() {
     let api_key = std::env::var("LIVE_API_KEY").ok().or_else(|| {
         xiaoban_hub::KeyringSecrets::new(xiaoban_hub::KEYCHAIN_SERVICE)
