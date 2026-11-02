@@ -6,6 +6,7 @@ import { useHub } from "../../app/hub.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { PlanRing } from "../plan/PlanCard.tsx";
 import { usePlanSummary } from "../plan/planSummary.ts";
+import { TodoDailyCard, TodosDialog } from "../todo/TodoLists.tsx";
 import { WeatherIcon } from "../trip/icons.tsx";
 import { DailyArranged } from "./DailyArrange.tsx";
 import { DishCover } from "./KitchenPage.tsx";
@@ -158,6 +159,7 @@ export function DailyPage({
       ](),
   };
   const [editing, setEditing] = useState(false);
+  const [todosOpen, setTodosOpen] = useState(false);
 
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
@@ -229,6 +231,12 @@ export function DailyPage({
                     </div>
                   </section>
                 ) : null,
+            },
+            {
+              id: "todos",
+              title: t("todo-title"),
+              wide: false,
+              node: <TodoDailyCard onOpenAll={() => setTodosOpen(true)} />,
             },
             {
               id: "food",
@@ -347,6 +355,7 @@ export function DailyPage({
         />
         {editing && <MutedTray />}
       </div>
+      {todosOpen && <TodosDialog onClose={() => setTodosOpen(false)} />}
     </main>
   );
 }

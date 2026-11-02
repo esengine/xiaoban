@@ -39,6 +39,7 @@ import { usePlanDock } from "../plan/usePlanDock.ts";
 import { FailedCard, RunMarker, ScheduleBar, ScheduleCard } from "../schedule/ScheduleCard.tsx";
 import { SheetCard } from "../sheet/SheetCard.tsx";
 import { DeckCard, WritingDecks } from "../slides/DeckCard.tsx";
+import { TodoCard } from "../todo/TodoCard.tsx";
 import { EventCard } from "../trip/EventCard.tsx";
 import { SearchCard, SearchDialog } from "../trip/SearchCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
@@ -542,6 +543,9 @@ export function ChatPane(full: Props) {
     }
     if (attachment?.kind === "schedule") {
       return <ScheduleCard scheduleId={attachment.scheduleId} onOpenThread={props.onOpenThread} />;
+    }
+    if (attachment?.kind === "todos") {
+      return <TodoCard todoIds={attachment.todoIds} />;
     }
     if (attachment?.kind === "schedule_failed") {
       return <FailedCard scheduleId={attachment.scheduleId} reason={attachment.reason} />;

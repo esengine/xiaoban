@@ -3,6 +3,7 @@ import { useI18n } from "@xiaoban/i18n/react";
 import { type ReactNode, useState } from "react";
 import { MascotFace } from "../onboarding/Mascot.tsx";
 import { SchedulesDialog } from "../schedule/SchedulesDialog.tsx";
+import { TodosDialog } from "../todo/TodoLists.tsx";
 
 interface Destination {
   id: string;
@@ -68,6 +69,7 @@ export function Rail({
 }) {
   const { t } = useI18n();
   const [schedules, setSchedules] = useState(false);
+  const [todos, setTodos] = useState(false);
   return (
     <nav className="rail" aria-label={t("nav-main")}>
       <div className="rail__logo" role="img" aria-label={t("app-name")}>
@@ -99,6 +101,30 @@ export function Rail({
           </svg>
         </button>
       ))}
+      <button
+        type="button"
+        className="rail__item"
+        data-nav="todos"
+        aria-label={t("todo-title")}
+        aria-expanded={todos}
+        title={t("todo-title")}
+        onClick={() => setTodos(true)}
+      >
+        <svg
+          aria-hidden="true"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        >
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M8.5 12.2l2.4 2.4 4.6-5" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {todos && <TodosDialog onClose={() => setTodos(false)} />}
       <button
         type="button"
         className="rail__item"
