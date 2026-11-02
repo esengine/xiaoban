@@ -826,6 +826,33 @@ impl ToolRunner for HubTools<'_> {
         )
     }
 
+    fn concurrent(&self, call: &ToolCall) -> bool {
+        match call.function.name.as_str() {
+            WEATHER
+            | WEB_SEARCH
+            | READ_PAGE
+            | FIND_APPS
+            | crate::code_tools::LIST_DIR
+            | crate::code_tools::READ_FILE
+            | crate::code_tools::SEARCH_FILES
+            | crate::file_tools::FILE_SEARCH
+            | crate::file_tools::FILE_READ
+            | crate::file_tools::RECALL
+            | crate::file_tools::HISTORY_SEARCH
+            | crate::file_tools::HISTORY_READ
+            | crate::file_tools::HISTORY_OUTLINE
+            | crate::thread_tools::LIST_THREADS
+            | crate::thread_tools::FIND_THREADS
+            | crate::thread_tools::READ_THREAD
+            | crate::mail::SEARCH
+            | crate::mail::READ => true,
+            name @ (crate::vcs_tools::GIT | crate::vcs_tools::GH) => {
+                crate::vcs_tools::reads(name, &call.function.arguments)
+            }
+            _ => false,
+        }
+    }
+
     fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String> {
         Box::pin(async move {
             let arguments = call.function.arguments.as_str();

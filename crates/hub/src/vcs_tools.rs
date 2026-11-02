@@ -115,6 +115,18 @@ pub fn gh_reads(args: &[String]) -> bool {
     }
 }
 
+/// True for a `git`/`gh` call that only reads, judged the same way the permission prompt is.
+pub(crate) fn reads(name: &str, arguments: &str) -> bool {
+    let Ok(Args { args }) = serde_json::from_str::<Args>(arguments) else {
+        return false;
+    };
+    let args: Vec<String> = args.into_iter().skip_while(|arg| arg == name).collect();
+    if args.first().is_none_or(|first| first.starts_with('-')) {
+        return false;
+    }
+    if name == GIT { git_reads(&args) } else { gh_reads(&args) }
+}
+
 fn quoted(args: &[String]) -> String {
     args.iter()
         .map(|arg| {

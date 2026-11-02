@@ -11,6 +11,7 @@ use crate::prompt::{StablePrefix, Transcript, assemble_with};
 use crate::{AgentError, ChatMessage, ChatRole, ModelChunk, ModelProvider, ToolCall};
 
 const REPEAT_LIMIT: u32 = 2;
+const MAX_PARALLEL: usize = 8;
 const REPEATED: &str = r#"{"error":"you already ran this exact call twice in this turn; stop repeating it and answer with what you have"}"#;
 
 fn canonical(arguments: &str) -> String {
@@ -42,6 +43,11 @@ pub trait ToolRunner: Send + Sync {
         true
     }
 
+    /// Whether this call only reads, so it may run alongside its neighbours in the same step.
+    fn concurrent(&self, _call: &ToolCall) -> bool {
+        false
+    }
+
     fn notes(&self) -> Vec<String> {
         Vec::new()
     }
@@ -55,6 +61,90 @@ impl ToolRunner for NoTools {
         let message = format!("unknown tool {}", call.function.name);
         Box::pin(async move { message })
     }
+}
+
+type Seen = HashMap<(String, String), (String, u32)>;
+
+/// Runs one step's tool calls. Consecutive read-only calls run together; everything else runs
+/// alone, in order, so a write never overlaps the reads around it. Results always come back in
+/// the order the model asked for them.
+async fn run_calls(
+    calls: &[ToolCall],
+    tools: &dyn ToolRunner,
+    events: &mpsc::Sender<TurnEvent>,
+    cancel: &CancellationToken,
+    seen: &mut Seen,
+    tail: &mut Vec<ChatMessage>,
+) -> Result<(), AgentError> {
+    let mut start = 0;
+    while start < calls.len() {
+        if cancel.is_cancelled() {
+            return Err(AgentError::Cancelled);
+        }
+        let end = if tools.concurrent(&calls[start]) {
+            start
+                + calls[start..]
+                    .iter()
+                    .take_while(|call| tools.concurrent(call))
+                    .count()
+        } else {
+            start + 1
+        };
+        let batch = &calls[start..end];
+        start = end;
+        for call in batch {
+            let _ = events.send(TurnEvent::ToolUsed(call.clone())).await;
+        }
+        let keys: Vec<_> = batch
+            .iter()
+            .map(|call| {
+                (
+                    call.function.name.clone(),
+                    canonical(&call.function.arguments),
+                )
+            })
+            .collect();
+        let mut results: Vec<Option<String>> = vec![None; batch.len()];
+        let mut fresh = Vec::new();
+        for (index, call) in batch.iter().enumerate() {
+            match seen
+                .get_mut(&keys[index])
+                .filter(|_| tools.reusable(&call.function.name))
+            {
+                Some((_, count)) if *count >= REPEAT_LIMIT => {
+                    results[index] = Some(REPEATED.to_owned());
+                }
+                Some((cached, count)) => {
+                    *count += 1;
+                    results[index] = Some(cached.clone());
+                }
+                None => fresh.push(index),
+            }
+        }
+        let mut outputs: Vec<String> = Vec::with_capacity(fresh.len());
+        for group in fresh.chunks(MAX_PARALLEL) {
+            let running: Vec<_> = group
+                .iter()
+                .map(|&index| tools.run(&batch[index]))
+                .collect();
+            outputs.extend(futures_util::future::join_all(running).await);
+        }
+        for (index, output) in fresh.into_iter().zip(outputs) {
+            seen.insert(keys[index].clone(), (output.clone(), 1));
+            results[index] = Some(output);
+        }
+        for (call, result) in batch.iter().zip(results) {
+            let result = result.unwrap_or_default();
+            let _ = events
+                .send(TurnEvent::ToolFinished {
+                    call: call.clone(),
+                    result: result.clone(),
+                })
+                .await;
+            tail.push(ChatMessage::tool_result(call.id.clone(), result));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -181,7 +271,7 @@ impl Agent {
         let mut usage = Usage::default();
         let mut peak_input = 0;
 
-        let mut seen: HashMap<(String, String), (String, u32)> = HashMap::new();
+        let mut seen = Seen::new();
         loop {
             let before = usage.input_tokens;
             let step = self
@@ -208,38 +298,7 @@ impl Agent {
                     messages: tail.split_off(1),
                 });
             }
-            for call in &calls {
-                if cancel.is_cancelled() {
-                    return Err(AgentError::Cancelled);
-                }
-                let _ = events.send(TurnEvent::ToolUsed(call.clone())).await;
-                let key = (
-                    call.function.name.clone(),
-                    canonical(&call.function.arguments),
-                );
-                let result = match seen
-                    .get_mut(&key)
-                    .filter(|_| tools.reusable(&call.function.name))
-                {
-                    Some((_, count)) if *count >= REPEAT_LIMIT => REPEATED.to_owned(),
-                    Some((cached, count)) => {
-                        *count += 1;
-                        cached.clone()
-                    }
-                    None => {
-                        let result = tools.run(call).await;
-                        seen.insert(key, (result.clone(), 1));
-                        result
-                    }
-                };
-                let _ = events
-                    .send(TurnEvent::ToolFinished {
-                        call: call.clone(),
-                        result: result.clone(),
-                    })
-                    .await;
-                tail.push(ChatMessage::tool_result(call.id.clone(), result));
-            }
+            run_calls(&calls, tools, &events, &cancel, &mut seen, &mut tail).await?;
             let notes = [notes, tools.notes()].concat();
             if !notes.is_empty() {
                 tail.push(ChatMessage::new(ChatRole::User, notes.join("\n")));

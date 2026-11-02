@@ -352,3 +352,94 @@ async fn notes_from_the_user_reach_the_next_step() {
     assert_eq!(last.role, ChatRole::User);
     assert_eq!(last.content, "PDF 里把软装单独列出来");
 }
+
+struct Barrier {
+    gate: tokio::sync::Barrier,
+    order: Mutex<Vec<String>>,
+}
+
+impl ToolRunner for Barrier {
+    fn concurrent(&self, call: &ToolCall) -> bool {
+        call.function.name.starts_with("read")
+    }
+
+    fn run<'a>(&'a self, call: &'a ToolCall) -> BoxFuture<'a, String> {
+        Box::pin(async move {
+            self.order.lock().unwrap().push(format!("start {}", call.id));
+            if call.function.name == "read" {
+                // Only returns once all three reads are in flight together.
+                self.gate.wait().await;
+            }
+            self.order.lock().unwrap().push(format!("end {}", call.id));
+            format!("result {}", call.id)
+        })
+    }
+}
+
+#[tokio::test]
+async fn read_only_calls_in_one_step_run_together_and_come_back_in_order() {
+    let call = |index: usize, id: &str, name: &str| ModelChunk::ToolCallDelta {
+        index,
+        id: Some(id.into()),
+        name: Some(name.into()),
+        arguments: format!(r#"{{"n":{index}}}"#),
+    };
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![
+            call(0, "r1", "read"),
+            call(1, "r2", "read"),
+            call(2, "r3", "read"),
+            call(3, "w1", "write"),
+            call(4, "r4", "read_after"),
+        ],
+        vec![ModelChunk::Text("done".into())],
+    ]));
+    let agent = Agent::new(provider.clone());
+    let tools = Barrier {
+        gate: tokio::sync::Barrier::new(3),
+        order: Mutex::default(),
+    };
+    let (tx, mut rx) = mpsc::channel(64);
+    let outcome = tokio::time::timeout(
+        Duration::from_secs(5),
+        agent.run_turn(
+            &StablePrefix::new("system"),
+            &Transcript::default(),
+            "go",
+            &tools,
+            tx,
+            CancellationToken::new(),
+        ),
+    )
+    .await
+    .expect("reads must overlap, otherwise the barrier never opens")
+    .unwrap();
+    assert_eq!(outcome.text, "done");
+
+    let order = tools.order.lock().unwrap().clone();
+    let first_end = order.iter().position(|line| line.starts_with("end")).unwrap();
+    assert_eq!(order[..first_end].len(), 3, "{order:?}");
+    // The write waits for the reads before it, and the read after it waits for the write.
+    let index = |line: &str| order.iter().position(|item| item == line).unwrap();
+    assert!(index("end r3") < index("start w1"), "{order:?}");
+    assert!(index("end w1") < index("start r4"), "{order:?}");
+
+    let ids: Vec<String> = outcome
+        .messages
+        .iter()
+        .filter(|message| message.role == ChatRole::Tool)
+        .map(|message| message.content.clone())
+        .collect();
+    assert_eq!(
+        ids,
+        ["result r1", "result r2", "result r3", "result w1", "result r4"]
+    );
+
+    let mut finished = Vec::new();
+    while let Ok(event) = rx.try_recv() {
+        if let TurnEvent::ToolFinished { call, .. } = event {
+            finished.push(call.id);
+        }
+    }
+    assert_eq!(finished, ["r1", "r2", "r3", "w1", "r4"]);
+}
