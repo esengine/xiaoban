@@ -154,7 +154,8 @@ fn digits_near(text: &str) -> bool {
             index += 1;
         }
         let money = start > 0 && MONEY_BEFORE.contains(&chars[start - 1]);
-        let decimal = chars.get(index).is_some_and(|c| MONEY_AFTER.contains(c));
+        let decimal = chars.get(index).is_some_and(|c| MONEY_AFTER.contains(c))
+            && chars.get(index + 1).is_some_and(char::is_ascii_digit);
         if CODE_DIGITS.contains(&(index - start)) && !money && !decimal {
             return true;
         }
@@ -415,6 +416,7 @@ mod tests {
         assert!(is_code(&parsed("a@b.com", "安全提醒", "本次操作的验证码：6610，5 分钟内有效")));
         assert!(!is_code(&parsed("a@cmbchina.com", "信用卡电子账单", "请勿向任何人泄露验证码。本期应还 ¥3,240.00")));
         assert!(!is_code(&parsed("a@b.com", "Hotpot party", "bring 2 friends")));
+        assert!(!is_code(&parsed("a@b.com", "Order", "verification code not needed, total 1280.50 paid")));
     }
 
     #[test]
