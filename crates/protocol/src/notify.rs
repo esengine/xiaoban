@@ -145,4 +145,6 @@ pub struct Notice {
     pub confirm_id: Option<String>,
     pub choices: Vec<NoticeChoice>,
     pub reply: bool,
+    #[serde(default)]
+    pub todo_id: Option<String>,
 }

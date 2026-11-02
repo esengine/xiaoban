@@ -580,6 +580,34 @@ pub enum Request {
     DeleteSchedule {
         id: String,
     },
+    ListTodos,
+    AddTodo {
+        draft: crate::TodoDraft,
+        #[serde(default)]
+        propose: bool,
+    },
+    QuickAddTodo {
+        text: String,
+    },
+    ConfirmTodo {
+        id: String,
+    },
+    UpdateTodo {
+        todo: Box<crate::Todo>,
+    },
+    TodoAction {
+        id: String,
+        action: crate::TodoAction,
+    },
+    DeleteTodo {
+        id: String,
+    },
+    TodosToShopping {
+        ids: Vec<String>,
+    },
+    KeepTodos {
+        ids: Vec<String>,
+    },
     PlanAction {
         thread_id: String,
         action: crate::PlanAction,
@@ -854,6 +882,12 @@ pub enum Response {
     },
     Schedules {
         schedules: Vec<crate::Schedule>,
+    },
+    Todo {
+        todo: crate::Todo,
+    },
+    Todos {
+        todos: Vec<crate::Todo>,
     },
     Capabilities {
         capabilities: Vec<crate::Capability>,

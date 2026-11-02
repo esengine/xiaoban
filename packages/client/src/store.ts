@@ -51,6 +51,9 @@ import type {
   RecipeView,
   Response,
   Schedule,
+  Todo,
+  TodoAction,
+  TodoDraft,
   ServiceStatus,
   SheetFormat,
   SheetOp,
@@ -950,6 +953,67 @@ export class HubStore {
     return this.#putSchedule(schedule);
   }
 
+  #putTodos(todos: readonly Todo[]): Todo[] {
+    this.#update((state) => ({
+      ...state,
+      todos: { ...state.todos, ...Object.fromEntries(todos.map((todo) => [todo.id, todo])) },
+    }));
+    return [...todos];
+  }
+
+  async listTodos(): Promise<Todo[]> {
+    const { todos } = await this.client.request({ type: "list_todos" }, "todos");
+    this.#update((state) => ({
+      ...state,
+      todosLoaded: true,
+      todos: Object.fromEntries(todos.map((todo) => [todo.id, todo])),
+    }));
+    return todos;
+  }
+
+  async addTodo(draft: TodoDraft, propose = false): Promise<Todo> {
+    const { todo } = await this.client.request({ type: "add_todo", draft, propose }, "todo");
+    return this.#putTodos([todo])[0] ?? todo;
+  }
+
+  async quickAddTodo(text: string): Promise<Todo> {
+    const { todo } = await this.client.request({ type: "quick_add_todo", text }, "todo");
+    return this.#putTodos([todo])[0] ?? todo;
+  }
+
+  async confirmTodo(id: string): Promise<Todo> {
+    const { todo } = await this.client.request({ type: "confirm_todo", id }, "todo");
+    return this.#putTodos([todo])[0] ?? todo;
+  }
+
+  async updateTodo(next: Todo): Promise<Todo> {
+    const { todo } = await this.client.request({ type: "update_todo", todo: next }, "todo");
+    return this.#putTodos([todo])[0] ?? todo;
+  }
+
+  async todoAction(id: string, action: TodoAction): Promise<Todo> {
+    const { todo } = await this.client.request({ type: "todo_action", id, action }, "todo");
+    return this.#putTodos([todo])[0] ?? todo;
+  }
+
+  async deleteTodo(id: string): Promise<void> {
+    this.#update((state) => {
+      const { [id]: _removed, ...todos } = state.todos;
+      return { ...state, todos };
+    });
+    await this.client.request({ type: "delete_todo", id }, "ack");
+  }
+
+  async todosToShopping(ids: string[]): Promise<Todo[]> {
+    const { todos } = await this.client.request({ type: "todos_to_shopping", ids }, "todos");
+    return this.#putTodos(todos);
+  }
+
+  async keepTodos(ids: string[]): Promise<Todo[]> {
+    const { todos } = await this.client.request({ type: "keep_todos", ids }, "todos");
+    return this.#putTodos(todos);
+  }
+
   async deleteSchedule(id: string): Promise<void> {
     await this.client.request({ type: "delete_schedule", id }, "ack");
     this.#update((state) => {
@@ -1036,7 +1100,11 @@ export class HubStore {
 
   async loadDailyFeed(): Promise<DailyFeed> {
     const { feed } = await this.client.request({ type: "daily_feed" }, "daily_feed");
-    this.#update((state) => ({ ...state, dailyFeed: feed }));
+    this.#update((state) => ({
+      ...state,
+      dailyFeed: feed,
+      todos: { ...state.todos, ...Object.fromEntries(feed.todos.map((todo) => [todo.id, todo])) },
+    }));
     return feed;
   }
 

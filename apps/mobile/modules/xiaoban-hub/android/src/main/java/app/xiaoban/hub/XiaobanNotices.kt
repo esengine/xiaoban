@@ -103,12 +103,13 @@ object XiaobanNotices {
     val tag = notice.getString("id")
     val threadId = notice.optString("threadId").takeIf { notice.has("threadId") && !notice.isNull("threadId") }
     val confirmId = notice.optString("confirmId").takeIf { notice.has("confirmId") && !notice.isNull("confirmId") }
+    val todoId = notice.optString("todoId").takeIf { notice.has("todoId") && !notice.isNull("todoId") }
     val body = notice.optString("body")
     val builder = builder(context, URGENT)
       .setContentTitle(notice.optString("title"))
       .setContentText(body)
       .setStyle(Notification.BigTextStyle().bigText(body))
-      .setSubText(texts.optString("category"))
+      .setSubText(if (todoId != null) texts.optString("todoCategory") else texts.optString("category"))
       .setCategory(
         when (notice.optString("category")) {
           "confirm" -> Notification.CATEGORY_EVENT
@@ -139,6 +140,22 @@ object XiaobanNotices {
         )
         val icon = Icon.createWithResource(context, R.drawable.xiaoban_notify)
         builder.addAction(Notification.Action.Builder(icon, option.optString("label"), pending).build())
+      }
+    }
+    if (todoId != null) {
+      for ((action, label) in listOf("done" to "todoDone", "hour" to "todoHour", "tomorrow" to "todoTomorrow")) {
+        val answer = JSONObject().put("kind", "todo").put("todoId", todoId).put("action", action)
+        val intent = answerIntent(context, tag, route, texts)
+          .putExtra("answer", answer.toString())
+          .putExtra("done", texts.optString(if (action == "done") "answeredTodoDone" else "answeredTodoLater"))
+        val pending = PendingIntent.getBroadcast(
+          context,
+          "$tag:$action".hashCode(),
+          intent,
+          PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val icon = Icon.createWithResource(context, R.drawable.xiaoban_notify)
+        builder.addAction(Notification.Action.Builder(icon, texts.optString(label), pending).build())
       }
     }
     if (threadId != null && notice.optBoolean("reply")) {

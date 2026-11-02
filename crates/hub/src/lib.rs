@@ -45,6 +45,8 @@ mod prompts;
 mod registry;
 mod router;
 mod schedules;
+mod todo_parse;
+mod todos;
 mod runtime;
 mod secrets;
 mod server;

@@ -1,5 +1,5 @@
 import { useI18n } from "@xiaoban/i18n/react";
-import type { ConfirmChoice } from "@xiaoban/protocol";
+import type { ConfirmChoice, TodoAction } from "@xiaoban/protocol";
 import { useEffect } from "react";
 import { AppState } from "react-native";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
@@ -8,12 +8,15 @@ import { noticeTexts } from "./noticeText.ts";
 
 type Answer =
   | { kind: "confirm"; confirmId: string; choice: ConfirmChoice }
-  | { kind: "reply"; threadId: string; text: string };
+  | { kind: "reply"; threadId: string; text: string }
+  | { kind: "todo"; todoId: string; action: TodoAction };
 
 function parse(raw: string): Answer | null {
   try {
     const value = JSON.parse(raw) as Answer;
-    return value.kind === "confirm" || value.kind === "reply" ? value : null;
+    return value.kind === "confirm" || value.kind === "reply" || value.kind === "todo"
+      ? value
+      : null;
   } catch {
     return null;
   }
@@ -59,6 +62,8 @@ export function Notices() {
       if (!parsed) return;
       if (parsed.kind === "confirm") {
         void store.answerConfirm(parsed.confirmId, parsed.choice).catch(() => undefined);
+      } else if (parsed.kind === "todo") {
+        void store.todoAction(parsed.todoId, parsed.action).catch(() => undefined);
       } else {
         void store.send(parsed.threadId, parsed.text).catch(() => undefined);
       }
