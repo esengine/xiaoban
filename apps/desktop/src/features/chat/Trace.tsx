@@ -27,6 +27,7 @@ const TOOL_NAMES: Record<string, PlainMessageKey> = {
   press_keys: "tool-name-operate",
   confirm: "tool-name-operate",
   ask_user: "tool-name-ask",
+  look_at_image: "tool-name-image",
   load_tools: "tool-name-packs",
 };
 

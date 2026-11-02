@@ -172,6 +172,7 @@ pub fn specs(localizer: &Localizer) -> Vec<ToolSpec> {
     specs.extend(crate::operate_tools::specs(localizer));
     specs.push(crate::asks::spec(localizer));
     specs.push(crate::save_file::spec(localizer));
+    specs.push(crate::vision::spec(localizer));
     specs.extend(crate::price_check::specs(localizer));
     specs.push(crate::trip_spend::spec(localizer));
     specs.extend(crate::file_tools::specs(localizer));
@@ -444,6 +445,7 @@ pub struct HubTools<'a> {
     snapshot: Option<String>,
     pub(crate) screens: Mutex<std::collections::HashMap<String, Vec<crate::operate::UiElement>>>,
     pub(crate) granted: Mutex<Vec<String>>,
+    pub(crate) looks: std::sync::atomic::AtomicU32,
     pub(crate) pack_changed: std::sync::atomic::AtomicBool,
 }
 
@@ -481,6 +483,7 @@ impl<'a> HubTools<'a> {
             snapshot: None,
             screens: Mutex::new(std::collections::HashMap::new()),
             granted: Mutex::new(Vec::new()),
+            looks: std::sync::atomic::AtomicU32::new(0),
             pack_changed: std::sync::atomic::AtomicBool::new(false),
         }
     }
@@ -807,6 +810,7 @@ impl ToolRunner for HubTools<'_> {
                 | crate::operate_tools::CONFIRM
                 | crate::asks::ASK_USER
                 | crate::save_file::SAVE_FILE
+                | crate::vision::LOOK_AT_IMAGE
                 | crate::packs::LOAD_TOOLS
                 | crate::code_tools::WRITE_FILE
                 | crate::code_tools::EDIT_FILE
@@ -908,6 +912,7 @@ impl ToolRunner for HubTools<'_> {
                 crate::operate_tools::DO_STEPS => self.do_steps(arguments).await,
                 crate::asks::ASK_USER => self.ask_user(arguments).await,
                 crate::save_file::SAVE_FILE => self.save_file(arguments).await,
+                crate::vision::LOOK_AT_IMAGE => self.look_at_image(arguments).await,
                 crate::packs::LOAD_TOOLS => self.load_tools(arguments).await,
                 crate::file_tools::FILE_SEARCH => self.file_search(arguments).await,
                 crate::file_tools::FILE_READ => self.file_read(arguments).await,

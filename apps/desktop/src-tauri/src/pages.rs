@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 use xiaoban_hub::PageReport;
 
-const TIMEOUT: Duration = Duration::from_secs(15);
+const TIMEOUT: Duration = Duration::from_secs(25);
 const PAGE_POLICY: &str = "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'";
 
 static PAGES: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(Mutex::default);
@@ -53,7 +53,7 @@ impl xiaoban_hub::Pages for DesktopPages {
                     Ok(Ok(report)) => Ok(report),
                     Ok(Err(_)) => Err("the browser gave no answer".to_owned()),
                     Err(_) => Ok(PageReport {
-                        errors: vec!["the page did not finish loading within 15 seconds".to_owned()],
+                        errors: vec!["the page did not finish loading within 25 seconds".to_owned()],
                         ..PageReport::default()
                     }),
                 }

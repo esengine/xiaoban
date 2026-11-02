@@ -15776,10 +15776,13 @@ p.mail-card__source {
 }
 
 .page-check-host {
+  /* On screen but unseen: a browser makes no frames for a page that is off screen, and a page
+     that makes none cannot be watched for animation. */
   position: fixed;
-  left: -20000px;
+  left: 0;
   top: 0;
-  opacity: 0;
+  z-index: -1;
+  opacity: 0.01;
   pointer-events: none;
 }
 

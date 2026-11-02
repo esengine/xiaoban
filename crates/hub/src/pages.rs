@@ -20,6 +20,20 @@ const MAX_KEPT: usize = 200;
 const MAX_HTML: usize = 400_000;
 const SCRIPT: &str = include_str!("page_check.js");
 
+/// Whether anything on the page moves, found by sampling where things are, with no pictures.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Motion {
+    /// Whether the browser was making frames at all; without them "nothing moved" means nothing.
+    pub observable: bool,
+    pub moving: Option<bool>,
+    pub changed: u32,
+    pub examples: Vec<String>,
+    pub canvas_changed: bool,
+    pub animations: u32,
+    pub smil: u32,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct PageReport {
@@ -28,6 +42,10 @@ pub struct PageReport {
     pub overflow: bool,
     pub title: Option<String>,
     pub text: String,
+    pub motion: Option<Motion>,
+    /// Several frames of the page, small, in one picture (a data URL); kept off the model's table.
+    pub sheet: Option<String>,
+    pub sheet_error: Option<String>,
 }
 
 pub trait Pages: Debug + Send + Sync + 'static {
@@ -52,8 +70,9 @@ pub fn hash(code: &str) -> String {
     format!("{value:016x}")
 }
 
-pub fn inject(html: &str) -> String {
-    let tag = format!("<script>{SCRIPT}</script>");
+pub fn inject(html: &str, look: bool) -> String {
+    let flag = if look { "<script>window.__xbLook=true</script>" } else { "" };
+    let tag = format!("{flag}<script>{SCRIPT}</script>");
     let lower = html.to_ascii_lowercase();
     if let Some(start) = lower.find("<head")
         && let Some(end) = lower[start..].find('>')
@@ -72,6 +91,7 @@ pub fn spec(l: &Localizer) -> ToolSpec {
             "type": "object",
             "properties": {
                 "html": { "type": "string", "description": l.text(keys::TOOL_CHECK_PAGE_HTML) },
+                "look": { "type": "boolean", "description": l.text(keys::TOOL_CHECK_PAGE_LOOK) },
             },
             "required": ["html"],
             "additionalProperties": false,
@@ -121,7 +141,11 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
 #[derive(Deserialize)]
 struct Args {
     html: String,
+    #[serde(default)]
+    look: bool,
 }
+
+const MAX_LOOKS: u32 = 2;
 
 fn error(message: &str) -> String {
     json!({ "error": message }).to_string()
@@ -147,6 +171,42 @@ pub fn summarize(reports: &[(u32, PageReport)]) -> (bool, Vec<String>, bool, u32
     (errors.is_empty() && !overflow, errors, overflow, clicked)
 }
 
+fn motion_json(motion: Option<&Motion>) -> Value {
+    let Some(motion) = motion else {
+        return Value::Null;
+    };
+    json!({
+        // true: things move. false: nothing moved while the page was being drawn. null: this browser
+        // was not drawing the page, so it cannot be told; do not change an animation because of null.
+        "moves": motion.moving,
+        "what": motion.examples,
+        "canvasChanged": motion.canvas_changed,
+        "cssAnimationsRunning": motion.animations,
+        "svgAnimationElements": motion.smil,
+    })
+}
+
+fn facts(l: &Localizer, motion: Option<&Motion>) -> String {
+    l.text(match motion.and_then(|motion| motion.moving) {
+        Some(true) => keys::PAGE_LOOK_MOVING,
+        Some(false) => keys::PAGE_LOOK_STILL,
+        None => keys::PAGE_LOOK_UNKNOWN,
+    })
+}
+
+/// A model that sees pictures reads the contact sheet once and answers in a few words, so the
+/// model writing the page spends text tokens, not picture tokens, on seeing it.
+async fn describe_sheet(state: &SharedState, sheet: &str, motion: Option<&Motion>) -> Option<String> {
+    crate::vision::ask(
+        state,
+        state.localizer.text(keys::PROMPT_PAGE_LOOK),
+        facts(&state.localizer, motion),
+        sheet.to_owned(),
+        600,
+    )
+    .await
+}
+
 impl HubTools<'_> {
     pub(crate) async fn check_page(&self, arguments: &str) -> String {
         let Ok(args) = serde_json::from_str::<Args>(arguments) else {
@@ -159,10 +219,15 @@ impl HubTools<'_> {
         if html.len() > MAX_HTML {
             return error("the page is too large to check");
         }
-        let injected = inject(&html);
+        let look = args.look
+            && self
+                .looks
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+                < MAX_LOOKS;
         let mut reports = Vec::new();
         for width in [PHONE_WIDTH, DESK_WIDTH] {
-            match self.state.pages.check(injected.clone(), width).await {
+            let injected = inject(&html, look && width == DESK_WIDTH);
+            match self.state.pages.check(injected, width).await {
                 Ok(report) => reports.push((width, report)),
                 Err(failure) => {
                     return json!({
@@ -198,9 +263,30 @@ impl HubTools<'_> {
                 })
             })
             .collect();
+        let desk = reports.iter().find(|(width, _)| *width == DESK_WIDTH).map(|(_, report)| report);
+        let motion = desk.and_then(|report| report.motion.as_ref());
+        let seen = match (look, desk) {
+            (true, Some(report)) => match report.sheet.as_deref() {
+                Some(sheet) => describe_sheet(self.state, sheet, motion).await,
+                None => None,
+            },
+            _ => None,
+        };
+        let looked = if !args.look {
+            Value::Null
+        } else if let Some(text) = seen {
+            Value::String(text)
+        } else {
+            Value::String(
+                "could not look at the page here (no picture could be taken, or no model that sees pictures is connected); rely on motion and the other results"
+                    .to_owned(),
+            )
+        };
         json!({
             "checked": true,
             "ok": ok,
+            "motion": motion_json(motion),
+            "look": looked,
             "results": details,
             "hint": if ok {
                 "the page passed; put exactly this same HTML in your reply"
@@ -218,9 +304,11 @@ mod tests {
 
     #[test]
     fn injects_the_checker_into_the_head() {
-        let page = inject("<!doctype html><html><head><title>x</title></head><body></body></html>");
+        let page = inject("<!doctype html><html><head><title>x</title></head><body></body></html>", false);
         assert!(page.starts_with("<!doctype html><html><head><script>"));
-        assert!(inject("<p>hi</p>").starts_with("<script>"));
+        assert!(inject("<p>hi</p>", false).starts_with("<script>"));
+        assert!(inject("<p>hi</p>", true).contains("window.__xbLook=true"));
+        assert!(!inject("<p>hi</p>", false).contains("__xbLook=true"));
     }
 
     #[test]

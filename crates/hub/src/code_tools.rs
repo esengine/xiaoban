@@ -136,6 +136,7 @@ pub fn keeps_in_code(name: &str) -> bool {
             | tools::WEB_SEARCH
             | tools::READ_PAGE
             | asks::ASK_USER
+            | crate::vision::LOOK_AT_IMAGE
             | plan::PLAN
             | pages::CHECK_PAGE
             | crate::browser::BROWSE

@@ -48,6 +48,7 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
         crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
         crate::operate_tools::DO_STEPS => text(&args, "summary"),
+        crate::vision::LOOK_AT_IMAGE => text(&args, "question"),
         crate::packs::LOAD_TOOLS => args
             .get("packs")
             .and_then(Value::as_array)

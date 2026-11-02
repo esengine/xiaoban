@@ -146,7 +146,7 @@ fn the_fixed_prefix_stays_within_budget() {
     // (scene, budget in estimated tokens for tools plus the shared system prompt)
     let budgets = [
         ("chat", 28_000),
-        ("core", 6_500),
+        ("core", 7_000),
         ("code", 9_500),
         ("doc", 11_000),
     ];

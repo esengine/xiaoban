@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 object PageChecker {
   private const val HEIGHT_DP = 800
-  private const val TIMEOUT_SECONDS = 12L
+  private const val TIMEOUT_SECONDS = 22L
 
   private class Receiver(private val result: AtomicReference<String?>, private val latch: CountDownLatch) {
     @JavascriptInterface

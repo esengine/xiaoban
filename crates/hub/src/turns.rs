@@ -248,7 +248,7 @@ fn attachments(state: &SharedState, files: &[FileInfo]) -> (Vec<ContextNote>, Ve
         let (label, body) = match info.mode {
             FileMode::Image => {
                 images.extend(state.files.data_url(info));
-                (l.format(keys::FILE_NOTE_IMAGE, &[name]), String::new())
+                (l.format(keys::FILE_NOTE_IMAGE, &[name, ("id", info.id.as_str())]), String::new())
             }
             FileMode::Full => (
                 l.format(keys::FILE_NOTE_FULL, &counted),

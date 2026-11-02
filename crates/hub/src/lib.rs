@@ -48,6 +48,7 @@ mod plan;
 mod packs;
 mod save_file;
 mod sensitive;
+mod vision;
 mod pauses;
 mod preferences;
 #[cfg(test)]
@@ -97,7 +98,7 @@ pub use location::{FixedLocator, Locator, NoLocator};
 pub use mail_imap::{Batch, ImapMail, Login, MailError, MailSource, Raw};
 pub use operate::{ActFailure, MAX_ELEMENTS, NoOperator, Operator, Snapshot, UiAction, UiElement};
 pub use prompts::Prompts;
-pub use pages::{NoPages, PageReport, Pages};
+pub use pages::{Motion, NoPages, PageReport, Pages};
 pub use router::{NoRouter, Router};
 
 pub fn todo_wake_at(

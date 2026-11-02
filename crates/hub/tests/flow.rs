@@ -3055,6 +3055,190 @@ async fn live_phone_pay() {
     hub.shutdown().await;
 }
 
+/// A browser that returns the same report for any page, and keeps the pages it was given.
+#[derive(Debug)]
+struct FakePages {
+    seen: std::sync::Mutex<Vec<String>>,
+}
+
+impl xiaoban_hub::Pages for FakePages {
+    fn check(
+        &self,
+        html: String,
+        width: u32,
+    ) -> BoxFuture<'static, Result<xiaoban_hub::PageReport, String>> {
+        self.seen.lock().unwrap().push(html.clone());
+        let wants_sheet = html.contains("window.__xbLook=true");
+        Box::pin(async move {
+            Ok(xiaoban_hub::PageReport {
+                motion: Some(xiaoban_hub::Motion {
+                    observable: true,
+                    moving: Some(true),
+                    changed: 2,
+                    examples: vec!["div#wheel".into()],
+                    ..xiaoban_hub::Motion::default()
+                }),
+                sheet: (wants_sheet && width == 1280)
+                    .then(|| "data:image/jpeg;base64,QUJDREVGRw==".to_owned()),
+                ..xiaoban_hub::PageReport::default()
+            })
+        })
+    }
+}
+
+#[tokio::test]
+async fn checking_a_page_can_look_at_frames_without_the_model_ever_holding_a_picture() {
+    let page = "<!doctype html><html><head><title>车</title></head><body><div id=\"wheel\"></div></body></html>";
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "check_page",
+            &serde_json::json!({ "html": page, "look": true }),
+        )],
+        vec![ModelChunk::Text("车轮在转；右侧车把被截断。".into())],
+        vec![tool_call(
+            "check_page",
+            &serde_json::json!({ "html": page }),
+        )],
+        vec![ModelChunk::Text("好了".into())],
+    ]));
+    let pages = Arc::new(FakePages {
+        seen: std::sync::Mutex::default(),
+    });
+    let mut runtime = runtime(provider.clone());
+    runtime.pages = pages.clone();
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "做个转轮网页", Vec::new()).await;
+
+    let requests = provider.requests();
+    // Request 1 is the picture being read: it carries the picture, a vision model and the sheet
+    // prompt, and nothing else of the conversation's tools.
+    let reading = &requests[1];
+    assert!(reading.model.is_some(), "a model that sees pictures is asked");
+    assert_eq!(reading.tools.len(), 0);
+    let sent = reading.messages.last().unwrap();
+    assert_eq!(sent.images, ["data:image/jpeg;base64,QUJDREVGRw=="]);
+    assert!(sent.content.contains("有东西在动"), "{}", sent.content);
+    // Request 2 is the page-writing model getting the answer back: text only.
+    let told = &requests[2].messages.last().unwrap().content;
+    assert!(told.contains("车轮在转；右侧车把被截断。"), "{told}");
+    assert!(told.contains("\"moves\":true"), "{told}");
+    assert!(!told.contains("QUJDREVGRw"), "the picture never reaches the page-writing model");
+    assert!(requests.iter().all(|request| {
+        request
+            .messages
+            .iter()
+            .filter(|message| message.role != xiaoban_agent::ChatRole::User || message.content != sent.content)
+            .all(|message| message.images.is_empty())
+    }));
+    // Without `look` there is no second model call and no sheet is even asked of the browser.
+    let seen = pages.seen.lock().unwrap().clone();
+    assert_eq!(seen.iter().filter(|html| html.contains("window.__xbLook=true")).count(), 1);
+    assert_eq!(requests.len(), 4);
+    hub.shutdown().await;
+}
+
+/// A model that answers the picture the first time, then asks to look again with the id it was
+/// given in the attachment note, and reads the answer back.
+#[derive(Debug, Default)]
+struct PictureModel {
+    calls: std::sync::Mutex<usize>,
+}
+
+impl ModelProvider for PictureModel {
+    fn stream(&self, request: xiaoban_agent::ChatRequest) -> xiaoban_agent::ModelStream {
+        let n = {
+            let mut calls = self.calls.lock().unwrap();
+            *calls += 1;
+            *calls - 1
+        };
+        let chunks = match n {
+            0 => vec![ModelChunk::Text("是一只橘猫".into())],
+            1 => {
+                let note = request
+                    .messages
+                    .iter()
+                    .find_map(|message| message.content.split("id：").nth(1).map(str::to_owned))
+                    .unwrap_or_default();
+                let id = note.split('）').next().unwrap_or_default().to_owned();
+                vec![tool_call(
+                    "look_at_image",
+                    &serde_json::json!({ "id": id, "question": "猫是什么颜色" }),
+                )]
+            }
+            2 => vec![ModelChunk::Text("橘色，右下角写着 MEOW".into())],
+            _ => vec![ModelChunk::Text("是橘色的".into())],
+        };
+        futures_util::stream::iter(chunks.into_iter().map(Ok::<_, AgentError>)).boxed()
+    }
+}
+
+#[tokio::test]
+async fn a_picture_can_be_looked_at_again_in_a_later_turn_by_its_id() {
+    const PNG: &[u8] = &[
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f,
+        0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0xda, 0x63, 0x64,
+        0xf8, 0xff, 0xff, 0x3f, 0x00, 0x05, 0xfe, 0x02, 0xfe, 0xa7, 0xd4, 0xb6, 0xf9, 0x00, 0x00,
+        0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60,
+    ];
+    let dir = std::env::temp_dir().join(format!("xiaoban-picture-{}", uuid_like()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("cat.png");
+    std::fs::write(&path, PNG).unwrap();
+
+    let provider = RecordingProvider::wrap(PictureModel::default());
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "这是什么".into(),
+            context: Vec::new(),
+            quote: None,
+            files: vec![path.to_string_lossy().into_owned()],
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    loop {
+        if let Event::TurnCompleted { .. } = client.next_event().await {
+            break;
+        }
+    }
+    converse(&mut client, &thread, "图里那只猫是什么颜色", Vec::new()).await;
+
+    let requests = provider.requests();
+    // The first turn is the only one that carries the picture itself, and a model that sees it.
+    assert_eq!(requests[0].messages.last().unwrap().images.len(), 1);
+    assert!(requests[0].model.is_some());
+    // The second turn is a plain text turn, but its history names the picture and how to look again.
+    assert!(requests[1].messages.iter().all(|message| message.images.is_empty()));
+    assert!(
+        requests[1]
+            .messages
+            .iter()
+            .any(|message| message.content.contains("look_at_image")),
+        "the note tells the model how to look again"
+    );
+    assert!(requests[1].tools.iter().any(|tool| tool.name == "look_at_image"));
+    // The tool reloaded the picture for a model that sees it and brought back only words.
+    assert_eq!(requests[2].messages.last().unwrap().images.len(), 1);
+    assert!(requests[2].model.is_some());
+    assert_eq!(requests[2].tools.len(), 0);
+    let told = &requests[3].messages.last().unwrap().content;
+    assert!(told.contains("橘色，右下角写着 MEOW"), "{told}");
+    assert!(requests[3].messages.iter().all(|message| message.images.is_empty()));
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
