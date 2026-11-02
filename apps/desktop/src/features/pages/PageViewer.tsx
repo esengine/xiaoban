@@ -36,14 +36,14 @@ export function PageViewer({
     >
       <header className="page-viewer__head">
         <b className="page-viewer__title">{title}</b>
-        <div className="page-viewer__widths" role="group">
+        <fieldset className="page-viewer__widths">
           <button type="button" aria-pressed={width === "phone"} onClick={() => setWidth("phone")}>
             {t("page-viewer-phone")}
           </button>
           <button type="button" aria-pressed={width === "desk"} onClick={() => setWidth("desk")}>
             {t("page-viewer-desk")}
           </button>
-        </div>
+        </fieldset>
         <button
           type="button"
           className="page-viewer__link"

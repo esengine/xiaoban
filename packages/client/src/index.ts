@@ -1,6 +1,8 @@
+export { summarize as summarizeAnswer } from "./askFlow.ts";
 export { clockOf, dayKey, reminderText, whenText } from "./calendar.ts";
 export type { ConnectionStatus, HubClientOptions, Welcome } from "./client.ts";
 export { HubClient, HubRequestError } from "./client.ts";
+export { extensionOfName, type Token, type TokenKind, tokenize } from "./codeColor.ts";
 export { type ConfirmOption, confirmText } from "./confirmText.ts";
 export { connectionKey, describeError, failureKey, providerKey } from "./describe.ts";
 export {
@@ -82,8 +84,6 @@ export {
   windowText,
 } from "./schedule.ts";
 export { extensionOf, firstLink, hostOf, shareKind, sizeText } from "./share.ts";
-export { summarize as summarizeAnswer } from "./askFlow.ts";
-export { extensionOfName, type Token, type TokenKind, tokenize } from "./codeColor.ts";
 export type {
   AgentState,
   AnsweredAsk,

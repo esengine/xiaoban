@@ -1,5 +1,5 @@
-import type { ChangedFile } from "@xiaoban/protocol";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { ChangedFile } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";

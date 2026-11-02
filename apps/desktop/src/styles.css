@@ -12491,10 +12491,7 @@ button.sent-files__image {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: conic-gradient(
-    var(--color-accent) var(--used, 0deg),
-    var(--color-line-strong) 0
-  );
+  background: conic-gradient(var(--color-accent) var(--used, 0deg), var(--color-line-strong) 0);
   mask: radial-gradient(circle, transparent 4px, #000 4.5px);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
@@ -12505,10 +12502,7 @@ button.sent-files__image {
 }
 
 .context-meter__trigger[data-warn] .context-meter__ring {
-  background: conic-gradient(
-    var(--color-attention) var(--used, 0deg),
-    var(--color-line-strong) 0
-  );
+  background: conic-gradient(var(--color-attention) var(--used, 0deg), var(--color-line-strong) 0);
   mask: radial-gradient(circle, transparent 4px, #000 4.5px);
 }
 
@@ -15820,7 +15814,10 @@ p.mail-card__source {
 
 .page-viewer__widths {
   display: flex;
+  min-width: 0;
+  margin: 0;
   padding: 2px;
+  border: 0;
   border-radius: 10px;
   background: var(--color-ground);
 }

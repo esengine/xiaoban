@@ -1,5 +1,6 @@
 import type {
   Allowance,
+  AskAnswer,
   AutonomyLevel,
   Branch,
   BrowserPage,
@@ -7,7 +8,6 @@ import type {
   CellEdit,
   CommandRun,
   CommitInfo,
-  AskAnswer,
   ConfirmChoice,
   ConflictChoice,
   ConflictFile,
