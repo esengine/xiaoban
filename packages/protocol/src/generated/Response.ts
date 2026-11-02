@@ -37,6 +37,7 @@ import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
 import type { NotifySettings } from "./NotifySettings.ts";
 import type { OperatePermissions } from "./OperatePermissions.ts";
+import type { PageCheck } from "./PageCheck.ts";
 import type { Plan } from "./Plan.ts";
 import type { Preferences } from "./Preferences.ts";
 import type { ProviderOption } from "./ProviderOption.ts";
@@ -132,6 +133,7 @@ export type Response =
   | { type: "schedules"; schedules: Array<Schedule> }
   | { type: "todo"; todo: Todo }
   | { type: "todos"; todos: Array<Todo> }
+  | { type: "page_check"; check: PageCheck | null }
   | { type: "capabilities"; capabilities: Array<Capability> }
   | { type: "capability"; capability: Capability }
   | { type: "doc"; doc: Doc }

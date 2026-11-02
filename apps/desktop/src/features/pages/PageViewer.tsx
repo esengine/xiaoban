@@ -21,7 +21,9 @@ export function PageViewer({
 
   useEffect(() => {
     dialog.current?.showModal();
-    void invoke<string>("page_keep", { text: code }).then(setId).catch(() => undefined);
+    void invoke<string>("page_keep", { text: code })
+      .then(setId)
+      .catch(() => undefined);
   }, [code]);
 
   return (

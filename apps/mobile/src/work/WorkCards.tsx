@@ -1,7 +1,7 @@
 import { htmlFileName, htmlLines, htmlTitle, pageHash } from "@xiaoban/client";
-import type { PageCheck } from "@xiaoban/protocol";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { PageCheck } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";

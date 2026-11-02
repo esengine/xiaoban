@@ -128,6 +128,7 @@ export type { NotifyScene } from "./NotifyScene.ts";
 export type { NotifySettings } from "./NotifySettings.ts";
 export type { OpeningKind } from "./OpeningKind.ts";
 export type { OperatePermissions } from "./OperatePermissions.ts";
+export type { PageCheck } from "./PageCheck.ts";
 export type { PlaceDetail } from "./PlaceDetail.ts";
 export type { Plan } from "./Plan.ts";
 export type { PlanAction } from "./PlanAction.ts";

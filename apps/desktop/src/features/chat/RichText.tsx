@@ -5,17 +5,19 @@ import {
   htmlTitle,
   isHtmlBlock,
   keyLabel,
+  pageHash,
   remarkInlineTags,
 } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
+import type { PageCheck } from "@xiaoban/protocol";
 import { type ComponentProps, memo, type ReactNode, useEffect, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
 import { remarkGithubRefs } from "../code/githubRefs.ts";
 import { RefChip } from "../code/RefChip.tsx";
 import { PageViewer } from "../pages/PageViewer.tsx";
-import { useHub } from "../../app/hub.tsx";
 import { useImageViewer } from "../viewer/ImageViewer.tsx";
 
 function textOf(node: ReactNode): string {
@@ -82,11 +84,7 @@ function HtmlCard({ code }: { code: string }) {
       ) : null}
       <span className="html-card__meta">{t("html-card-meta", { lines: htmlLines(code) })}</span>
       <div className="html-card__actions">
-        <button
-          type="button"
-          className="button button--primary"
-          onClick={() => setViewing(true)}
-        >
+        <button type="button" className="button button--primary" onClick={() => setViewing(true)}>
           {t("html-card-open")}
         </button>
         <button

@@ -243,6 +243,7 @@ export type Request =
   | { type: "confirm_todo"; id: string }
   | { type: "update_todo"; todo: Todo }
   | { type: "todo_action"; id: string; action: TodoAction }
+  | { type: "page_check"; hash: string }
   | { type: "delete_todo"; id: string }
   | { type: "todos_to_shopping"; ids: Array<string> }
   | { type: "keep_todos"; ids: Array<string> }

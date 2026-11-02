@@ -39,4 +39,3 @@ export function markdownOutline(text: string): { title: string | null; sections:
 export function htmlPage(id: string): string | null {
   return pages.get(id) ?? null;
 }
-
