@@ -56,6 +56,23 @@ export default function RootLayout() {
             name="calendar-settings"
             options={{ headerShown: false, title: t("calendar-settings-title") }}
           />
+          <Stack.Screen
+            name="services"
+            options={{ headerShown: false, title: t("services-title") }}
+          />
+          <Stack.Screen
+            name="mail-add"
+            options={{ headerShown: false, title: t("mail-add-title") }}
+          />
+          <Stack.Screen
+            name="mail-connect"
+            options={{ headerShown: false, title: t("mail-connect-title") }}
+          />
+          <Stack.Screen name="mail" options={{ headerShown: false, title: t("mail-list-title") }} />
+          <Stack.Screen
+            name="mail-original"
+            options={{ headerShown: false, title: t("mail-original-title") }}
+          />
           <Stack.Screen name="scan" options={{ headerShown: false, title: t("scan-title") }} />
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />

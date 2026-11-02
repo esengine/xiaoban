@@ -3163,7 +3163,7 @@ async fn mail_connects_read_only_drops_codes_and_forgets_everything_on_disconnec
         panic!("expected mail status");
     };
     assert!(!status.connected);
-    assert!(mail_list(&mut client).await.is_empty());
+    assert_eq!(mail_list(&mut client).await, Vec::new());
     assert_eq!(secrets.load_named("mail:password").unwrap(), None);
     let Response::DailyFeed { feed } = client.request(Request::DailyFeed).await else {
         panic!("expected daily feed");

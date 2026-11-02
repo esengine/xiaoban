@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { type HostInstance, Pressable, View } from "react-native";
 import { EventCard } from "../calendar/EventCard.tsx";
 import { FloorCard } from "../floor/FloorCard.tsx";
+import { DraftCard, MailCard } from "../mail/MailCards.tsx";
 import { RecipeCard } from "../life/RecipeCard.tsx";
 import { FailedCard } from "../schedule/ScheduleBits.tsx";
 import { ScheduleCard } from "../schedule/ScheduleCard.tsx";
@@ -37,6 +38,10 @@ function AttachmentCard({ message, last }: { message: Message; last: boolean }) 
       return <FailedCard scheduleId={attachment.scheduleId} reason={attachment.reason} />;
     case "subthreads":
       return <SubthreadCards threadIds={attachment.threadIds} />;
+    case "mail":
+      return <MailCard mail={attachment.mail} />;
+    case "mail_draft":
+      return <DraftCard draft={attachment.draft} />;
     case "service_needed":
       return attachment.service === "web_search" ? (
         <SearchCard threadId={message.threadId} answered={!last} />
