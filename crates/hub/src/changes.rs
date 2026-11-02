@@ -168,7 +168,12 @@ pub async fn revert(
         .insert((thread_id.to_owned(), shown_path.to_owned()), now.clone());
     match hunk {
         None => match &baseline.content {
-            Some(content) => std::fs::write(path, content).map_err(|failure| failure.to_string())?,
+            Some(content) => {
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent).map_err(|failure| failure.to_string())?;
+                }
+                std::fs::write(path, content).map_err(|failure| failure.to_string())?;
+            }
             None => {
                 if path.exists() {
                     std::fs::remove_file(path).map_err(|failure| failure.to_string())?;

@@ -54,7 +54,9 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         crate::code_tools::LIST_DIR
         | crate::code_tools::READ_FILE
         | crate::code_tools::WRITE_FILE
-        | crate::code_tools::EDIT_FILE => text(&args, "path"),
+        | crate::code_tools::EDIT_FILE
+        | crate::code_tools::DELETE_FILE => text(&args, "path"),
+        crate::code_tools::MOVE_FILE => text(&args, "from"),
         crate::vcs_tools::GIT | crate::vcs_tools::GH => args
             .get("args")
             .and_then(Value::as_array)

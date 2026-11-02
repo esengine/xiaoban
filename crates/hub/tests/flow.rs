@@ -2074,6 +2074,90 @@ async fn asking_the_user_parks_the_turn_until_they_answer() {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn deleting_and_moving_files_are_tracked_so_the_user_can_undo_them() {
+    let dir = std::env::temp_dir().join(format!("xiaoban-files-{}", uuid_like()));
+    std::fs::create_dir_all(dir.join("old")).unwrap();
+    std::fs::write(dir.join("a.txt"), "alpha
+").unwrap();
+    std::fs::write(dir.join("old/b.txt"), "bravo
+").unwrap();
+    std::fs::create_dir_all(dir.join(".git")).unwrap();
+    std::fs::write(dir.join(".git/HEAD"), "ref").unwrap();
+
+    let call = |name: &str, arguments: serde_json::Value| vec![tool_call(name, &arguments)];
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        call("move_file", serde_json::json!({ "from": "a.txt", "to": "src/a2.txt" })),
+        call("move_file", serde_json::json!({ "from": "old", "to": "new/old" })),
+        call("delete_file", serde_json::json!({ "path": "src/a2.txt" })),
+        call("delete_file", serde_json::json!({ "path": ".git" })),
+        call("move_file", serde_json::json!({ "from": "new", "to": "new/inside" })),
+        vec![ModelChunk::Text("done".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let Response::Workspace { workspace } = client
+        .request(Request::CreateWorkspace { path: dir.to_string_lossy().into_owned() })
+        .await
+    else {
+        panic!("expected workspace");
+    };
+    let Response::Thread { thread } = client
+        .request(Request::CreateThread { title: None, workspace_id: Some(workspace.id) })
+        .await
+    else {
+        panic!("expected thread");
+    };
+    converse(&mut client, &thread.id, "整理一下", Vec::new()).await;
+
+    assert!(!dir.join("a.txt").exists());
+    assert!(!dir.join("src/a2.txt").exists(), "deleted after the move");
+    assert_eq!(std::fs::read_to_string(dir.join("new/old/b.txt")).unwrap(), "bravo
+");
+    assert!(!dir.join("old").exists());
+    assert!(dir.join(".git/HEAD").exists(), ".git is off limits");
+    let results: Vec<String> = provider
+        .requests()
+        .iter()
+        .skip(1)
+        .map(|request| request.messages.last().unwrap().content.clone())
+        .collect();
+    assert!(results[0].contains("moved"), "{results:?}");
+    assert!(results[1].contains("\"files\":1"), "{results:?}");
+    assert!(results[3].contains("off limits"), "{results:?}");
+    assert!(results[4].contains("into itself"), "{results:?}");
+
+    let Response::Changes { files } = client
+        .request(Request::ThreadChanges { thread_id: thread.id.clone() })
+        .await
+    else {
+        panic!("expected changes");
+    };
+    let status = |path: &str| files.iter().find(|file| file.path == path).map(|file| file.status);
+    assert_eq!(status("a.txt"), Some(xiaoban_protocol::ChangeStatus::Deleted));
+    assert_eq!(status("old/b.txt"), Some(xiaoban_protocol::ChangeStatus::Deleted));
+    assert_eq!(status("new/old/b.txt"), Some(xiaoban_protocol::ChangeStatus::Added));
+    assert!(status("src/a2.txt").is_none(), "created and deleted in one turn leaves nothing");
+
+    let Response::Changes { .. } = client
+        .request(Request::RevertChange {
+            thread_id: thread.id.clone(),
+            path: "old/b.txt".into(),
+            hunk: None,
+        })
+        .await
+    else {
+        panic!("expected changes");
+    };
+    assert_eq!(std::fs::read_to_string(dir.join("old/b.txt")).unwrap(), "bravo
+");
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator
@@ -2153,7 +2237,7 @@ async fn attached_files_reach_the_model() {
         .unwrap();
     let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
     let thread = new_thread(&mut client).await;
-    let dir = std::env::temp_dir().join(format!("xiaoban-flow-{}", uuid::Uuid::now_v7()));
+    let dir = std::env::temp_dir().join(format!("xiaoban-flow-{}", uuid_like()));
     std::fs::create_dir_all(&dir).unwrap();
     let note = dir.join("通知.txt");
     std::fs::write(&note, "家长会改到周五下午三点").unwrap();

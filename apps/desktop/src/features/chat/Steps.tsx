@@ -27,6 +27,8 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
   search_files: { detail: "step-search_files", plain: "step-search_files-plain" },
   write_file: { detail: "step-write_file", plain: "step-write_file-plain" },
   edit_file: { detail: "step-edit_file", plain: "step-edit_file-plain" },
+  delete_file: { detail: "step-delete_file", plain: "step-delete_file-plain" },
+  move_file: { detail: "step-move_file", plain: "step-move_file-plain" },
   run_command: { detail: "step-run_command", plain: "step-run_command-plain" },
   git: { detail: "step-git", plain: "step-git-plain" },
   gh: { detail: "step-gh", plain: "step-gh-plain" },

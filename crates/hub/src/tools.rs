@@ -788,6 +788,8 @@ impl ToolRunner for HubTools<'_> {
                 | crate::code_tools::WRITE_FILE
                 | crate::code_tools::EDIT_FILE
                 | crate::code_tools::RUN_COMMAND
+                | crate::code_tools::DELETE_FILE
+                | crate::code_tools::MOVE_FILE
                 | crate::code_tools::READ_FILE
                 | crate::code_tools::LIST_DIR
                 | crate::code_tools::SEARCH_FILES

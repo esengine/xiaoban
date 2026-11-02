@@ -16,6 +16,10 @@ pub const SEARCH_FILES: &str = "search_files";
 pub const WRITE_FILE: &str = "write_file";
 pub const EDIT_FILE: &str = "edit_file";
 pub const RUN_COMMAND: &str = "run_command";
+pub const DELETE_FILE: &str = "delete_file";
+pub const MOVE_FILE: &str = "move_file";
+const MAX_TREE_FILES: usize = 200;
+const MAX_TREE_BYTES: u64 = 20 * 1024 * 1024;
 
 const READ_LINES: usize = 2_000;
 const LIST_LIMIT: usize = 500;
@@ -102,6 +106,21 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
             }),
             &["command", "reason"],
         ),
+        spec(
+            DELETE_FILE,
+            l.text(keys::TOOL_DELETE_FILE_DESCRIPTION),
+            &json!({ "path": text(l, keys::TOOL_CODE_PATH) }),
+            &["path"],
+        ),
+        spec(
+            MOVE_FILE,
+            l.text(keys::TOOL_MOVE_FILE_DESCRIPTION),
+            &json!({
+                "from": text(l, keys::TOOL_MOVE_FILE_FROM),
+                "to": text(l, keys::TOOL_MOVE_FILE_TO),
+            }),
+            &["from", "to"],
+        ),
     ]
 }
 
@@ -114,6 +133,8 @@ pub fn is_code_tool(name: &str) -> bool {
             | WRITE_FILE
             | EDIT_FILE
             | RUN_COMMAND
+            | DELETE_FILE
+            | MOVE_FILE
             | crate::vcs_tools::GIT
             | crate::vcs_tools::GH
     )
@@ -169,6 +190,17 @@ struct EditArgs {
 }
 
 #[derive(Deserialize)]
+struct DeleteArgs {
+    path: String,
+}
+
+#[derive(Deserialize)]
+struct MoveArgs {
+    from: String,
+    to: String,
+}
+
+#[derive(Deserialize)]
 struct CommandArgs {
     command: String,
 }
@@ -184,6 +216,54 @@ fn walk(root: &Path, depth: Option<usize>) -> ignore::Walk {
         .filter_entry(|entry| entry.file_name() != ".git")
         .max_depth(depth);
     builder.build()
+}
+
+/// Never touch the workspace folder itself or anything under a `.git` folder.
+fn guard_tree(workspace: &Workspace, path: &Path) -> Result<(), String> {
+    if path == workspace::root(workspace) {
+        return Err(error("that is the workspace folder itself"));
+    }
+    if path.components().any(|part| part.as_os_str() == ".git") {
+        return Err(error("git's own folder is off limits; use the git tool instead"));
+    }
+    Ok(())
+}
+
+/// Every file under a folder, refusing trees too big to keep a baseline of.
+fn tree_files(folder: &Path) -> Result<Vec<PathBuf>, String> {
+    let mut files = Vec::new();
+    let mut bytes = 0_u64;
+    let mut walk = ignore::WalkBuilder::new(folder);
+    walk.standard_filters(false).hidden(false);
+    for entry in walk.build() {
+        let entry = entry.map_err(|failure| error(&failure.to_string()))?;
+        if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+            continue;
+        }
+        if entry.path().components().any(|part| part.as_os_str() == ".git") {
+            return Err(error("that folder contains a .git folder; leave it to the user"));
+        }
+        bytes += entry.metadata().map_or(0, |meta| meta.len());
+        files.push(entry.into_path());
+        if files.len() > MAX_TREE_FILES || bytes > MAX_TREE_BYTES {
+            return Err(error("that folder is too big to do safely here (over 200 files or 20 MB); tell the user to do it themselves"));
+        }
+    }
+    Ok(files)
+}
+
+fn copy_then_remove(from: &Path, to: &Path) -> Result<(), String> {
+    if from.is_dir() {
+        std::fs::create_dir_all(to).map_err(|failure| failure.to_string())?;
+        for entry in std::fs::read_dir(from).map_err(|failure| failure.to_string())? {
+            let entry = entry.map_err(|failure| failure.to_string())?;
+            copy_then_remove(&entry.path(), &to.join(entry.file_name()))?;
+        }
+        std::fs::remove_dir(from).map_err(|failure| failure.to_string())
+    } else {
+        std::fs::copy(from, to).map_err(|failure| failure.to_string())?;
+        std::fs::remove_file(from).map_err(|failure| failure.to_string())
+    }
 }
 
 fn preview(old: &str, new: &str) -> Vec<DiffLine> {
@@ -374,6 +454,8 @@ impl HubTools<'_> {
             WRITE_FILE => self.write_file(&workspace, arguments).await,
             EDIT_FILE => self.edit_file(&workspace, arguments).await,
             RUN_COMMAND => self.run_command(&workspace, arguments).await,
+            DELETE_FILE => self.delete_file(&workspace, arguments).await,
+            MOVE_FILE => self.move_file(&workspace, arguments).await,
             crate::vcs_tools::GIT | crate::vcs_tools::GH => Ok(self.vcs_tool(&workspace, name, arguments).await),
             _ => Err(error("unknown tool")),
         };
@@ -531,6 +613,145 @@ impl HubTools<'_> {
         self.may_write(workspace, &target, &content, &updated).await?;
         self.save(workspace, &target.path, Some(bytes), updated.as_bytes()).await?;
         Ok(json!({ "edited": workspace::shown(workspace, &target.path), "replacements": if args.all { count } else { 1 } }).to_string())
+    }
+
+    /// Remembers what a file looked like before this turn touched it, so the change card can show and undo it.
+    async fn track(&self, workspace: &Workspace, path: &Path, before: Option<Vec<u8>>) -> Result<(), String> {
+        self.touched
+            .lock()
+            .unwrap()
+            .entry(path.to_path_buf())
+            .or_insert_with(|| before.clone());
+        self.state
+            .store
+            .keep_baseline(self.thread_id.to_owned(), workspace.id.clone(), path.to_string_lossy().into_owned(), before)
+            .await
+            .map_err(|failure| error(&failure.to_string()))
+    }
+
+    fn announce(&self, workspace: &Workspace, paths: &[PathBuf]) {
+        self.state.publish(Event::FilesChanged {
+            workspace_id: workspace.id.clone(),
+            thread_id: Some(self.thread_id.to_owned()),
+            paths: paths.iter().map(|path| workspace::shown(workspace, path)).collect(),
+        });
+    }
+
+    async fn delete_file(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: DeleteArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {path}"))?;
+        let target = workspace::resolve(workspace, &args.path);
+        guard_tree(workspace, &target.path)?;
+        if !target.path.exists() {
+            return Err(error("nothing exists at that path"));
+        }
+        if target.path.is_dir() {
+            if !target.inside {
+                return Err(error("only single files can be deleted outside the workspace; tell the user which folder to remove"));
+            }
+            let files = tree_files(&target.path)?;
+            let mut saved = Vec::new();
+            for file in &files {
+                saved.push((file.clone(), std::fs::read(file).map_err(|failure| error(&failure.to_string()))?));
+            }
+            for (file, bytes) in saved {
+                self.track(workspace, &file, Some(bytes)).await?;
+            }
+            std::fs::remove_dir_all(&target.path).map_err(|failure| error(&failure.to_string()))?;
+            self.announce(workspace, &files);
+            return Ok(json!({
+                "deleted": workspace::shown(workspace, &target.path),
+                "files": files.len(),
+                "undo": "the user can restore it from the changes card",
+            })
+            .to_string());
+        }
+        let bytes = std::fs::read(&target.path).map_err(|failure| error(&failure.to_string()))?;
+        if self.stale(&target.path, &bytes) {
+            return Err(error("the file changed since you read it (the user may have edited it); read it again before deleting"));
+        }
+        let old = String::from_utf8_lossy(&bytes).into_owned();
+        self.may_write(workspace, &target, &old, "").await?;
+        self.track(workspace, &target.path, Some(bytes)).await?;
+        std::fs::remove_file(&target.path).map_err(|failure| error(&failure.to_string()))?;
+        self.state
+            .code_reads
+            .lock()
+            .unwrap()
+            .remove(&self.reads_key(&target.path));
+        self.announce(workspace, std::slice::from_ref(&target.path));
+        Ok(json!({
+            "deleted": workspace::shown(workspace, &target.path),
+            "undo": "the user can restore it from the changes card",
+        })
+        .to_string())
+    }
+
+    async fn move_file(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
+        let args: MoveArgs = serde_json::from_str(arguments).map_err(|_| error("arguments must be {from, to}"))?;
+        let from = workspace::resolve(workspace, &args.from);
+        let to = workspace::resolve(workspace, &args.to);
+        guard_tree(workspace, &from.path)?;
+        guard_tree(workspace, &to.path)?;
+        if !from.path.exists() {
+            return Err(error("nothing exists at the from path"));
+        }
+        if to.path.exists() {
+            return Err(error("something already exists at the to path; pick another name or delete it first"));
+        }
+        if to.path.starts_with(&from.path) {
+            return Err(error("cannot move a folder into itself"));
+        }
+        let folder = from.path.is_dir();
+        if folder && (!from.inside || !to.inside) {
+            return Err(error("folders can only be moved inside the workspace; tell the user which folder to move"));
+        }
+        let files = if folder { tree_files(&from.path)? } else { vec![from.path.clone()] };
+        let mut saved = Vec::new();
+        for file in &files {
+            let bytes = std::fs::read(file).map_err(|failure| error(&failure.to_string()))?;
+            if !folder && self.stale(file, &bytes) {
+                return Err(error("the file changed since you read it (the user may have edited it); read it again before moving"));
+            }
+            saved.push((file.clone(), bytes));
+        }
+        if !folder {
+            let old = String::from_utf8_lossy(&saved[0].1).into_owned();
+            self.may_write(workspace, &from, &old, "").await?;
+            self.may_write(workspace, &to, "", &old).await?;
+        }
+        let renamed: Vec<PathBuf> = if folder {
+            files
+                .iter()
+                .map(|file| to.path.join(file.strip_prefix(&from.path).unwrap_or(Path::new(""))))
+                .collect()
+        } else {
+            vec![to.path.clone()]
+        };
+        for ((file, bytes), moved) in saved.into_iter().zip(&renamed) {
+            self.track(workspace, &file, Some(bytes)).await?;
+            self.track(workspace, moved, None).await?;
+        }
+        if let Some(parent) = to.path.parent() {
+            std::fs::create_dir_all(parent).map_err(|failure| error(&failure.to_string()))?;
+        }
+        if std::fs::rename(&from.path, &to.path).is_err() {
+            copy_then_remove(&from.path, &to.path).map_err(|failure| error(&failure))?;
+        }
+        {
+            let mut known = self.state.code_reads.lock().unwrap();
+            for file in &files {
+                known.remove(&self.reads_key(file));
+            }
+        }
+        let mut changed = files.clone();
+        changed.extend(renamed);
+        self.announce(workspace, &changed);
+        Ok(json!({
+            "moved": workspace::shown(workspace, &from.path),
+            "to": workspace::shown(workspace, &to.path),
+            "files": files.len(),
+        })
+        .to_string())
     }
 
     async fn run_command(&self, workspace: &Workspace, arguments: &str) -> Result<String, String> {
