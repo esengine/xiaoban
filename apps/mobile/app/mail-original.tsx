@@ -48,7 +48,9 @@ export default function MailOriginalScreen() {
           <Text selectable style={styles.text}>
             {original.text}
           </Text>
-          {original.truncated && <Text style={mailStyles.label}>{t("mail-original-truncated")}</Text>}
+          {original.truncated && (
+            <Text style={mailStyles.label}>{t("mail-original-truncated")}</Text>
+          )}
         </View>
       ) : failed ? (
         <Text style={styles.hint}>{t("mail-original-failed")}</Text>

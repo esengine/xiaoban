@@ -11,6 +11,8 @@ import type { DocFormat } from "./DocFormat.ts";
 import type { EventDraft } from "./EventDraft.ts";
 import type { Expense } from "./Expense.ts";
 import type { InsightKind } from "./InsightKind.ts";
+import type { MailCategory } from "./MailCategory.ts";
+import type { MailProvider } from "./MailProvider.ts";
 import type { ModelApi } from "./ModelApi.ts";
 import type { NotifySettings } from "./NotifySettings.ts";
 import type { PlanAction } from "./PlanAction.ts";
@@ -253,4 +255,15 @@ export type Request =
   | { type: "mute_insight"; month: string; key: string }
   | { type: "set_import_row"; month: string; id: string; checked: boolean; category: string }
   | { type: "commit_import"; month: string }
-  | { type: "cancel_import"; month: string };
+  | { type: "cancel_import"; month: string }
+  | { type: "mail_status" }
+  | {
+      type: "connect_mail";
+      provider: MailProvider;
+      address: string;
+      password: string;
+      host: string | null;
+    }
+  | { type: "disconnect_mail" }
+  | { type: "mail_list"; category: MailCategory | null }
+  | { type: "mail_original"; id: string };

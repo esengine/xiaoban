@@ -23,8 +23,7 @@ export function useMailAct(onOpenThread: (threadId: string) => void): {
     if (!event) return;
     const name = t("trip-calendar-name");
     const outcome = await syncCalendar(
-      () =>
-        store.eventCalendar({ id: `mail-${item.id}`, ...event, reminder: REMIND_MINUTES }),
+      () => store.eventCalendar({ id: `mail-${item.id}`, ...event, reminder: REMIND_MINUTES }),
       name,
     );
     setNotice(

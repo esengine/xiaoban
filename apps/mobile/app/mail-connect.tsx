@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useHubContext, useHubStore } from "../src/hub/HubProvider.tsx";
 import { MailScreen, mailStyles } from "../src/mail/MailScreen.tsx";
+import { Icon } from "../src/ui/Icon.tsx";
 
 type Field = "address" | "password" | "host";
 
@@ -147,7 +148,7 @@ export default function MailConnectScreen() {
       {done && (
         <View style={[mailStyles.card, styles.success]}>
           <View style={styles.resultHead}>
-            <Text style={styles.check}>✓</Text>
+            <Icon name="check" color={color.success} size={16} />
             <Text style={styles.resultTitle}>{t("mail-connected-title")}</Text>
           </View>
           <Text style={mailStyles.body}>{t("mail-connected-body", { count: result.total })}</Text>
@@ -183,6 +184,5 @@ const styles = StyleSheet.create({
   success: { borderColor: color.successLine },
   failed: { borderColor: color.attentionLine },
   resultHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  check: { fontWeight: "700", color: color.success },
   resultTitle: { fontSize: 14, fontWeight: "700", color: color.ink },
 });

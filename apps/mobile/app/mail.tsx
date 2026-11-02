@@ -39,7 +39,11 @@ export default function MailListScreen() {
 
   return (
     <MailScreen title={t("mail-list-title")}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chips}
+      >
         {chips.map((chip) => {
           const active = chip === category;
           return (

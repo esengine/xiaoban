@@ -3,6 +3,7 @@ import {
   mailActions,
   mailMeta,
   mailMoney,
+  mailReplyTopic,
   mailSender,
   mailtoUrl,
   monthDay,
@@ -18,11 +19,7 @@ import { mailStyles } from "./MailScreen.tsx";
 import { openOriginal } from "./MailToday.tsx";
 import { useMailAct } from "./useMailAct.tsx";
 
-function Buttons({
-  items,
-}: {
-  items: { key: string; label: string; onPress: () => void }[];
-}) {
+function Buttons({ items }: { items: { key: string; label: string; onPress: () => void }[] }) {
   return (
     <View style={mailStyles.buttons}>
       {items.map((item, index) => (
@@ -95,7 +92,7 @@ export function MailCard({ mail }: { mail: MailItem }) {
 
 export function DraftCard({ draft }: { draft: MailDraft }) {
   const { t } = useI18n();
-  const subject = draft.subject.replace(/^re\s*[:：]\s*/i, "");
+  const subject = mailReplyTopic(draft.subject);
   return (
     <View style={styles.wrap}>
       <View style={[mailStyles.card, styles.card]}>

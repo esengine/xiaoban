@@ -1,6 +1,7 @@
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import { type ReactNode, useState } from "react";
+import { MailDialog } from "../mail/MailDialog.tsx";
 import { MascotFace } from "../onboarding/Mascot.tsx";
 import { SchedulesDialog } from "../schedule/SchedulesDialog.tsx";
 
@@ -68,6 +69,7 @@ export function Rail({
 }) {
   const { t } = useI18n();
   const [schedules, setSchedules] = useState(false);
+  const [services, setServices] = useState(false);
   return (
     <nav className="rail" aria-label={t("nav-main")}>
       <div className="rail__logo" role="img" aria-label={t("app-name")}>
@@ -122,6 +124,35 @@ export function Rail({
           <path d="M12 7.5V12l3 2" strokeLinejoin="round" />
         </svg>
       </button>
+      <button
+        type="button"
+        className="rail__item"
+        data-nav="services"
+        aria-label={t("services-title")}
+        aria-expanded={services}
+        title={t("services-title")}
+        onClick={() => setServices(true)}
+      >
+        <svg
+          aria-hidden="true"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        >
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+          <path d="M4 7l8 6 8-6" />
+        </svg>
+      </button>
+      {services && (
+        <MailDialog
+          onClose={() => setServices(false)}
+          onOpenThread={(threadId) => onOpenThread?.(threadId)}
+        />
+      )}
       {schedules && (
         <SchedulesDialog
           onClose={() => setSchedules(false)}

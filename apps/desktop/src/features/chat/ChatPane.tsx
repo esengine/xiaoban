@@ -32,6 +32,7 @@ import { useWorkspaceOf } from "../code/useCode.ts";
 import { DocCard, WritingDocs } from "../doc/DocCard.tsx";
 import { FloorCard } from "../floor/FloorCard.tsx";
 import { RecipeCard } from "../life/RecipeCard.tsx";
+import { MailCard, DraftCard as MailDraftCard } from "../mail/MailCards.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { PlanCard } from "../plan/PlanCard.tsx";
@@ -522,6 +523,8 @@ export function ChatPane(full: Props) {
     openMenu(event, entries);
   };
 
+  const openThreadFromCard = (target: string) => props.onOpenThread?.(target);
+
   const attachmentFor = (message: Message): ReactNode => {
     const attachment = message.attachment;
     if (attachment?.kind === "trip") {
@@ -569,6 +572,12 @@ export function ChatPane(full: Props) {
     }
     if (attachment?.kind === "service_needed") {
       return <SearchCard threadId={threadId} answered={messages.at(-1)?.id !== message.id} />;
+    }
+    if (attachment?.kind === "mail") {
+      return <MailCard mail={attachment.mail} onOpenThread={openThreadFromCard} />;
+    }
+    if (attachment?.kind === "mail_draft") {
+      return <MailDraftCard draft={attachment.draft} />;
     }
     return null;
   };

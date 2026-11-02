@@ -3,6 +3,8 @@ import { useI18n } from "@xiaoban/i18n/react";
 import type { Plan } from "@xiaoban/protocol";
 import { useEffect, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
+import { MailDialog } from "../mail/MailDialog.tsx";
+import { MailTodayCard } from "../mail/MailToday.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
 import { PlanRing } from "../plan/PlanCard.tsx";
 import { usePlanSummary } from "../plan/planSummary.ts";
@@ -158,6 +160,7 @@ export function DailyPage({
       ](),
   };
   const [editing, setEditing] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
 
   useEffect(() => {
     void store.loadKitchen().catch(() => undefined);
@@ -324,6 +327,18 @@ export function DailyPage({
                 ) : null,
             },
             {
+              id: "mail",
+              title: t("mail-today"),
+              wide: false,
+              node: dailyFeed?.mail ? (
+                <MailTodayCard
+                  today={dailyFeed.mail}
+                  onOpenAll={() => setMailOpen(true)}
+                  onOpenThread={onOpenThread}
+                />
+              ) : null,
+            },
+            {
               id: "done",
               title: t("daily-done"),
               wide: false,
@@ -346,6 +361,7 @@ export function DailyPage({
           ]}
         />
         {editing && <MutedTray />}
+        {mailOpen && <MailDialog onClose={() => setMailOpen(false)} onOpenThread={onOpenThread} />}
       </div>
     </main>
   );

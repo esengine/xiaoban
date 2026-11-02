@@ -218,7 +218,8 @@ export function mailSay(t: T, item: MailItem, kind: MailActionKind): string {
     case "trip":
       return t("mail-say-trip", { trip: mailTripText(t, item), from, date });
     case "arrive": {
-      const what = [item.parcel?.merchant, item.parcel?.item].filter(Boolean).join(" ") || item.title;
+      const what =
+        [item.parcel?.merchant, item.parcel?.item].filter(Boolean).join(" ") || item.title;
       return item.parcel?.eta
         ? t("mail-say-arrive-eta", { what, eta: monthDay(t, item.parcel.eta), from })
         : t("mail-say-arrive", { what, from, date });
@@ -246,6 +247,12 @@ export function mailEvent(t: T, item: MailItem): MailEvent | null {
     location: trip.station ?? trip.from ?? "",
     notes: t("mail-original-from", { from: mailSender(item), date: monthDay(t, dayKey(item.at)) }),
   };
+}
+
+const REPLY_PREFIX = /^re\s*[:\uFF1A]\s*/i;
+
+export function mailReplyTopic(subject: string): string {
+  return subject.replace(REPLY_PREFIX, "");
 }
 
 export function mailtoUrl(draft: MailDraft): string {

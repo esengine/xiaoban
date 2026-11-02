@@ -13,6 +13,7 @@ import type { Failure } from "./Failure.ts";
 import type { FloorPlan } from "./FloorPlan.ts";
 import type { Insight } from "./Insight.ts";
 import type { Kitchen } from "./Kitchen.ts";
+import type { MailStatus } from "./MailStatus.ts";
 import type { Memory } from "./Memory.ts";
 import type { Message } from "./Message.ts";
 import type { ModelInfo } from "./ModelInfo.ts";
@@ -93,4 +94,5 @@ export type Event =
   | { type: "notify"; notice: Notice }
   | { type: "notice_withdrawn"; id: string }
   | { type: "daily_feed_changed" }
-  | { type: "insight_alert"; insight: Insight };
+  | { type: "insight_alert"; insight: Insight }
+  | { type: "mail_status_changed"; status: MailStatus };

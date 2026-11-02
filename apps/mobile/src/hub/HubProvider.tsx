@@ -14,7 +14,15 @@ import { Platform } from "react-native";
 import aliases from "../../../../locales/native/app-aliases.json";
 import handover from "../../../../locales/native/handover.json";
 import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
-import { fetchKeys, type Keys, loadKeys, loadNamed, saveKey, saveNamed, withNamed } from "./keys.ts";
+import {
+  fetchKeys,
+  type Keys,
+  loadKeys,
+  loadNamed,
+  saveKey,
+  saveNamed,
+  withNamed,
+} from "./keys.ts";
 import {
   clearSession,
   hubUrl,
@@ -198,13 +206,10 @@ export function HubProvider({ children }: { children: ReactNode }) {
     setKeys(await saveKey(provider, key));
   }, []);
 
-  const namedSaved = useCallback(
-    async (name: string, value: string | null) => {
-      if (onComputerRef.current) return;
-      await saveNamed(name, value);
-    },
-    [],
-  );
+  const namedSaved = useCallback(async (name: string, value: string | null) => {
+    if (onComputerRef.current) return;
+    await saveNamed(name, value);
+  }, []);
 
   const onComputer = remote !== null && (remoteOpen || local === null);
   onComputerRef.current = onComputer;

@@ -3,6 +3,7 @@ import {
   mailActions,
   mailMeta,
   mailMoney,
+  mailReplyTopic,
   mailSender,
   mailtoUrl,
   monthDay,
@@ -68,7 +69,7 @@ export function MailCard({
 export function DraftCard({ draft }: { draft: MailDraft }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const subject = draft.subject.replace(/^re\s*[:：]\s*/i, "");
+  const subject = mailReplyTopic(draft.subject);
   return (
     <div className="mail-card">
       <p className="mail-card__source">
@@ -79,9 +80,7 @@ export function DraftCard({ draft }: { draft: MailDraft }) {
         <button
           type="button"
           className="button--dark"
-          onClick={() =>
-            void navigator.clipboard.writeText(draft.text).then(() => setCopied(true))
-          }
+          onClick={() => void navigator.clipboard.writeText(draft.text).then(() => setCopied(true))}
         >
           {t("mail-draft-copy")}
         </button>
