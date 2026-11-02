@@ -138,7 +138,7 @@ impl HubState {
             let mut tools = crate::packs::filter(self.tools.iter().chain(&self.life_tools), packs);
             let mut system = self.prompts.chat.clone();
             if self.lazy_packs()
-                && let Some(catalog) = crate::packs::catalog(&self.localizer, packs)
+                && let Some(catalog) = crate::packs::catalog(&self.localizer, packs, self.operator.can_operate())
             {
                 tools.extend(self.pack_tools.iter().cloned());
                 system = format!("{system}\n\n{catalog}");

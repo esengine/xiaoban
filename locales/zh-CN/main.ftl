@@ -131,6 +131,7 @@ pack-trip = 规划和保存行程、地点详情、在应用里查价、记出�
 pack-home = 保存和修改户型图
 pack-schedule = 日程和日历、定时任务和循环任务、待办和提醒
 pack-computer = 在这台电脑上打开和操作软件
+pack-computer-open = 在这台电脑上打开软件
 pack-docs = 新建文档、表格和演示文稿
 pack-kitchen = 菜谱、今晚吃什么、家里厨房的事
 pack-mail = 搜索和阅读邮件、起草回复

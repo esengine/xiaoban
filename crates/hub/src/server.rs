@@ -116,9 +116,12 @@ impl Hub {
             info: info.clone(),
             port: addr.port(),
             store,
-            tools: crate::slides::with_write_specs(
-                crate::sheet::with_create_spec(crate::doc::with_write_specs(crate::tools::specs(&localizer), &localizer), &localizer),
-                &localizer,
+            tools: crate::packs::without_operating(
+                crate::slides::with_write_specs(
+                    crate::sheet::with_create_spec(crate::doc::with_write_specs(crate::tools::specs(&localizer), &localizer), &localizer),
+                    &localizer,
+                ),
+                runtime.operator.can_operate(),
             ),
             pack_tools: vec![crate::packs::spec(&localizer)],
             code_tools: crate::code_tools::specs(&localizer),

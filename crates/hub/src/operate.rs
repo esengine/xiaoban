@@ -64,6 +64,10 @@ pub trait Operator: Debug + Send + Sync + 'static {
     fn is_phone(&self) -> bool {
         false
     }
+    /// Whether this device can look at and drive other apps at all. Opening them is separate.
+    fn can_operate(&self) -> bool {
+        true
+    }
     fn status(&self, _title: Option<String>) {}
 }
 
@@ -73,6 +77,10 @@ pub struct NoOperator;
 impl Operator for NoOperator {
     fn permissions(&self) -> OperatePermissions {
         OperatePermissions { control: false }
+    }
+
+    fn can_operate(&self) -> bool {
+        false
     }
 
     fn snapshot(&self, _: String) -> BoxFuture<'static, Result<Snapshot, String>> {

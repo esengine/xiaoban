@@ -2357,6 +2357,30 @@ async fn a_conversation_with_a_floor_plan_already_has_the_home_pack() {
 }
 
 #[tokio::test]
+async fn a_device_that_cannot_operate_apps_never_offers_the_tools_that_need_it() {
+    let provider = RecordingProvider::new(ScriptedProvider::new(["好"]));
+    let mut runtime = runtime(provider.clone());
+    runtime.operator = Arc::new(xiaoban_hub::NoOperator);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "你好", Vec::new()).await;
+    let names: Vec<String> = provider.requests()[0]
+        .tools
+        .iter()
+        .map(|tool| tool.name.clone())
+        .collect();
+    for gone in ["look_at_app", "click", "type_text", "press_keys", "do_steps", "check_price_in_app"] {
+        assert!(!names.iter().any(|name| name == gone), "{gone} is offered: {names:?}");
+    }
+    // Finding and opening apps does not need an operator, and a general go-ahead question stays.
+    for kept in ["find_apps", "open_app", "confirm", "save_trip"] {
+        assert!(names.iter().any(|name| name == kept), "{kept} is missing");
+    }
+    hub.shutdown().await;
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator

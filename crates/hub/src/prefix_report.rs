@@ -156,7 +156,7 @@ fn the_fixed_prefix_stays_within_budget() {
         let scenes = tools_for(&localizer);
         for (scene, budget) in budgets {
             let catalog = if scene == "core" {
-                crate::packs::catalog(&localizer, &crate::packs::PackSet::new())
+                crate::packs::catalog(&localizer, &crate::packs::PackSet::new(), true)
                     .map_or(0, |text| estimate(&text))
             } else {
                 0

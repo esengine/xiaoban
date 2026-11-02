@@ -86,7 +86,6 @@ impl Pack {
                 "type_text",
                 "press_keys",
                 "do_steps",
-                "confirm",
             ],
             Self::Docs => &[
                 "doc_start",
@@ -105,8 +104,9 @@ impl Pack {
 
 pub const LOAD_TOOLS: &str = "load_tools";
 
-fn describe(pack: Pack, l: &Localizer) -> String {
+fn describe(pack: Pack, l: &Localizer, can_operate: bool) -> String {
     l.text(match pack {
+        Pack::Computer if !can_operate => keys::PACK_COMPUTER_OPEN,
         Pack::Trip => keys::PACK_TRIP,
         Pack::Home => keys::PACK_HOME,
         Pack::Schedule => keys::PACK_SCHEDULE,
@@ -139,11 +139,11 @@ pub fn spec(l: &Localizer) -> ToolSpec {
 }
 
 /// The part of the system prompt that tells the model which packs it can still load.
-pub fn catalog(l: &Localizer, loaded: &PackSet) -> Option<String> {
+pub fn catalog(l: &Localizer, loaded: &PackSet, can_operate: bool) -> Option<String> {
     let missing: Vec<String> = Pack::ALL
         .into_iter()
         .filter(|pack| !loaded.contains(pack))
-        .map(|pack| format!("- {}: {}", pack.id(), describe(pack, l)))
+        .map(|pack| format!("- {}: {}", pack.id(), describe(pack, l, can_operate)))
         .collect();
     if missing.is_empty() {
         return None;
@@ -153,6 +153,28 @@ pub fn catalog(l: &Localizer, loaded: &PackSet) -> Option<String> {
         l.text(keys::PROMPT_PACKS),
         missing.join("\n")
     ))
+}
+
+/// Tools that read or drive another app's window. A device that cannot do that never offers them.
+const OPERATING: [&str; 7] = [
+    "look_at_app",
+    "click",
+    "type_text",
+    "press_keys",
+    "do_steps",
+    "check_price_in_app",
+    "note_app_price",
+];
+
+/// Drops the tools that need an operator this device does not have.
+pub fn without_operating(tools: Vec<ToolSpec>, can_operate: bool) -> Vec<ToolSpec> {
+    if can_operate {
+        return tools;
+    }
+    tools
+        .into_iter()
+        .filter(|tool| !OPERATING.contains(&tool.name.as_str()))
+        .collect()
 }
 
 pub fn pack_of(tool: &str) -> Option<Pack> {

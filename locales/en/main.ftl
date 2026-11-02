@@ -131,6 +131,7 @@ pack-trip = Plan and save trips, place details, check prices in apps, log trip s
 pack-home = Save and edit floor plans
 pack-schedule = Events and calendar, scheduled and repeating tasks, to-dos and reminders
 pack-computer = Open and operate apps on this computer
+pack-computer-open = Open apps on this computer
 pack-docs = Create documents, spreadsheets and slide decks
 pack-kitchen = Recipes, what to cook tonight, the home kitchen
 pack-mail = Search and read mail, draft replies
