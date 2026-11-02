@@ -87,7 +87,7 @@ pub async fn handle(state: &SharedState, request: Request) -> Result<Response, P
     Ok(Response::NotifySettings { settings })
 }
 
-fn in_window(start: u16, end: u16, minute: u16) -> bool {
+pub(crate) fn in_window(start: u16, end: u16, minute: u16) -> bool {
     if start <= end {
         start <= minute && minute < end
     } else {
@@ -183,6 +183,7 @@ struct Draft {
     confirm_id: Option<String>,
     choices: Vec<NoticeChoice>,
     reply: bool,
+    todo_id: Option<String>,
 }
 
 impl Draft {
@@ -198,6 +199,7 @@ impl Draft {
             confirm_id: self.confirm_id,
             choices: self.choices,
             reply: self.reply,
+            todo_id: self.todo_id,
         }
     }
 }
@@ -351,6 +353,7 @@ fn confirm_draft(l: &Localizer, confirm: &ConfirmRequest) -> Draft {
         confirm_id: Some(confirm.id.clone()),
         choices,
         reply: false,
+        todo_id: None,
     }
 }
 
@@ -387,9 +390,11 @@ fn insight_draft(l: &Localizer, insight: Insight) -> Draft {
         confirm_id: None,
         choices: Vec::new(),
         reply: false,
+        todo_id: None,
     }
 }
 
+#[allow(clippy::too_many_lines)]
 async fn draft_for(
     state: &SharedState,
     turns: &mut HashMap<String, String>,
@@ -427,6 +432,7 @@ async fn draft_for(
                 confirm_id: None,
                 choices: Vec::new(),
                 reply: true,
+                todo_id: None,
             })
         }
         Event::TurnFailed { turn_id, failure } => {
@@ -447,6 +453,7 @@ async fn draft_for(
                 confirm_id: None,
                 choices: Vec::new(),
                 reply: false,
+                todo_id: None,
             })
         }
         Event::TimerFired { timer } => Some(Draft {
@@ -462,6 +469,7 @@ async fn draft_for(
             confirm_id: None,
             choices: Vec::new(),
             reply: false,
+            todo_id: None,
         }),
         Event::PrepDue { task } => Some(Draft {
             id: format!("prep:{}:{}:{}", task.date, task.time, task.text),
@@ -472,6 +480,18 @@ async fn draft_for(
             confirm_id: None,
             choices: Vec::new(),
             reply: false,
+            todo_id: None,
+        }),
+        Event::TodoDue { todo } => Some(Draft {
+            id: crate::todos::notice_id(&todo.id),
+            category: NotifyCategory::Remind,
+            body: crate::todos::notice_body(l, &todo),
+            title: todo.title,
+            thread_id: None,
+            confirm_id: None,
+            choices: Vec::new(),
+            reply: false,
+            todo_id: Some(todo.id),
         }),
         Event::WeatherAlert {
             title,
@@ -490,6 +510,7 @@ async fn draft_for(
             confirm_id: None,
             choices: Vec::new(),
             reply: false,
+            todo_id: None,
         }),
         _ => None,
     }

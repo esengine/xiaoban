@@ -15,4 +15,5 @@ export type Notice = {
   confirmId: string | null;
   choices: Array<NoticeChoice>;
   reply: boolean;
+  todoId: string | null;
 };

@@ -41,6 +41,7 @@ pub struct HubState {
     pub confirms: crate::confirms::Confirms,
     pub pauses: crate::pauses::Pauses,
     pub schedules: crate::schedules::Runs,
+    pub todos: crate::todos::Book,
     pub files: crate::files::Files,
     pub auto_titles: bool,
     pub auto_thinking: bool,

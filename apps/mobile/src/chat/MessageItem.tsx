@@ -7,6 +7,7 @@ import { FloorCard } from "../floor/FloorCard.tsx";
 import { RecipeCard } from "../life/RecipeCard.tsx";
 import { FailedCard } from "../schedule/ScheduleBits.tsx";
 import { ScheduleCard } from "../schedule/ScheduleCard.tsx";
+import { TodoCard } from "../todo/TodoCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { DeckCard, DocCard, SheetCard } from "../work/WorkCards.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
@@ -33,6 +34,8 @@ function AttachmentCard({ message, last }: { message: Message; last: boolean }) 
       return <FloorCard planId={attachment.planId} />;
     case "schedule":
       return <ScheduleCard scheduleId={attachment.scheduleId} />;
+    case "todos":
+      return <TodoCard todoIds={attachment.todoIds} />;
     case "schedule_failed":
       return <FailedCard scheduleId={attachment.scheduleId} reason={attachment.reason} />;
     case "subthreads":

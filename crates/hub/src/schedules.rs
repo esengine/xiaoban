@@ -98,7 +98,7 @@ impl Runs {
     }
 }
 
-fn at(date: Date, minute: u16, zone: &TimeZone) -> Option<Timestamp> {
+pub(crate) fn at(date: Date, minute: u16, zone: &TimeZone) -> Option<Timestamp> {
     let time = Time::new(
         i8::try_from(minute / 60).ok()?,
         i8::try_from(minute % 60).ok()?,
@@ -904,7 +904,7 @@ struct ReportArgs {
     reason: Option<String>,
 }
 
-fn parse_minute(text: Option<&str>) -> Option<u16> {
+pub(crate) fn parse_minute(text: Option<&str>) -> Option<u16> {
     let text = text?.trim().replace('\u{ff1a}', ":");
     let time = Time::strptime("%H:%M", &text).ok()?;
     u16::try_from(i32::from(time.hour()) * 60 + i32::from(time.minute())).ok()

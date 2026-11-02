@@ -27,5 +27,11 @@ export function noticeTexts(t: Translate, category: NotifyCategory) {
     failed: t("notify-send-failed"),
     channelUrgent: t("notify-channel-urgent"),
     channelQuiet: t("notify-channel-quiet"),
+    todoCategory: t("notify-todo-category"),
+    todoDone: t("notify-todo-done"),
+    todoHour: t("notify-todo-hour"),
+    todoTomorrow: t("notify-todo-tomorrow"),
+    answeredTodoDone: t("notify-todo-answered-done"),
+    answeredTodoLater: t("notify-todo-answered-later"),
   };
 }

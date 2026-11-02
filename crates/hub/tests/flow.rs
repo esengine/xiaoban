@@ -2976,3 +2976,88 @@ async fn scheduled_tasks_wait_for_start_then_run_report_and_record_failures() {
     assert_eq!(after.runs, 2);
     hub.shutdown().await;
 }
+
+#[tokio::test]
+async fn todos_with_a_time_wait_for_ok_and_untimed_ones_go_straight_on_the_list() {
+    let provider = ScriptedProvider::sequence([
+        vec![tool_call(
+            "add_todo",
+            &serde_json::json!({
+                "items": [{ "title": "交房租", "time": "09:00", "repeat": "monthly", "days": [5] }],
+            }),
+        )],
+        vec![ModelChunk::Text("每月 5 号 9 点提醒你，确认一下".into())],
+        vec![tool_call(
+            "add_todo",
+            &serde_json::json!({
+                "items": [
+                    { "title": "买牙膏", "shop_item": "牙膏" },
+                    { "title": "买电池", "shop_item": "电池" },
+                ],
+            }),
+        )],
+        vec![ModelChunk::Text("加到待办了".into())],
+    ]);
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider)).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "提醒我每月 5 号交房租", Vec::new()).await;
+    let card = latest_message_with(&mut client, &thread, |attachment| {
+        matches!(attachment, Attachment::Todos { .. })
+    })
+    .await;
+    let Some(Attachment::Todos { todo_ids }) = card.attachment else {
+        panic!("expected a to-do card");
+    };
+    let Response::Todos { todos } = client.request(Request::ListTodos).await else {
+        panic!("expected to-dos");
+    };
+    let rent = todos.iter().find(|todo| todo.id == todo_ids[0]).unwrap();
+    assert_eq!(rent.state, xiaoban_protocol::TodoState::Proposed);
+    assert_eq!(rent.minute, Some(9 * 60));
+    let Response::DailyFeed { feed } = client.request(Request::DailyFeed).await else {
+        panic!("expected the daily feed");
+    };
+    assert!(feed.todos.is_empty(), "a proposal must not show before OK");
+    let Response::Todo { todo } = client
+        .request(Request::ConfirmTodo { id: rent.id.clone() })
+        .await
+    else {
+        panic!("expected a to-do");
+    };
+    assert_eq!(todo.state, xiaoban_protocol::TodoState::Open);
+
+    converse(&mut client, &thread, "记得买牙膏和电池", Vec::new()).await;
+    let card = latest_message_with(&mut client, &thread, |attachment| {
+        matches!(attachment, Attachment::Todos { todo_ids } if todo_ids.len() == 2)
+    })
+    .await;
+    let Some(Attachment::Todos { todo_ids }) = card.attachment else {
+        panic!("expected a to-do card");
+    };
+    let Response::DailyFeed { feed } = client.request(Request::DailyFeed).await else {
+        panic!("expected the daily feed");
+    };
+    assert!(todo_ids.iter().all(|id| feed.todos.iter().any(|todo| &todo.id == id)));
+    let Response::Todos { todos } = client
+        .request(Request::TodosToShopping { ids: todo_ids.clone() })
+        .await
+    else {
+        panic!("expected to-dos");
+    };
+    assert!(todos.iter().all(|todo| todo.state == xiaoban_protocol::TodoState::Shopping));
+    let Response::Kitchen { kitchen } = client.request(Request::Kitchen).await else {
+        panic!("expected the kitchen");
+    };
+    assert!(kitchen.shopping.iter().any(|item| item.name == "牙膏"));
+    let Response::Todo { todo } = client
+        .request(Request::QuickAddTodo { text: "明天晚上8点给妈妈打电话".into() })
+        .await
+    else {
+        panic!("expected a to-do");
+    };
+    assert_eq!(todo.title, "给妈妈打电话");
+    assert_eq!(todo.minute, Some(20 * 60));
+    assert_eq!(todo.state, xiaoban_protocol::TodoState::Open);
+    hub.shutdown().await;
+}

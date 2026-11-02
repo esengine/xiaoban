@@ -18,4 +18,5 @@ export type Attachment =
   | { kind: "floor_plan"; planId: string }
   | { kind: "schedule"; scheduleId: string }
   | { kind: "schedule_run"; scheduleId: string; mark: RunMark; dueAt: number }
-  | { kind: "schedule_failed"; scheduleId: string; reason: string };
+  | { kind: "schedule_failed"; scheduleId: string; reason: string }
+  | { kind: "todos"; todoIds: Array<string> };

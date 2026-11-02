@@ -19,6 +19,7 @@ mod sheet;
 mod slides;
 mod request;
 mod schedule;
+mod todo;
 mod trip;
 mod weather;
 
@@ -43,6 +44,7 @@ pub use sheet::*;
 pub use slides::*;
 pub use request::*;
 pub use schedule::*;
+pub use todo::*;
 pub use trip::*;
 pub use weather::*;
 

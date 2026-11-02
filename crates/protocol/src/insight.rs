@@ -91,4 +91,5 @@ pub struct DailyFeed {
     pub insights: Vec<Insight>,
     pub done: Vec<DoneItem>,
     pub muted: Vec<MutedInsight>,
+    pub todos: Vec<crate::Todo>,
 }

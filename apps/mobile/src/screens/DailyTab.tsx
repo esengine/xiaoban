@@ -9,6 +9,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SkyIcon } from "../life/LifeIcons.tsx";
 import { DoneCard, NoticedCard } from "../life/Noticed.tsx";
+import { TodoDailyCard } from "../todo/TodoDailyCard.tsx";
 import { moneyFormat } from "../ui/format.ts";
 import { openThread } from "./ChatsTab.tsx";
 
@@ -168,6 +169,8 @@ export function DailyTab({ store }: { store: HubStore }) {
         </Text>
         <Text style={styles.date}>{date}</Text>
       </View>
+
+      <TodoDailyCard store={store} />
 
       {!report && (
         <Card

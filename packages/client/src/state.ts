@@ -27,6 +27,7 @@ import type {
   ServiceStatus,
   StepResult,
   Thread,
+  Todo,
   Trip,
   WeatherView,
   Workbook,
@@ -83,6 +84,8 @@ export interface HubState {
   plans: Readonly<Record<string, Plan | null>>;
   schedules: Readonly<Record<string, Schedule>>;
   schedulesLoaded: boolean;
+  todos: Readonly<Record<string, Todo>>;
+  todosLoaded: boolean;
   capabilities: Capability[];
   foundCapabilities: Readonly<Record<string, Capability[]>>;
   usedCapabilities: Readonly<Record<string, string[]>>;
@@ -128,6 +131,8 @@ export const initialHubState: HubState = {
   plans: {},
   schedules: {},
   schedulesLoaded: false,
+  todos: {},
+  todosLoaded: false,
   capabilities: [],
   foundCapabilities: {},
   usedCapabilities: {},
@@ -217,6 +222,14 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
       const { [event.id]: _removed, ...schedules } = state.schedules;
       return { ...state, schedules };
     }
+    case "todo_updated":
+      return { ...state, todos: { ...state.todos, [event.todo.id]: event.todo } };
+    case "todo_removed": {
+      const { [event.id]: _removed, ...todos } = state.todos;
+      return { ...state, todos };
+    }
+    case "todo_due":
+      return state;
     case "capabilities_changed":
       return { ...state, capabilities: event.capabilities };
     case "capabilities_found":

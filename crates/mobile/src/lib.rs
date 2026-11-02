@@ -313,6 +313,26 @@ mod tests {
         assert!(reply.get("error").is_some());
         let reply = notices::deliver(&link, "nonsense").await;
         assert!(reply.get("error").is_some());
+        let added = link
+            .request(Request::AddTodo {
+                draft: xiaoban_protocol::TodoDraft {
+                    title: "Pay rent".to_owned(),
+                    ..Default::default()
+                },
+                propose: false,
+            })
+            .await
+            .unwrap();
+        let xiaoban_protocol::Response::Todo { todo } = added else {
+            panic!("expected a to-do");
+        };
+        let answer = serde_json::json!({ "kind": "todo", "todoId": todo.id, "action": "done" });
+        let reply = notices::deliver(&link, &answer.to_string()).await;
+        assert!(reply.get("ok").is_some());
+        let xiaoban_protocol::Response::Todos { todos } = link.request(Request::ListTodos).await.unwrap() else {
+            panic!("expected to-dos");
+        };
+        assert_eq!(todos[0].state, xiaoban_protocol::TodoState::Done);
         handle.shutdown().await;
     }
 

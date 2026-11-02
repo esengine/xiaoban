@@ -64,6 +64,8 @@ export const color = {
   mapGround: "#EEF0EC",
   mapPark: "#DCEAD6",
   mapWater: "#CFE0EE",
+  todoOverdue: "#E5533D",
+  todoRing: "#C5CAD5",
 } as const;
 
 export const dark = {

@@ -22,6 +22,9 @@ import type { SheetFormat } from "./SheetFormat.ts";
 import type { SheetOp } from "./SheetOp.ts";
 import type { Slide } from "./Slide.ts";
 import type { ThinkingEffort } from "./ThinkingEffort.ts";
+import type { Todo } from "./Todo.ts";
+import type { TodoAction } from "./TodoAction.ts";
+import type { TodoDraft } from "./TodoDraft.ts";
 import type { Transition } from "./Transition.ts";
 import type { WeatherPlace } from "./WeatherPlace.ts";
 import type { WeatherRules } from "./WeatherRules.ts";
@@ -231,6 +234,15 @@ export type Request =
   | { type: "set_schedule_active"; id: string; active: boolean }
   | { type: "run_schedule"; id: string }
   | { type: "delete_schedule"; id: string }
+  | { type: "list_todos" }
+  | { type: "add_todo"; draft: TodoDraft; propose: boolean }
+  | { type: "quick_add_todo"; text: string }
+  | { type: "confirm_todo"; id: string }
+  | { type: "update_todo"; todo: Todo }
+  | { type: "todo_action"; id: string; action: TodoAction }
+  | { type: "delete_todo"; id: string }
+  | { type: "todos_to_shopping"; ids: Array<string> }
+  | { type: "keep_todos"; ids: Array<string> }
   | { type: "plan_action"; threadId: string; action: PlanAction }
   | { type: "find_capabilities"; query: string }
   | { type: "list_capabilities" }

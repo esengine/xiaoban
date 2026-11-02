@@ -5,7 +5,9 @@ use serde_json::{Value, json};
 use tokio::sync::broadcast::error::RecvError;
 use xiaoban_hub::LocalLink;
 use xiaoban_i18n::{Localizer, keys};
-use xiaoban_protocol::{Event, Request, Response, Schedule, ScheduleState};
+use xiaoban_protocol::{
+    Event, NotifySettings, Request, Response, Schedule, ScheduleState, Todo,
+};
 
 use crate::operator::Bridge;
 
@@ -20,6 +22,7 @@ struct Watch {
     turns: HashMap<String, (String, i64)>,
     titles: HashMap<String, String>,
     wakes: HashMap<String, i64>,
+    settings: NotifySettings,
 }
 
 fn next_wake(schedule: &Schedule) -> Option<i64> {
@@ -33,6 +36,16 @@ impl Watch {
         match next_wake(schedule) {
             Some(at) => self.wakes.insert(schedule.id.clone(), at),
             None => self.wakes.remove(&schedule.id),
+        };
+    }
+
+    fn todo(&mut self, todo: &Todo) {
+        let key = format!("todo:{}", todo.id);
+        let at = xiaoban_hub::todo_wake_at(todo, &self.settings)
+            .filter(|at| todo.reminded_at != Some(*at));
+        match at {
+            Some(at) => self.wakes.insert(key, at),
+            None => self.wakes.remove(&key),
         };
     }
 
@@ -97,6 +110,14 @@ pub async fn watch(link: LocalLink, bridge: Bridge, l: Localizer) {
             state.schedule(schedule);
         }
     }
+    if let Ok(Response::NotifySettings { settings }) = link.request(Request::NotifySettings).await {
+        state.settings = settings;
+    }
+    if let Ok(Response::Todos { todos }) = link.request(Request::ListTodos).await {
+        for todo in &todos {
+            state.todo(todo);
+        }
+    }
     send(&bridge, state.wake()).await;
     loop {
         let event = tokio::select! {
@@ -130,6 +151,14 @@ pub async fn watch(link: LocalLink, bridge: Bridge, l: Localizer) {
             }
             Event::ScheduleUpdated { schedule } => {
                 state.schedule(&schedule);
+                send(&bridge, state.wake()).await;
+            }
+            Event::TodoUpdated { todo } | Event::TodoDue { todo } => {
+                state.todo(&todo);
+                send(&bridge, state.wake()).await;
+            }
+            Event::TodoRemoved { id } => {
+                state.wakes.remove(&format!("todo:{id}"));
                 send(&bridge, state.wake()).await;
             }
             Event::ScheduleRemoved { id } => {

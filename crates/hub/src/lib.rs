@@ -45,6 +45,8 @@ mod prompts;
 mod registry;
 mod router;
 mod schedules;
+mod todo_parse;
+mod todos;
 mod runtime;
 mod secrets;
 mod server;
@@ -83,6 +85,13 @@ pub use location::{FixedLocator, Locator, NoLocator};
 pub use operate::{ActFailure, MAX_ELEMENTS, NoOperator, Operator, Snapshot, UiAction, UiElement};
 pub use prompts::Prompts;
 pub use router::{NoRouter, Router};
+
+pub fn todo_wake_at(
+    todo: &xiaoban_protocol::Todo,
+    settings: &xiaoban_protocol::NotifySettings,
+) -> Option<i64> {
+    todos::remind_at(todo, settings, &jiff::tz::TimeZone::system())
+}
 pub use runtime::HubRuntime;
 pub use secrets::{KEYCHAIN_SERVICE, KeyringSecrets, MemorySecrets, SecretError, SecretStore};
 pub use server::{Hub, HubHandle, LocalLink};

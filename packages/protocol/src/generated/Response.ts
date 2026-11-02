@@ -42,6 +42,7 @@ import type { Schedule } from "./Schedule.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
 import type { SheetTab } from "./SheetTab.ts";
 import type { Thread } from "./Thread.ts";
+import type { Todo } from "./Todo.ts";
 import type { Trip } from "./Trip.ts";
 import type { TripCalendar } from "./TripCalendar.ts";
 import type { Usage } from "./Usage.ts";
@@ -124,6 +125,8 @@ export type Response =
   | { type: "plans"; plans: Array<Plan> }
   | { type: "schedule"; schedule: Schedule }
   | { type: "schedules"; schedules: Array<Schedule> }
+  | { type: "todo"; todo: Todo }
+  | { type: "todos"; todos: Array<Todo> }
   | { type: "capabilities"; capabilities: Array<Capability> }
   | { type: "capability"; capability: Capability }
   | { type: "doc"; doc: Doc }

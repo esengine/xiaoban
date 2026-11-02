@@ -4,7 +4,7 @@ use tokio::sync::broadcast::error::RecvError;
 use xiaoban_hub::LocalLink;
 use xiaoban_i18n::{Key, Localizer, keys};
 use xiaoban_protocol::{
-    ConfirmChoice, Event, Notice, NotifyCategory, NotifyLevel, NotifyRing, Request,
+    ConfirmChoice, Event, Notice, NotifyCategory, NotifyLevel, NotifyRing, Request, TodoAction,
 };
 
 use crate::operator::Bridge;
@@ -25,6 +25,10 @@ enum Answer {
         text: String,
     },
     StopAll,
+    Todo {
+        todo_id: String,
+        action: TodoAction,
+    },
 }
 
 fn category_key(category: NotifyCategory) -> Key {
@@ -52,6 +56,12 @@ pub fn texts(l: &Localizer, category: NotifyCategory) -> Value {
         "failed": l.text(keys::NOTIFY_SEND_FAILED),
         "channelUrgent": l.text(keys::NOTIFY_CHANNEL_URGENT),
         "channelQuiet": l.text(keys::NOTIFY_CHANNEL_QUIET),
+        "todoCategory": l.text(keys::NOTIFY_TODO_CATEGORY),
+        "todoDone": l.text(keys::NOTIFY_TODO_DONE),
+        "todoHour": l.text(keys::NOTIFY_TODO_HOUR),
+        "todoTomorrow": l.text(keys::NOTIFY_TODO_TOMORROW),
+        "answeredTodoDone": l.text(keys::NOTIFY_TODO_ANSWERED_DONE),
+        "answeredTodoLater": l.text(keys::NOTIFY_TODO_ANSWERED_LATER),
     })
 }
 
@@ -112,6 +122,7 @@ pub async fn deliver(link: &LocalLink, raw: &str) -> Value {
             }
             return json!({ "ok": true });
         }
+        Answer::Todo { todo_id, action } => Request::TodoAction { id: todo_id, action },
     };
     match link.request(request).await {
         Ok(_) => json!({ "ok": true }),

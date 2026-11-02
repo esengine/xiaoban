@@ -22,6 +22,7 @@ import type { PrepTask } from "./PrepTask.ts";
 import type { Schedule } from "./Schedule.ts";
 import type { StepResult } from "./StepResult.ts";
 import type { Thread } from "./Thread.ts";
+import type { Todo } from "./Todo.ts";
 import type { Usage } from "./Usage.ts";
 import type { WorkbookSummary } from "./WorkbookSummary.ts";
 import type { Workspace } from "./Workspace.ts";
@@ -59,6 +60,9 @@ export type Event =
   | { type: "plan_updated"; threadId: string; plan: Plan | null }
   | { type: "schedule_updated"; schedule: Schedule }
   | { type: "schedule_removed"; id: string }
+  | { type: "todo_updated"; todo: Todo }
+  | { type: "todo_removed"; id: string }
+  | { type: "todo_due"; todo: Todo }
   | { type: "capabilities_changed"; capabilities: Array<Capability> }
   | {
       type: "capabilities_found";

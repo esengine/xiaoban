@@ -107,6 +107,15 @@ pub enum Event {
     ScheduleRemoved {
         id: String,
     },
+    TodoUpdated {
+        todo: crate::Todo,
+    },
+    TodoRemoved {
+        id: String,
+    },
+    TodoDue {
+        todo: crate::Todo,
+    },
     CapabilitiesChanged {
         capabilities: Vec<crate::Capability>,
     },
@@ -231,6 +240,9 @@ impl Event {
             | Self::InsightAlert { .. }
             | Self::ScheduleUpdated { .. }
             | Self::ScheduleRemoved { .. }
+            | Self::TodoUpdated { .. }
+            | Self::TodoRemoved { .. }
+            | Self::TodoDue { .. }
             | Self::CapabilitiesChanged { .. } => None,
             Self::FilesChanged { thread_id, .. } => thread_id.as_deref(),
             Self::Notify { notice } => notice.thread_id.as_deref(),

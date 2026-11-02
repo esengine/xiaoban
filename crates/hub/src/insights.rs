@@ -551,6 +551,7 @@ async fn feed(state: &SharedState) -> DailyFeed {
         insights: saved.items.into_iter().filter(|item| item.until > now).collect(),
         done: done(state).await,
         muted,
+        todos: crate::todos::feed(state).await,
     }
 }
 
