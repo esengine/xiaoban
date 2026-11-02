@@ -4,6 +4,7 @@ import {
   mailEvent,
   mailSay,
   mailTargetThread,
+  mailTodo,
 } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
@@ -49,6 +50,14 @@ export function useMailAct(store: HubStore): {
   const act = (item: MailItem, kind: MailActionKind) => {
     if (kind === "calendar") {
       void calendar(item);
+      return;
+    }
+    const todo = kind === "remind" ? mailTodo(t, item) : null;
+    if (todo) {
+      void store
+        .addTodo(todo)
+        .then(() => shortToast(t("mail-todo-done")))
+        .catch(() => Alert.alert(t("mail-todo-failed")));
       return;
     }
     const thread = kind === "ledger" ? (ledger?.threadId ?? null) : mailTargetThread(item, kind);

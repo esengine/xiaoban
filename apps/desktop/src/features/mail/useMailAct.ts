@@ -1,4 +1,10 @@
-import { type MailActionKind, mailEvent, mailSay, mailTargetThread } from "@xiaoban/client";
+import {
+  type MailActionKind,
+  mailEvent,
+  mailSay,
+  mailTargetThread,
+  mailTodo,
+} from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { MailItem } from "@xiaoban/protocol";
@@ -40,6 +46,14 @@ export function useMailAct(onOpenThread: (threadId: string) => void): {
   const act = (item: MailItem, kind: MailActionKind) => {
     if (kind === "calendar") {
       void calendar(item);
+      return;
+    }
+    const todo = kind === "remind" ? mailTodo(t, item) : null;
+    if (todo) {
+      void store
+        .addTodo(todo)
+        .then(() => setNotice(t("mail-todo-done")))
+        .catch(() => setNotice(t("mail-todo-failed")));
       return;
     }
     const thread =

@@ -5,6 +5,7 @@ import type {
   MailFailure,
   MailItem,
   MailProvider,
+  TodoDraft,
 } from "@xiaoban/protocol";
 import { dayKey } from "./calendar.ts";
 import { monthDay } from "./trip.ts";
@@ -263,4 +264,26 @@ export function mailtoUrl(draft: MailDraft): string {
 export function mailTargetThread(item: MailItem, kind: MailActionKind): string | null {
   if (kind === "trip") return item.trip?.tripThreadId ?? null;
   return null;
+}
+
+export function mailTodo(t: T, item: MailItem): TodoDraft | null {
+  const due = item.bill?.due;
+  if (!due) return null;
+  const day = new Date(`${due}T00:00:00`);
+  if (Number.isNaN(day.getTime())) return null;
+  day.setDate(day.getDate() - 1);
+  const date = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  const cents = item.bill?.cents;
+  return {
+    title: t("mail-todo-title", { name: item.fromName || item.title }),
+    date,
+    minute: 9 * 60,
+    repeat: null,
+    note:
+      cents === null || cents === undefined
+        ? t("mail-todo-note-due", { due: monthDay(t, due) })
+        : t("mail-todo-note", { due: monthDay(t, due), amount: (cents / 100).toFixed(2) }),
+    source: { kind: "email", detail: item.fromName || item.fromAddress, threadId: null },
+    shopItem: null,
+  };
 }

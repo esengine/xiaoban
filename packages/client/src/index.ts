@@ -51,6 +51,7 @@ export {
   mailSay,
   mailSender,
   mailTargetThread,
+  mailTodo,
   mailTripText,
   mailtoUrl,
   mailWhen,
