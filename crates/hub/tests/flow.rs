@@ -2979,12 +2979,11 @@ async fn live_phone_pay() {
                 let answers: Vec<xiaoban_protocol::AskAnswer> = ask
                     .questions
                     .iter()
-                    .map(|question| match question.options.first() {
-                        Some(option) => {
+                    .map(|question| {
+                        if let Some(option) = question.options.first() {
                             println!("asked: {} -> {}", question.text, option.label);
                             xiaoban_protocol::AskAnswer::Chosen { labels: vec![option.label.clone()] }
-                        }
-                        None => {
+                        } else {
                             println!("asked: {} -> 3307", question.text);
                             xiaoban_protocol::AskAnswer::Typed { text: "3307".into() }
                         }
