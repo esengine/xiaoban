@@ -58,8 +58,9 @@ function dueAt(todo: Todo): number | null {
 
 function daysFromToday(date: string, now: number): number {
   const start = dayStart(date);
-  if (start === null) return 0;
-  return Math.round((start - dayStart(dayKey(now))!) / DAY);
+  const today = dayStart(dayKey(now));
+  if (start === null || today === null) return 0;
+  return Math.round((start - today) / DAY);
 }
 
 export function todoBucket(todo: Todo, now = Date.now()): TodoBucket {
@@ -133,7 +134,9 @@ function join(t: T, parts: (string | null | undefined)[]): string {
 
 function doneText(t: T, todo: Todo, now: number): string {
   if (todo.doneAt === null) return t("todo-done");
-  const time = minuteText(new Date(todo.doneAt).getHours() * 60 + new Date(todo.doneAt).getMinutes());
+  const time = minuteText(
+    new Date(todo.doneAt).getHours() * 60 + new Date(todo.doneAt).getMinutes(),
+  );
   const day = dayKey(todo.doneAt);
   return day === dayKey(now)
     ? t("todo-done-at", { time })

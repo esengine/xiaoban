@@ -30,7 +30,10 @@ function Proposal({ todos, onEdit }: { todos: Todo[]; onEdit: (todo: Todo) => vo
       {single ? (
         <>
           <View style={styles.head}>
-            <TodoCircle done={single.state === "done"} label={t("todo-check", { title: single.title })} />
+            <TodoCircle
+              done={single.state === "done"}
+              label={t("todo-check", { title: single.title })}
+            />
             <Text style={styles.headTitle}>{single.title}</Text>
           </View>
           <Text style={styles.sub}>{todoProposalLine(t, single)}</Text>

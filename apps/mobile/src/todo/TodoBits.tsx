@@ -1,4 +1,4 @@
-import { parseMinute, SCHEDULE_WEEKDAYS, TODO_SOURCE_KEYS, minuteText } from "@xiaoban/client";
+import { minuteText, parseMinute, SCHEDULE_WEEKDAYS, TODO_SOURCE_KEYS } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Todo, TodoRepeat } from "@xiaoban/protocol";
 import { color } from "@xiaoban/tokens";
@@ -250,7 +250,11 @@ export function TodoEditor({ todo, onClose }: { todo: Todo | null; onClose: () =
         <Text style={styles.fieldLabel}>{t("todo-edit-repeat")}</Text>
         <View style={styles.fieldBody}>
           <View style={styles.chips}>
-            <Chip text={t("todo-repeat-none")} on={kind === "none"} onPress={() => setKind("none")} />
+            <Chip
+              text={t("todo-repeat-none")}
+              on={kind === "none"}
+              onPress={() => setKind("none")}
+            />
             <Chip
               text={t("todo-repeat-daily")}
               on={kind === "daily"}

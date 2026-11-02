@@ -2,9 +2,11 @@
 import type { DoneItem } from "./DoneItem.ts";
 import type { Insight } from "./Insight.ts";
 import type { MutedInsight } from "./MutedInsight.ts";
+import type { Todo } from "./Todo.ts";
 
 export type DailyFeed = {
   insights: Array<Insight>;
   done: Array<DoneItem>;
   muted: Array<MutedInsight>;
+  todos: Array<Todo>;
 };
