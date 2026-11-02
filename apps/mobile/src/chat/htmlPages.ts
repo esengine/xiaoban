@@ -40,7 +40,3 @@ export function htmlPage(id: string): string | null {
   return pages.get(id) ?? null;
 }
 
-export function looksLikeHtml(lang: string | null | undefined, value: string): boolean {
-  if (lang && /^(html|htm|xhtml)$/i.test(lang)) return true;
-  return /^\s*(<!doctype html|<html[\s>])/i.test(value);
-}

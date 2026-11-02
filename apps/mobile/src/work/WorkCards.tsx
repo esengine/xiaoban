@@ -1,3 +1,4 @@
+import { htmlFileName, htmlLines, htmlTitle } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
@@ -5,8 +6,9 @@ import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { keepMarkdown, markdownOutline } from "../chat/htmlPages.ts";
+import { keepHtml, keepMarkdown, markdownOutline } from "../chat/htmlPages.ts";
 import { useHubStore } from "../hub/HubProvider.tsx";
+import { shareText } from "./exportFile.ts";
 import { openDeck, openDoc, openSheet, themeKey } from "./open.ts";
 import SlideStrip from "./SlideStrip.tsx";
 
@@ -60,6 +62,52 @@ function CardShell({
     >
       {children}
     </Pressable>
+  );
+}
+
+export function HtmlCard({ code }: { code: string }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const title = htmlTitle(code) ?? t("html-card-untitled");
+  const open = () => router.push({ pathname: "/html/[id]", params: { id: keepHtml(code), title } });
+  const copy = () => {
+    void Clipboard.setStringAsync(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  const save = () => {
+    void shareText(code, htmlFileName(htmlTitle(code)), "text/html").catch(() => undefined);
+  };
+  return (
+    <View style={[styles.card, styles.htmlCard]}>
+      <View style={styles.head}>
+        <View style={[styles.tile, styles.tileHtml]}>
+          <Text style={[styles.tileText, styles.tileTextHtml]}>{t("html-card-icon")}</Text>
+        </View>
+        <Text style={[styles.title, styles.headText]} numberOfLines={1}>
+          {title}
+        </Text>
+        <Pressable style={styles.copyChip} hitSlop={6} accessibilityRole="button" onPress={copy}>
+          <Text style={styles.copyChipText}>{t(copied ? "md-view-copied" : "md-card-copy")}</Text>
+        </Pressable>
+      </View>
+      <Text style={[styles.meta, styles.indent]}>
+        {t("html-card-meta", { lines: htmlLines(code) })}
+      </Text>
+      <View style={styles.htmlButtons}>
+        <Pressable
+          style={[styles.htmlButton, styles.htmlPrimary]}
+          accessibilityRole="button"
+          onPress={open}
+        >
+          <Text style={styles.htmlPrimaryText}>{t("html-card-open")}</Text>
+        </Pressable>
+        <Pressable style={styles.htmlButton} accessibilityRole="button" onPress={save}>
+          <Text style={styles.htmlButtonText}>{t("html-card-save")}</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -328,6 +376,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  htmlCard: { alignSelf: "stretch" },
+  tileHtml: { backgroundColor: color.attentionSoft },
+  tileTextHtml: { fontSize: 9, color: color.attentionInk },
+  htmlButtons: { flexDirection: "row", gap: 8, marginTop: 4 },
+  htmlButton: {
+    flex: 1,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: color.lineStrong,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  htmlButtonText: { fontSize: 13, color: color.ink },
+  htmlPrimary: { backgroundColor: color.ink, borderColor: color.ink },
+  htmlPrimaryText: { fontSize: 13, fontWeight: "600", color: color.surface },
   tileMd: { backgroundColor: color.ground },
   tileTextMd: { fontSize: 10, color: color.inkMid },
   copyChip: {

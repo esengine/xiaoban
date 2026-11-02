@@ -15632,3 +15632,69 @@ p.mail-card__source {
 .todos__delete:focus-visible {
   opacity: 1;
 }
+
+.html-card {
+  max-width: 420px;
+  margin: 8px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.html-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.html-card__tile {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--color-attention-soft);
+  color: var(--color-attention-ink);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.html-card__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.html-card__copy {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  border: 1px solid var(--color-line-strong);
+  background: none;
+  font-size: 12px;
+  color: var(--color-ink);
+}
+
+.html-card__meta {
+  padding-left: 36px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.html-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.html-card__actions .button {
+  flex: 1;
+}

@@ -1,16 +1,14 @@
-import { keyLabel, remarkInlineTags } from "@xiaoban/client";
+import { isHtmlBlock, keyLabel, remarkInlineTags } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color, dark } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
-import { router } from "expo-router";
 import { memo, type ReactNode, useDeferredValue, useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { Icon } from "../ui/Icon.tsx";
-import { NoteCard } from "../work/WorkCards.tsx";
-import { keepHtml, looksLikeHtml } from "./htmlPages.ts";
+import { HtmlCard, NoteCard } from "../work/WorkCards.tsx";
 
 interface Node {
   type: string;
@@ -129,6 +127,7 @@ function CodeBlock({ node }: { node: Node }) {
     });
   };
   if (node.lang && /^(md|markdown)$/i.test(node.lang)) return <NoteCard text={node.value ?? ""} />;
+  if (isHtmlBlock(node.lang, node.value ?? "")) return <HtmlCard code={node.value ?? ""} />;
   return (
     <View style={styles.pre}>
       <Text style={styles.preText} selectable>
@@ -143,17 +142,6 @@ function CodeBlock({ node }: { node: Node }) {
       >
         <Icon name={copied ? "check" : "copy"} size={14} color={dark.textMuted} />
       </Pressable>
-      {looksLikeHtml(node.lang, node.value ?? "") ? (
-        <Pressable
-          style={styles.preview}
-          accessibilityRole="button"
-          onPress={() =>
-            router.push({ pathname: "/html/[id]", params: { id: keepHtml(node.value ?? "") } })
-          }
-        >
-          <Text style={styles.previewText}>{t("html-view-open")}</Text>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
@@ -298,16 +286,6 @@ const styles = StyleSheet.create({
   },
   preText: { fontFamily: "monospace", fontSize: 12.5, lineHeight: 19, color: color.surface },
   copy: { position: "absolute", top: 8, right: 8 },
-  preview: {
-    alignSelf: "flex-start",
-    marginTop: 8,
-    paddingHorizontal: 12,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: color.surface,
-    justifyContent: "center",
-  },
-  previewText: { fontSize: 13, fontWeight: "500", color: color.ink },
   quote: {
     borderLeftWidth: 3,
     borderLeftColor: color.line,

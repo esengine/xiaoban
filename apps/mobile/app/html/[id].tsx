@@ -8,7 +8,7 @@ import { htmlPage } from "../../src/chat/htmlPages.ts";
 import { Icon } from "../../src/ui/Icon.tsx";
 
 export default function HtmlScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const html = htmlPage(id);
@@ -24,7 +24,9 @@ export default function HtmlScreen() {
         >
           <Icon name="back" color={color.ink} />
         </Pressable>
-        <Text style={styles.title}>{t("html-view-title")}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {title || t("html-view-title")}
+        </Text>
       </View>
       {html ? (
         <WebView

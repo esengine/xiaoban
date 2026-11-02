@@ -54,6 +54,8 @@ pub fn run() {
             stored::file_reveal,
             stored::file_copy,
             stored::file_save_as,
+            stored::text_save_as,
+            stored::html_open,
             stored::pick_folder,
             stored::open_in_editor,
             stored::list_editors,

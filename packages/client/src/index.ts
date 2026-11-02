@@ -30,6 +30,7 @@ export {
   roomSize,
   viewBox,
 } from "./floorplan.ts";
+export { htmlFileName, htmlLines, htmlTitle, isHtmlBlock } from "./html.ts";
 export { keyLabel, remarkInlineTags } from "./inlineTags.ts";
 export {
   MAIL_CATEGORIES,

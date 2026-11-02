@@ -58,3 +58,10 @@ export function useExporter(onReady: () => void) {
   };
   return { busy, failed, start, clear: () => setFailed(false) };
 }
+
+export async function shareText(text: string, name: string, mime: string): Promise<void> {
+  const file = target(name);
+  file.create();
+  file.write(text);
+  await share({ uri: file.uri, name, mime });
+}

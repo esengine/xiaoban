@@ -1,4 +1,12 @@
-import { keyLabel, remarkInlineTags } from "@xiaoban/client";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  htmlFileName,
+  htmlLines,
+  htmlTitle,
+  isHtmlBlock,
+  keyLabel,
+  remarkInlineTags,
+} from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import { type ComponentProps, memo, type ReactNode, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
@@ -17,7 +25,60 @@ function textOf(node: ReactNode): string {
   return "";
 }
 
+function blockLanguage(children: ReactNode): string | null {
+  const child = Array.isArray(children) ? children[0] : children;
+  if (!child || typeof child !== "object" || !("props" in child)) return null;
+  const name = (child.props as { className?: string }).className ?? "";
+  return /language-([\w-]+)/.exec(name)?.[1] ?? null;
+}
+
+function HtmlCard({ code }: { code: string }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const title = htmlTitle(code) ?? t("html-card-untitled");
+  const name = htmlFileName(htmlTitle(code));
+  const copy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="html-card">
+      <div className="html-card__head">
+        <span className="html-card__tile">{t("html-card-icon")}</span>
+        <b className="html-card__title">{title}</b>
+        <button type="button" className="html-card__copy" onClick={() => void copy()}>
+          {copied ? t("rich-copied") : t("rich-copy")}
+        </button>
+      </div>
+      <span className="html-card__meta">{t("html-card-meta", { lines: htmlLines(code) })}</span>
+      <div className="html-card__actions">
+        <button
+          type="button"
+          className="button button--primary"
+          onClick={() => void invoke("html_open", { text: code, name }).catch(() => undefined)}
+        >
+          {t("html-card-open")}
+        </button>
+        <button
+          type="button"
+          className="button"
+          onClick={() => void invoke("text_save_as", { text: code, name }).catch(() => undefined)}
+        >
+          {t("html-card-save")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CodeBlock({ children }: ComponentProps<"pre">) {
+  const code = textOf(children).replace(/\n$/, "");
+  if (isHtmlBlock(blockLanguage(children), code)) return <HtmlCard code={code} />;
+  return <PlainCode>{children}</PlainCode>;
+}
+
+function PlainCode({ children }: { children?: ReactNode }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const copy = async () => {

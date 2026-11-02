@@ -22,6 +22,22 @@ pub fn file_open(app: AppHandle, path: String) -> Result<(), String> {
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
+pub fn html_open(app: AppHandle, text: String, name: String) -> Result<(), String> {
+    let safe: String = name
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '-' })
+        .collect();
+    let folder = std::env::temp_dir().join("xiaoban-pages");
+    std::fs::create_dir_all(&folder).map_err(|error| error.to_string())?;
+    let file = folder.join(safe).with_extension("html");
+    std::fs::write(&file, text).map_err(|error| error.to_string())?;
+    app.opener()
+        .open_path(file.to_string_lossy(), None::<&str>)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
 pub fn file_reveal(path: String) -> Result<(), String> {
     let file = existing(&path)?;
     tauri_plugin_opener::reveal_item_in_dir(file).map_err(|error| error.to_string())
@@ -75,6 +91,25 @@ fn copy_to_clipboard(file: &std::path::Path) -> Result<(), String> {
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn copy_to_clipboard(_file: &std::path::Path) -> Result<(), String> {
     Err("copying files is not supported here".to_owned())
+}
+
+#[tauri::command]
+pub async fn text_save_as(app: AppHandle, text: String, name: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(target) = app
+            .dialog()
+            .file()
+            .set_file_name(&name)
+            .blocking_save_file()
+        else {
+            return Ok(false);
+        };
+        let target = target.into_path().map_err(|error| error.to_string())?;
+        std::fs::write(target, text).map_err(|error| error.to_string())?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
