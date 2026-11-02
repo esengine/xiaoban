@@ -35,6 +35,7 @@ import { RecipeCard } from "../life/RecipeCard.tsx";
 import { MailCard, DraftCard as MailDraftCard } from "../mail/MailCards.tsx";
 import { type MenuEntry, useContextMenu } from "../menu/ContextMenu.tsx";
 import { ConfirmCard } from "../operate/ConfirmCard.tsx";
+import { AnsweredAsk, AskCard } from "./AskCard.tsx";
 import { PlanCard } from "../plan/PlanCard.tsx";
 import { usePlanDock } from "../plan/usePlanDock.ts";
 import { FailedCard, RunMarker, ScheduleBar, ScheduleCard } from "../schedule/ScheduleCard.tsx";
@@ -323,6 +324,7 @@ export function ChatPane(full: Props) {
     });
   }, [running, holding, nextQueued, store]);
   const end = useRef<HTMLLIElement>(null);
+  const pendingAsks = state.asks.filter((ask) => ask.threadId === threadId);
   const pinned = useRef(true);
   const list = useRef<HTMLOListElement>(null);
   const flown = useRef(new Set<string>());
@@ -791,6 +793,22 @@ export function ChatPane(full: Props) {
                 <ConfirmCard confirm={confirm} />
               </li>
             ))}
+          {state.answeredAsks
+            .filter(
+              (done) =>
+                done.ask.threadId === threadId &&
+                drafts.some((draft) => draft.turnId === done.ask.turnId),
+            )
+            .map((done) => (
+              <li key={done.ask.id} className="ask-answered-list">
+                <AnsweredAsk ask={done.ask} answers={done.answers} />
+              </li>
+            ))}
+          {pendingAsks.map((ask) => (
+            <li key={ask.id} className="ask-item">
+              <AskCard ask={ask} />
+            </li>
+          ))}
           {side && messages.length === 0 && trailing.length === 0 && (
             <li className="chat__side-hint">{side.labels.hint}</li>
           )}
@@ -816,7 +834,9 @@ export function ChatPane(full: Props) {
         <Composer
           busy={Boolean(running) || holding}
           placeholder={
-            side?.labels.placeholder ?? (schedule ? t("schedule-composer-hint") : undefined)
+            pendingAsks.length > 0
+              ? t("ask-composer-hint")
+              : (side?.labels.placeholder ?? (schedule ? t("schedule-composer-hint") : undefined))
           }
           quote={quote}
           onClearQuote={() => quoteWith(null)}
@@ -824,6 +844,11 @@ export function ChatPane(full: Props) {
           threadId={threadId}
           onSend={async (text, threadRefs) => {
             const files = attachments.ready.map((file) => file.path);
+            const asked = pendingAsks.length === 1 ? pendingAsks[0] : undefined;
+            if (asked && asked.questions.length === 1 && files.length === 0) {
+              await store.answerAsk(asked.id, [{ kind: "typed", text }]);
+              return;
+            }
             if (running || holding) {
               if (running && isCancel(text, t("composer-cancel-words"))) {
                 await store.cancel(running.turnId);

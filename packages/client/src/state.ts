@@ -1,5 +1,7 @@
 import type {
   Archived,
+  AskAnswer,
+  AskRequest,
   Capability,
   CommandRun,
   CompactPhase,
@@ -105,6 +107,8 @@ export interface HubState {
   latestTrip: Readonly<Record<string, number>>;
   services: ServiceStatus[];
   confirms: ConfirmRequest[];
+  asks: AskRequest[];
+  answeredAsks: AnsweredAsk[];
   workspaces: Workspace[];
   commands: Readonly<Record<string, CommandRun[]>>;
   filesVersion: Readonly<Record<string, number>>;
@@ -153,6 +157,8 @@ export const initialHubState: HubState = {
   latestTrip: {},
   services: [],
   confirms: [],
+  asks: [],
+  answeredAsks: [],
   workspaces: [],
   commands: {},
   filesVersion: {},
@@ -204,6 +210,11 @@ function withoutDraft(drafts: HubState["drafts"], turnId: string): HubState["dra
   return rest;
 }
 
+export interface AnsweredAsk {
+  ask: AskRequest;
+  answers: AskAnswer[];
+}
+
 export function applyEvent(state: HubState, event: Event, now = Date.now()): HubState {
   switch (event.type) {
     case "confirm_requested":
@@ -214,6 +225,24 @@ export function applyEvent(state: HubState, event: Event, now = Date.now()): Hub
           event.confirm,
         ],
       };
+    case "ask_requested":
+      return {
+        ...state,
+        asks: [...state.asks.filter((ask) => ask.id !== event.ask.id), event.ask],
+      };
+    case "ask_resolved": {
+      const ask = state.asks.find((candidate) => candidate.id === event.askId);
+      return {
+        ...state,
+        asks: state.asks.filter((candidate) => candidate.id !== event.askId),
+        answeredAsks: ask
+          ? [
+              ...state.answeredAsks.filter((done) => done.ask.id !== ask.id),
+              { ask, answers: event.answers },
+            ]
+          : state.answeredAsks,
+      };
+    }
     case "plan_updated":
       return { ...state, plans: { ...state.plans, [event.threadId]: event.plan } };
     case "schedule_updated":

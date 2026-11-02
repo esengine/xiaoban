@@ -27,6 +27,7 @@ const TOOL_NAMES: Record<string, PlainMessageKey> = {
   type_text: "tool-name-operate",
   press_keys: "tool-name-operate",
   confirm: "tool-name-operate",
+  ask_user: "tool-name-ask",
 };
 
 function useToolName() {

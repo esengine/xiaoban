@@ -7,6 +7,7 @@ import type {
   CellEdit,
   CommandRun,
   CommitInfo,
+  AskAnswer,
   ConfirmChoice,
   ConflictChoice,
   ConflictFile,
@@ -485,6 +486,15 @@ export class HubStore {
       "pending_confirms",
     );
     this.#update((state) => ({ ...state, confirms }));
+  }
+
+  async refreshAsks(): Promise<void> {
+    const { asks } = await this.client.request({ type: "pending_asks" }, "pending_asks");
+    this.#update((state) => ({ ...state, asks }));
+  }
+
+  async answerAsk(askId: string, answers: AskAnswer[]): Promise<void> {
+    await this.client.request({ type: "answer_ask", askId, answers }, "ack");
   }
 
   async answerConfirm(confirmId: string, choice: ConfirmChoice): Promise<void> {
@@ -1548,6 +1558,7 @@ export class HubStore {
       this.refreshDevices(),
       this.refreshServices(),
       this.refreshConfirms(),
+      this.refreshAsks(),
       this.loadMailStatus(),
     ]).catch(() => undefined);
   }

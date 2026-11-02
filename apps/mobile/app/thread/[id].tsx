@@ -32,6 +32,7 @@ import { XiaobanHub } from "../../modules/xiaoban-hub/index.ts";
 import { PlanCalendarButton } from "../../src/calendar/PlanCalendar.tsx";
 import { Bubble, bubbleStyles } from "../../src/chat/Bubble.tsx";
 import { Composer } from "../../src/chat/Composer.tsx";
+import { AnsweredAsk, AskCard } from "../../src/chat/AskCard.tsx";
 import { ConfirmCard } from "../../src/chat/ConfirmCard.tsx";
 import { BackgroundCard, DraftBubble } from "../../src/chat/DraftBubble.tsx";
 import { MessageItem } from "../../src/chat/MessageItem.tsx";
@@ -150,6 +151,10 @@ export default function ThreadScreen() {
   const lastAnswer = lastGroup?.kind === "answer" ? lastGroup : null;
   const confirms = state.confirms.filter(
     (confirm) => confirm.threadId === id && confirm.kind.kind !== "permissions",
+  );
+  const asks = state.asks.filter((ask) => ask.threadId === id);
+  const answered = state.answeredAsks.filter(
+    (done) => done.ask.threadId === id && drafts.some((draft) => draft.turnId === done.ask.turnId),
   );
   const consent = state.confirms.find(
     (confirm) => confirm.threadId === id && confirm.kind.kind === "permissions",
@@ -478,8 +483,14 @@ export default function ThreadScreen() {
         keyboardShouldPersistTaps="handled"
         maintainVisibleContentPosition={{ minIndexForVisible: 1, autoscrollToTopThreshold: 80 }}
         ListHeaderComponent={
-          confirms.length === 0 ? undefined : (
+          confirms.length + asks.length + answered.length === 0 ? undefined : (
             <View style={styles.footer}>
+              {answered.map((done) => (
+                <AnsweredAsk key={done.ask.id} ask={done.ask} answers={done.answers} />
+              ))}
+              {asks.map((ask) => (
+                <AskCard key={ask.id} ask={ask} />
+              ))}
               {confirms.map((confirm) => (
                 <ConfirmCard key={confirm.id} confirm={confirm} />
               ))}
@@ -508,9 +519,22 @@ export default function ThreadScreen() {
         busy={Boolean(running) || holding}
         stoppable={Boolean(running)}
         quote={quote}
-        placeholder={schedule ? t("schedule-composer-hint") : undefined}
+        placeholder={
+          asks.length > 0
+            ? t("ask-composer-hint")
+            : schedule
+              ? t("schedule-composer-hint")
+              : undefined
+        }
         onClearQuote={() => setQuote(null)}
-        onSend={(text, files) => send(text, quote, files)}
+        onSend={(text, files) => {
+          const asked = asks.length === 1 ? asks[0] : undefined;
+          if (asked && asked.questions.length === 1 && files.length === 0) {
+            void store.answerAsk(asked.id, [{ kind: "typed", text }]).catch(() => undefined);
+            return;
+          }
+          send(text, quote, files);
+        }}
         onStop={() => {
           if (running) void store.cancel(running.turnId).catch(() => undefined);
         }}

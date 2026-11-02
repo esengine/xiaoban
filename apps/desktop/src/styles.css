@@ -15846,3 +15846,337 @@ p.mail-card__source {
   border-left: 1px solid var(--color-line);
   border-right: 1px solid var(--color-line);
 }
+
+.ask-item {
+  align-self: flex-start;
+  width: min(460px, 100%);
+  animation: bubble-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.ask-card {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-accent);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+
+.ask-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--color-accent-wash);
+  color: var(--color-accent-strong);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ask-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-accent);
+  animation: ask-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes ask-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.ask-card__steps {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.ask-card__bars {
+  display: flex;
+  gap: 4px;
+}
+
+.ask-card__bars i {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-accent-line);
+}
+
+.ask-card__bars i[data-on] {
+  background: var(--color-accent);
+}
+
+.ask-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.ask-card__question {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.ask-card__question small {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-faint);
+}
+
+.ask-card__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+.ask-card__options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ask-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+
+.ask-option:hover:not(:disabled) {
+  border-color: var(--color-accent-line);
+}
+
+.ask-option[data-on] {
+  border: 1.5px solid var(--color-accent);
+  padding: 9.5px 11.5px;
+  background: var(--color-accent-wash);
+}
+
+.ask-option:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.ask-option__mark {
+  flex: none;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--color-faint);
+  border-radius: 9px;
+  background: var(--color-surface);
+  display: grid;
+  place-items: center;
+}
+
+.ask-option[data-multiple] .ask-option__mark {
+  border-radius: 5px;
+  width: 16px;
+  height: 16px;
+}
+
+.ask-option[data-on] .ask-option__mark {
+  border: 5px solid var(--color-accent);
+}
+
+.ask-option[data-on][data-multiple] .ask-option__mark {
+  border: 0;
+  background: var(--color-accent);
+}
+
+.ask-option__mark svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ask-option__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ask-option__text b {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ask-option__text small {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.ask-option kbd {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.ask-option--other {
+  border-style: dashed;
+  color: var(--color-ink-mid);
+  font-size: 14px;
+}
+
+.ask-option__pen {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.ask-option__pen svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.ask-card__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.ask-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ask-card__submit,
+.ask-card__ghost {
+  height: 36px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ask-card__submit {
+  padding: 0 16px;
+  border: 0;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-weight: 500;
+}
+
+.ask-card__submit:disabled {
+  background: #c4c8d2;
+  cursor: default;
+}
+
+.ask-card__ghost {
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.ask-card__ghost:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ask-card__keys {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.ask-answered-list {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.ask-answered {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+  font-size: 13px;
+}
+
+.ask-answered__mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--color-success);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ask-answered[data-skipped] .ask-answered__mark {
+  stroke: var(--color-faint);
+}
+
+.ask-answered__question {
+  color: var(--color-muted);
+}
+
+.ask-answered b {
+  min-width: 0;
+  font-weight: 500;
+}
+
+.ask-answered[data-skipped] b {
+  color: var(--color-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-card__dot {
+    animation: none;
+  }
+}
