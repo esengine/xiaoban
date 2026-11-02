@@ -61,7 +61,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 4px;
   padding: 20px 0;
 }
 
@@ -81,25 +81,44 @@ button {
 }
 
 .rail__item {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  padding: 7px 0 6px;
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--dark-text-muted);
-  display: grid;
-  place-items: center;
-  transition: background var(--motion-fast) var(--ease-standard);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
-.rail__item[aria-current="page"] {
+.rail__item:hover {
+  color: var(--dark-text);
+}
+
+.rail__item[aria-current="page"],
+.rail__item[aria-expanded="true"] {
   background: var(--dark-line);
   color: var(--dark-text);
 }
 
-.rail__item:disabled {
-  opacity: 0.45;
-  cursor: default;
+.rail__label {
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.rail__divider {
+  width: 32px;
+  height: 1px;
+  margin: 8px 0;
+  border: 0;
+  background: var(--dark-line);
 }
 
 .panel {
