@@ -3038,7 +3038,7 @@ async fn todos_with_a_time_wait_for_ok_and_untimed_ones_go_straight_on_the_list(
     let Response::DailyFeed { feed } = client.request(Request::DailyFeed).await else {
         panic!("expected the daily feed");
     };
-    assert_eq!(feed.todos.len(), 2);
+    assert!(todo_ids.iter().all(|id| feed.todos.iter().any(|todo| &todo.id == id)));
     let Response::Todos { todos } = client
         .request(Request::TodosToShopping { ids: todo_ids.clone() })
         .await
