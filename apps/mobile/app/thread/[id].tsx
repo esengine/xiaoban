@@ -44,7 +44,7 @@ import { isCancel, toGroups } from "../../src/chat/rows.ts";
 import { ThoughtToggle } from "../../src/chat/ThoughtToggle.tsx";
 import { MemoryChips, TraceSummary } from "../../src/chat/Trace.tsx";
 import { useBackgroundAsk } from "../../src/hub/BackgroundAsk.tsx";
-import { useHubStore } from "../../src/hub/HubProvider.tsx";
+import { useHubContext, useHubStore, WithStore } from "../../src/hub/HubProvider.tsx";
 import { planBallSupported, setPlanBall, usePlanBall } from "../../src/hub/planBallStore.ts";
 import { shortToast } from "../../src/hub/shortToast.ts";
 import { RunMarker, ScheduleBar } from "../../src/schedule/ScheduleBits.tsx";
@@ -117,7 +117,7 @@ function DraftItem({
   );
 }
 
-export default function ThreadScreen() {
+function ThreadScreen() {
   const params = useLocalSearchParams<{ id: string; quote?: string; plan?: string }>();
   const id = params.id;
   const { t, locale } = useI18n();
@@ -141,6 +141,11 @@ export default function ThreadScreen() {
   }, []);
   const primary = state.preferences?.primaryThreadId === id;
   const thread = state.threads.find((item) => item.id === id);
+  const inWorkspace = Boolean(thread?.workspaceId);
+  useEffect(() => {
+    if (inWorkspace && state.status === "open")
+      void store.refreshWorkspaces().catch(() => undefined);
+  }, [inWorkspace, state.status, store]);
   const title = primary ? t("app-name") : (thread?.title ?? t("thread-untitled"));
   const drafts = draftsForThread(state, id);
   const running = drafts.find((draft) => !draft.failure && !draft.background);
@@ -275,11 +280,16 @@ export default function ThreadScreen() {
   }
   for (const item of queued) rows.push({ key: `q-${item.id}`, kind: "queued", item });
 
+  const workspaceName = thread?.workspaceId
+    ? state.workspaces.find((workspace) => workspace.id === thread.workspaceId)?.name
+    : undefined;
   const subtitle = primary
     ? t("chat-sub-primary", { memories: state.memories.length })
-    : state.model
-      ? activeModelName(state.model)
-      : "";
+    : workspaceName
+      ? t("ws-chat-sub", { name: workspaceName })
+      : state.model
+        ? activeModelName(state.model)
+        : "";
 
   const send = (text: string, sentQuote: Quote | null = quote, files: string[] = []) => {
     list.current?.scrollToOffset({ offset: 0, animated: true });
@@ -603,3 +613,16 @@ const styles = StyleSheet.create({
   },
   suggestionText: { fontSize: 13, color: color.ink },
 });
+
+export default function ThreadRoute() {
+  const { hub } = useLocalSearchParams<{ hub?: string }>();
+  const { local, store } = useHubContext();
+  if (hub === "local" && local && local !== store) {
+    return (
+      <WithStore store={local}>
+        <ThreadScreen />
+      </WithStore>
+    );
+  }
+  return <ThreadScreen />;
+}

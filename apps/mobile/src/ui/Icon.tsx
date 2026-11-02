@@ -18,7 +18,8 @@ export type IconName =
   | "close"
   | "check"
   | "mic"
-  | "keyboard";
+  | "keyboard"
+  | "folder";
 
 export function Icon({
   name,
@@ -99,6 +100,9 @@ export function Icon({
           <Circle cx={15} cy={11} r={0.9} fill={color} />
           <Path {...common} d="M9 15c1.6 1.2 4.4 1.2 6 0" />
         </>
+      )}
+      {name === "folder" && (
+        <Path {...common} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
       )}
       {name === "chevronDown" && <Path {...common} d="M6 9l6 6 6-6" />}
       {name === "chevronRight" && <Path {...common} d="M9 5l7 7-7 7" />}

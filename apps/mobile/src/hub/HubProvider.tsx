@@ -243,6 +243,12 @@ export function HubProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Runs what is inside against another hub, such as the phone's own while it is on a computer. */
+export function WithStore({ store, children }: { store: HubStore; children: ReactNode }) {
+  const context = useHubContext();
+  return <HubContext value={{ ...context, store }}>{children}</HubContext>;
+}
+
 export function useHubContext(): HubContextValue {
   const value = use(HubContext);
   if (!value) throw new Error("useHubContext must be used inside HubProvider");

@@ -18,6 +18,10 @@ export function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
   const [sent, setSent] = useState(false);
   const enter = useRef(new Animated.Value(0)).current;
   const text = confirmText(confirm, t);
+  const preview =
+    confirm.kind.kind === "write_outside" || confirm.kind.kind === "save_file"
+      ? confirm.kind.preview
+      : [];
 
   useEffect(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
@@ -49,6 +53,23 @@ export function ConfirmCard({ confirm }: { confirm: ConfirmRequest }) {
       <View style={styles.body}>
         <Text style={styles.title}>{text.title}</Text>
         {text.detail ? <Text style={styles.detail}>{text.detail}</Text> : null}
+        {preview.length > 0 ? (
+          <View style={styles.preview}>
+            {preview.map((line, index) => (
+              <Text
+                key={index}
+                style={[
+                  styles.previewLine,
+                  line.kind === "added" && styles.previewAdded,
+                  line.kind === "removed" && styles.previewRemoved,
+                ]}
+                numberOfLines={1}
+              >
+                {`${line.kind === "added" ? "+" : line.kind === "removed" ? "−" : " "} ${line.text}`}
+              </Text>
+            ))}
+          </View>
+        ) : null}
         {text.hint ? (
           <Text style={[styles.detail, confirm.kind.kind === "price_check" && styles.strong]}>
             {text.hint}
@@ -113,4 +134,8 @@ const styles = StyleSheet.create({
   choiceText: { fontSize: 14, color: color.ink },
   choicePrimaryText: { color: color.surface, fontWeight: "500" },
   dim: { opacity: 0.6 },
+  preview: { backgroundColor: color.ground, borderRadius: 10, padding: 10, marginTop: 4 },
+  previewLine: { fontSize: 11.5, lineHeight: 18, color: color.inkSoft, fontFamily: "monospace" },
+  previewAdded: { color: color.success },
+  previewRemoved: { color: color.dangerInk },
 });

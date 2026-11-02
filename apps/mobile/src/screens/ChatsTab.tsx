@@ -93,6 +93,7 @@ export function ChatsTab({ store }: { store: HubStore }) {
       };
     }
     if (running.has(thread.id)) return { text: t("chats-tag-running"), tone: TONES[0] };
+    if (thread.workspaceId) return { text: t("ws-tag"), tone: TONES[3] };
     return null;
   };
 
@@ -131,6 +132,13 @@ export function ChatsTab({ store }: { store: HubStore }) {
             onPress={() => setQuery(query === null ? "" : null)}
           >
             <Icon name="search" color={color.ink} />
+          </Pressable>
+          <Pressable
+            style={styles.iconButton}
+            accessibilityLabel={t("ws-title")}
+            onPress={() => router.push("/workspaces")}
+          >
+            <Icon name="folder" color={color.ink} />
           </Pressable>
           <Pressable
             style={styles.iconButton}

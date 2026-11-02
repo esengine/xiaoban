@@ -87,6 +87,7 @@ export default function RootLayout() {
           <Stack.Screen name="scan" options={{ headerShown: false, title: t("scan-title") }} />
           <Stack.Screen name="pair" options={{ headerShown: false, title: t("pair-title") }} />
           <Stack.Screen name="thread/[id]" options={{ headerShown: false, title: "" }} />
+          <Stack.Screen name="workspaces" options={{ headerShown: false, title: t("ws-title") }} />
         </Stack>
       </HubProvider>
     </I18nProvider>

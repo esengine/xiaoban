@@ -12,6 +12,7 @@ import { TodoCard } from "../todo/TodoCard.tsx";
 import { TripCard } from "../trip/TripCard.tsx";
 import { DeckCard, DocCard, SheetCard } from "../work/WorkCards.tsx";
 import { Bubble, bubbleStyles } from "./Bubble.tsx";
+import { ChangeCard } from "./ChangeCard.tsx";
 import { SearchCard } from "./SearchCard.tsx";
 import { SentFiles } from "./SentFiles.tsx";
 import { ReportTitle, SubthreadCards } from "./Subthreads.tsx";
@@ -37,6 +38,8 @@ function AttachmentCard({ message, last }: { message: Message; last: boolean }) 
       return <ScheduleCard scheduleId={attachment.scheduleId} />;
     case "todos":
       return <TodoCard todoIds={attachment.todoIds} />;
+    case "changes":
+      return <ChangeCard threadId={message.threadId} files={attachment.files} />;
     case "schedule_failed":
       return <FailedCard scheduleId={attachment.scheduleId} reason={attachment.reason} />;
     case "subthreads":
