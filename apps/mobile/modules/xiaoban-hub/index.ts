@@ -17,8 +17,12 @@ interface XiaobanHubNative {
   notify(request: string): string;
   withdrawNotice(id: string): void;
   setForeground(active: boolean): void;
+  takeShare?(): Promise<string | null>;
+  closeShare?(): void;
+  openFromShare?(url: string): void;
   addListener(event: "onNoticeAnswer", listener: (event: { answer: string }) => void): Subscription;
   addListener(event: "onPlanBall", listener: (event: { action: string }) => void): Subscription;
+  addListener(event: "onShare", listener: () => void): Subscription;
 }
 
 export const XiaobanHub = requireOptionalNativeModule<XiaobanHubNative>("XiaobanHub");

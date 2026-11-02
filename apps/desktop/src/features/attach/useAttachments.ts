@@ -32,11 +32,13 @@ function judge(list: Picked[]): Attached[] {
 
 export function useAttachments() {
   const [files, setFiles] = useState<Attached[]>([]);
+  const [fresh, setFresh] = useState<Picked[]>([]);
 
-  const addPaths = useCallback(async (paths: string[]) => {
+  const addPaths = useCallback(async (paths: string[], offer = false) => {
     if (!isTauri() || paths.length === 0) return;
     const picked = await invoke<Picked[]>("describe_files", { paths });
     setFiles((current) => judge([...current, ...picked]));
+    if (offer) setFresh(picked.filter((file) => file.size <= MAX_BYTES).slice(0, MAX_FILES));
   }, []);
 
   const addBlobs = useCallback(
@@ -50,7 +52,7 @@ export function useAttachments() {
           }),
         ),
       );
-      await addPaths(paths);
+      await addPaths(paths, true);
     },
     [addPaths],
   );
@@ -60,6 +62,12 @@ export function useAttachments() {
     [],
   );
   const clear = useCallback(() => setFiles([]), []);
+  const settle = useCallback(() => setFresh([]), []);
+  const removePaths = useCallback(
+    (paths: string[]) =>
+      setFiles((current) => judge(current.filter((file) => !paths.includes(file.path)))),
+    [],
+  );
   const dropImages = useCallback(
     () => setFiles((current) => judge(current.filter((file) => !file.image))),
     [],
@@ -71,9 +79,12 @@ export function useAttachments() {
     ready,
     hasImages: ready.some((file) => file.image),
     blocked: files.some((file) => file.problem !== null),
+    fresh,
+    settle,
     addPaths,
     addBlobs,
     remove,
+    removePaths,
     clear,
     dropImages,
   };

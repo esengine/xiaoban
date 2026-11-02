@@ -4617,6 +4617,125 @@ button.sent-files__image {
   background: var(--color-accent-wash);
 }
 
+.share-guess {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow:
+    0 12px 32px color-mix(in srgb, var(--color-ink) 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-ink) 8%, transparent);
+  animation: context-menu-in var(--motion-fast) var(--ease-standard) both;
+}
+
+.share-guess__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.share-guess__dismiss {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.share-guess__dismiss:hover {
+  background: var(--color-ground);
+}
+
+.share-guess__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.share-guess__item:hover:not(:disabled),
+.share-guess__item:focus-visible {
+  background: var(--color-accent-wash);
+  outline: none;
+}
+
+.share-guess__item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.share-guess__label {
+  font-size: 13px;
+}
+
+.share-guess__hint {
+  font-size: 11px;
+  color: var(--color-faint);
+}
+
+.share-guess__wait,
+.share-guess__problem {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--color-faint);
+}
+
+.share-guess__problem {
+  color: var(--color-attention-ink);
+}
+
+.share-guess--done {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+}
+
+.share-guess__check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--color-success-soft);
+}
+
+.share-guess__check svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-success);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.share-guess__done {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.share-guess__done b {
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
 .threads__list li[data-child] .thread-row {
   position: relative;
   padding-left: 34px;

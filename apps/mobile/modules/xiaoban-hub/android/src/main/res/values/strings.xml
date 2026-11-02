@@ -1,4 +1,5 @@
 <resources>
+  <string name="xiaoban_share_label">Xiaoban</string>
   <string name="xiaoban_operator_label">Xiaoban assistant</string>
   <string name="xiaoban_operator_description">Lets Xiaoban tap and type in other apps only while doing a task you gave it. It never records the screen, and stops at payments, passwords and verification codes.</string>
 </resources>

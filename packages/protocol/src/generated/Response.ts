@@ -40,6 +40,7 @@ import type { ProviderOption } from "./ProviderOption.ts";
 import type { RecipeView } from "./RecipeView.ts";
 import type { Schedule } from "./Schedule.ts";
 import type { ServiceStatus } from "./ServiceStatus.ts";
+import type { ShareSuggestion } from "./ShareSuggestion.ts";
 import type { SheetTab } from "./SheetTab.ts";
 import type { Thread } from "./Thread.ts";
 import type { Trip } from "./Trip.ts";
@@ -113,6 +114,7 @@ export type Response =
   | { type: "daily_feed"; feed: DailyFeed }
   | { type: "context_usage"; usage: ContextUsage }
   | { type: "uploaded"; path: string }
+  | { type: "share_suggested"; suggestion: ShareSuggestion }
   | {
       type: "provider_keys";
       publicKey: string;

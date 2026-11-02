@@ -14,3 +14,7 @@ android {
     consumerProguardFiles 'consumer-rules.pro'
   }
 }
+
+dependencies {
+  implementation 'com.facebook.react:react-android'
+}

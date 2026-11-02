@@ -646,6 +646,16 @@ pub enum Request {
     CancelImport {
         month: String,
     },
+    SuggestShare {
+        item: crate::SharedItem,
+    },
+    SendShare {
+        item: crate::SharedItem,
+        thread_id: String,
+        prompt: String,
+        #[serde(default)]
+        remember: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -836,6 +846,9 @@ pub enum Response {
     },
     Uploaded {
         path: String,
+    },
+    ShareSuggested {
+        suggestion: crate::ShareSuggestion,
     },
     ProviderKeys {
         public_key: String,

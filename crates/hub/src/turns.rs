@@ -228,7 +228,7 @@ struct Job {
 const DEEPSEEK_VISION: &str = "deepseek-v4-flash-vision-exp";
 const MIMO_VISION: &str = "mimo-v2.5";
 
-fn vision_model(state: &SharedState) -> Option<String> {
+pub(crate) fn vision_model(state: &SharedState) -> Option<String> {
     let provider = state.active().model.as_ref()?.provider;
     match provider {
         ProviderId::Deepseek => Some(DEEPSEEK_VISION.to_owned()),

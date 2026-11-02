@@ -52,6 +52,8 @@ import type {
   Response,
   Schedule,
   ServiceStatus,
+  SharedItem,
+  ShareSuggestion,
   SheetFormat,
   SheetOp,
   SheetTab,
@@ -211,6 +213,27 @@ export class HubStore {
   async uploadFile(name: string, data: string): Promise<string> {
     const { path } = await this.client.request({ type: "upload_file", name, data }, "uploaded");
     return path;
+  }
+
+  async suggestShare(item: SharedItem): Promise<ShareSuggestion> {
+    const { suggestion } = await this.client.request(
+      { type: "suggest_share", item },
+      "share_suggested",
+    );
+    return suggestion;
+  }
+
+  async sendShare(input: {
+    item: SharedItem;
+    threadId: string;
+    prompt: string;
+    remember: boolean;
+  }): Promise<{ turnId: string; threadId: string }> {
+    const { turnId, message } = await this.client.request(
+      { type: "send_share", ...input },
+      "turn_accepted",
+    );
+    return { turnId, threadId: message.threadId };
   }
 
   async shareProviderKeys(

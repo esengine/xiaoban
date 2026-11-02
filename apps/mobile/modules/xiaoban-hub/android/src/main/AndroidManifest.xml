@@ -27,5 +27,35 @@
         <action android:name="app.xiaoban.hub.NOTICE_ANSWER" />
       </intent-filter>
     </receiver>
+    <activity
+      android:name="app.xiaoban.hub.XiaobanShareActivity"
+      android:exported="true"
+      android:label="@string/xiaoban_share_label"
+      android:theme="@style/XiaobanShareTheme"
+      android:taskAffinity=""
+      android:excludeFromRecents="true"
+      android:windowSoftInputMode="adjustResize"
+      android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode">
+      <intent-filter>
+        <action android:name="android.intent.action.SEND" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="text/*" />
+        <data android:mimeType="image/*" />
+        <data android:mimeType="application/pdf" />
+        <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+        <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <data android:mimeType="application/vnd.ms-excel" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.SEND_MULTIPLE" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="image/*" />
+        <data android:mimeType="application/pdf" />
+        <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+        <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <data android:mimeType="application/vnd.ms-excel" />
+        <data android:mimeType="text/*" />
+      </intent-filter>
+    </activity>
   </application>
 </manifest>
