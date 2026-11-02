@@ -431,7 +431,7 @@ export function ChatPane(full: Props) {
       else if (payload.type === "leave") setDragging(0);
       else if (payload.type === "drop") {
         setDragging(0);
-        if (!overSidebar(payload.position)) void addPaths(payload.paths);
+        if (!overSidebar(payload.position)) void addPaths(payload.paths, true);
       }
     });
     return () => void stop.then((unlisten) => unlisten());

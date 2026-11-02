@@ -18,6 +18,7 @@ import type { ProviderId } from "./ProviderId.ts";
 import type { Quote } from "./Quote.ts";
 import type { Schedule } from "./Schedule.ts";
 import type { ServiceId } from "./ServiceId.ts";
+import type { SharedItem } from "./SharedItem.ts";
 import type { SheetFormat } from "./SheetFormat.ts";
 import type { SheetOp } from "./SheetOp.ts";
 import type { Slide } from "./Slide.ts";
@@ -265,4 +266,6 @@ export type Request =
   | { type: "mute_insight"; month: string; key: string }
   | { type: "set_import_row"; month: string; id: string; checked: boolean; category: string }
   | { type: "commit_import"; month: string }
-  | { type: "cancel_import"; month: string };
+  | { type: "cancel_import"; month: string }
+  | { type: "suggest_share"; item: SharedItem }
+  | { type: "send_share"; item: SharedItem; threadId: string; prompt: string; remember: boolean };

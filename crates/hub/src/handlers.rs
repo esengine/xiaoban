@@ -338,6 +338,13 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             preferences::complete_onboarding(state).await?;
             Ok(Response::Ack)
         }
+        Request::SuggestShare { item } => crate::share::suggest(state, local, item).await,
+        Request::SendShare {
+            item,
+            thread_id,
+            prompt,
+            remember,
+        } => crate::share::send(state, local, item, thread_id, &prompt, remember).await,
     }
 }
 

@@ -1,12 +1,19 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { firstLink } from "@xiaoban/client";
 import { useHubState } from "@xiaoban/client/react";
 import type { PlainMessageKey } from "@xiaoban/i18n";
 import { useI18n } from "@xiaoban/i18n/react";
 import type { Quote, Thread } from "@xiaoban/protocol";
-import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useHub } from "../../app/hub.tsx";
 import { openExternal } from "../../lib/external.ts";
 import { AttachRow, useVisionChoice, VisionNotice } from "../attach/Attachments.tsx";
+import {
+  ShareGuess,
+  type ShareHanded,
+  ShareHandedNote,
+  type ShareOffer,
+} from "../attach/ShareGuess.tsx";
 import type { AttachmentsState } from "../attach/useAttachments.ts";
 import { COMPOSE_EVENT } from "../memory/MemorySkyView.tsx";
 import { useContextMenu } from "../menu/ContextMenu.tsx";
@@ -213,6 +220,7 @@ export function Composer({
     if (!value && attachments.ready.length === 0) return;
     if (attachments.blocked || waitingVision) return;
     setText("");
+    setOffer(null);
     const referenced = refs.map((thread) => thread.id);
     setRefs([]);
     await onSend(value, referenced);
@@ -222,9 +230,45 @@ export function Composer({
     if (!chosen) return;
     await attachments.addPaths(Array.isArray(chosen) ? chosen : [chosen]);
   };
+  const [offer, setOffer] = useState<ShareOffer | null>(null);
+  const [handed, setHanded] = useState<ShareHanded | null>(null);
+  const { fresh, settle, removePaths } = attachments;
+  useEffect(() => {
+    if (fresh.length === 0) return;
+    settle();
+    setOffer({
+      item: {
+        kind: fresh.every((file) => file.image) ? "image" : "file",
+        text: null,
+        subject: null,
+        files: fresh.map((file) => file.path),
+      },
+      link: null,
+    });
+  }, [fresh, settle]);
+  const shareHanded = (done: ShareOffer, note: ShareHanded | null) => {
+    setOffer(null);
+    setHanded(note);
+    if (done.item.files.length > 0) removePaths(done.item.files);
+    const link = done.link;
+    if (link) setText((current) => current.replace(link, "").trim());
+  };
+  const closeHanded = useCallback(() => setHanded(null), []);
+  const offeredFiles = offer?.item.files ?? [];
+  const offerGone =
+    offeredFiles.length > 0 && !files.some((file) => offeredFiles.includes(file.path));
+  useEffect(() => {
+    if (offerGone) setOffer(null);
+  }, [offerGone]);
   const pasteFiles = (event: React.ClipboardEvent) => {
     const blobs = Array.from(event.clipboardData.files);
-    if (blobs.length === 0) return;
+    if (blobs.length === 0) {
+      const pasted = event.clipboardData.getData("text").trim();
+      if (pasted && firstLink(pasted) === pasted) {
+        setOffer({ item: { kind: "link", text: pasted, subject: null, files: [] }, link: pasted });
+      }
+      return;
+    }
     event.preventDefault();
     void attachments.addBlobs(blobs);
   };
@@ -351,6 +395,15 @@ export function Composer({
                 </button>
               ))}
             </div>
+          )}
+          {handed && <ShareHandedNote handed={handed} onClose={closeHanded} />}
+          {offer && (
+            <ShareGuess
+              offer={offer}
+              threadId={threadId}
+              onHanded={shareHanded}
+              onDismiss={() => setOffer(null)}
+            />
           )}
           <AttachRow files={files} onRemove={attachments.remove} />
           {attachments.hasImages && (

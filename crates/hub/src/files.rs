@@ -29,6 +29,15 @@ const TEXTS: &[&str] = &[
     "toml", "ini", "rtf", "srt",
 ];
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Peek {
+    pub name: String,
+    pub size: u64,
+    pub pages: Option<u32>,
+    pub text: String,
+    pub image: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Files {
     dir: PathBuf,
@@ -189,6 +198,42 @@ impl Files {
         let path = dir.join(safe);
         std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
         Ok(path)
+    }
+
+    pub fn peek(source: &Path) -> Result<Peek, String> {
+        let name = source
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("the file has no name")?
+            .to_owned();
+        let size = std::fs::metadata(source)
+            .map_err(|error| error.to_string())?
+            .len();
+        if size > MAX_BYTES {
+            return Err(format!("{name} is larger than 20MB"));
+        }
+        let ext = extension(&name);
+        if let Some((_, mime)) = IMAGES.iter().find(|(known, _)| *known == ext) {
+            let bytes = std::fs::read(source).map_err(|error| error.to_string())?;
+            let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+            return Ok(Peek {
+                name,
+                size,
+                pages: None,
+                text: String::new(),
+                image: Some(format!("data:{mime};base64,{encoded}")),
+            });
+        }
+        let pages = extract(source, &ext).unwrap_or_default();
+        Ok(Peek {
+            name,
+            size,
+            pages: u32::try_from(pages.len())
+                .ok()
+                .filter(|count| ext == "pdf" && *count > 0),
+            text: preview(&pages),
+            image: None,
+        })
     }
 
     pub fn is_upload(&self, path: &str) -> bool {

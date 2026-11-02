@@ -55,6 +55,7 @@ export {
   whenText as scheduleWhen,
   windowText,
 } from "./schedule.ts";
+export { extensionOf, firstLink, hostOf, shareKind, sizeText } from "./share.ts";
 export type { AgentState, Draft, HubState, Settled, TraceStep, TurnTrace } from "./state.ts";
 export { applyEvent, initialHubState, tripKey } from "./state.ts";
 export { type ExportedFile, HubStore } from "./store.ts";

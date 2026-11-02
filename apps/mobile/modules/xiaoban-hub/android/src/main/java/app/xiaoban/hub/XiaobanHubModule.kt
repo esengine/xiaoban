@@ -16,17 +16,33 @@ class XiaobanHubModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("XiaobanHub")
 
-    Events("onNoticeAnswer", "onPlanBall")
+    Events("onNoticeAnswer", "onPlanBall", "onShare")
 
     OnCreate {
       XiaobanOperator.context = appContext.reactContext?.applicationContext
       XiaobanNotices.listener = { answer -> sendEvent("onNoticeAnswer", mapOf("answer" to answer)) }
       PlanBall.listener = { action -> sendEvent("onPlanBall", mapOf("action" to action)) }
+      XiaobanShare.listener = { sendEvent("onShare", mapOf<String, Any>()) }
     }
 
     OnDestroy {
       XiaobanNotices.listener = null
       PlanBall.listener = null
+      XiaobanShare.listener = null
+    }
+
+    AsyncFunction("takeShare") {
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      XiaobanShare.take(context.applicationContext)?.toString()
+    }
+
+    Function("closeShare") {
+      XiaobanShare.close()
+    }
+
+    Function("openFromShare") { url: String ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      XiaobanShare.open(context.applicationContext, url)
     }
 
     Function("planBall") { state: String ->

@@ -20,7 +20,7 @@ use xiaoban_protocol::{
     AgendaItem, Attachment, AutonomyLevel, ClientFrame, ConfirmChoice, ConfirmKind, ContextNote, Coord,
     Credential, DeviceHello, DocFormat, ErrorCode, Event, FailureKind, Interpretation, Location,
     OperatePermissions, PROTOCOL_VERSION, Platform, ProtocolError, ProviderId, Request, Response,
-    Role, ServerFrame, ServiceId, SheetFormat, Sky, TravelMode, TripLeg,
+    Role, ServerFrame, ServiceId, ShareKind, SharedItem, SheetFormat, Sky, TravelMode, TripLeg,
 };
 
 struct TestClient {
@@ -3059,5 +3059,71 @@ async fn todos_with_a_time_wait_for_ok_and_untimed_ones_go_straight_on_the_list(
     assert_eq!(todo.title, "给妈妈打电话");
     assert_eq!(todo.minute, Some(20 * 60));
     assert_eq!(todo.state, xiaoban_protocol::TodoState::Open);
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn shared_links_get_guessed_actions_and_land_in_the_chosen_thread() {
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![ModelChunk::Text("不是 JSON".into())],
+        vec![ModelChunk::Text("好的".into())],
+        vec![ModelChunk::Text("好的".into())],
+        vec![ModelChunk::Text("好的".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    client.request(Request::CompleteOnboarding).await;
+    let Response::Thread { thread } = client
+        .request(Request::CreateThread {
+            title: Some("新家装修".into()),
+            workspace_id: None,
+        })
+        .await
+    else {
+        panic!("expected thread");
+    };
+    let item = SharedItem {
+        kind: ShareKind::Link,
+        text: Some("2026 年家装避坑指南 https://example.com/guide".into()),
+        subject: None,
+        files: Vec::new(),
+    };
+    let Response::ShareSuggested { suggestion } = client
+        .request(Request::SuggestShare { item: item.clone() })
+        .await
+    else {
+        panic!("expected suggestions");
+    };
+    assert!(suggestion.actions.len() >= 2, "{suggestion:?}");
+    assert!(suggestion.actions.iter().any(|action| action.remember));
+    assert_ne!(suggestion.thread_id, thread.id);
+    assert_eq!(suggestion.thread_title, None);
+    assert_eq!(suggestion.source.as_deref(), Some("example.com"));
+    let guessed = provider.requests();
+    let first = guessed.first().expect("the share was guessed by the model");
+    assert!(
+        first
+            .messages
+            .iter()
+            .any(|message| message.content.contains("新家装修")),
+        "candidate threads reach the model"
+    );
+
+    let Response::TurnAccepted { message, .. } = client
+        .request(Request::SendShare {
+            item,
+            thread_id: thread.id.clone(),
+            prompt: "放进「新家装修」，以后问装修时参考".into(),
+            remember: true,
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    assert_eq!(message.thread_id, thread.id);
+    assert!(message.text.starts_with("放进「新家装修」"));
+    assert!(message.text.contains("https://example.com/guide"));
     hub.shutdown().await;
 }
