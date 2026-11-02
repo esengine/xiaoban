@@ -36,6 +36,8 @@ object XiaobanOperator {
   private var paused = false
   private var stoppedAt = 0L
   private var handover: Handover? = null
+  // Chat and payment apps the user said yes to for the task in hand; only the hub ever changes this.
+  private val granted = mutableSetOf<String>()
   @Volatile private var lastAction = 0L
   @Volatile private var status: String? = null
   @Volatile var touched = false
@@ -60,6 +62,7 @@ object XiaobanOperator {
         } else {
           open(request.getString("app"))
         }
+        "grant" -> grant(request.getString("app"), request.optBoolean("on"))
         "snapshot" -> snapshot(request.getString("app"))
         "act" -> act(request)
         "keys" -> keys(request.getString("keys"))
@@ -97,7 +100,13 @@ object XiaobanOperator {
     return rules
   }
 
+  private fun grant(app: String, on: Boolean): JSONObject {
+    synchronized(lock) { if (on) granted.add(app) else granted.remove(app) }
+    return ok()
+  }
+
   private fun blocked(app: String): Boolean {
+    if (synchronized(lock) { app in granted }) return false
     val rules = rules()
     val lower = app.lowercase()
     return app in rules.packages || rules.words.any { lower.split('.').contains(it) || lower.contains(".$it") }
@@ -250,6 +259,7 @@ object XiaobanOperator {
   }
 
   fun stop() = synchronized(lock) {
+    granted.clear()
     paused = false
     status = null
     stoppedAt = SystemClock.uptimeMillis()
@@ -280,8 +290,9 @@ object XiaobanOperator {
     val node = if (remembered.refresh()) remembered else relocate(remembered, known)
       ?: return failure("the page reloaded and that element is no longer on screen; call look_at_app again and continue, the app itself works fine")
     val label = labelOf(node)
-    val press = request.optString("do") == "press"
-    if (press && isHandover(label)) {
+    val confirmed = request.optString("do") == "press_confirmed"
+    val press = confirmed || request.optString("do") == "press"
+    if (press && !confirmed && isHandover(label)) {
       OperatorOverlay.handover(
         text("handover-title"),
         text("handover-body", "label" to label),
@@ -306,6 +317,11 @@ object XiaobanOperator {
         putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, request.optString("text"))
       }
       node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+    }
+    if (done && confirmed && isHandover(label)) {
+      // The user approved this payment twice and it is pressed; what comes next is theirs alone.
+      OperatorOverlay.handover(text("secret-title"), text("secret-body"), text("handover-ok"), text("handover-back"))
+      return ok().put("note", "the payment button is pressed; the payment password, fingerprint or code is the user's to enter, tell them so and stop")
     }
     OperatorOverlay.idleLater()
     return if (done) ok() else failure("the phone did not accept that action; look at the app again")

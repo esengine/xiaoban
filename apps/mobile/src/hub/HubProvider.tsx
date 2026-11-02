@@ -68,6 +68,8 @@ function operatorStrings(t: ReturnType<typeof useI18n>["t"]): string {
     "handover-title": t("operate-handover-title"),
     "handover-body": t("operate-handover-body", { label: "{label}" }),
     "handover-ok": t("operate-handover-ok"),
+    "secret-title": t("operate-secret-title"),
+    "secret-body": t("operate-secret-body"),
     "handover-back": t("operate-handover-back"),
     handover,
     aliases,
