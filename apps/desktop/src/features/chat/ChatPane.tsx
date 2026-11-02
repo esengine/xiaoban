@@ -111,6 +111,7 @@ interface Queued {
 }
 
 const OLDER_THRESHOLD = 240;
+const PINNED_SLACK = 80;
 
 let counter = 0;
 
@@ -322,6 +323,7 @@ export function ChatPane(full: Props) {
     });
   }, [running, holding, nextQueued, store]);
   const end = useRef<HTMLLIElement>(null);
+  const pinned = useRef(true);
   const list = useRef<HTMLOListElement>(null);
   const flown = useRef(new Set<string>());
   const [speaking, setSpeaking] = useState(false);
@@ -392,7 +394,9 @@ export function ChatPane(full: Props) {
   };
   const onScroll = () => {
     const node = list.current;
-    if (!node || node.scrollTop > OLDER_THRESHOLD) return;
+    if (!node) return;
+    pinned.current = node.scrollHeight - node.scrollTop - node.clientHeight < PINNED_SLACK;
+    if (node.scrollTop > OLDER_THRESHOLD) return;
     if (folded) unfold(true);
     else loadOlder();
   };
@@ -408,8 +412,27 @@ export function ChatPane(full: Props) {
   const lastMessage = messages.at(-1)?.id;
   const lastDraft = drafts.at(-1);
   useEffect(() => {
+    pinned.current = true;
     end.current?.scrollIntoView({ block: "end" });
   }, [threadId, lastMessage, lastDraft?.text, lastDraft?.tools.length, lastDraft?.memories.length]);
+
+  useEffect(() => {
+    const node = list.current;
+    if (!node) return;
+    let frame = 0;
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (pinned.current) node.scrollTop = node.scrollHeight;
+      });
+    };
+    const observer = new MutationObserver(follow);
+    observer.observe(node, { childList: true, subtree: true, characterData: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     for (const memory of lastDraft?.memories ?? []) {

@@ -626,8 +626,6 @@ button {
 
 .bubble--thinking {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
   padding: 10px 14px;
   border-radius: 16px 16px 16px 4px;
 }
@@ -1127,7 +1125,7 @@ button.quote-block__main {
 .thinking {
   align-self: flex-start;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-sm);
   animation: bubble-in var(--motion-standard) var(--ease-standard) both;
 }
@@ -3662,7 +3660,7 @@ button.quote-block__main {
 }
 
 .memory-graph__legend span,
-.memory-graph__list li > span:first-child {
+.memory-graph__list li > span:first-child:not(.memory-graph__text) {
   flex: none;
   width: 7px;
   height: 7px;
@@ -12456,6 +12454,43 @@ button.sent-files__image {
 .model-menu__trigger:hover,
 .model-menu__trigger[aria-expanded="true"] {
   color: var(--color-ink);
+}
+
+.context-meter__trigger {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.context-meter__ring {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--color-accent) var(--used, 0deg),
+    var(--color-line-strong) 0
+  );
+  mask: radial-gradient(circle, transparent 4px, #000 4.5px);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.context-meter__trigger:hover .context-meter__ring,
+.context-meter__trigger[aria-expanded="true"] .context-meter__ring {
+  transform: scale(1.15);
+}
+
+.context-meter__trigger[data-warn] .context-meter__ring {
+  background: conic-gradient(
+    var(--color-attention) var(--used, 0deg),
+    var(--color-line-strong) 0
+  );
+  mask: radial-gradient(circle, transparent 4px, #000 4.5px);
 }
 
 .model-menu__effort {

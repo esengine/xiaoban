@@ -159,12 +159,14 @@ export function DraftBubble({
             <MascotFace thinking />
           </span>
           <span className="bubble bubble--assistant bubble--thinking">
-            <span className="shimmer">{t("draft-thinking")}</span>
-            {elapsed >= waiting.showElapsedMs && (
-              <span key={Math.floor(elapsed / 1000)} className="bubble__note">
-                {t("draft-elapsed", { seconds: Math.floor(elapsed / 1000) })}
-              </span>
-            )}
+            <span
+              key={elapsed >= waiting.showElapsedMs ? Math.floor(elapsed / 1000) : 0}
+              className="shimmer"
+            >
+              {elapsed >= waiting.showElapsedMs
+                ? t("reasoning-thinking", { seconds: Math.floor(elapsed / 1000) })
+                : t("draft-thinking")}
+            </span>
           </span>
         </li>
         {hint}
