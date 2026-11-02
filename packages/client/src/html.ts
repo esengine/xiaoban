@@ -34,3 +34,16 @@ export function htmlFileName(title: string | null): string {
   const base = (title ?? "page").replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "");
   return `${base || "page"}.html`;
 }
+
+const FNV_OFFSET = 0xcbf29ce484222325n;
+const FNV_PRIME = 0x100000001b3n;
+const MASK = 0xffffffffffffffffn;
+
+export function pageHash(code: string): string {
+  let value = FNV_OFFSET;
+  for (const byte of new TextEncoder().encode(code.trim())) {
+    value ^= BigInt(byte);
+    value = (value * FNV_PRIME) & MASK;
+  }
+  return value.toString(16).padStart(16, "0");
+}

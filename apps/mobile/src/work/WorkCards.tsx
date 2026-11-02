@@ -1,4 +1,5 @@
-import { htmlFileName, htmlLines, htmlTitle } from "@xiaoban/client";
+import { htmlFileName, htmlLines, htmlTitle, pageHash } from "@xiaoban/client";
+import type { PageCheck } from "@xiaoban/protocol";
 import { useHubState } from "@xiaoban/client/react";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color } from "@xiaoban/tokens";
@@ -67,7 +68,21 @@ function CardShell({
 
 export function HtmlCard({ code }: { code: string }) {
   const { t } = useI18n();
+  const store = useHubStore();
   const [copied, setCopied] = useState(false);
+  const [check, setCheck] = useState<PageCheck | null>(null);
+  useEffect(() => {
+    let live = true;
+    void store
+      .pageCheck(pageHash(code))
+      .then((found) => {
+        if (live) setCheck(found);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [store, code]);
   const title = htmlTitle(code) ?? t("html-card-untitled");
   const open = () => router.push({ pathname: "/html/[id]", params: { id: keepHtml(code), title } });
   const copy = () => {
@@ -92,6 +107,13 @@ export function HtmlCard({ code }: { code: string }) {
           <Text style={styles.copyChipText}>{t(copied ? "md-view-copied" : "md-card-copy")}</Text>
         </Pressable>
       </View>
+      {check ? (
+        <Text style={[styles.indent, styles.checkLine, check.ok && styles.checkOk]}>
+          {check.ok
+            ? t("html-card-checked")
+            : t("html-card-problems", { count: check.errors.length + (check.overflow ? 1 : 0) })}
+        </Text>
+      ) : null}
       <Text style={[styles.meta, styles.indent]}>
         {t("html-card-meta", { lines: htmlLines(code) })}
       </Text>
@@ -377,6 +399,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   htmlCard: { alignSelf: "stretch" },
+  checkLine: { fontSize: 12, color: color.attentionInk },
+  checkOk: { color: color.success },
   tileHtml: { backgroundColor: color.attentionSoft },
   tileTextHtml: { fontSize: 9, color: color.attentionInk },
   htmlButtons: { flexDirection: "row", gap: 8, marginTop: 4 },

@@ -70,6 +70,7 @@ object XiaobanOperator {
         "notify" -> XiaobanNotices.notify(context ?: service(), request)
         "withdraw" -> XiaobanNotices.withdraw(context ?: service(), request.getString("id"))
         "keep" -> HubKeeper.keep(context ?: service(), request)
+        "check_page" -> PageChecker.check(context ?: service(), request.getString("html"), request.optInt("width", 390))
         "wake" -> HubKeeper.wake(context ?: service(), if (request.isNull("at")) null else request.optLong("at"))
         else -> failure("unknown request")
       }.also { reply -> if (reply.has("error")) Log.w(TAG, "$op: ${reply.optString("error")}") }.toString()

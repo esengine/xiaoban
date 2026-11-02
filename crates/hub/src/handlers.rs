@@ -299,6 +299,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::DeleteTodo { .. }
         | Request::TodosToShopping { .. }
         | Request::KeepTodos { .. }) => crate::todos::handle(state, request).await,
+        request @ Request::PageCheck { .. } => crate::pages::handle(state, request).await,
         request @ (Request::FindCapabilities { .. }
         | Request::ListCapabilities
         | Request::InstallCapability { .. }

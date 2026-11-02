@@ -5,6 +5,7 @@ mod island;
 mod location;
 mod operate;
 mod overlay;
+mod pages;
 mod presence;
 mod stored;
 mod uploads;
@@ -20,6 +21,7 @@ pub fn run() {
         .init();
 
     let app = tauri::Builder::default()
+        .register_uri_scheme_protocol("xbpage", |_context, request| pages::protocol(&request))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -29,6 +31,7 @@ pub fn run() {
                 data_dir,
                 location::system(app.handle().clone()),
                 operate::system(app.handle().clone()),
+                pages::system(app.handle().clone()),
             ))?;
             app.manage(running);
             island::keep_running_when_closed(app.handle());
@@ -56,6 +59,8 @@ pub fn run() {
             stored::file_save_as,
             stored::text_save_as,
             stored::html_open,
+            pages::page_check_done,
+            pages::page_keep,
             stored::pick_folder,
             stored::open_in_editor,
             stored::list_editors,

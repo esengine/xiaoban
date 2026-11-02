@@ -41,6 +41,7 @@ const WITH_DETAIL: Record<string, { detail: MessageKey; plain: PlainMessageKey }
 
 const PLAIN: Record<string, PlainMessageKey> = {
   save_trip: "step-save_trip",
+  check_page: "step-check_page",
   floorplan_save: "step-floorplan_save",
   floorplan_edit: "step-floorplan_edit",
   check_price_in_app: "step-check_price_in_app",

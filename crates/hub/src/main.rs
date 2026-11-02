@@ -125,6 +125,7 @@ async fn main() -> anyhow::Result<()> {
         router: Arc::new(NoRouter),
         apps: Arc::new(NoApps),
         operator: Arc::new(NoOperator),
+        pages: Arc::new(xiaoban_hub::NoPages),
         web: Arc::new(DeepseekWeb::new()),
         mail: Arc::new(xiaoban_hub::ImapMail),
         fallback: configured(&args)?,

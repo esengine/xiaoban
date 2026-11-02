@@ -25,6 +25,7 @@ pub struct HubRuntime {
     pub router: Arc<dyn Router>,
     pub apps: Arc<dyn Apps>,
     pub operator: Arc<dyn Operator>,
+    pub pages: Arc<dyn crate::pages::Pages>,
     pub web: Arc<dyn Web>,
     pub mail: Arc<dyn crate::mail_imap::MailSource>,
     pub fallback: Option<ConfiguredProvider>,

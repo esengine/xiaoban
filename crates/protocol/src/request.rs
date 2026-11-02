@@ -599,6 +599,9 @@ pub enum Request {
         id: String,
         action: crate::TodoAction,
     },
+    PageCheck {
+        hash: String,
+    },
     DeleteTodo {
         id: String,
     },
@@ -917,6 +920,9 @@ pub enum Response {
     },
     Todos {
         todos: Vec<crate::Todo>,
+    },
+    PageCheck {
+        check: Option<crate::PageCheck>,
     },
     Capabilities {
         capabilities: Vec<crate::Capability>,

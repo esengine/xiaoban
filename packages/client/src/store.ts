@@ -47,6 +47,7 @@ import type {
   ModelInfo,
   NotifySettings,
   OperatePermissions,
+  PageCheck,
   Plan,
   PlanAction,
   Preferences,
@@ -997,6 +998,11 @@ export class HubStore {
       todos: Object.fromEntries(todos.map((todo) => [todo.id, todo])),
     }));
     return todos;
+  }
+
+  async pageCheck(hash: string): Promise<PageCheck | null> {
+    const { check } = await this.client.request({ type: "page_check", hash }, "page_check");
+    return check;
   }
 
   async addTodo(draft: TodoDraft, propose = false): Promise<Todo> {

@@ -174,6 +174,7 @@ fn runtime_with(
         router: Arc::new(NoRouter),
         apps: Arc::new(FakeApps::default()),
         operator: Arc::new(FakeOperator::default()),
+        pages: Arc::new(xiaoban_hub::NoPages),
         web: Arc::new(FakeWeb),
         mail: Arc::new(xiaoban_hub::ImapMail),
         fallback,

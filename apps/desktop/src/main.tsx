@@ -12,6 +12,7 @@ import { OperateOverlay } from "./features/overlay/OperateOverlay.tsx";
 import "./features/overlay/overlay.css";
 import "./features/island/island.css";
 import "@xiaoban/slides/slides.css";
+import { PageCheckHost } from "./features/pages/PageCheckHost.tsx";
 import "./styles.css";
 
 const translator = createTranslator(negotiateLocale(navigator.languages));
@@ -38,7 +39,16 @@ createRoot(root).render(
     ) : (
       <I18nProvider translator={translator}>
         <HubProvider window={overlay ? "overlay" : island ? "island" : "main"}>
-          {overlay ? <OperateOverlay /> : island ? <Island /> : <App />}
+          {overlay ? (
+            <OperateOverlay />
+          ) : island ? (
+            <Island />
+          ) : (
+            <>
+              <App />
+              <PageCheckHost />
+            </>
+          )}
         </HubProvider>
       </I18nProvider>
     )}

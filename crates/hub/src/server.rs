@@ -132,6 +132,7 @@ impl Hub {
             router: runtime.router,
             apps: runtime.apps,
             operator: runtime.operator,
+            pages: runtime.pages,
             confirms: crate::confirms::Confirms::default(),
             pauses: crate::pauses::Pauses::default(),
             schedules: crate::schedules::Runs::default(),

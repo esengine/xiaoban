@@ -39,6 +39,7 @@ mod memory;
 mod model;
 mod network;
 mod notify;
+mod pages;
 mod operate;
 mod operate_tools;
 mod plan;
@@ -89,6 +90,7 @@ pub use location::{FixedLocator, Locator, NoLocator};
 pub use mail_imap::{Batch, ImapMail, Login, MailError, MailSource, Raw};
 pub use operate::{ActFailure, MAX_ELEMENTS, NoOperator, Operator, Snapshot, UiAction, UiElement};
 pub use prompts::Prompts;
+pub use pages::{NoPages, PageReport, Pages};
 pub use router::{NoRouter, Router};
 
 pub fn todo_wake_at(

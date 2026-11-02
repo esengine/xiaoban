@@ -8,12 +8,14 @@ import {
   remarkInlineTags,
 } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
-import { type ComponentProps, memo, type ReactNode, useState } from "react";
+import { type ComponentProps, memo, type ReactNode, useEffect, useState } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { openExternal } from "../../lib/external.ts";
 import { remarkGithubRefs } from "../code/githubRefs.ts";
 import { RefChip } from "../code/RefChip.tsx";
+import { PageViewer } from "../pages/PageViewer.tsx";
+import { useHub } from "../../app/hub.tsx";
 import { useImageViewer } from "../viewer/ImageViewer.tsx";
 
 function textOf(node: ReactNode): string {
@@ -32,9 +34,29 @@ function blockLanguage(children: ReactNode): string | null {
   return /language-([\w-]+)/.exec(name)?.[1] ?? null;
 }
 
+function useCheck(code: string): PageCheck | null {
+  const store = useHub();
+  const [check, setCheck] = useState<PageCheck | null>(null);
+  useEffect(() => {
+    let live = true;
+    void store
+      .pageCheck(pageHash(code))
+      .then((found) => {
+        if (live) setCheck(found);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [store, code]);
+  return check;
+}
+
 function HtmlCard({ code }: { code: string }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [viewing, setViewing] = useState(false);
+  const check = useCheck(code);
   const title = htmlTitle(code) ?? t("html-card-untitled");
   const name = htmlFileName(htmlTitle(code));
   const copy = async () => {
@@ -51,12 +73,19 @@ function HtmlCard({ code }: { code: string }) {
           {copied ? t("rich-copied") : t("rich-copy")}
         </button>
       </div>
+      {check ? (
+        <span className="html-card__check" data-ok={check.ok || undefined}>
+          {check.ok
+            ? t("html-card-checked")
+            : t("html-card-problems", { count: check.errors.length + (check.overflow ? 1 : 0) })}
+        </span>
+      ) : null}
       <span className="html-card__meta">{t("html-card-meta", { lines: htmlLines(code) })}</span>
       <div className="html-card__actions">
         <button
           type="button"
           className="button button--primary"
-          onClick={() => void invoke("html_open", { text: code, name }).catch(() => undefined)}
+          onClick={() => setViewing(true)}
         >
           {t("html-card-open")}
         </button>
@@ -68,6 +97,9 @@ function HtmlCard({ code }: { code: string }) {
           {t("html-card-save")}
         </button>
       </div>
+      {viewing ? (
+        <PageViewer code={code} title={title} name={name} onClose={() => setViewing(false)} />
+      ) : null}
     </div>
   );
 }

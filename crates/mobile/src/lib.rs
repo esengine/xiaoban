@@ -45,6 +45,13 @@ fn hands() -> Hands {
     }
 }
 
+fn pages() -> Arc<dyn xiaoban_hub::Pages> {
+    match BRIDGE.get() {
+        Some(bridge) => Arc::new(operator::PhonePages::new(bridge.clone())),
+        None => Arc::new(xiaoban_hub::NoPages),
+    }
+}
+
 fn runtime() -> &'static tokio::runtime::Runtime {
     RUNTIME.get_or_init(|| {
         tokio::runtime::Builder::new_multi_thread()
@@ -89,6 +96,7 @@ fn runtime_config(locale: Locale, secrets_json: &str) -> HubRuntime {
         router: Arc::new(NoRouter),
         apps,
         operator,
+        pages: pages(),
         web: Arc::new(DeepseekWeb::new()),
         mail: Arc::new(xiaoban_hub::ImapMail),
         fallback: None,

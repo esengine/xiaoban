@@ -32,6 +32,7 @@ pub async fn start(
     data_dir: PathBuf,
     locator: Arc<dyn xiaoban_hub::Locator>,
     operator: Arc<dyn xiaoban_hub::Operator>,
+    pages: Arc<dyn xiaoban_hub::Pages>,
 ) -> anyhow::Result<RunningHub> {
     let locale = system_locale();
     let runtime = HubRuntime {
@@ -46,6 +47,7 @@ pub async fn start(
         router: Arc::new(NoRouter),
         apps: Arc::new(crate::apps::system()),
         operator,
+        pages,
         web: Arc::new(DeepseekWeb::new()),
         mail: Arc::new(xiaoban_hub::ImapMail),
         fallback: first_configured_from_env(),

@@ -318,3 +318,37 @@ mod tests {
         assert_eq!((events[0].start, events[0].end), (1, 2));
     }
 }
+
+#[derive(Clone)]
+pub struct PhonePages {
+    bridge: Bridge,
+}
+
+impl PhonePages {
+    pub fn new(bridge: Bridge) -> Self {
+        Self { bridge }
+    }
+}
+
+impl fmt::Debug for PhonePages {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("PhonePages")
+    }
+}
+
+impl xiaoban_hub::Pages for PhonePages {
+    fn check(
+        &self,
+        html: String,
+        width: u32,
+    ) -> BoxFuture<'static, Result<xiaoban_hub::PageReport, String>> {
+        let reply = call(&self.bridge, json!({ "op": "check_page", "html": html, "width": width }));
+        Box::pin(async move {
+            let value = reply.await?;
+            if let Some(error) = value.get("error").and_then(Value::as_str) {
+                return Err(error.to_owned());
+            }
+            serde_json::from_value(value).map_err(|error| error.to_string())
+        })
+    }
+}
