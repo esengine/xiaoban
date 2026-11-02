@@ -2,6 +2,7 @@ import type {
   Allowance,
   AutonomyLevel,
   Branch,
+  BrowserPage,
   Capability,
   CellEdit,
   CommandRun,
@@ -998,6 +999,14 @@ export class HubStore {
       todos: Object.fromEntries(todos.map((todo) => [todo.id, todo])),
     }));
     return todos;
+  }
+
+  async browserResult(id: string, page: BrowserPage): Promise<void> {
+    await this.client.request({ type: "browser_result", id, page }, "ack");
+  }
+
+  async browserStop(): Promise<void> {
+    await this.client.request({ type: "browser_stop" }, "ack");
   }
 
   async pageCheck(hash: string): Promise<PageCheck | null> {

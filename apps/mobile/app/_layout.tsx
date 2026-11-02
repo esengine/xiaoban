@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { HubProvider } from "../src/hub/HubProvider.tsx";
 import { Island } from "../src/hub/Island.tsx";
 import { Notices } from "../src/hub/Notices.tsx";
+import { BrowserBridge } from "../src/browser/BrowserBridge.tsx";
 import { PlanBall } from "../src/hub/PlanBall.tsx";
 import { translator } from "../src/i18n.ts";
 
@@ -17,6 +18,7 @@ export default function RootLayout() {
         <Island />
         <Notices />
         <PlanBall />
+        <BrowserBridge />
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
@@ -43,6 +45,7 @@ export default function RootLayout() {
             name="background"
             options={{ headerShown: false, title: t("background-title") }}
           />
+          <Stack.Screen name="browser" options={{ headerShown: false, title: t("browser-title") }} />
           <Stack.Screen
             name="md/[id]"
             options={{ headerShown: false, title: t("md-card-untitled") }}

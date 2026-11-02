@@ -301,7 +301,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::KeepTodos { .. }) => crate::todos::handle(state, request).await,
         request @ Request::PageCheck { .. } => crate::pages::handle(state, request).await,
         request @ (Request::BrowserResult { .. } | Request::BrowserStop) => {
-            crate::browser::handle(state, request).await
+            Ok(crate::browser::handle(state, &request))
         }
         request @ (Request::FindCapabilities { .. }
         | Request::ListCapabilities

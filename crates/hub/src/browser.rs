@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use tokio::sync::oneshot;
 use xiaoban_agent::ToolSpec;
 use xiaoban_i18n::{Localizer, keys};
-use xiaoban_protocol::{BrowserAction, BrowserElement, BrowserPage, Event, ProtocolError, Request, Response};
+use xiaoban_protocol::{BrowserAction, BrowserElement, BrowserPage, Event, Request, Response};
 
 use crate::state::SharedState;
 use crate::tools::HubTools;
@@ -47,7 +47,7 @@ impl Browser {
     fn begin(&self, turn: &str) -> bool {
         let mut session = self.session.lock().unwrap();
         if session.turn != turn {
-            session.turn = turn.to_owned();
+            turn.clone_into(&mut session.turn);
             session.stopped = false;
             session.elements.clear();
         }
@@ -146,18 +146,15 @@ fn describe(page: &BrowserPage) -> Value {
     })
 }
 
-pub async fn handle(state: &SharedState, request: Request) -> Result<Response, ProtocolError> {
+pub fn handle(state: &SharedState, request: &Request) -> Response {
     match request {
         Request::BrowserResult { id, page } => {
-            state.browser.deliver(&id, page);
-            Ok(Response::Ack)
+            state.browser.deliver(id, page.clone());
         }
-        Request::BrowserStop => {
-            state.browser.stop();
-            Ok(Response::Ack)
-        }
+        Request::BrowserStop => state.browser.stop(),
         _ => unreachable!("not a browser request"),
     }
+    Response::Ack
 }
 
 impl HubTools<'_> {

@@ -2,6 +2,7 @@ import { isHtmlBlock, keyLabel, remarkInlineTags } from "@xiaoban/client";
 import { useI18n } from "@xiaoban/i18n/react";
 import { color, dark } from "@xiaoban/tokens";
 import * as Clipboard from "expo-clipboard";
+import { router } from "expo-router";
 import { memo, type ReactNode, useDeferredValue, useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, type TextStyle, View } from "react-native";
 import remarkGfm from "remark-gfm";
@@ -73,7 +74,7 @@ function inline(node: Node, key: string, tone: Tone, style?: TextStyle): ReactNo
           key={key}
           style={[styles.link, tone === "dark" && styles.linkDark]}
           onPress={() => {
-            if (node.url) void Linking.openURL(node.url);
+            if (node.url) openLink(node.url);
           }}
         >
           <Inline nodes={kids} tone={tone} />
@@ -115,6 +116,11 @@ function inline(node: Node, key: string, tone: Tone, style?: TextStyle): ReactNo
     default:
       return kids.length > 0 ? nested({}) : (node.value ?? null);
   }
+}
+
+function openLink(url: string) {
+  if (/^https?:\/\//i.test(url)) router.push({ pathname: "/browser", params: { url } });
+  else void Linking.openURL(url);
 }
 
 function CodeBlock({ node }: { node: Node }) {
