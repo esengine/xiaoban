@@ -338,7 +338,7 @@ export function MemorySky({
         if (level.kind === "galaxy" && inside && full) {
           context.globalAlpha = 0.9;
           context.fillStyle = dark.text;
-          context.font = "11px 'Noto Sans SC', system-ui";
+          context.font = "11px 'Noto Sans SC Variable', 'Noto Sans SC', system-ui";
           context.textAlign = "center";
           context.fillText(planet.memory.subject, at.x, at.y + radius + 16);
         }
@@ -351,10 +351,10 @@ export function MemorySky({
           const at = project(cluster.at, cam, width, height);
           if (!at) continue;
           context.fillStyle = dark.text;
-          context.font = `700 ${full ? 13 : 11}px 'Noto Sans SC', system-ui`;
+          context.font = `700 ${full ? 13 : 11}px 'Noto Sans SC Variable', 'Noto Sans SC', system-ui`;
           context.fillText(t(CLUSTER_LABELS[cluster.id]), at.x, at.y + 70 * at.scale + 14);
           context.fillStyle = dark.textMuted;
-          context.font = "10px 'Noto Sans SC', system-ui";
+          context.font = "10px 'Noto Sans SC Variable', 'Noto Sans SC', system-ui";
           context.fillText(
             t("memory-sky-count", { count: cluster.count }),
             at.x,
@@ -366,11 +366,11 @@ export function MemorySky({
           const at = project(galaxy.at, cam, width, height);
           if (!at) continue;
           context.fillStyle = dark.text;
-          context.font = "700 12px 'Noto Sans SC', system-ui";
+          context.font = "700 12px 'Noto Sans SC Variable', 'Noto Sans SC', system-ui";
           context.fillText(galaxy.name || t("memory-sky-loose"), at.x, at.y + 46 * at.scale + 14);
           if (galaxy.summary) {
             context.fillStyle = dark.textMuted;
-            context.font = "10px 'Noto Sans SC', system-ui";
+            context.font = "10px 'Noto Sans SC Variable', 'Noto Sans SC', system-ui";
             context.fillText(galaxy.summary.slice(0, 24), at.x, at.y + 46 * at.scale + 28);
           }
         }

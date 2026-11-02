@@ -107,8 +107,8 @@ export const space = {
 } as const;
 
 export const font = {
-  family: "'Noto Sans SC', system-ui, sans-serif",
-  mono: "'JetBrains Mono', ui-monospace, monospace",
+  family: "'Noto Sans SC Variable', 'Noto Sans SC', system-ui, sans-serif",
+  mono: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
 } as const;
 
 export const motion = {
