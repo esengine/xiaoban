@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      android_only:
+        description: Build only the Android app (skip the desktop installers)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -42,6 +47,9 @@ jobs:
           JNI=apps/mobile/modules/xiaoban-hub/android/src/main/jniLibs/arm64-v8a
           mkdir -p "$JNI"
           cp target/aarch64-linux-android/release/libxiaoban_mobile.so "$JNI/"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - name: Prebuild
         working-directory: apps/mobile
         env:
@@ -61,7 +69,7 @@ jobs:
           fi
           echo "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/upload.jks"
           export XIAOBAN_UPLOAD_STORE_FILE="$RUNNER_TEMP/upload.jks"
-          ./gradlew assembleRelease bundleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+          ./gradlew assembleRelease bundleRelease --no-daemon --build-cache -PreactNativeArchitectures=arm64-v8a
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/out/xiaoban-android.apk"
           cp app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/out/xiaoban-android.aab"
@@ -79,6 +87,7 @@ jobs:
 
   desktop:
     name: Desktop (${{ matrix.name }})
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.android_only) }}
     strategy:
       fail-fast: false
       matrix:
