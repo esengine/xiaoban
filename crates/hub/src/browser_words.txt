@@ -1,0 +1,28 @@
+登录
+登陆
+注册
+支付
+付款
+下单
+提交订单
+立即购买
+立即支付
+确认支付
+去结算
+结算
+充值
+转账
+发送验证码
+获取验证码
+sign in
+log in
+login
+sign up
+register
+pay
+pay now
+buy now
+checkout
+place order
+purchase
+send code

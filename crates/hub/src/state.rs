@@ -39,6 +39,7 @@ pub struct HubState {
     pub apps: Arc<dyn crate::apps::Apps>,
     pub operator: Arc<dyn crate::operate::Operator>,
     pub pages: Arc<dyn crate::pages::Pages>,
+    pub browser: crate::browser::Browser,
     pub confirms: crate::confirms::Confirms,
     pub pauses: crate::pauses::Pauses,
     pub schedules: crate::schedules::Runs,

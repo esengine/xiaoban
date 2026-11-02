@@ -1,3 +1,4 @@
+mod browser;
 mod calendar;
 mod capability;
 mod code;
@@ -26,6 +27,7 @@ mod todo;
 mod trip;
 mod weather;
 
+pub use browser::*;
 pub use calendar::*;
 pub use capability::*;
 pub use code::*;

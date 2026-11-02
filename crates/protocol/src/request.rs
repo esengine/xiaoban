@@ -602,6 +602,11 @@ pub enum Request {
     PageCheck {
         hash: String,
     },
+    BrowserResult {
+        id: String,
+        page: crate::BrowserPage,
+    },
+    BrowserStop,
     DeleteTodo {
         id: String,
     },

@@ -195,6 +195,10 @@ pub enum Event {
     MailStatusChanged {
         status: crate::MailStatus,
     },
+    BrowserCommand {
+        id: String,
+        action: crate::BrowserAction,
+    },
 }
 
 impl Event {
@@ -242,6 +246,7 @@ impl Event {
             | Self::DailyFeedChanged
             | Self::InsightAlert { .. }
             | Self::MailStatusChanged { .. }
+            | Self::BrowserCommand { .. }
             | Self::ScheduleUpdated { .. }
             | Self::ScheduleRemoved { .. }
             | Self::TodoUpdated { .. }

@@ -39,6 +39,7 @@ mod memory;
 mod model;
 mod network;
 mod notify;
+mod browser;
 mod pages;
 mod operate;
 mod operate_tools;
