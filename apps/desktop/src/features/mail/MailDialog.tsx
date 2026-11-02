@@ -15,6 +15,7 @@ import { dismiss, dismissOnCancel } from "../../lib/dialog.ts";
 import { openExternal } from "../../lib/external.ts";
 import { recency } from "../chat/time.ts";
 import { ConfirmDialog } from "../dialog/ConfirmDialog.tsx";
+import { MailMark } from "./MailMark.tsx";
 import { MailOriginalDialog } from "./MailOriginalDialog.tsx";
 import { MailRow } from "./MailToday.tsx";
 import { useMailAct } from "./useMailAct.ts";
@@ -45,7 +46,7 @@ function Providers({ onPick }: { onPick: (provider: MailProviderInfo) => void })
             className="mail-provider"
             onClick={() => onPick(provider)}
           >
-            <span className="mail-provider__mark" aria-hidden="true" />
+            <MailMark provider={provider.id} />
             <span className="mail-provider__text">
               <b>{t(provider.name)}</b>
               <small>{t(provider.sub)}</small>
@@ -232,7 +233,7 @@ function Connected({
   return (
     <>
       <div className="mail-account">
-        <span className="mail-provider__mark" aria-hidden="true" />
+        <MailMark provider={status.provider} />
         <span className="mail-provider__text">
           <b>{`${t(mailProvider(status.provider).name)} · ${status.address ?? ""}`}</b>
           <small data-warn={status.failure ? true : undefined}>{line}</small>
