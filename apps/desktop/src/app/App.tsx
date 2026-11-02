@@ -89,6 +89,9 @@ function Home() {
           thread.id !== primaryId &&
           !thread.parentId &&
           thread.lastMessage === null &&
+          // The ledger, kitchen, documents and the like keep a titled thread of their own that
+          // never gets a chat message; only a thread nobody has named is a blank chat.
+          thread.title === null &&
           (thread.workspaceId ?? undefined) === workspaceId,
       );
       if (blank) {
