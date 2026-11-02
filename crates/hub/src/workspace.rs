@@ -102,6 +102,39 @@ pub fn pretty(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+/// Where workspaces made by `NewWorkspace` live; `None` for a hub without a data folder.
+pub fn managed_root(state: &SharedState) -> Option<PathBuf> {
+    state.data_dir.as_ref().map(|dir| dir.join("workspaces"))
+}
+
+/// A name that is safe to use as a folder name on any system: no separators or characters a file
+/// system rejects, no leading or trailing dots and spaces, and not too long.
+pub fn safe_folder_name(name: &str) -> Option<String> {
+    let cleaned: String = name
+        .trim()
+        .chars()
+        .map(|c| if c.is_control() || "\\/:*?\"<>|".contains(c) { '_' } else { c })
+        .collect();
+    let cleaned: String = cleaned.trim_matches(|c: char| c == '.' || c.is_whitespace()).chars().take(60).collect();
+    (!cleaned.is_empty()).then_some(cleaned)
+}
+
+/// Creates an empty folder for a workspace, adding a number when the name is already taken.
+pub fn fresh_folder(root: &Path, name: &str) -> Result<PathBuf, String> {
+    let base = safe_folder_name(name).ok_or("the name has nothing usable in it")?;
+    std::fs::create_dir_all(root).map_err(|failure| failure.to_string())?;
+    for number in 1..1000 {
+        let leaf = if number == 1 { base.clone() } else { format!("{base} {number}") };
+        let candidate = root.join(leaf);
+        match std::fs::create_dir(&candidate) {
+            Ok(()) => return Ok(candidate),
+            Err(failure) if failure.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(failure) => return Err(failure.to_string()),
+        }
+    }
+    Err("too many workspaces with that name".to_owned())
+}
+
 pub fn folder_name(path: &Path) -> String {
     path.file_name()
         .map_or_else(|| path.to_string_lossy().into_owned(), |name| name.to_string_lossy().into_owned())
@@ -405,6 +438,29 @@ pub async fn pull(workspace: &Workspace) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn folder_names_are_safe_on_every_system() {
+        assert_eq!(safe_folder_name(" 周报:模板/v2 ").as_deref(), Some("周报_模板_v2"));
+        assert_eq!(safe_folder_name(r"a\b*c?").as_deref(), Some("a_b_c_"));
+        assert_eq!(safe_folder_name("..hidden.. ").as_deref(), Some("hidden"));
+        assert_eq!(safe_folder_name("   "), None);
+        assert_eq!(safe_folder_name("..."), None);
+        assert_eq!(safe_folder_name(&"x".repeat(100)).unwrap().chars().count(), 60);
+    }
+
+    #[test]
+    fn a_taken_name_gets_a_number() {
+        let root = std::env::temp_dir().join(format!("xiaoban-fresh-{}", uuid::Uuid::now_v7()));
+        let first = fresh_folder(&root, "demo").unwrap();
+        let second = fresh_folder(&root, "demo").unwrap();
+        let third = fresh_folder(&root, "demo").unwrap();
+        assert_eq!(first.file_name().unwrap(), "demo");
+        assert_eq!(second.file_name().unwrap(), "demo 2");
+        assert_eq!(third.file_name().unwrap(), "demo 3");
+        assert!(fresh_folder(&root, "///").is_ok(), "a name of only separators still gets a folder");
+        let _ = std::fs::remove_dir_all(root);
+    }
 
     #[test]
     fn reads_branch_lines() {

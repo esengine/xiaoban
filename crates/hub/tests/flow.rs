@@ -3240,6 +3240,135 @@ async fn a_picture_can_be_looked_at_again_in_a_later_turn_by_its_id() {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
+async fn a_hub_makes_workspaces_in_its_own_data_folder_and_cleans_up_only_those() {
+    let data = std::env::temp_dir().join(format!("xiaoban-data-{}", uuid_like()));
+    let pointed = std::env::temp_dir().join(format!("xiaoban-pointed-{}", uuid_like()));
+    std::fs::create_dir_all(&pointed).unwrap();
+    std::fs::write(pointed.join("keep.txt"), "mine").unwrap();
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "write_file",
+            &serde_json::json!({ "path": "index.html", "content": "<h1>骑车</h1>\n" }),
+        )],
+        vec![ModelChunk::Text("写好了".into())],
+    ]));
+    let config = HubConfig {
+        data_dir: Some(data.clone()),
+        ..HubConfig::ephemeral()
+    };
+    let hub = Hub::start(config, runtime(provider.clone())).await.unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+    let make = |name: &str| {
+        let name = name.to_owned();
+        async move { Request::NewWorkspace { name } }
+    };
+
+    let Response::Workspace { workspace: first } = client.request(make("周报:模板/v2").await).await
+    else {
+        panic!("expected workspace");
+    };
+    assert_eq!(first.name, "周报:模板/v2", "the name the user sees is the one they typed");
+    let folder = std::path::PathBuf::from(&first.path);
+    assert!(folder.is_dir(), "{folder:?}");
+    assert!(folder.starts_with(std::fs::canonicalize(data.join("workspaces")).unwrap()));
+    assert_eq!(folder.file_name().unwrap(), "周报_模板_v2");
+    let Response::Workspace { workspace: second } = client.request(make("周报:模板/v2").await).await
+    else {
+        panic!("expected workspace");
+    };
+    assert_ne!(first.id, second.id);
+    assert!(second.path.ends_with("周报_模板_v2 2"), "{}", second.path);
+
+    for bad in ["", "   ", &"长".repeat(61)] {
+        assert!(client.try_request(make(bad).await).await.is_err(), "{bad:?}");
+    }
+
+    // A conversation in it can write files, which land inside the folder.
+    let Response::Thread { thread } = client
+        .request(Request::CreateThread { title: None, workspace_id: Some(first.id.clone()) })
+        .await
+    else {
+        panic!("expected thread");
+    };
+    converse(&mut client, &thread.id, "写个网页", Vec::new()).await;
+    assert_eq!(std::fs::read_to_string(folder.join("index.html")).unwrap(), "<h1>骑车</h1>\n");
+
+    // Removing it takes the files along; removing a folder the user pointed at never does.
+    let Response::Ack = client
+        .request(Request::RemoveWorkspace { workspace_id: first.id })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    assert!(!folder.exists());
+    let Response::Workspace { workspace: theirs } = client
+        .request(Request::CreateWorkspace { path: pointed.to_string_lossy().into_owned() })
+        .await
+    else {
+        panic!("expected workspace");
+    };
+    let Response::Ack = client
+        .request(Request::RemoveWorkspace { workspace_id: theirs.id })
+        .await
+    else {
+        panic!("expected ack");
+    };
+    assert_eq!(std::fs::read_to_string(pointed.join("keep.txt")).unwrap(), "mine");
+    hub.shutdown().await;
+    let _ = std::fs::remove_dir_all(&data);
+    let _ = std::fs::remove_dir_all(&pointed);
+}
+
+#[tokio::test]
+async fn a_hub_without_a_data_folder_cannot_make_workspaces() {
+    let hub = start_hub(&["好"]).await;
+    let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+    let result = client
+        .try_request(Request::NewWorkspace { name: "x".into() })
+        .await;
+    assert!(result.is_err(), "{result:?}");
+    hub.shutdown().await;
+}
+
+#[tokio::test]
+async fn a_workspace_on_a_phone_says_what_the_phone_does_not_have() {
+    let data = std::env::temp_dir().join(format!("xiaoban-data-{}", uuid_like()));
+    for phone in [true, false] {
+        let provider = RecordingProvider::new(ScriptedProvider::new(["好"]));
+        let mut runtime = runtime(provider.clone());
+        if phone {
+            runtime.operator = PhoneOperator::new(&[]);
+        }
+        let config = HubConfig {
+            data_dir: Some(data.clone()),
+            ..HubConfig::ephemeral()
+        };
+        let hub = Hub::start(config, runtime).await.unwrap();
+        let (mut client, _) = TestClient::connect(&hub, "phone", Credential::Local).await;
+        let Response::Workspace { workspace } = client
+            .request(Request::NewWorkspace { name: format!("试验{phone}") })
+            .await
+        else {
+            panic!("expected workspace");
+        };
+        let Response::Thread { thread } = client
+            .request(Request::CreateThread { title: None, workspace_id: Some(workspace.id) })
+            .await
+        else {
+            panic!("expected thread");
+        };
+        converse(&mut client, &thread.id, "你好", Vec::new()).await;
+        let system = provider.requests()[0].messages[0].content.clone();
+        assert_eq!(system.contains("没有 git、node、python、npm"), phone, "{phone}: {system}");
+        let tools: Vec<String> = provider.requests()[0].tools.iter().map(|tool| tool.name.clone()).collect();
+        assert!(tools.contains(&"write_file".to_owned()), "{tools:?}");
+        hub.shutdown().await;
+    }
+    let _ = std::fs::remove_dir_all(&data);
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator

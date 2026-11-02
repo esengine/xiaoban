@@ -162,6 +162,7 @@ impl Hub {
             pauses: crate::pauses::Pauses::default(),
             schedules: crate::schedules::Runs::default(),
             todos: crate::todos::Book::default(),
+            data_dir: config.data_dir.clone(),
             files: crate::files::Files::new(config.data_dir.as_ref().map_or_else(
                 || std::env::temp_dir().join(format!("xiaoban-files-{}", uuid::Uuid::now_v7())),
                 |dir| dir.join("files"),

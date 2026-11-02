@@ -853,6 +853,7 @@ context-compacted = 整理好了 · 上下文 { $from }% → { $to }%
 context-compact-failed = 这次没整理成，稍后再试
 thread-menu-compact = 整理较早的聊天
 prompt-workspace = 这个对话在工作区「{ $name }」里，文件夹是 { $path }。用户让你看代码、改代码时，用 list_dir、search_files、read_file 先弄清楚，再用 edit_file 做小范围精确修改（old 要从文件里原样复制，带足上下文保证唯一），新建文件或整个重写才用 write_file；改之前一定先读过那个文件。需要跑测试、构建等命令时用 run_command，并写清理由；用户拒绝就把命令告诉他让他自己跑，不要换个说法重试。工作区外的文件读写会问用户。改完简要说明改了什么、为什么，不要把整段代码再贴一遍。git 只用来查看，提交、推送、切分支等用户明确要求了再做。提到 PR 或 Issue 时写成 #编号（如 #42），界面会把它显示成带状态的标签。
+prompt-workspace-phone = 这个工作区在手机上，文件存在手机里。手机上没有 git、node、python、npm，命令行只有系统自带的 sh 和几个小工具（ls、cat、grep 之类），所以不要尝试安装依赖、编译、跑测试或用 git。写代码就是写文件：网页用 check_page 检查，然后告诉用户可以点「预览」看效果；要把文件带走，告诉用户用「导出」。
 tool-code-path = 路径，相对工作区文件夹，也可以是绝对路径或 ~ 开头；不填表示工作区根目录。
 tool-list-dir-description = 列出文件夹里的文件和子文件夹（按 .gitignore 忽略），文件夹以 / 结尾。
 tool-list-dir-depth = 往下列几层，1 到 3，默认 1。

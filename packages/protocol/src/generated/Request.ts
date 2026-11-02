@@ -117,6 +117,7 @@ export type Request =
   | { type: "set_thinking"; threadId: string; effort: ThinkingEffort }
   | { type: "list_workspaces" }
   | { type: "create_workspace"; path: string }
+  | { type: "new_workspace"; name: string }
   | { type: "rename_workspace"; workspaceId: string; name: string }
   | { type: "remove_workspace"; workspaceId: string }
   | { type: "list_dir"; workspaceId: string; path: string }

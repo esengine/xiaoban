@@ -50,6 +50,23 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             });
             Ok(Response::Workspace { workspace: created })
         }
+        Request::NewWorkspace { name } => {
+            only_here(local)?;
+            let name = name.trim().to_owned();
+            if name.is_empty() || name.chars().count() > 60 {
+                return Err(bad_request("the name must be 1 to 60 characters"));
+            }
+            let root = workspace::managed_root(state).ok_or_else(|| bad_request("this hub has no data folder to keep workspaces in"))?;
+            let folder = workspace::fresh_folder(&root, &name).map_err(|failure| bad_request(&failure))?;
+            let created = state
+                .store
+                .add_workspace(name, workspace::real(&folder).to_string_lossy().into_owned())
+                .await?;
+            state.publish(Event::WorkspaceUpdated {
+                workspace: created.clone(),
+            });
+            Ok(Response::Workspace { workspace: created })
+        }
         Request::RenameWorkspace { workspace_id, name } => {
             let name = name.trim().to_owned();
             if name.is_empty() {
@@ -62,8 +79,17 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
             Ok(Response::Workspace { workspace: renamed })
         }
         Request::RemoveWorkspace { workspace_id } => {
+            let found = state.store.workspace(workspace_id.clone()).await.ok();
             state.store.remove_workspace(workspace_id.clone()).await?;
             state.publish(Event::WorkspaceRemoved { workspace_id });
+            // A workspace the hub made in its own data folder goes away with its files; a folder
+            // the user pointed at is only forgotten, never deleted.
+            if let (Some(found), Some(root)) = (found, workspace::managed_root(state)) {
+                let folder = workspace::real(Path::new(&found.path));
+                if folder != workspace::real(&root) && folder.starts_with(workspace::real(&root)) {
+                    let _ = tokio::fs::remove_dir_all(&folder).await;
+                }
+            }
             Ok(Response::Ack)
         }
         Request::ListDir { workspace_id, path } => {

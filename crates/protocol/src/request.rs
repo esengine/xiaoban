@@ -190,6 +190,11 @@ pub enum Request {
     CreateWorkspace {
         path: String,
     },
+    /// A new empty workspace folder inside this hub's own data folder, for a device (a phone)
+    /// that has no folders of its own to pick from.
+    NewWorkspace {
+        name: String,
+    },
     RenameWorkspace {
         workspace_id: String,
         name: String,

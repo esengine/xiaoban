@@ -15,15 +15,27 @@ const LIVE_EVERY: Duration = Duration::from_millis(300);
 const RESULT_CHARS: usize = 12_000;
 const CHAINING: [&str; 8] = [";", "&&", "||", "|", ">", "<", "`", "$("];
 
-fn shell(command: &str, dir: &Path) -> tokio::process::Command {
-    let mut process = if cfg!(windows) {
-        let mut process = tokio::process::Command::new("cmd");
-        process.arg("/C").arg(command);
-        process
+/// The program and flag that run a command line: `cmd` on Windows, the system `sh` on Android (it
+/// has no zsh and no login shell), the user's own shell elsewhere.
+fn shell_program(windows: bool, android: bool, shell: Option<&str>) -> (String, &'static str) {
+    if windows {
+        ("cmd".to_owned(), "/C")
+    } else if android {
+        ("/system/bin/sh".to_owned(), "-c")
     } else {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_owned());
-        let mut process = tokio::process::Command::new(shell);
-        process.arg("-lc").arg(command);
+        (shell.unwrap_or("/bin/zsh").to_owned(), "-lc")
+    }
+}
+
+fn shell(command: &str, dir: &Path) -> tokio::process::Command {
+    let (program, flag) = shell_program(
+        cfg!(windows),
+        cfg!(target_os = "android"),
+        std::env::var("SHELL").ok().as_deref(),
+    );
+    let mut process = {
+        let mut process = tokio::process::Command::new(program);
+        process.arg(flag).arg(command);
         process
     };
     process
@@ -208,6 +220,19 @@ pub fn stop(state: &SharedState, command_id: &str) -> bool {
         .get(command_id)
         .map(CancellationToken::cancel)
         .is_some()
+}
+
+#[cfg(test)]
+mod shell_tests {
+    use super::*;
+
+    #[test]
+    fn each_system_runs_commands_its_own_way() {
+        assert_eq!(shell_program(true, false, Some("zsh")), ("cmd".to_owned(), "/C"));
+        assert_eq!(shell_program(false, true, Some("/bin/zsh")), ("/system/bin/sh".to_owned(), "-c"));
+        assert_eq!(shell_program(false, false, Some("/bin/bash")), ("/bin/bash".to_owned(), "-lc"));
+        assert_eq!(shell_program(false, false, None), ("/bin/zsh".to_owned(), "-lc"));
+    }
 }
 
 #[cfg(test)]

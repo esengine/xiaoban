@@ -49,6 +49,7 @@ pub struct HubState {
     pub schedules: crate::schedules::Runs,
     pub todos: crate::todos::Book,
     pub files: crate::files::Files,
+    pub data_dir: Option<std::path::PathBuf>,
     pub auto_titles: bool,
     pub auto_thinking: bool,
     pub web: Arc<dyn crate::services::Web>,
@@ -146,7 +147,7 @@ impl HubState {
             self.capabilities.extend(&mut tools);
             return StablePrefix::compose(&system, memory, tools);
         };
-        let system = format!(
+        let mut system = format!(
             "{}\n\n{}",
             self.prompts.chat,
             self.localizer.format(
@@ -154,6 +155,9 @@ impl HubState {
                 &[("name", &workspace.name), ("path", &workspace.path)],
             )
         );
+        if self.operator.is_phone() {
+            system = format!("{system}\n\n{}", self.localizer.text(xiaoban_i18n::keys::PROMPT_WORKSPACE_PHONE));
+        }
         let mut tools: Vec<_> = self
             .tools
             .iter()

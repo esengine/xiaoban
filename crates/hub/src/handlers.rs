@@ -184,6 +184,7 @@ pub async fn handle(state: &SharedState, local: bool, request: Request) -> Handl
         | Request::TripSpending { .. }) => trip_requests::handle(state, local, request).await,
         request @ (Request::ListWorkspaces
         | Request::CreateWorkspace { .. }
+        | Request::NewWorkspace { .. }
         | Request::RenameWorkspace { .. }
         | Request::RemoveWorkspace { .. }
         | Request::ListDir { .. }

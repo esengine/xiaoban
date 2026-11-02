@@ -1307,6 +1307,16 @@ export class HubStore {
     return workspace;
   }
 
+  /** A new empty workspace inside the hub's own data folder, for a device with no folders to pick. */
+  async newWorkspace(name: string): Promise<Workspace> {
+    const { workspace } = await this.client.request({ type: "new_workspace", name }, "workspace");
+    this.#update((state) => ({
+      ...state,
+      workspaces: upsertWorkspace(state.workspaces, workspace),
+    }));
+    return workspace;
+  }
+
   async renameWorkspace(workspaceId: string, name: string): Promise<void> {
     await this.client.request({ type: "rename_workspace", workspaceId, name }, "workspace");
   }
