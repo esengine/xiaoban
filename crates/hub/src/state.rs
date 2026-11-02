@@ -113,7 +113,15 @@ impl HubState {
         };
         if let Some((prompt, extra)) = special {
             let system = format!("{}\n\n{}", self.prompts.chat, self.localizer.text(prompt));
-            let mut tools = self.tools.clone();
+            let mut tools: Vec<_> = if scene == Scene::Kitchen {
+                self.tools.clone()
+            } else {
+                self.tools
+                    .iter()
+                    .filter(|tool| crate::code_tools::keeps_in_code(&tool.name))
+                    .cloned()
+                    .collect()
+            };
             tools.extend(extra.iter().cloned());
             self.capabilities.extend(&mut tools);
             return StablePrefix::compose(&system, memory, tools);
@@ -132,7 +140,12 @@ impl HubState {
                 &[("name", &workspace.name), ("path", &workspace.path)],
             )
         );
-        let mut tools = self.tools.clone();
+        let mut tools: Vec<_> = self
+            .tools
+            .iter()
+            .filter(|tool| crate::code_tools::keeps_in_code(&tool.name))
+            .cloned()
+            .collect();
         tools.extend(self.code_tools.iter().cloned());
         if crate::workspace::git_binary().is_some() {
             tools.extend(self.git_tools.iter().cloned());

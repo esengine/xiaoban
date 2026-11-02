@@ -47,6 +47,8 @@ mod operate_tools;
 mod plan;
 mod pauses;
 mod preferences;
+#[cfg(test)]
+mod prefix_report;
 mod prompts;
 mod registry;
 mod router;

@@ -124,6 +124,36 @@ pub fn specs(l: &Localizer) -> Vec<ToolSpec> {
     ]
 }
 
+/// The everyday tools a coding, document, sheet, deck or ledger conversation keeps. Trips, floor
+/// plans, schedules, mail and the like stay out: they are most of the fixed prefix and those
+/// conversations never use them.
+pub fn keeps_in_code(name: &str) -> bool {
+    use crate::{agents, asks, capability, file_tools, pages, plan, subthreads, thread_tools, tools};
+    matches!(
+        name,
+        tools::REMEMBER
+            | tools::FORGET
+            | tools::WEB_SEARCH
+            | tools::READ_PAGE
+            | asks::ASK_USER
+            | plan::PLAN
+            | pages::CHECK_PAGE
+            | crate::browser::BROWSE
+            | agents::SPAWN_AGENTS
+            | subthreads::OPEN_SUBTHREADS
+            | subthreads::MESSAGE_SUBTHREAD
+            | thread_tools::LIST_THREADS
+            | thread_tools::FIND_THREADS
+            | thread_tools::READ_THREAD
+            | file_tools::RECALL
+            | file_tools::HISTORY_OUTLINE
+            | file_tools::HISTORY_SEARCH
+            | file_tools::HISTORY_READ
+            | capability::FIND
+            | capability::SKILL_READ
+    )
+}
+
 pub fn is_code_tool(name: &str) -> bool {
     matches!(
         name,
