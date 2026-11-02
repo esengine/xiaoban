@@ -23,6 +23,7 @@ pub enum ConfirmKind {
     RunCommand { command: String, cwd: String, rule: String },
     ReadOutside { path: String, folder: String },
     WriteOutside { path: String, folder: String, preview: Vec<crate::DiffLine> },
+    SaveFile { path: String, folder: String, preview: Vec<crate::DiffLine> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

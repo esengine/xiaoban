@@ -116,12 +116,15 @@ impl Hub {
             info: info.clone(),
             port: addr.port(),
             store,
-            tools: crate::packs::without_operating(
+            tools: crate::packs::without_saving(
+                crate::packs::without_operating(
                 crate::slides::with_write_specs(
                     crate::sheet::with_create_spec(crate::doc::with_write_specs(crate::tools::specs(&localizer), &localizer), &localizer),
                     &localizer,
                 ),
                 runtime.operator.can_operate(),
+                ),
+                runtime.operator.is_phone(),
             ),
             pack_tools: vec![crate::packs::spec(&localizer)],
             code_tools: crate::code_tools::specs(&localizer),

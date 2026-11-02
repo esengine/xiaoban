@@ -42,7 +42,9 @@ pub fn detail(call: &ToolCall) -> Option<String> {
         REMEMBER | crate::tools::FORGET => text(&args, "subject"),
         SAVE_TRIP | crate::operate_tools::CONFIRM => text(&args, "title"),
         SAVE_PLACE_DETAIL => text(&args, "stop"),
-        OPEN_APP | crate::operate_tools::LOOK_AT_APP => text(&args, "name"),
+        OPEN_APP | crate::operate_tools::LOOK_AT_APP | crate::save_file::SAVE_FILE => {
+            text(&args, "name")
+        }
         crate::operate_tools::CLICK | crate::operate_tools::TYPE_TEXT => text(&args, "label"),
         crate::operate_tools::PRESS_KEYS => text(&args, "keys"),
         crate::operate_tools::DO_STEPS => text(&args, "summary"),

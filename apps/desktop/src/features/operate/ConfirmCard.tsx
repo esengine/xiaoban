@@ -9,7 +9,7 @@ export function useConfirmText(confirm: ConfirmRequest) {
   return confirmText(confirm, translator.t);
 }
 
-const CODE_KINDS = new Set(["run_command", "read_outside", "write_outside"]);
+const CODE_KINDS = new Set(["run_command", "read_outside", "write_outside", "save_file"]);
 
 function CodeConfirm({
   confirm,
@@ -28,7 +28,7 @@ function CodeConfirm({
       <legend className="code-confirm__head">{text.title}</legend>
       <p className="code-confirm__detail">{text.detail}</p>
       {text.hint && <p className="code-confirm__hint">{text.hint}</p>}
-      {kind.kind === "write_outside" && kind.preview.length > 0 && (
+      {(kind.kind === "write_outside" || kind.kind === "save_file") && kind.preview.length > 0 && (
         <div className="code-confirm__preview">
           {kind.preview.map((line, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: preview lines have no identity

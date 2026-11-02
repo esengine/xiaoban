@@ -330,6 +330,19 @@ pub fn confirm_text(l: &Localizer, kind: &ConfirmKind) -> (String, String, Vec<N
                 choice(Once, l.text(keys::CONFIRM_RUN_ONCE), true),
             ],
         ),
+        ConfirmKind::SaveFile { path, folder, .. } => (
+            l.text(keys::CONFIRM_SAVE_TITLE),
+            path.clone(),
+            vec![
+                choice(No, l.text(keys::CONFIRM_SAVE_NO), false),
+                choice(
+                    Always,
+                    l.format(keys::CONFIRM_SAVE_ALWAYS, &[("folder", folder)]),
+                    false,
+                ),
+                choice(Once, l.text(keys::CONFIRM_SAVE_ONCE), true),
+            ],
+        ),
         ConfirmKind::Permissions => (
             l.text(keys::CONFIRM_PERMISSIONS_TITLE),
             l.text(keys::CONFIRM_PERMISSIONS_HINT),

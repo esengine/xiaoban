@@ -100,6 +100,18 @@ export function confirmText(confirm: ConfirmRequest, t: Translator["t"]) {
       ] satisfies ConfirmOption[],
     };
   }
+  if (kind.kind === "save_file") {
+    return {
+      title: t("confirm-save-title"),
+      hint: "",
+      detail: kind.path,
+      choices: [
+        { choice: "once", label: t("confirm-save-once"), primary: true },
+        { choice: "always", label: t("confirm-save-always", { folder: kind.folder }) },
+        { choice: "no", label: t("confirm-save-no") },
+      ] satisfies ConfirmOption[],
+    };
+  }
   if (kind.kind === "write_outside") {
     return {
       title: t("confirm-write-title"),

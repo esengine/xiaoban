@@ -96,7 +96,7 @@ impl Pack {
             ],
             Self::Kitchen => &["recipe", "life"],
             Self::Mail => &["search_mail", "read_mail", "draft_reply"],
-            Self::Files => &["file_search", "file_read"],
+            Self::Files => &["file_search", "file_read", "save_file"],
             Self::Web => &["browse", "check_page"],
         }
     }
@@ -165,6 +165,17 @@ const OPERATING: [&str; 7] = [
     "check_price_in_app",
     "note_app_price",
 ];
+
+/// A phone has no Desktop, Documents or Downloads folder to put a file in.
+pub fn without_saving(tools: Vec<ToolSpec>, is_phone: bool) -> Vec<ToolSpec> {
+    if !is_phone {
+        return tools;
+    }
+    tools
+        .into_iter()
+        .filter(|tool| tool.name != crate::save_file::SAVE_FILE)
+        .collect()
+}
 
 /// Drops the tools that need an operator this device does not have.
 pub fn without_operating(tools: Vec<ToolSpec>, can_operate: bool) -> Vec<ToolSpec> {

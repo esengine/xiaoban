@@ -10,4 +10,5 @@ export type ConfirmKind =
   | { kind: "permissions" }
   | { kind: "run_command"; command: string; cwd: string; rule: string }
   | { kind: "read_outside"; path: string; folder: string }
-  | { kind: "write_outside"; path: string; folder: string; preview: Array<DiffLine> };
+  | { kind: "write_outside"; path: string; folder: string; preview: Array<DiffLine> }
+  | { kind: "save_file"; path: string; folder: string; preview: Array<DiffLine> };

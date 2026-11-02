@@ -2381,6 +2381,151 @@ async fn a_device_that_cannot_operate_apps_never_offers_the_tools_that_need_it()
 }
 
 #[tokio::test]
+async fn saving_a_file_asks_first_and_refuses_programs() {
+    let name = format!("xiaoban-test-{}.html", uuid_like());
+    let provider = RecordingProvider::new(ScriptedProvider::sequence([
+        vec![tool_call(
+            "save_file",
+            &serde_json::json!({ "name": "run.bat", "content": "echo hi" }),
+        )],
+        vec![tool_call(
+            "save_file",
+            &serde_json::json!({ "name": name, "content": "<h1>骑车</h1>
+<p>会动</p>
+" }),
+        )],
+        vec![ModelChunk::Text("没存".into())],
+    ]));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "做个网页放到桌面".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let mut answers: Vec<Answer> = vec![(
+        |kind| matches!(kind, ConfirmKind::SaveFile { preview, .. } if preview.len() == 2),
+        ConfirmChoice::No,
+    )];
+    answer_confirms(&mut client, &thread, &mut answers, 1).await;
+    assert!(answers.is_empty(), "the user was asked once, with a preview of the file");
+
+    let results: Vec<String> = provider
+        .requests()
+        .iter()
+        .skip(1)
+        .map(|request| request.messages.last().unwrap().content.clone())
+        .collect();
+    assert!(results[0].contains("programs and scripts"), "{results:?}");
+    assert!(results[1].contains("did not want the file saved"), "{results:?}");
+    let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
+    if let Some(home) = home {
+        let home = std::path::PathBuf::from(home);
+        for desktop in [home.join("Desktop"), home.join("OneDrive").join("Desktop")] {
+            assert!(!desktop.join(&name).exists(), "nothing is written without a yes");
+        }
+    }
+    hub.shutdown().await;
+}
+
+/// What does a real model do with "make a page and put it on the desktop"? Apps, the screen and
+/// the weather are fakes, and every save is declined, so nothing on this computer is touched.
+/// `XIAOBAN_TEST_FRAME_SECS=120 cargo test -p xiaoban-hub --test flow live_save_file -- --ignored --nocapture`
+#[tokio::test]
+#[ignore = "calls a real model"]
+async fn live_save_file() {
+    let api_key = std::env::var("LIVE_API_KEY").ok().or_else(|| {
+        xiaoban_hub::KeyringSecrets::new(xiaoban_hub::KEYCHAIN_SERVICE)
+            .load(ProviderId::Deepseek)
+            .ok()
+            .flatten()
+    });
+    let Some(api_key) = api_key else {
+        eprintln!("set LIVE_API_KEY, or configure a DeepSeek key in the app");
+        return;
+    };
+    let provider = RecordingProvider::wrap(xiaoban_agent::OpenAiCompatible::new(OpenAiConfig {
+        base_url: std::env::var("LIVE_BASE_URL").unwrap_or_else(|_| "https://api.deepseek.com".into()),
+        api_key,
+        model: std::env::var("LIVE_MODEL").unwrap_or_else(|_| "deepseek-v4-flash".into()),
+        api: xiaoban_protocol::ModelApi::OpenAi,
+    }));
+    let runtime = runtime_with(
+        provider.clone(),
+        &Prompts::for_locale(Locale::ZhCn).chat,
+        Some(deepseek(VALID_KEY)),
+        Arc::new(MemorySecrets::default()),
+    );
+    let hub = Hub::start(HubConfig::ephemeral(), runtime).await.unwrap();
+    hub.set_lazy_packs(true);
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    let Response::TurnAccepted { turn_id, .. } = client
+        .request(Request::SendMessage {
+            thread_id: thread.clone(),
+            text: "做一个会动的醒醐骑自行车SVG的网页放到桌面".into(),
+            context: Vec::new(),
+            quote: None,
+            files: Vec::new(),
+            threads: Vec::new(),
+        })
+        .await
+    else {
+        panic!("expected turn");
+    };
+    let deadline = std::time::Instant::now() + Duration::from_secs(480);
+    let mut asked = false;
+    while std::time::Instant::now() < deadline {
+        let Response::PendingConfirms { confirms } = client.request(Request::PendingConfirms).await else {
+            panic!("expected confirms");
+        };
+        for confirm in confirms {
+            if let ConfirmKind::SaveFile { path, preview, .. } = &confirm.kind {
+                println!("save asked: {path} ({} preview lines)", preview.len());
+                asked = true;
+            } else {
+                println!("other confirm: {:?}", confirm.kind);
+            }
+            let _ = client
+                .try_request(Request::AnswerConfirm { confirm_id: confirm.id, choice: ConfirmChoice::No })
+                .await;
+        }
+        let Response::Messages { messages, .. } = client
+            .request(Request::ListMessages { thread_id: thread.clone(), before: None, limit: None })
+            .await
+        else {
+            panic!("expected messages");
+        };
+        if messages.iter().any(|message| message.role == Role::Assistant) && asked {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    let _ = client.try_request(Request::CancelTurn { turn_id }).await;
+    let calls: Vec<String> = provider
+        .requests()
+        .iter()
+        .flat_map(|request| request.messages.iter())
+        .flat_map(|message| message.tool_calls.iter())
+        .map(|call| call.function.name.clone())
+        .collect();
+    println!("tools the model called, in order: {calls:?}");
+    println!("asked to save: {asked}; requests sent: {}", provider.requests().len());
+    hub.shutdown().await;
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator

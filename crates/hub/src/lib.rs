@@ -46,6 +46,7 @@ mod operate;
 mod operate_tools;
 mod plan;
 mod packs;
+mod save_file;
 mod pauses;
 mod preferences;
 #[cfg(test)]
