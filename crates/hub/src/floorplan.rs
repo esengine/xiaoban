@@ -625,6 +625,17 @@ async fn save(state: &SharedState, plan: &mut FloorPlan) {
     state.publish(Event::FloorPlanUpdated { plan: plan.clone() });
 }
 
+/// Whether this conversation was started from, or has since saved, a floor plan.
+pub(crate) async fn has_plan(state: &SharedState, thread_id: &str) -> bool {
+    state
+        .store
+        .setting_owned(format!("{THREAD_KEY}{thread_id}"))
+        .await
+        .ok()
+        .flatten()
+        .is_some_and(|id| !id.is_empty())
+}
+
 async fn in_thread(state: &SharedState, thread_id: &str) -> Option<FloorPlan> {
     let id = state
         .store

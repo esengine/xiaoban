@@ -2327,6 +2327,36 @@ async fn live_pack_loading() {
 }
 
 #[tokio::test]
+async fn a_conversation_with_a_floor_plan_already_has_the_home_pack() {
+    let script = vec![
+        vec![tool_call(
+            "floorplan_save",
+            &serde_json::json!({
+                "title": "新家",
+                "rooms": [{ "name": "客厅", "rect": { "x": 0, "y": 0, "w": 6, "h": 4.5 } }],
+            }),
+        )],
+        vec![ModelChunk::Text("认出来了".into())],
+        vec![ModelChunk::Text("好".into())],
+    ];
+    let provider = RecordingProvider::new(ScriptedProvider::sequence(script));
+    let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+        .await
+        .unwrap();
+    let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+    let thread = new_thread(&mut client).await;
+    converse(&mut client, &thread, "这是我家户型", Vec::new()).await;
+
+    hub.set_lazy_packs(true);
+    converse(&mut client, &thread, "客厅再大一点", Vec::new()).await;
+    let has = |tools: &[xiaoban_agent::ToolSpec], name: &str| tools.iter().any(|tool| tool.name == name);
+    let tools = provider.requests().last().unwrap().tools.clone();
+    assert!(has(&tools, "floorplan_edit"), "the plan's own conversation keeps the home pack");
+    assert!(!has(&tools, "save_trip"));
+    hub.shutdown().await;
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator

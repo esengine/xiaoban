@@ -219,12 +219,31 @@ fn key(thread_id: &str) -> String {
     format!("packs.{thread_id}")
 }
 
-/// The packs this conversation has loaded. While on-demand loading is off, that is all of them.
-pub async fn loaded(state: &SharedState, thread_id: &str) -> PackSet {
-    if !state.lazy_packs() {
-        return all();
+/// Packs a conversation needs because of what it already holds, without the model asking: it
+/// was opened from a trip card, a floor plan or a schedule.
+async fn implied(state: &SharedState, thread_id: &str) -> PackSet {
+    let mut packs = PackSet::new();
+    if crate::floorplan::has_plan(state, thread_id).await {
+        packs.insert(Pack::Home);
     }
-    let saved = state
+    if state
+        .store
+        .latest_trip_in_thread(thread_id.to_owned())
+        .await
+        .ok()
+        .flatten()
+        .is_some()
+    {
+        packs.insert(Pack::Trip);
+    }
+    if crate::schedules::note(state, thread_id).await.is_some() {
+        packs.insert(Pack::Schedule);
+    }
+    packs
+}
+
+async fn saved(state: &SharedState, thread_id: &str) -> PackSet {
+    let ids = state
         .store
         .setting_owned(key(thread_id))
         .await
@@ -232,19 +251,32 @@ pub async fn loaded(state: &SharedState, thread_id: &str) -> PackSet {
         .flatten()
         .and_then(|value| serde_json::from_str::<Vec<String>>(&value).ok())
         .unwrap_or_default();
-    saved.iter().filter_map(|id| Pack::from_id(id)).collect()
+    ids.iter().filter_map(|id| Pack::from_id(id)).collect()
+}
+
+/// The packs this conversation has loaded. While on-demand loading is off, that is all of them.
+pub async fn loaded(state: &SharedState, thread_id: &str) -> PackSet {
+    if !state.lazy_packs() {
+        return all();
+    }
+    let mut packs = saved(state, thread_id).await;
+    packs.extend(implied(state, thread_id).await);
+    packs
 }
 
 /// Adds packs to a conversation for good; returns the ones that were not loaded before.
 pub async fn load(state: &SharedState, thread_id: &str, wanted: &[Pack]) -> Vec<Pack> {
-    let mut current = loaded(state, thread_id).await;
-    let added: Vec<Pack> = wanted
-        .iter()
-        .copied()
-        .filter(|pack| current.insert(*pack))
-        .collect();
+    let have = loaded(state, thread_id).await;
+    let mut keep = saved(state, thread_id).await;
+    let mut added = Vec::new();
+    for pack in wanted {
+        if !have.contains(pack) && !added.contains(pack) {
+            added.push(*pack);
+        }
+        keep.insert(*pack);
+    }
     if !added.is_empty() {
-        let ids: Vec<&str> = current.iter().map(|pack| pack.id()).collect();
+        let ids: Vec<&str> = keep.iter().map(|pack| pack.id()).collect();
         let _ = state
             .store
             .set_setting_owned(
