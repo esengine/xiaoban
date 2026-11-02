@@ -42,6 +42,8 @@ pub struct HubState {
     pub browser: crate::browser::Browser,
     pub confirms: crate::confirms::Confirms,
     pub asks: crate::asks::Asks,
+    /// Leave the packs a conversation has not loaded out of its tool list. Off unless switched on.
+    pub lazy_packs: std::sync::atomic::AtomicBool,
     pub pauses: crate::pauses::Pauses,
     pub schedules: crate::schedules::Runs,
     pub todos: crate::todos::Book,
@@ -97,11 +99,16 @@ pub async fn scene_of(state: &SharedState, thread_id: &str) -> Scene {
 }
 
 impl HubState {
+    pub fn lazy_packs(&self) -> bool {
+        self.lazy_packs.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
     pub fn prefix_for(
         &self,
         memory: Option<&str>,
         workspace: Option<&xiaoban_protocol::Workspace>,
         scene: Scene,
+        packs: &crate::packs::PackSet,
     ) -> StablePrefix {
         let special = match scene {
             Scene::Kitchen => Some((xiaoban_i18n::keys::PROMPT_KITCHEN, &self.kitchen_tools)),
@@ -127,8 +134,7 @@ impl HubState {
             return StablePrefix::compose(&system, memory, tools);
         }
         let Some(workspace) = workspace else {
-            let mut tools = self.tools.clone();
-            tools.extend(self.life_tools.iter().cloned());
+            let mut tools = crate::packs::filter(self.tools.iter().chain(&self.life_tools), packs);
             self.capabilities.extend(&mut tools);
             return StablePrefix::compose(&self.prompts.chat, memory, tools);
         };
@@ -161,8 +167,9 @@ impl HubState {
         &self,
         workspace: Option<&xiaoban_protocol::Workspace>,
         scene: Scene,
+        packs: &crate::packs::PackSet,
     ) -> String {
-        self.prefix_for(None, workspace, scene).fingerprint().to_owned()
+        self.prefix_for(None, workspace, scene, packs).fingerprint().to_owned()
     }
 
     pub fn publish(&self, event: Event) {

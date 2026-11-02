@@ -521,11 +521,12 @@ pub async fn begin_epoch(
     let snapshot = fresh_snapshot(state).await?;
     let workspace = crate::workspace::for_thread(state, thread_id).await;
     let scene = crate::state::scene_of(state, thread_id).await;
+    let packs = crate::packs::loaded(state, thread_id).await;
     state
         .store
         .start_epoch(
             thread_id.to_owned(),
-            state.base_fingerprint_for(workspace.as_ref(), scene),
+            state.base_fingerprint_for(workspace.as_ref(), scene, &packs),
             reason,
             snapshot,
             carried.iter().map(to_wire).collect(),
@@ -592,7 +593,8 @@ fn weight(messages: &[ChatMessage]) -> usize {
 async fn compact_now(state: &SharedState, thread_id: &str) -> Option<(u8, u8)> {
     let workspace = crate::workspace::for_thread(state, thread_id).await;
     let scene = crate::state::scene_of(state, thread_id).await;
-    let base = state.base_fingerprint_for(workspace.as_ref(), scene);
+    let packs = crate::packs::loaded(state, thread_id).await;
+    let base = state.base_fingerprint_for(workspace.as_ref(), scene, &packs);
     let (epoch, entries) = state
         .store
         .latest_epoch(thread_id.to_owned())
@@ -623,7 +625,8 @@ async fn current_epoch(
     let workspace = crate::workspace::for_thread(state, thread_id).await;
     let workspace = workspace.as_ref();
     let scene = crate::state::scene_of(state, thread_id).await;
-    let base = state.base_fingerprint_for(workspace, scene);
+    let packs = crate::packs::loaded(state, thread_id).await;
+    let base = state.base_fingerprint_for(workspace, scene, &packs);
     let (reason, carried) = match state.store.latest_epoch(thread_id.to_owned()).await? {
         Some((mut epoch, entries)) if epoch.prefix_fingerprint == base => {
             if entries.is_empty() {
@@ -642,10 +645,10 @@ async fn current_epoch(
             {
                 let epoch =
                     begin_epoch(state, thread_id, EpochReason::Compacted, carried.clone()).await?;
-                let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, scene);
+                let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, scene, &packs);
                 return Ok((epoch, prefix, carried.into_iter().collect()));
             }
-            let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, scene);
+            let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, scene, &packs);
             return Ok((epoch, prefix, transcript));
         }
         Some((previous, entries)) => {
@@ -661,7 +664,7 @@ async fn current_epoch(
     };
     let carried: Vec<ChatMessage> = carried.entries().to_vec();
     let epoch = begin_epoch(state, thread_id, reason, carried.clone()).await?;
-    let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, scene);
+    let prefix = state.prefix_for(epoch.memory_snapshot.as_deref(), workspace, scene, &packs);
     Ok((epoch, prefix, carried.into_iter().collect()))
 }
 

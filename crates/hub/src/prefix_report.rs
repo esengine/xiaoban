@@ -33,6 +33,11 @@ fn tools_for(localizer: &Localizer) -> BTreeMap<&'static str, Vec<ToolSpec>> {
         tools.push(crate::life::spec(localizer));
         tools
     });
+    scenes.insert("core", {
+        let mut tools = base.clone();
+        tools.push(crate::life::spec(localizer));
+        crate::packs::filter(&tools, &crate::packs::PackSet::new())
+    });
     scenes.insert("code", {
         let mut tools: Vec<_> = base
             .iter()
@@ -105,6 +110,15 @@ fn prefix_report() {
                 total + estimate(&prompts.chat)
             );
         }
+        let all_tools = &scenes["chat"];
+        for pack in crate::packs::Pack::ALL {
+            let tokens: usize = all_tools
+                .iter()
+                .filter(|tool| crate::packs::pack_of(&tool.name) == Some(pack))
+                .map(size)
+                .sum();
+            println!("  pack {:<9} ~{tokens:>5} tokens", pack.id());
+        }
         let names: Vec<String> = scenes["chat"]
             .iter()
             .map(|tool| format!("{}:{}", tool.name, size(tool)))
@@ -128,7 +142,12 @@ fn prefix_report() {
 #[test]
 fn the_fixed_prefix_stays_within_budget() {
     // (scene, budget in estimated tokens for tools plus the shared system prompt)
-    let budgets = [("chat", 28_000), ("code", 9_500), ("doc", 11_000)];
+    let budgets = [
+        ("chat", 28_000),
+        ("core", 7_500),
+        ("code", 9_500),
+        ("doc", 11_000),
+    ];
     for locale in Locale::ALL {
         let localizer = Localizer::new(locale);
         let prompt = estimate(&Prompts::for_locale(locale).chat);
@@ -166,5 +185,21 @@ fn the_coding_toolset_only_names_tools_that_exist() {
         crate::mail::SEARCH,
     ] {
         assert!(!crate::code_tools::keeps_in_code(dropped));
+    }
+}
+
+/// `XIAOBAN_TOOL=save_trip cargo test -p xiaoban-hub dump_tool -- --ignored --nocapture`
+#[test]
+#[ignore = "prints one tool definition"]
+fn dump_tool() {
+    let Ok(name) = std::env::var("XIAOBAN_TOOL") else {
+        return;
+    };
+    let localizer = Localizer::new(Locale::ZhCn);
+    for tool in tools_for(&localizer)["chat"]
+        .iter()
+        .filter(|tool| tool.name == name)
+    {
+        println!("{}", serde_json::to_string_pretty(&tool.wire()).unwrap());
     }
 }

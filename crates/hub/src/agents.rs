@@ -72,7 +72,8 @@ impl HubTools<'_> {
         };
         let workspace = crate::workspace::for_thread(self.state, self.thread_id).await;
         let scene = crate::state::scene_of(self.state, self.thread_id).await;
-        let prefix = self.state.prefix_for(snapshot.as_deref(), workspace.as_ref(), scene);
+        let packs = crate::packs::loaded(self.state, self.thread_id).await;
+        let prefix = self.state.prefix_for(snapshot.as_deref(), workspace.as_ref(), scene, &packs);
         let runs = args.tasks.into_iter().enumerate().map(|(index, task)| {
             let prefix = prefix.clone();
             async move {

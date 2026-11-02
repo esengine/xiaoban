@@ -49,6 +49,13 @@ impl LocalLink {
 }
 
 impl HubHandle {
+    /// Leave tool packs a conversation has not loaded out of its requests. Off by default.
+    pub fn set_lazy_packs(&self, on: bool) {
+        self.state
+            .lazy_packs
+            .store(on, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn ws_url(&self) -> String {
         let host = if self.addr.ip().is_unspecified() {
             "127.0.0.1".to_owned()
@@ -136,6 +143,9 @@ impl Hub {
             browser: crate::browser::Browser::default(),
             confirms: crate::confirms::Confirms::default(),
             asks: crate::asks::Asks::default(),
+            lazy_packs: std::sync::atomic::AtomicBool::new(
+                std::env::var("XIAOBAN_LAZY_PACKS").is_ok_and(|value| value == "1"),
+            ),
             pauses: crate::pauses::Pauses::default(),
             schedules: crate::schedules::Runs::default(),
             todos: crate::todos::Book::default(),

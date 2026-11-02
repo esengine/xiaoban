@@ -2158,6 +2158,38 @@ async fn deleting_and_moving_files_are_tracked_so_the_user_can_undo_them() {
 }
 
 #[tokio::test]
+async fn a_plain_chat_only_sends_the_core_tools_when_packs_are_on_demand() {
+    let tool_names = |provider: &RecordingProvider| -> Vec<String> {
+        provider.requests()[0]
+            .tools
+            .iter()
+            .map(|tool| tool.name.clone())
+            .collect()
+    };
+    let mut sizes = Vec::new();
+    for lazy in [false, true] {
+        let provider = RecordingProvider::new(ScriptedProvider::new(["好"]));
+        let hub = Hub::start(HubConfig::ephemeral(), runtime(provider.clone()))
+            .await
+            .unwrap();
+        hub.set_lazy_packs(lazy);
+        let (mut client, _) = TestClient::connect(&hub, "desktop", Credential::Local).await;
+        let thread = new_thread(&mut client).await;
+        converse(&mut client, &thread, "你好", Vec::new()).await;
+        let names = tool_names(&provider);
+        assert!(names.iter().any(|name| name == "remember"), "{names:?}");
+        assert_eq!(
+            names.iter().any(|name| name == "save_trip"),
+            !lazy,
+            "{lazy}: {names:?}"
+        );
+        sizes.push(names.len());
+        hub.shutdown().await;
+    }
+    assert!(sizes[1] < sizes[0] / 2, "{sizes:?}");
+}
+
+#[tokio::test]
 async fn stubborn_apps_borrow_the_mouse_only_after_asking() {
     let operator = Arc::new(FakeOperator::default());
     operator
