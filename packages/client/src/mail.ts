@@ -11,6 +11,8 @@ import { monthDay } from "./trip.ts";
 
 type T = Translator["t"];
 
+export const MAIL_SECRET = "mail:password";
+
 const DAY = 86_400_000;
 const TRIP_MINUTES = 120;
 

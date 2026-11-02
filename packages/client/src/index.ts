@@ -36,6 +36,7 @@ export {
   MAIL_CATEGORY_KEYS,
   MAIL_FAILURE_KEYS,
   MAIL_PROVIDERS,
+  MAIL_SECRET,
   type MailAction,
   type MailActionKind,
   type MailEvent,

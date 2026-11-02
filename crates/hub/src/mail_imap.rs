@@ -373,6 +373,7 @@ impl<S: AsyncWrite + Unpin> AsyncWrite for Guarded<S> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use std::fmt::Write as _;
     use std::sync::Mutex;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::TcpListener;
@@ -422,13 +423,14 @@ pub mod tests {
                         if !peek {
                             server.seen.lock().unwrap().push(message.uid);
                         }
-                        out.push_str(&format!(
+                        let _ = write!(
+                            out,
                             "* {} FETCH (UID {} INTERNALDATE \"01-Nov-2026 08:00:00 +0800\" BODY[]<0> {{{}}}\r\n{})\r\n",
                             index + 1,
                             message.uid,
                             message.raw.len(),
                             message.raw
-                        ));
+                        );
                     }
                     format!("{out}{tag} OK done\r\n")
                 }

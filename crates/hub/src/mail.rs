@@ -345,10 +345,13 @@ fn parse_verdicts(text: &str) -> Vec<Verdict> {
     if start >= end {
         return Vec::new();
     }
-    serde_json::from_str::<Verdicts>(&text[start..=end]).map(|found| found.mails).unwrap_or_else(|failure| {
-        tracing::warn!(%failure, "unreadable mail sorting");
-        Vec::new()
-    })
+    serde_json::from_str::<Verdicts>(&text[start..=end]).map_or_else(
+        |failure| {
+            tracing::warn!(%failure, "unreadable mail sorting");
+            Vec::new()
+        },
+        |found| found.mails,
+    )
 }
 
 async fn ask(state: &SharedState, mails: &[(usize, &Parsed, Rule)], today: &str) -> HashMap<usize, Verdict> {
@@ -987,7 +990,7 @@ mod tests {
         let items = vec![first, second];
         assert_eq!(search(&items, "招商 账单", None, 30, NOW).len(), 1);
         assert_eq!(search(&items, "", Some(MailCategory::Trip), 30, NOW)[0].id, "1-2");
-        assert!(search(&items, "账单", Some(MailCategory::Trip), 30, NOW).is_empty());
+        assert_eq!(search(&items, "账单", Some(MailCategory::Trip), 30, NOW), Vec::<MailItem>::new());
     }
 
     #[test]
